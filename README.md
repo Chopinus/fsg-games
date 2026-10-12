@@ -9,7 +9,7 @@ Online-Spielehub für Freunde. Jeder spielt auf seinem eigenen iPad, Handy oder 
 - **Mensch ärgere dich nicht** – 2–4 Spieler
 - **Vier gewinnt** – 2 Spieler, weitere schauen zu
 - **Minispiel-Party** – 2–12 Spieler. Zufällige Action-Minispiele à 35–45 Sekunden: Ballon-Pumpe (im Takt tippen), Turbo-Rennen (Gas geben und richtig schalten), Pong-Mauer, Raketenflug und Stapelturm. Nach jedem Minispiel gibt es Punkte für die Platzierung (10, 7, 5, 4 …).
-- **Ritterlauf (Solo)** – Deine Heldengruppe (Ritter, Wächter, Schützin) kämpft sich von allein durch Gegnerwellen. Nach jedem Lauf verbesserst du jeden Helden im Lager über seinen eigenen Fertigkeitenbaum, bezahlt mit Gold und Seelen. Mit der Wiedergeburt setzt du alles zurück und bekommst Sterne für dauerhafte Verbesserungen. Spielstand per Name und Passwort.
+- **Ritterlauf (Solo)** – Deine Heldengruppe kämpft sich von allein durch 150 Stufen. Sechs Klassen (Ritter, Wächter, Schützin, Magier, Priesterin, Tierbändiger) mit je eigenem Fertigkeitenbaum. Jede Wiedergeburt schaltet etwas Neues frei: neue Klassen, mehr Stufen, mehr Schlüssel-Fertigkeiten, Runen, Runenschmiede und Turm-Modus. Spielstand per Name und Passwort.
 
 ---
 
