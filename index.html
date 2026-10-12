@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1b1726">
+<title>FSG Spiele</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Figtree:wght@400;600;800&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="conn" class="conn" hidden>Verbindung wird hergestellt …</div>
+
+<main id="hub" class="wrap">
+  <header class="brand">
+    <p class="eyebrow">FSG</p>
+    <h1>Spiele<span>·</span>abend</h1>
+    <p class="lead">Jeder spielt auf seinem eigenen Gerät. Starte eine Runde oder tritt einer offenen Runde bei.</p>
+  </header>
+
+  <section class="panel">
+    <div class="field"><label for="nick">Dein Name</label><input id="nick" maxlength="16" placeholder="z. B. Lena" autocomplete="nickname"></div>
+  </section>
+
+  <section class="stack">
+    <h2>Neues Spiel starten</h2>
+    <div class="tiles" id="tiles"></div>
+  </section>
+
+  <section class="stack">
+    <h2>Offene Runden</h2>
+    <div class="list" id="rooms"><div class="empty">Runden werden geladen …</div></div>
+  </section>
+</main>
+
+<main id="room" hidden></main>
+
+<div id="picker" class="overlay" hidden></div>
+<div id="toast" class="toast" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>
