@@ -184,5 +184,47 @@ input{font:inherit;font-size:18px;color:var(--fg);background:var(--bg);border:1p
   font-weight:800;padding:12px 20px;border-radius:999px;box-shadow:0 8px 24px rgba(0,0,0,.4);max-width:calc(100% - 32px);text-align:center}
 .toast.big{font-family:var(--display);font-weight:400;font-size:24px;background:var(--cr);color:#fff}
 .conn{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--cr);color:#fff;text-align:center;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));font-weight:800}
+/* Ritterlauf */
+.solo{max-width:960px;gap:14px;padding-block:10px 40px}
+.rl-canvas{width:100%}
+.rl-canvas canvas{display:block;border-radius:14px;touch-action:manipulation;max-width:100%}
+.rl-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.rl-stat{display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;font-variant-numeric:tabular-nums}
+.rl-gold{font-family:var(--display);font-size:22px;color:#ffcf4a}
+.rl-soul{font-family:var(--display);font-size:18px;color:#c9a6ff}
+.rl-tabs{display:flex;gap:6px;border-bottom:1px solid var(--line)}
+.rl-tabs button{background:transparent;border:0;border-bottom:3px solid transparent;padding:10px 14px;font-weight:800;color:var(--muted);min-height:44px}
+.rl-tabs button.on{color:var(--fg);border-bottom-color:var(--accent)}
+#rlPanel{display:flex;flex-direction:column;gap:12px}
+.rl-shop{display:flex;flex-direction:column;gap:8px}
+.rl-item{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.rl-item > div{min-width:0}
+.rl-item .btn{min-width:120px;font-variant-numeric:tabular-nums}
+.rl-tree{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.rl-branch{display:flex;flex-direction:column;gap:8px}
+.rl-branch h3{margin:0;font-family:var(--display);font-weight:400;font-size:15px;color:var(--accent)}
+.rl-node{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px;position:relative}
+.rl-node + .rl-node::before{content:"";position:absolute;top:-9px;left:50%;width:2px;height:8px;background:var(--line)}
+.rl-node.has{border-color:#7d62b0}
+.rl-node.locked{opacity:.5}
+.rl-node .btn{align-self:flex-start}
+.rl-dead{background:color-mix(in srgb,var(--cr) 16%,var(--surface));border:1px solid color-mix(in srgb,var(--cr) 45%,transparent);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.rl-check{display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:15px;color:var(--fg);font-weight:600}
+.rl-check input{width:22px;height:22px}
+.rl-save{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.rl-save h3{margin:8px 0 0;font-family:var(--display);font-weight:400;font-size:16px}
+.rl-code{font-family:ui-monospace,Menlo,monospace;font-size:20px;letter-spacing:.06em;background:var(--surface);border:1px dashed var(--accent);border-radius:10px;padding:12px 14px;user-select:all;-webkit-user-select:all;word-break:break-all;max-width:100%}
+.rl-save .numrow{width:min(100%,520px)}
+#rlIn{font-family:ui-monospace,Menlo,monospace;text-transform:uppercase;font-size:17px}
+.rl-form{display:flex;flex-direction:column;gap:8px;width:min(100%,420px)}
+.rl-details{width:min(100%,560px);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px;display:flex;flex-direction:column;gap:10px}
+.rl-details summary{font-weight:800;cursor:pointer;min-height:32px;display:flex;align-items:center}
+.rl-details[open]{display:flex}
+.rl-details > * + *{margin-top:10px}
+.warn{background:color-mix(in srgb,var(--cr) 18%,transparent);border:1px solid color-mix(in srgb,var(--cr) 50%,transparent);border-radius:12px;padding:12px 14px;font-size:15px;margin:0}
+.rl-art{display:block;width:56px;height:56px;border-radius:12px;background:linear-gradient(160deg,#8fc9f2,#6fb45e);position:relative;overflow:hidden}
+.rl-art::before{content:"⚔";position:absolute;inset:0;display:grid;place-items:center;font-size:30px;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.3)}
+.solo-tile{border-color:#7d62b0}
+@media (max-width:760px){.rl-tree{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:520px){.roomrow{grid-template-columns:1fr}.roomrow .btn{justify-self:start}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}

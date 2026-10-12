@@ -63,7 +63,8 @@ setInterval(() => {
 
 /* ---------- Hub ---------- */
 function renderTiles() {
-  $('#tiles').innerHTML = GAMES.map(g => g.key === 'party'
+  $('#tiles').innerHTML = `<div class="tile wide solo-tile"><div class="art"><span class="rl-art"></span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b>Ritterlauf <span class="pill">Solo</span></b><span class="sub">Dein Ritter kämpft sich allein durch Gegnerwellen. Sammle Gold und Seelen, verbessere ihn und komm jedes Mal weiter. Spielstand mit Passwort.</span></div>
+      <button class="btn small" data-solo="1">Spielen</button></div>` + GAMES.map(g => g.key === 'party'
     ? `<div class="tile wide"><div class="art">${g.art}</div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b>${esc(g.title)}</b><span class="sub">${esc(g.sub)}</span></div>
       <button class="btn small" data-create="${g.key}">Party starten</button></div>`
     : `<div class="tile"><div class="art">${g.art}</div><b>${esc(g.title)}</b><span class="sub">${esc(g.sub)}</span>
@@ -86,12 +87,14 @@ function needNick() {
   if (!n) { toast('Gib zuerst deinen Namen ein.'); $('#nick').focus(); return false; }
   store.set('fsg.nick', n); send({ t: 'name', name: n }); return true;
 }
-$('#tiles').addEventListener('click', e => { const b = e.target.closest('[data-create]'); if (b && needNick()) send({ t: 'create', game: b.dataset.create }); });
+$('#tiles').addEventListener('click', e => { if (e.target.closest('[data-solo]')) { window.Ritter.open(); return; } const b = e.target.closest('[data-create]'); if (b && needNick()) send({ t: 'create', game: b.dataset.create }); });
 $('#rooms').addEventListener('click', e => { const b = e.target.closest('[data-join]'); if (b && needNick()) send({ t: 'join', room: b.dataset.join }); });
 $('#nick').addEventListener('change', () => { const n = nick(); if (n) { store.set('fsg.nick', n); send({ t: 'name', name: n }); } });
 
 /* ---------- Raum ---------- */
 function render() {
+  if (!room || room.game !== 'party') endMini();
+  if (window.Ritter && Ritter.isOpen()) { if (!room) return; Ritter.close(); }
   $('#hub').hidden = !!room; $('#room').hidden = !room;
   if (!room) { $('#picker').hidden = true; renderRooms(); return; }
   renderRoom();
@@ -295,14 +298,14 @@ function renderMaedn(st, v) {
 }
 
 /* ---------- Minispiel-Party ---------- */
-const PCOL = { r: 'Rot', g: 'Grün', b: 'Blau', y: 'Gelb' };
-const PVAR = { r: 'var(--cr)', g: 'var(--cg)', b: 'var(--cb)', y: 'var(--cy)' };
+let stopMini = null, miniKey = null;
+function endMini() { if (stopMini) { stopMini(); stopMini = null; } miniKey = null; }
 function boardHTML(rows) {
-  return `<div class="board">${rows.map(x => `<div class="r ${x.id === room.me ? 'me' : ''}"><span class="pl">${x.place ?? ''}</span><span>${esc(nameOf(x.id))}</span><span class="lbl">${esc(x.label ?? '')}</span><span class="pts">${x.pts != null ? (x.plus ? '+' : '') + x.pts : ''}</span></div>`).join('') || '<p class="note">Keine Antworten.</p>'}</div>`;
+  return `<div class="board">${rows.map(x => `<div class="r ${x.id === room.me ? 'me' : ''}"><span class="pl">${x.place ?? ''}</span><span>${esc(nameOf(x.id))}</span><span class="lbl">${esc(x.label ?? '')}</span><span class="pts">${x.pts != null ? (x.plus ? '+' : '') + x.pts : ''}</span></div>`).join('') || '<p class="note">Noch keine Ergebnisse.</p>'}</div>`;
 }
 function renderParty(st, v) {
   if (room.status === 'ended') {
-    setMode(st, 'party-end');
+    endMini(); setMode(st, 'party-end');
     let place = 0, prev = null;
     const rows = v.total.map((x, i) => { if (x.pts !== prev) { place = i; prev = x.pts; } return { id: x.id, place: place + 1, pts: x.pts, label: 'Punkte' }; });
     st.innerHTML = `<h2>Party vorbei</h2><p class="status">${rows.length ? `${esc(nameOf(rows[0].id))} gewinnt!` : ''}</p>
@@ -310,87 +313,43 @@ function renderParty(st, v) {
     return;
   }
   if (st.dataset.mode !== 'party') {
-    st.dataset.mode = 'party';
-    st.innerHTML = '<div class="party"><div class="phead" id="phead"></div><div class="qarea" id="qarea"></div><div class="ptot" id="ptot"></div><div class="row" id="pctl"></div></div>';
+    endMini(); st.dataset.mode = 'party';
+    st.innerHTML = '<div class="party"><div class="phead" id="phead"></div><div class="qarea" id="qarea"></div><div class="ptot" id="plive"></div><div class="ptot" id="ptot"></div><div class="row" id="pctl"></div></div>';
   }
   const m = v.mini;
-  $('#phead').innerHTML = m ? `<div><h2>${esc(m.title)}</h2><span class="note">${v.phase === 'intro' ? 'Gleich geht’s los' : v.phase === 'results' ? 'Ergebnis' : `Runde ${Math.min(m.round, m.rounds)} von ${m.rounds}`} · Minispiel ${v.played + 1}</span></div>
+  $('#phead').innerHTML = m ? `<div><h2>${esc(m.title)}</h2><span class="note">${v.phase === 'intro' ? 'Gleich geht’s los' : v.phase === 'results' ? 'Ergebnis' : 'Läuft'} · Minispiel ${v.phase === 'results' ? v.played : v.played + 1}</span></div>
     <span class="cd">${deadline ? '<span data-cd></span> s' : ''}</span>` : '';
-  $('#ptot').innerHTML = v.total.map((x, i) => `<span class="chip">${i + 1}. ${esc(nameOf(x.id))} · ${x.pts}</span>`).join('');
+  $('#ptot').innerHTML = '<span class="note" style="width:100%;text-align:center">Gesamtpunkte</span>' + v.total.map((x, i) => `<span class="chip">${i + 1}. ${esc(nameOf(x.id))} · ${x.pts}</span>`).join('');
   $('#pctl').innerHTML = isHost() ? '<button class="btn ghost small" data-party="skip">Minispiel überspringen</button><button class="btn ghost small" data-party="stop">Party beenden</button>' : '';
-  const q = m && m.q || {};
-  const alive = m && m.alive ? m.alive.includes(room.me) : true;
-  const k = [v.phase, m && m.key, m && m.round, q.go, m && m.answered, v.played].join('|');
   const qa = $('#qarea');
-  if (v.phase === 'intro') { patch(qa, `<p class="qtext">${esc(m.title)}</p><p class="qtext small" style="max-width:34ch">${esc(m.howto)}</p><p class="note">Los geht’s in <span data-cd></span> Sekunden</p>`, k); return; }
-  if (v.phase === 'reveal') {
-    const rows = m.reveal.rows.map(x => ({ ...x, plus: true }));
-    patch(qa, `<p class="qtext small">${esc(m.reveal.text)}</p><div style="width:min(100%,520px)">${boardHTML(rows)}</div>`, k + JSON.stringify(m.reveal.rows.length)); return;
+  const k = [v.phase, m && m.key, v.played].join('|');
+  if (v.phase === 'play') {
+    const live = Object.entries(m.live || {}).sort((a, b) => b[1].v - a[1].v);
+    $('#plive').innerHTML = live.map(([id, x], i) => `<span class="chip" ${id === room.me ? 'style="color:var(--accent)"' : ''}>${i + 1}. ${esc(nameOf(id))} · ${esc(x.label)}</span>`).join('');
+    if (qa.dataset.k !== k) {
+      endMini(); qa.innerHTML = '<div id="minihost" style="width:100%"></div>'; qa.dataset.k = k; miniKey = k;
+      const left = v.left != null ? v.left : m.ms;
+      stopMini = window.MiniGames.run(m.key, $('#minihost'), {
+        seed: m.seed, ms: Math.max(1000, left),
+        onLive: s => act({ type: 'live', v: s.v, label: s.label }),
+        onFinal: s => act({ type: 'final', v: s.v, label: s.label }),
+        peers: () => Object.entries((room.view && room.view.mini && room.view.mini.live) || {}).filter(([id]) => id !== room.me).map(([id, x]) => ({ name: nameOf(id), v: x.v })),
+      });
+    }
+    return;
+  }
+  $('#plive').innerHTML = '';
+  if (v.phase === 'intro') {
+    endMini();
+    patch(qa, `<p class="qtext">${esc(m.title)}</p><p class="qtext small" style="max-width:36ch">${esc(m.howto)}</p><p class="note">Los geht’s in <span data-cd></span> Sekunden</p>`, k);
+    return;
   }
   if (v.phase === 'results') {
-    const rows = v.results.map(x => ({ id: x.id, place: x.place, label: `${x.score} im Spiel`, pts: x.pts, plus: true }));
-    patch(qa, `<p class="qtext small">Platzierung in ${esc(m.title)}</p><div style="width:min(100%,520px)">${boardHTML(rows)}</div><p class="note">Nächstes Minispiel in <span data-cd></span> s</p>`, k); return;
-  }
-  // Runde läuft
-  if (q.kind === 'reaction') {
-    if (m.answered) patch(qa, '<button class="pad done" disabled>Gespeichert</button><p class="note">Warte auf die anderen …</p>', k);
-    else if (patch(qa, `<button class="pad ${q.go ? 'go' : 'wait'}" id="pad">${q.go ? 'JETZT!' : 'Warten …'}</button>`, k) && q.go) ui.p.goT = performance.now();
-    return;
-  }
-  if (q.kind === 'number') {
-    if (m.answered) { patch(qa, `<p class="qtext ${q.estimate ? 'small' : ''}">${esc(q.text)}</p><p class="note">Antwort abgegeben – warte auf die anderen …</p>`, k); return; }
-    if (patch(qa, `<p class="qtext ${q.estimate ? 'small' : ''}">${esc(q.text)}${q.estimate ? '' : ' = ?'}</p>
-      <form class="numrow" id="numform"><input id="numin" inputmode="${q.estimate ? 'decimal' : 'numeric'}" autocomplete="off" placeholder="${q.estimate ? 'Deine Schätzung' : 'Ergebnis'}"><button class="btn">OK</button></form>`, k)) {
-      setTimeout(() => $('#numin') && $('#numin').focus(), 50);
-    }
-    return;
-  }
-  if (q.kind === 'stroop') {
-    if (m.answered) { patch(qa, '<p class="qtext">✓</p><p class="note">Gespeichert – warte auf die anderen …</p>', k); return; }
-    patch(qa, `<p class="qtext" style="color:${PVAR[q.ink]};font-size:clamp(48px,12vw,96px)">${q.word}</p>
-      <div class="choices">${Object.keys(PCOL).map(c => `<button data-stroop="${c}">${PCOL[c]}</button>`).join('')}</div>`, k);
-    return;
-  }
-  if (q.kind === 'sequence') {
-    if (!alive) { patch(qa, '<p class="qtext small">Du bist raus.</p><p class="note">Schau zu, wie weit die anderen kommen.</p>', k); return; }
-    if (m.answered) { patch(qa, `<p class="qtext small">Stufe ${q.level} eingegeben</p><p class="note">Warte auf die anderen …</p>`, k); return; }
-    if (patch(qa, `<p class="qtext small" id="seqmsg">Gut aufpassen …</p><div class="seqpads" id="seqpads">${['r', 'g', 'b', 'y'].map(c => `<button class="s-${c}" data-seq="${c}" aria-label="${PCOL[c]}"></button>`).join('')}</div><div class="dots" id="seqdots"></div>`, k)) playSequence(q);
-    return;
-  }
-  if (q.kind === 'tap') {
-    if (m.answered) { patch(qa, `<p class="qtext">${ui.p.taps} Tipps</p><p class="note">Gespeichert – warte auf die anderen …</p>`, k); return; }
-    if (patch(qa, `<button class="pad tap" id="tappad">TIPP!</button><p class="qtext" id="tapcount">0</p>`, k)) {
-      ui.p.taps = 0; ui.p.tapEnd = performance.now() + q.ms; const myK = k;
-      setTimeout(() => { if ($('#qarea').dataset.k === myK) { act({ type: 'answer', v: ui.p.taps }); const p = $('#tappad'); if (p) { p.disabled = true; p.textContent = 'Zeit!'; } } }, q.ms);
-    }
+    endMini();
+    const rows = v.results.map(x => ({ id: x.id, place: x.place, label: x.label, pts: x.pts, plus: true }));
+    patch(qa, `<p class="qtext small">Platzierung: ${esc(m.title)}</p><div style="width:min(100%,520px)">${boardHTML(rows)}</div><p class="note">Nächstes Minispiel in <span data-cd></span> s</p>`, k);
   }
 }
-function playSequence(q) {
-  const pads = $('#seqpads'), myK = $('#qarea').dataset.k;
-  ui.p.seq = q.seq; ui.p.seqIn = []; ui.p.seqReady = false;
-  const step = 650;
-  q.seq.forEach((c, i) => {
-    setTimeout(() => { if ($('#qarea').dataset.k !== myK) return; const b = pads.querySelector(`[data-seq="${c}"]`); b.classList.add('lit'); setTimeout(() => b.classList.remove('lit'), step - 180); }, 400 + i * step);
-  });
-  setTimeout(() => {
-    if ($('#qarea').dataset.k !== myK) return;
-    ui.p.seqReady = true; pads.classList.add('input'); $('#seqmsg').textContent = `Jetzt du – ${q.seq.length} Farben`;
-  }, 400 + q.seq.length * step);
-}
-$('#room').addEventListener('pointerdown', e => {
-  const pad = e.target.closest('#pad');
-  if (pad && !pad.disabled) { const v = room.view.mini.q.go ? { ms: Math.round(performance.now() - ui.p.goT) } : {}; pad.disabled = true; act({ type: 'answer', v }); return; }
-  const tp = e.target.closest('#tappad');
-  if (tp && !tp.disabled && performance.now() < ui.p.tapEnd) { ui.p.taps++; $('#tapcount').textContent = ui.p.taps; }
-});
-$('#room').addEventListener('submit', e => {
-  if (e.target.id !== 'numform') return;
-  e.preventDefault();
-  const raw = ($('#numin').value || '').replace(/\./g, '').replace(',', '.').trim();
-  const n = Number(raw);
-  if (raw === '' || !Number.isFinite(n)) { toast('Bitte eine Zahl eingeben.'); return; }
-  act({ type: 'answer', v: n });
-});
 
 /* ---------- Klicks im Spiel ---------- */
 $('#room').addEventListener('click', e => {
@@ -426,15 +385,6 @@ $('#room').addEventListener('click', e => {
   if (t.closest('[data-md="roll"]')) { act({ type: 'roll' }); return; }
   const pc = t.closest('[data-piece]');
   if (pc) { act({ type: 'move', piece: Number(pc.dataset.piece) }); return; }
-  const st = t.closest('[data-stroop]');
-  if (st) { act({ type: 'answer', v: st.dataset.stroop }); return; }
-  const sb = t.closest('[data-seq]');
-  if (sb && ui.p.seqReady) {
-    ui.p.seqIn.push(sb.dataset.seq);
-    $('#seqdots').innerHTML = ui.p.seqIn.map(c => `<i style="background:${PVAR[c]}"></i>`).join('');
-    if (ui.p.seqIn.length >= ui.p.seq.length) { ui.p.seqReady = false; act({ type: 'answer', v: ui.p.seqIn }); }
-    return;
-  }
   const pt = t.closest('[data-party]');
   if (pt) act({ type: pt.dataset.party });
 });

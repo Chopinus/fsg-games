@@ -8,7 +8,8 @@ Online-Spielehub für Freunde. Jeder spielt auf seinem eigenen iPad, Handy oder 
 - **Schach** – 2 Spieler, weitere schauen zu
 - **Mensch ärgere dich nicht** – 2–4 Spieler
 - **Vier gewinnt** – 2 Spieler, weitere schauen zu
-- **Minispiel-Party** – 2–12 Spieler. Es kommen zufällige Minispiele à 1–2 Minuten hintereinander: Blitzreaktion, Kopfrechnen, Schätzfrage, Farbfalle, Merkfolge und Tipp-Rausch. Nach jedem Minispiel gibt es Punkte für die Platzierung (10, 7, 5, 4 …).
+- **Minispiel-Party** – 2–12 Spieler. Zufällige Action-Minispiele à 35–45 Sekunden: Ballon-Pumpe (im Takt tippen), Turbo-Rennen (Gas geben und richtig schalten), Pong-Mauer, Raketenflug und Stapelturm. Nach jedem Minispiel gibt es Punkte für die Platzierung (10, 7, 5, 4 …).
+- **Ritterlauf (Solo)** – Dein Ritter kämpft sich von allein durch Gegnerwellen. Mit Gold verbesserst du ihn in der Schmiede, mit Seelen von Bossen lernst du Talente. Den Spielstand sicherst du mit einem Passwort.
 
 ---
 
@@ -25,10 +26,10 @@ Am einfachsten geht das an einem Computer. Auf dem iPad funktioniert es auch.
    - Wähle **Public**.
    - Tippe auf **Create repository**.
 4. Tippe auf der nächsten Seite auf **uploading an existing file**.
-5. Lade alle Dateien aus dem entpackten Ordner hoch. Das sind diese 11 Dateien:
+5. Lade alle Dateien aus dem entpackten Ordner hoch. Das sind diese 14 Dateien:
    - `server.js`, `uno.js`, `schach.js`, `maedn.js`, `vier.js`, `party.js`
-   - `index.html`, `app.js`, `style.css`
-   - `package.json`, `README.md`
+   - `index.html`, `app.js`, `style.css`, `mini.js`, `ritter.js`
+   - `konten.js`, `package.json`, `README.md`
 6. Tippe unten auf **Commit changes**.
 
 ### Schritt 2: Auf Render starten
@@ -49,10 +50,56 @@ Ist der Name schon vergeben, hängt Render ein paar Zeichen an. Du kannst dann e
 
 ---
 
+## Spielstände dauerhaft speichern (für Ritterlauf, einmalig ca. 10 Minuten)
+
+Im Ritterlauf legt man einen Spielstand mit eigenem Namen und Passwort an. Damit diese Spielstände nicht verloren gehen, wenn Render einschläft, speichert der Server sie in einem privaten GitHub-Projekt. Dafür braucht er einen Schlüssel.
+
+**1. Privates Projekt für die Spielstände anlegen**
+
+1. Tippe auf GitHub oben rechts auf **+** und dann auf **New repository**.
+2. Repository name: `fsg-spielstaende`
+3. Wähle **Private**.
+4. Setze den Haken bei **Add a README file**.
+5. Tippe auf **Create repository**.
+
+**2. Schlüssel erstellen**
+
+1. Öffne **github.com/settings/personal-access-tokens/new**. Alternativ: Profilbild → **Settings** → ganz unten **Developer settings** → **Personal access tokens** → **Fine-grained tokens** → **Generate new token**.
+2. Token name: `fsg-speicher`
+3. Expiration: Wähle die längste Dauer, die angeboten wird. Wenn der Schlüssel abläuft, erstellst du einfach einen neuen.
+4. Repository access: Wähle **Only select repositories** und dann **fsg-spielstaende**.
+5. Bei **Permissions** → **Repository permissions** stellst du **Contents** auf **Read and write**.
+6. Tippe unten auf **Generate token** und **kopiere den Schlüssel sofort**. Er beginnt mit `github_pat_` und wird nur einmal angezeigt.
+
+**3. Schlüssel bei Render eintragen**
+
+1. Öffne bei Render deinen Dienst und tippe links auf **Environment**.
+2. Tippe auf **Add Environment Variable** und trage zwei Einträge ein:
+   - `GITHUB_TOKEN` = der kopierte Schlüssel
+   - `SAVE_REPO` = `DeinBenutzername/fsg-spielstaende` (zum Beispiel `Chopinus/fsg-spielstaende`)
+3. Tippe auf **Save, rebuild, and deploy**.
+
+**4. Prüfen**
+
+Öffne im Ritterlauf den Reiter **Spielstand**. Ist der rote Hinweis „noch nicht für dauerhaftes Speichern eingerichtet“ verschwunden, hat alles geklappt.
+
+Passwörter werden nicht im Klartext gespeichert, sondern nur als verschlüsselter Fingerabdruck. Den Schlüssel aus Schritt 2 gibst du niemandem weiter.
+
+## Update einspielen
+
+Wenn du eine neue Version der ZIP bekommst:
+
+1. Öffne dein Projekt auf GitHub und tippe auf **Add file → Upload files**.
+2. Lade alle Dateien aus der neuen ZIP hoch. Gleichnamige Dateien werden dabei ersetzt.
+3. Tippe auf **Commit changes**.
+
+Render startet die Seite danach automatisch neu. Das dauert 2–3 Minuten.
+
 ## Gut zu wissen
 
 - **Erster Aufruf dauert etwa 1 Minute.** Die kostenlose Version schläft nach 15 Minuten ohne Besucher ein. Öffne den Link kurz vor dem Spieleabend, dann ist sie wach, wenn alle kommen.
 - **Laufende Spiele gehen verloren,** wenn der Server einschläft oder neu startet. Für einen Spieleabend reicht das.
+- **Ritterlauf** speichert auf dem Gerät automatisch. Mit dem Passwort aus dem Reiter „Spielstand“ holst du deinen Fortschritt auf jedes andere Gerät.
 - **Wie eine App aufs iPad legen:** Öffne den Link in Safari, tippe auf **Teilen** und dann auf **Zum Home-Bildschirm**.
 - **Änderungen:** Wenn du eine Datei auf GitHub änderst, aktualisiert Render die Seite automatisch.
 - **Verbindung kurz weg:** Lädt jemand die Seite neu oder verliert kurz das WLAN, kommt er automatisch zurück auf seinen Platz.

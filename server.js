@@ -13,15 +13,20 @@ const GAMES = {
   vier: require('./vier.js'),
   party: require('./party.js'),
 };
-const ROOM_CAP = 12;            // Personen pro Raum (inkl. Zuschauer)
+const konten = require('./konten.js');
+const ROOM_CAP = 12;           // Personen pro Raum (inkl. Zuschauer)
 const IDLE_MS = 30 * 60 * 1000; // Räume ohne verbundene Spieler verschwinden nach 30 Min.
 
-const STATIC = { '/': 'index.html', '/index.html': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css' };
+const STATIC = {
+  '/': 'index.html', '/index.html': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css',
+  '/mini.js': 'mini.js', '/ritter.js': 'ritter.js',
+};
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
 
 const server = http.createServer((req, res) => {
   const url = req.url.split('?')[0];
   if (url === '/health') { res.end('ok'); return; }
+  if (url.startsWith('/api/')) { api(req, res, url.slice(5)); return; }
   const file = STATIC[url];
   if (!file) { res.writeHead(302, { Location: '/' }); res.end(); return; }
   fs.readFile(path.join(__dirname, file), (err, data) => {
@@ -30,6 +35,22 @@ const server = http.createServer((req, res) => {
     res.end(data);
   });
 });
+
+// Spielstände (Ritterlauf) mit Name und Passwort
+function api(req, res, action) {
+  const reply = (code, obj) => { res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(obj)); };
+  if (req.method !== 'POST') return reply(405, { error: 'Nur POST' });
+  let body = '';
+  req.on('data', ch => { body += ch; if (body.length > 16384) { reply(413, { error: 'Zu groß' }); req.destroy(); } });
+  req.on('end', async () => {
+    if (res.writableEnded) return;
+    let data = {};
+    try { data = JSON.parse(body || '{}'); } catch { return reply(400, { error: 'Ungültige Anfrage' }); }
+    const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+    try { const [code, obj] = await konten.handle(action, data, ip); reply(code, obj); }
+    catch (e) { console.error(e); reply(500, { error: 'Da ist etwas schiefgelaufen.' }); }
+  });
+}
 
 const wss = new WebSocketServer({ server, maxPayload: 16 * 1024 });
 const clients = new Set();
@@ -78,6 +99,10 @@ function pushRoom(r) {
     });
   }
   broadcastRooms();
+}
+function pushSoon(r) {
+  if (r.soon) return;
+  r.soon = setTimeout(() => { r.soon = null; if (rooms.has(r.id)) pushRoom(r); }, 250);
 }
 function deleteRoom(r) {
   if (r.timer) clearTimeout(r.timer);
@@ -162,6 +187,8 @@ function handle(c, m) {
   if (m.t === 'act') {
     if (!r.players.some(p => p.id === c.pid) || !m.a || typeof m.a !== 'object') return;
     const err = G.act(r, c.pid, m.a);
+    if (err === 'quiet') return;
+    if (err === 'soon') { pushSoon(r); return; } // häufige Live-Updates gebündelt senden
     if (typeof err === 'string') send(c, { t: 'err', msg: err });
     pushRoom(r);
   }
