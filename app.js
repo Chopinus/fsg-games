@@ -63,7 +63,7 @@ setInterval(() => {
 
 /* ---------- Hub ---------- */
 function renderTiles() {
-  $('#tiles').innerHTML = `<div class="tile wide solo-tile"><div class="art"><span class="rl-art"></span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b>Ritterlauf <span class="pill">Solo</span></b><span class="sub">Dein Ritter kämpft sich allein durch Gegnerwellen. Sammle Gold und Seelen, verbessere ihn und komm jedes Mal weiter. Spielstand mit Passwort.</span></div>
+  $('#tiles').innerHTML = `<div class="tile wide solo-tile"><div class="art"><span class="rl-art"></span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b>Ritterlauf <span class="pill">Solo</span></b><span class="sub">Deine Heldengruppe kämpft sich von allein durch Gegnerwellen. Verbessere Ritter, Wächter und Schützin im Fertigkeitenbaum, werde wiedergeboren und komm immer weiter.</span></div>
       <button class="btn small" data-solo="1">Spielen</button></div>` + GAMES.map(g => g.key === 'party'
     ? `<div class="tile wide"><div class="art">${g.art}</div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b>${esc(g.title)}</b><span class="sub">${esc(g.sub)}</span></div>
       <button class="btn small" data-create="${g.key}">Party starten</button></div>`
