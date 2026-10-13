@@ -2422,6 +2422,11 @@
   }
   // Neuigkeiten: neueste Einträge oben. Neue Updates OBEN mit höherer id anhängen.
   const UPDATES = [
+    { id: 23, date: '13.10.2026', title: 'Schmied mit Amboss-Slots', items: [
+      ['Neu', 'Der Runenschmied hat jetzt dieselbe Slot-Ansicht wie der Wandler: 3 Runen auf den Amboss legen, schmieden oder zerstören.'],
+      ['Neu', 'Tester: Test-Wiedergeburt gibt immer Sterne, „Eine Wiedergeburt zurück“ ist neu.'],
+      ['Fix', 'Ergebnisse im Schmied und Wandler verschwinden, wenn du den Reiter wechselst.'],
+    ] },
     { id: 22, date: '13.10.2026', title: 'Runenwandler, Aufstellung & Geräte-Abgleich', items: [
       ['Neu', 'Runenwandler (Runen → 🎲 Wandler): 2 Runen derselben Stufe rein, 1 zufällige Rune derselben Stufe raus, nie eine der beiden hineingelegten Arten. Ein Glücksspiel-Kobold würfelt für dich.'],
       ['Neu', 'Aufstellung für alle: Ab 2 Helden kannst du im Lager jederzeit wählen, wer kämpft, zum Beispiel um einen Helden allein zu testen.'],
@@ -2532,7 +2537,7 @@
   function showUpdates() {
     try { localStorage.setItem('fsg.ritter.news', String(UPDATES[0].id)); } catch {}
     hud();
-    modal(`<span class="rl-mic">📰</span><h2>Neuigkeiten</h2><div class="rl-upd">${UPDATES.map((u, i) => `<details ${i === 0 ? 'open' : ''}><summary><b>${esc(u.title)}</b><small>${u.date}</small></summary>
+    modal(`<span class="rl-mic">📰</span><h2>Neuigkeiten</h2><p class="note">Spielversion ${UPDATES[0].id}</p><div class="rl-upd">${UPDATES.map((u, i) => `<details ${i === 0 ? 'open' : ''}><summary><b>${esc(u.title)}</b><small>${u.date}</small></summary>
       <ul>${u.items.map(([tag, txt]) => `<li><span class="tag" style="--tc:${TAGC[tag] || '#aaa'}">${tag}</span>${esc(txt)}</li>`).join('')}</ul></details>`).join('')}</div>
       <div class="row" style="justify-content:center"><button class="btn" data-m="ok">Schließen</button></div>`);
   }
