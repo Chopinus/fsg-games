@@ -133,13 +133,14 @@ function board() {
   const wk = weekId(), num = v => Math.max(0, Math.floor(Number(v) || 0));
   const rows = Object.values(accounts).map(a => {
     const d = a.data || {};
-    return { name: a.name, stage: Math.max(num(d.bestEver), num(d.best)), asc: num(d.asc), rebirths: num(d.rebirths), tower: num(d.towerBest),
+    return { name: a.name, stage: Math.max(num(d.bestEver), num(d.best)), cur: num(d.best), asc: num(d.asc), rebirths: num(d.rebirths), tower: num(d.towerBest),
       ach: Object.keys(d.ach || {}).length, week: d.weekly && d.weekly.week === wk ? num(d.weekly.best) : 0 };
   });
   const top = (key, tie) => rows.filter(r => r[key] > 0 || (key === 'prestige' && (r.asc || r.rebirths)))
     .sort((a, b) => (b[key] - a[key]) || (tie ? b[tie] - a[tie] : 0)).slice(0, 25);
   rows.forEach(r => (r.prestige = r.asc * 100 + r.rebirths));
-  boardCache = { week: wk, players: rows.length, stage: top('stage'), prestige: top('prestige', 'stage'), tower: top('tower'), ach: top('ach'), weekly: top('week') };
+  boardCache = { week: wk, players: rows.length, stage: top('stage'), prestige: top('prestige', 'stage'), tower: top('tower'), ach: top('ach'), weekly: top('week'),
+    path: rows.filter(r => r.stage > 0).sort((a, b) => b.stage - a.stage).slice(0, 200).map(r => ({ name: r.name, stage: r.stage, cur: r.cur, asc: r.asc, rebirths: r.rebirths })) };
   boardAt = Date.now();
   return boardCache;
 }
