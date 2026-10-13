@@ -587,6 +587,7 @@
     out.shardV = 1;
     if (!d.starV && Object.keys(out.perks).length) { const back = resetPerks(out); if (out.runs > 0 && back) out.starNews = back; }
     out.starV = 1;
+    out.rbHist = (Array.isArray(d.rbHist) ? d.rbHist : []).map(x => Math.max(0, Math.floor(Number(x) || 0))).slice(-40);
     out.rlager = Math.max(0, Math.min(LAGER_MAX, Math.floor(Number(d.rlager) || 0)));
     out.altar = Math.max(0, Math.min(ALTAR_MAX, Math.floor(Number(d.altar) || 0)));
     for (const h of [...HEROES].reverse()) while (kPlaced(out) > out.kslots && out.kplace[h.id]) { if (--out.kplace[h.id] <= 0) delete out.kplace[h.id]; }
@@ -668,8 +669,8 @@
   }
   function keepHires(S) { return perk(S, 'p_freunde') || cperk(S, 'k_veteran') ? HEROES.filter(h => h.hire && rank(S, h.hire)).map(h => h.hire) : []; }
   function rebirth(S, force) {
-    const st = starsFor(S); if (!st && !force) return 0;
-    S.stars += st; S.rebirths++; S.kslots = kSlots(S) + 1; S.bestEver = Math.max(S.bestEver, S.best);
+    const st = starsFor(S) || (force ? starsFor(S, reqOf(S)) : 0); if (!st && !force) return 0;
+    S.stars += st; S.rebirths++; S.kslots = kSlots(S) + 1; S.rbHist = [...(S.rbHist || []), st].slice(-40); S.bestEver = Math.max(S.bestEver, S.best);
     const keep = keepHires(S);
     S.nodes = { start: 1 }; keep.forEach(id => (S.nodes[id] = 1));
     S.gold = 500 * perk(S, 'p_zins') + 5000 * cperk(S, 'k_start'); S.souls = 3 * perk(S, 'p_seelenst') + 10 * cperk(S, 'k_start'); S.best = 0; S.equip = []; S.area = 0;
@@ -761,6 +762,35 @@
     if (b === 1) return 1;
     if (b <= 3) return x < 0.6 ? b - 1 : b;
     return x < 0.4 ? b - 2 : x < 0.75 ? b - 1 : b;
+  }
+  // Runenwandler: 2 freie Runen derselben Stufe rein, 1 zufällige Rune derselben Stufe einer anderen Art raus
+  function transmute(S, idA, idB) {
+    if (!feature(S, 'runen') || idA === idB) return null;
+    const used = socketed(S), a = S.runes.find(r => r.id === idA), b = S.runes.find(r => r.id === idB);
+    if (!a || !b || used.has(a.id) || used.has(b.id) || a.tier !== b.tier) return null;
+    const pool = RUNES.filter(r => r.id !== a.t && r.id !== b.t); if (!pool.length) return null;
+    S.runes = S.runes.filter(r => r !== a && r !== b);
+    const nr = { id: S.runeSeq++, t: pool[Math.floor(Math.random() * pool.length)].id, tier: a.tier }; S.runes.push(nr);
+    return nr;
+  }
+  // Test: eine Wiedergeburt zurück. Sternen-Laden wird zurückgesetzt, die Sterne dieser Wiedergeburt gehen verloren.
+  function unrebirth(S) {
+    if ((S.rebirths || 0) <= 0) return null;
+    const hist = S.rbHist || [];
+    const est = (() => { const tmp = { ...S, rebirths: S.rebirths - 1 }; return starsFor(tmp, reqOf(tmp)); })();
+    const lost = hist.length ? hist.pop() : est;
+    const back = resetPerks(S);
+    S.stars = Math.max(0, S.stars - lost); S.rebirths--; S.rbHist = hist;
+    S.kslots = Math.max(0, kSlots(S) - 1);
+    for (const h of [...HEROES].reverse()) while (kPlaced(S) > S.kslots && S.kplace && S.kplace[h.id]) { if (--S.kplace[h.id] <= 0) delete S.kplace[h.id]; }
+    for (const h of HEROES) {
+      if (!h.puzzle && h.hire && h.rebirth > S.rebirths && S.nodes[h.hire]) { delete S.nodes[h.hire]; S.equip = S.equip.filter(id => NODE[id].tree !== h.tree); }
+      const keys = NODES.filter(n => n.tree === h.tree && n.kind === 'key' && S.nodes[n.id]);
+      for (const n of keys.slice(keyCap(S, h.tree))) { const c = n.cost(0); S.gold += c.g; S.souls += c.s; delete S.nodes[n.id]; }
+    }
+    S.bench = (S.bench || []).filter(id => HEROES.some(h => h.id === id && hired(S, h.tree)));
+    S.area = Math.min(S.area || 0, areaMax(S));
+    return { lost, back };
   }
   function buyLager(S) { const n = S.rlager || 0; if (!feature(S, 'runen') || n >= LAGER_MAX || S.dust < lagerCost(n)) return false; S.dust -= lagerCost(n); S.rlager = n + 1; return true; }
   function dismantle(S, r) {
@@ -1363,7 +1393,7 @@
     return (n < 10 ? n.toFixed(2) : n < 100 ? n.toFixed(1) : Math.floor(n).toString()).replace('.', ',') + units[i];
   }
 
-  const core = { bossRuneTier, resetPerks, buyLager, lagerCost, LAGER_MAX, runeCap, shardOf, mergeCost, ALTAR_MAX, altarCost, altarMul, buyAltar, kSlots, kFree, keyCap, addSock, removeSock, removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, buyPiece, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
+  const core = { unrebirth, transmute, bossRuneTier, resetPerks, buyLager, lagerCost, LAGER_MAX, runeCap, shardOf, mergeCost, ALTAR_MAX, altarCost, altarMul, buyAltar, kSlots, kFree, keyCap, addSock, removeSock, removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, buyPiece, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
     rebirth, ascend, crownsFor, buyCperk, cperkCost, cperk, CPERKS, levelComp, toggleComp, compCost, compMax, compSlots, COMPS, checkAch, ACH, claimWeekly, weekId, weekRules, RULE, WEEK_TIERS, statsFor, starsFor, toggleEquip, slotsOf, hired, classOpen, keysUsed, keyLimit, capOf, reqOf, feature, encode, decode, fmt, socket, unsocket, merge, canMerge, dismantle, buyRune, runeVal, addRune };
   if (typeof module !== 'undefined') { module.exports = core; return; }
 
@@ -1382,6 +1412,7 @@
   const inCamp = () => !run || run.dead;
 
   /* ---------- Soundeffekte (werden live erzeugt, leise und weich) ---------- */
+  let wSel = [], wRes = null, fSlots = [], fRes = null;
   let shopSel = 'stern', runeView = 'ausr', forgeSort = 'art', forgeFilt = 'all', forgeSel = null; try { shopSel = localStorage.getItem('fsg.ritter.shop') || 'stern'; } catch {}
   let lowFx = false, fxAvg = 1 / 60, fxClock = 0;
   const SND = (() => {
@@ -1455,11 +1486,12 @@
   const typing = () => document.activeElement?.closest?.('#rlPanel form');
   let conflict = null; // neuerer Stand von einem anderen Gerät, wartet auf Entscheidung
   async function cloudSave(force, keepalive, keep) {
-    if (!acct || cloudBusy || (conflict && !keep) || (!cloudDirty && !force)) return {};
+    if (conflict && !keep) { if (inCamp()) resolveConflict(conflict); return {}; }
+    if (!acct || cloudBusy || (!cloudDirty && !force)) return {};
     cloudBusy = true; cloudDirty = false;
     const r = await api('save', { name: acct.name, token: acct.token, data: S, base: acct.updated || 0, force: !!keep }, keepalive);
     cloudBusy = false;
-    if (r.conflict) { conflict = { data: r.data, updated: r.updated }; cloudMsg = 'Auf einem anderen Gerät wurde weitergespielt.'; if (active) showConflict(); return r; }
+    if (r.conflict) { resolveConflict({ data: r.data, updated: r.updated }); return r; }
     if (r.error) { cloudDirty = true; cloudMsg = r.error; if (/anmelden/.test(r.error)) setAcct(null); }
     else { acct.updated = r.updated; acct.tester = !!r.tester; setAcct(acct); cloudMsg = `Gespeichert um ${timeStr(r.updated)}`; }
     if (tab === 'stand' && !typing() && active) panel();
@@ -1530,6 +1562,16 @@
     if (!done) { toast('Nicht genug Gold, Seelen, Sterne oder Kronen.'); return; }
     SND.play(mode === 'sell' ? 'tick' : 'buy'); toast(`${done} Stufe${done > 1 ? 'n' : ''} ${mode === 'sell' ? 'verkauft' : 'gekauft'}: jetzt Stufe ${store[id] || 0}`); setTimeout(afterChange, 0);
   }, true);
+  // Automatisch: der Stand mit mehr (oder gleich vielen) Läufen gewinnt
+  function resolveConflict(c) {
+    conflict = c;
+    const srv = Math.floor(Number(c.data && c.data.runs) || 0), loc = Math.floor(Number(S.runs) || 0);
+    if (srv >= loc) {
+      if (!inCamp()) return; // erst nach dem Lauf übernehmen
+      conflict = null; adopt(c.data || {}); acct.updated = c.updated; setAcct(acct); cloudDirty = false;
+      cloudMsg = `Neuerer Stand geladen (${srv} Läufe)`; if (active) toast(`Spielstand vom anderen Gerät geladen (${srv} Läufe).`);
+    } else { conflict = null; cloudSave(true, false, true); cloudMsg = `Dieser Stand hat mehr Läufe (${loc}) und wurde gespeichert.`; }
+  }
   function showConflict() {
     if (!conflict) return;
     const d = conflict.data || {}, num = v => Math.max(0, Math.floor(Number(v) || 0));
@@ -1588,14 +1630,14 @@
       $('#soloSnd').onclick = () => { const on = SND.toggle(); $('#soloSnd').textContent = on ? '🔊' : '🔇'; toast(on ? 'Ton an' : 'Ton aus'); };
       $('#soloSnd').textContent = SND.isOn() ? '🔊' : '🔇';
       $('#soloSpeed').onclick = () => { if (acct && acct.tester) { testSpeed(); return; } S.speed = S.speed >= maxSpeed(S) ? 1 : S.speed < 3 ? S.speed + 1 : S.speed + 0.5; save(); hud(); };
-      $('.rl-tabs').onclick = e => { const b = e.target.closest('[data-tab]'); if (b) { tab = b.dataset.tab; confirm = ''; runeSel = null; renderTabs(); panel(); } };
+      $('.rl-tabs').onclick = e => { const b = e.target.closest('[data-tab]'); if (b) { tab = b.dataset.tab; confirm = ''; runeSel = null; wRes = null; fRes = null; renderTabs(); panel(); } };
       for (const id of ['#rlPanel', '#rlAction', '#rlHeroes']) $(id).addEventListener('click', onClick);
       $('#rlPanel').addEventListener('submit', onSubmit);
     }
     sizeCanvas(); refresh();
     if (S.starNews) { const n = S.starNews; delete S.starNews; save(); setTimeout(() => toast(`Sternen-Laden zurückgesetzt: ${n} Sterne zurück. Verteile sie neu!`, true), 1200); }
     if (S.startNews) { const n = S.startNews; delete S.startNews; save(); setTimeout(() => toast(`Sprungstart wurde zu Beutezug umgebaut: ${n} Sterne zurück.`, true), 600); }
-    if (conflict) setTimeout(showConflict, 300); else if (acct) setTimeout(() => cloudSave(true), 800);
+    if (conflict) setTimeout(() => resolveConflict(conflict), 300); else if (acct) setTimeout(() => cloudSave(true), 800);
     if (!betaShown) { betaShown = true; showBeta(); } else openChain();
 
     last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
@@ -1655,7 +1697,7 @@
     const list = HEROES.filter(h => hired(S, h.tree) || classOpen(S, h.tree));
     const next = HEROES.find(h => !h.puzzle && !classOpen(S, h.tree));
     const field = fieldOf(S), slots = fieldSlots(S), hiredN = HEROES.filter(h => hired(S, h.tree)).length;
-    const bar = !live && (hiredN > 4 || (S.bench && S.bench.length)) ? `<div class="rl-lineup"><b>Aufstellung ${field.length}/${slots}</b>${HEROES.filter(h => hired(S, h.tree)).map(h => `<button class="${field.includes(h.id) ? 'on' : ''}" data-lineup="${h.id}" style="--hc:${h.color}">${PORTRAIT[h.id]} ${h.name}</button>`).join('')}<small>Tippe einen Helden an, um ihn ein- oder auszuwechseln.${slots < 6 ? ` Mehr Plätze: ${perk(S, 'p_feld') ? '' : 'Fünfter Platz im Sternen-Laden'}${!perk(S, 'p_feld') && !cperk(S, 'k_feld') ? ', ' : ''}${cperk(S, 'k_feld') ? '' : 'Sechster Platz im Kronen-Laden'}.` : ''}</small></div>` : '';
+    const bar = !live && hiredN > 1 ? `<div class="rl-lineup"><b>Aufstellung ${field.length}/${slots}</b>${HEROES.filter(h => hired(S, h.tree)).map(h => `<button class="${field.includes(h.id) ? 'on' : ''}" data-lineup="${h.id}" style="--hc:${h.color}">${PORTRAIT[h.id]} ${h.name}</button>`).join('')}<small>Tippe einen Helden an, um ihn ein- oder auszuwechseln.${slots < 6 ? ` Mehr Plätze: ${perk(S, 'p_feld') ? '' : 'Fünfter Platz im Sternen-Laden'}${!perk(S, 'p_feld') && !cperk(S, 'k_feld') ? ', ' : ''}${cperk(S, 'k_feld') ? '' : 'Sechster Platz im Kronen-Laden'}.` : ''}</small></div>` : '';
     $('#rlHeroes').innerHTML = bar + list.map(h => {
       const sh = st[h.id];
       if (!sh) return `<button class="rl-hero locked" data-tab="${h.tree}" style="--hc:${h.color}"><span class="pt">${PORTRAIT[h.id]}</span><span class="hn"><b>${h.name}</b><small>Im Baum anheuern</small></span></button>`;
@@ -1828,10 +1870,64 @@
 <g class="ksparks"><circle cx="80" cy="138" r="2.2" fill="#ffe08a"/><circle cx="92" cy="134" r="1.6" fill="#ffb347"/><circle cx="70" cy="132" r="1.8" fill="#fff2a8"/><circle cx="100" cy="128" r="1.4" fill="#ffd27a"/><circle cx="62" cy="128" r="1.4" fill="#ffb347"/></g>
 </svg>`;
   const kHit = () => setTimeout(() => { const el = document.querySelector('.rl-kobold'); if (el) { el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit'); } }, 30);
+  const GAMBLER_SVG = `<svg viewBox="0 0 200 230" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<radialGradient id="gbg" cx="50%" cy="60%" r="60%"><stop offset="0" stop-color="#c9a6ff" stop-opacity=".35"/><stop offset="1" stop-color="#c9a6ff" stop-opacity="0"/></radialGradient>
+<linearGradient id="gskin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b6a6f2"/><stop offset="1" stop-color="#7a64c8"/></linearGradient>
+<linearGradient id="gfelt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2f8a5a"/><stop offset="1" stop-color="#1c5a3a"/></linearGradient>
+<linearGradient id="gcup" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6a3a1c"/><stop offset=".5" stop-color="#a8642e"/><stop offset="1" stop-color="#6a3a1c"/></linearGradient>
+<linearGradient id="gvest" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c43a4a"/><stop offset="1" stop-color="#7a1e2a"/></linearGradient>
+</defs>
+<ellipse cx="100" cy="120" rx="100" ry="100" fill="url(#gbg)" class="gglow"/>
+<!-- Körper -->
+<path d="M66 132 Q100 112 134 132 L140 186 Q100 198 60 186 Z" fill="#f2ead8" stroke="#1e1610" stroke-width="2.5"/>
+<path d="M66 132 Q80 124 92 122 L96 190 Q76 190 60 186 Z M134 132 Q120 124 108 122 L104 190 Q124 190 140 186 Z" fill="url(#gvest)" stroke="#1e1610" stroke-width="2"/>
+<circle cx="100" cy="148" r="2.4" fill="#ffd23f"/><circle cx="100" cy="162" r="2.4" fill="#ffd23f"/>
+<path d="M92 124 L100 134 L108 124 L100 128 Z" fill="#1e1610"/>
+<!-- linker Arm mit Münze -->
+<path d="M68 138 Q48 150 44 166" fill="none" stroke="#1e1610" stroke-width="11" stroke-linecap="round"/>
+<path d="M68 138 Q48 150 44 166" fill="none" stroke="url(#gskin)" stroke-width="7" stroke-linecap="round"/>
+<g class="gcoin"><circle cx="42" cy="160" r="7" fill="#ffd23f" stroke="#a87a10" stroke-width="2"/><text x="42" y="164" font-size="9" text-anchor="middle" fill="#a87a10" font-weight="900">$</text></g>
+<!-- Kopf -->
+<path d="M76 92 L46 74 L70 104 Z" fill="url(#gskin)" stroke="#1e1610" stroke-width="2.5" stroke-linejoin="round"/>
+<path d="M124 92 L156 72 L130 104 Z" fill="url(#gskin)" stroke="#1e1610" stroke-width="2.5" stroke-linejoin="round"/>
+<path d="M74 90 L56 80 L72 100 Z M126 90 L146 78 L128 100 Z" fill="#e8a0c0"/>
+<circle cx="100" cy="100" r="27" fill="url(#gskin)" stroke="#1e1610" stroke-width="2.5"/>
+<!-- Zylinder -->
+<g class="ghat"><rect x="78" y="42" width="44" height="34" rx="3" fill="#1e1a2a" stroke="#0a0810" stroke-width="2"/><rect x="78" y="64" width="44" height="7" fill="#c43a4a"/><rect x="68" y="72" width="64" height="8" rx="4" fill="#1e1a2a" stroke="#0a0810" stroke-width="2"/>
+<path d="M114 64 l6 -9 l3 9 z" fill="#ffd23f"/></g>
+<!-- Augen: eins mit Monokel -->
+<ellipse cx="90" cy="98" rx="5" ry="5.5" fill="#fff6a0" stroke="#1e1610" stroke-width="1.6"/><circle cx="89" cy="99" r="2.4" fill="#1e1610"/>
+<ellipse cx="111" cy="97" rx="6" ry="6.5" fill="#fff6a0" stroke="#1e1610" stroke-width="1.6"/><circle cx="110" cy="98" r="2.8" fill="#1e1610"/>
+<circle cx="111" cy="97" r="9" fill="rgba(200,240,255,.25)" stroke="#ffd23f" stroke-width="2"/><path d="M119 102 Q124 116 118 128" fill="none" stroke="#ffd23f" stroke-width="1"/>
+<path d="M84 90 L94 92 M106 88 L117 87" stroke="#1e1610" stroke-width="2" stroke-linecap="round"/>
+<path d="M98 102 Q95 110 100 111 Q104 110 102 103 Z" fill="#9a88e0" stroke="#1e1610" stroke-width="1.5"/>
+<!-- Grinsen mit Goldzahn -->
+<path d="M84 114 Q100 128 118 112 Q100 120 84 114 Z" fill="#2a1410" stroke="#1e1610" stroke-width="1.4"/>
+<path d="M90 116 l2 4 l2 -3 z M108 116 l2 3 l2 -4 z" fill="#fff"/><rect x="98" y="117" width="4" height="4" rx="1" fill="#ffd23f"/>
+<!-- rechter Arm mit Würfelbecher -->
+<g class="gcupgrp">
+<path d="M132 138 Q154 128 156 108" fill="none" stroke="#1e1610" stroke-width="11" stroke-linecap="round"/>
+<path d="M132 138 Q154 128 156 108" fill="none" stroke="url(#gskin)" stroke-width="7" stroke-linecap="round"/>
+<path d="M144 84 L170 84 L166 112 L148 112 Z" fill="url(#gcup)" stroke="#1e1610" stroke-width="2.5" stroke-linejoin="round"/>
+<rect x="142" y="80" width="30" height="6" rx="3" fill="#8a4e24" stroke="#1e1610" stroke-width="2"/>
+<path d="M150 92 L164 92 M150 100 L163 100" stroke="#e0a83a" stroke-width="1.6"/>
+</g>
+<!-- Spieltisch -->
+<ellipse cx="100" cy="206" rx="96" ry="22" fill="url(#gfelt)" stroke="#0e2a1c" stroke-width="3"/>
+<ellipse cx="100" cy="204" rx="84" ry="16" fill="none" stroke="#e0c070" stroke-width="1.2" stroke-dasharray="4 3" opacity=".7"/>
+<g><ellipse cx="48" cy="204" rx="9" ry="3.5" fill="#a87a10"/><rect x="39" y="196" width="18" height="8" fill="#ffd23f" stroke="#a87a10" stroke-width="1.4"/><ellipse cx="48" cy="196" rx="9" ry="3.5" fill="#ffe27a" stroke="#a87a10" stroke-width="1.4"/>
+<ellipse cx="62" cy="208" rx="8" ry="3" fill="#a87a10"/><ellipse cx="62" cy="205" rx="8" ry="3" fill="#ffe27a" stroke="#a87a10" stroke-width="1.2"/></g>
+<g transform="rotate(-12 140 202)"><rect x="128" y="192" width="18" height="24" rx="2" fill="#fff" stroke="#1e1610" stroke-width="1.4"/><text x="137" y="208" font-size="10" text-anchor="middle" fill="#c43a4a" font-weight="900">♥</text></g>
+<!-- Würfel -->
+<g class="gdie d1"><rect x="-8" y="-8" width="16" height="16" rx="3.5" fill="#fff" stroke="#1e1610" stroke-width="1.8"/><circle cx="-3.5" cy="-3.5" r="1.7" fill="#c43a4a"/><circle cx="3.5" cy="3.5" r="1.7" fill="#c43a4a"/><circle cx="0" cy="0" r="1.7" fill="#c43a4a"/></g>
+<g class="gdie d2"><rect x="-8" y="-8" width="16" height="16" rx="3.5" fill="#fff" stroke="#1e1610" stroke-width="1.8"/><circle cx="-3.5" cy="-3.5" r="1.7" fill="#1e1610"/><circle cx="3.5" cy="-3.5" r="1.7" fill="#1e1610"/><circle cx="-3.5" cy="3.5" r="1.7" fill="#1e1610"/><circle cx="3.5" cy="3.5" r="1.7" fill="#1e1610"/></g>
+<g class="gspark"><path d="M30 60 l3 8 l8 3 l-8 3 l-3 8 l-3 -8 l-8 -3 l8 -3 z" fill="#ffe27a"/><path d="M170 150 l2 5 l5 2 l-5 2 l-2 5 l-2 -5 l-5 -2 l5 -2 z" fill="#c9a6ff"/></g>
+</svg>`;
   function runenWrap() {
     if (!feature(S, 'runen')) return runenTab();
-    return `<div class="rl-subtabs"><button data-runeview="ausr" class="${runeView === 'ausr' ? 'on' : ''}">🛡️ Ausrüstung</button><button data-runeview="schmied" class="${runeView === 'schmied' ? 'on' : ''}">⚒️ Schmied</button></div>`
-      + (runeView === 'schmied' ? forgeView() : runenTab());
+    return `<div class="rl-subtabs"><button data-runeview="ausr" class="${runeView === 'ausr' ? 'on' : ''}">🛡️ Ausrüstung</button><button data-runeview="schmied" class="${runeView === 'schmied' ? 'on' : ''}">⚒️ Schmied</button><button data-runeview="wandler" class="${runeView === 'wandler' ? 'on' : ''}">🎲 Wandler</button></div>`
+      + (runeView === 'schmied' ? forgeView() : runeView === 'wandler' ? wandlerView() : runenTab());
   }
   // Runenschmied: Stapel als Kacheln, sortierbar nach Art oder Stufe, mit Kobold am Amboss
   function forgeGroups() {
@@ -1841,39 +1937,66 @@
     return Object.values(groups).sort(forgeSort === 'art' ? (a, b) => ti(a.t) - ti(b.t) || b.tier - a.tier : (a, b) => b.tier - a.tier || ti(a.t) - ti(b.t));
   }
   function forgeFiltered(all) { return forgeFilt === 'all' ? all : all.filter(g => (forgeSort === 'art' ? g.t === forgeFilt : String(g.tier) === forgeFilt)); }
-  function forgeView() {
-    const all = forgeGroups(), list = forgeFiltered(all), ln = S.rlager || 0, lc = lagerCost(ln), canForge = feature(S, 'schmiede');
+  // Runenwandler beim Glücksspiel-Kobold
+  function wandlerView() {
+    const all = forgeGroups().filter(g => g.free > 0), list = forgeFiltered(all);
     const chips = forgeSort === 'art' ? [...new Set(all.map(g => g.t))].map(t => [t, RUNE[t].name, RUNE[t].color]) : [...new Set(all.map(g => g.tier))].sort((a, b) => a - b).map(n => [String(n), 'Stufe ' + ROMAN[n], '#c9a6ff']);
-    const sel = forgeSel && all.find(g => g.key === forgeSel);
+    wSel = wSel.filter(id => S.runes.some(r => r.id === id) && !socketed(S).has(id));
+    const sel = wSel.map(id => S.runes.find(r => r.id === id));
+    const inUse = k => wSel.filter(id => { const r = S.runes.find(x => x.id === id); return r && r.t + ':' + r.tier === k; }).length;
+    const ok = sel.length === 2 && sel[0].tier === sel[1].tier;
+    const slot = (r, i) => r ? `<button class="rl-wslot full" data-wrm="${i}" style="--rc:${RUNE[r.t].color}"><b>${ROMAN[r.tier]}</b><small>${RUNE[r.t].name}</small><span class="x">✕</span></button>` : '<div class="rl-wslot"><span>?</span></div>';
+    let html = `<div class="rl-forge2"><div class="rl-fmain">
+      <p class="note">Leg <b>2 Runen derselben Stufe</b> in den Kessel. Heraus kommt <b>1 zufällige Rune derselben Stufe</b>, aber nie eine der beiden Arten, die du hineingelegt hast. Eingesetzte Runen können nicht gewandelt werden.</p>
+      <div class="rl-wmach">${slot(sel[0], 0)}<span class="plus">+</span>${slot(sel[1], 1)}<span class="plus">→</span>
+        <div class="rl-wslot res ${wRes ? 'reveal' : ''}" ${wRes ? `style="--rc:${RUNE[wRes.t].color}"` : ''}>${wRes ? `<span class="roll">🎲</span><b>${ROMAN[wRes.tier]}</b><small>${RUNE[wRes.t].name}</small>` : '<span>🎲</span>'}</div></div>
+      <div class="row" style="justify-content:center;margin:8px 0"><button class="btn" data-rl="wroll" ${ok && inCamp() ? '' : 'disabled'}>🎲 Würfeln!</button></div>
+      ${sel.length === 2 && !ok ? '<p class="warn">Beide Runen müssen dieselbe Stufe haben.</p>' : ''}
+      <div class="rl-fbar"><span class="note">Sortieren:</span><button data-fsort="art" class="${forgeSort === 'art' ? 'on' : ''}">nach Art</button><button data-fsort="stufe" class="${forgeSort === 'stufe' ? 'on' : ''}">nach Stufe</button></div>
+      <div class="rl-fbar chips"><button data-ffilt="all" class="${forgeFilt === 'all' ? 'on' : ''}">Alle</button>${chips.map(([v, nm, c]) => `<button data-ffilt="${v}" class="${forgeFilt === v ? 'on' : ''}" style="--rc:${c}">${esc(nm)}</button>`).join('')}</div>
+      <div class="rl-fgrid">${list.map(g => { const R = RUNE[g.t], left = g.free - inUse(g.key); return `<button class="rl-ftile ${left ? '' : 'used'}" data-wsel="${g.key}" style="--rc:${R.color}" ${left ? '' : 'disabled'}><b>${ROMAN[g.tier]}</b><small>${R.name}</small><span class="cnt">×${left}</span></button>`; }).join('') || '<p class="note">Keine freien Runen.</p>'}</div>
+      </div><div class="rl-kobold gamble ${wRes ? 'hit' : ''}" aria-hidden="true">${GAMBLER_SVG}<p class="note" style="text-align:center;margin:4px 0 0">„Zwei rein, eine raus! Das Glück ist mit den Mutigen …“</p></div></div>`;
+    return html;
+  }
+  function forgeView() {
+    const all = forgeGroups(), list = forgeFiltered(all), ln = S.rlager || 0, lc = lagerCost(ln), canForge = feature(S, 'schmiede'), used = socketed(S);
+    const chips = forgeSort === 'art' ? [...new Set(all.map(g => g.t))].map(t => [t, RUNE[t].name, RUNE[t].color]) : [...new Set(all.map(g => g.tier))].sort((a, b) => a - b).map(n => [String(n), 'Stufe ' + ROMAN[n], '#c9a6ff']);
+    fSlots = fSlots.filter(id => S.runes.some(r => r.id === id) && !used.has(id));
+    const sel = fSlots.map(id => S.runes.find(r => r.id === id)), g0 = sel[0];
+    const inUse = k => sel.filter(r => r.t + ':' + r.tier === k).length;
+    const mc = g0 ? mergeCost(g0.tier) : 0, canM = canForge && sel.length === 3 && g0.tier < 10 && S.dust >= mc;
     const killN = list.reduce((a, g) => a + g.free, 0), killS = list.reduce((a, g) => a + g.free * shardOf(g.tier), 0);
+    const slot = (r, i) => r ? `<button class="rl-wslot full" data-frm="${i}" style="--rc:${RUNE[r.t].color}"><b>${ROMAN[r.tier]}</b><small>${RUNE[r.t].name}</small><span class="x">✕</span></button>` : '<div class="rl-wslot"><span>?</span></div>';
     let html = `<div class="rl-forge2"><div class="rl-fmain">
       <div class="rl-wallet"><span class="rl-cur dust">${dust}${S.dust} Runensplitter</span><span class="note">Lager ${S.runes.length}/${runeCap(S)}</span>
         <button class="btn small" data-rl="lager" ${ln < LAGER_MAX && S.dust >= lc && inCamp() ? '' : 'disabled'}>${ln >= LAGER_MAX ? 'Lager voll ausgebaut' : `Lager +5 (${dust}${lc})`}</button>
         ${canForge ? `<button class="btn ghost small" data-rl="buyrune" ${S.dust >= DUST_RUNE && S.runes.length < runeCap(S) ? '' : 'disabled'}>Zufällige Rune (${dust}${DUST_RUNE})</button>` : ''}</div>
+      <p class="note">Tippe eine Rune an, um sie auf den Amboss zu legen (bis zu 3 gleiche). ${canForge ? '<b>3 gleiche</b> schmiedest du zu einer Rune der nächsten Stufe.' : 'Schmieden geht ab der 4. Wiedergeburt.'} Alles auf dem Amboss kannst du auch zerstören.</p>
+      <div class="rl-wmach">${slot(sel[0], 0)}<span class="plus">+</span>${slot(sel[1], 1)}<span class="plus">+</span>${slot(sel[2], 2)}<span class="plus">→</span>
+        <div class="rl-wslot res ${fRes ? 'reveal' : ''}" ${fRes ? `style="--rc:${RUNE[fRes.t].color}"` : ''}>${fRes ? `<span class="roll">⚒️</span><b>${ROMAN[fRes.tier]}</b><small>${RUNE[fRes.t].name}</small>` : (g0 && canForge && g0.tier < 10 ? `<b style="opacity:.35">${ROMAN[g0.tier + 1]}</b><small style="opacity:.5">${RUNE[g0.t].name}</small>` : '<span>⚒️</span>')}</div></div>
+      <div class="row" style="justify-content:center;margin:8px 0;flex-wrap:wrap">${canForge ? `<button class="btn" data-rl="fup" ${canM && inCamp() ? '' : 'disabled'}>⚒️ Schmieden${g0 ? ` (${dust}${mc})` : ''}</button>` : ''}
+        <button class="btn ghost" data-rl="fdel" ${sel.length && inCamp() ? '' : 'disabled'}>💥 Zerstören${sel.length ? ` (+${dust}${sel.reduce((a, r) => a + shardOf(r.tier), 0)})` : ''}</button></div>
       <div class="rl-fbar"><span class="note">Sortieren:</span><button data-fsort="art" class="${forgeSort === 'art' ? 'on' : ''}">nach Art</button><button data-fsort="stufe" class="${forgeSort === 'stufe' ? 'on' : ''}">nach Stufe</button></div>
       <div class="rl-fbar chips"><button data-ffilt="all" class="${forgeFilt === 'all' ? 'on' : ''}">Alle</button>${chips.map(([v, nm, c]) => `<button data-ffilt="${v}" class="${forgeFilt === v ? 'on' : ''}" style="--rc:${c}">${esc(nm)}</button>`).join('')}</div>
-      <div class="rl-fgrid">${list.map(g => { const R = RUNE[g.t]; return `<button class="rl-ftile ${forgeSel === g.key ? 'on' : ''}" data-fsel="${g.key}" style="--rc:${R.color}"><b>${ROMAN[g.tier]}</b><small>${R.name}</small><span class="cnt">×${g.n}</span>${g.n - g.free ? `<span class="lock" title="eingesetzt">⚑${g.n - g.free}</span>` : ''}</button>`; }).join('') || '<p class="note">Keine Runen. Bosse lassen Runen fallen.</p>'}</div>`;
-    if (sel) { const R = RUNE[sel.t], mc = mergeCost(sel.tier), canM = canForge && sel.n >= 3 && sel.tier < 10 && S.dust >= mc;
-      html += `<div class="rl-fsel" style="--rc:${R.color}"><div><b>${R.name} ${ROMAN[sel.tier]}</b><span class="note">${R.desc(runeVal(sel.t, sel.tier))} · ${sel.n}× im Besitz${sel.n - sel.free ? `, ${sel.n - sel.free} eingesetzt` : ''}</span></div>
-        <div class="row">${canForge ? `<button class="btn small" data-rl="fup" ${canM ? '' : 'disabled'}>${sel.tier >= 10 ? 'Höchste Stufe' : `⬆ Upgraden: 3 → ${ROMAN[sel.tier + 1]} (${dust}${mc})`}</button>` : '<span class="note">Upgraden ab der 4. Wiedergeburt</span>'}
-        <button class="btn ghost small" data-rl="fdel" ${sel.free ? '' : 'disabled'}>💥 Eine zerstören (+${dust}${shardOf(sel.tier)})</button></div></div>`; }
+      <div class="rl-fgrid">${list.map(g => { const R = RUNE[g.t], left = g.free - inUse(g.key); return `<button class="rl-ftile ${left ? '' : 'used'}" data-fpick="${g.key}" style="--rc:${R.color}" ${left ? '' : 'disabled'}><b>${ROMAN[g.tier]}</b><small>${R.name}</small><span class="cnt">×${left}</span>${g.n - g.free ? `<span class="lock" title="eingesetzt">⚑${g.n - g.free}</span>` : ''}</button>`; }).join('') || '<p class="note">Keine Runen. Bosse lassen Runen fallen.</p>'}</div>`;
     const lab = confirm === 'fall2' ? `Wirklich ${killN} Runen zerstören?` : confirm === 'fall' ? 'Sicher? Nochmal tippen' : `Alle ${forgeFilt === 'all' ? '' : 'gefilterten '}freien zerstören (${killN} Runen, +${killS} Splitter)`;
     html += `<div class="row" style="margin-top:10px"><button class="btn small ${confirm ? 'danger' : 'ghost'}" data-rl="fall" ${killN && inCamp() ? '' : 'disabled'}>💥 ${lab}</button></div>
-      <p class="note">Eingesetzte Runen (⚑) werden nie zerstört. Upgraden kostet so viel, wie 3 zerstörte Runen dieser Stufe geben.</p></div>
-      <div class="rl-kobold" aria-hidden="true">${KOBOLD_SVG}</div></div>`;
+      <p class="note">Eingesetzte Runen (⚑) werden nie zerstört. Schmieden kostet so viel, wie 3 zerstörte Runen dieser Stufe geben.</p></div>
+      <div class="rl-kobold ${fRes ? 'hit' : ''}" aria-hidden="true">${KOBOLD_SVG}</div></div>`;
     return html;
   }
+
   /* ---------- Wiedergeburt ---------- */
   function ruhmTab() {
     const gain = starsFor(S), req = reqOf(S);
-    const tRb = acct && acct.tester ? `<div class="rl-test"><b>🧪 Test</b> <button class="btn small" data-rl="trebirth" ${inCamp() ? '' : 'disabled'}>Sofort wiedergeboren werden</button><span class="note">ohne Voraussetzung, gibt die Sterne für deinen aktuellen Rekord</span></div>` : '';
+    const tRb = acct && acct.tester ? `<div class="rl-test"><b>🧪 Test</b> <button class="btn small" data-rl="trebirth" ${inCamp() ? '' : 'disabled'}>Sofort wiedergeboren werden</button> <button class="btn small ${confirm === 'unrb' ? 'danger' : 'ghost'}" data-rl="tunrb" ${inCamp() && S.rebirths > 0 ? '' : 'disabled'}>${confirm === 'unrb' ? 'Wirklich eine zurück?' : '↩ Eine Wiedergeburt zurück'}</button><span class="note">Sofort: ohne Voraussetzung. Sterne gibt es für deinen Rekord, mindestens aber so viele wie beim Erreichen der Voraussetzung. Zurück: Sternen-Laden wird zurückgesetzt, die Sterne dieser Wiedergeburt gehen verloren, Freischaltungen dieser Stufe auch.</span></div>` : '';
     if (S.rebirths >= 9) return tRb + ascSection(true) + shopHint('Sternen-Laden');
     let html = `<div class="rl-rebirth"><div><h3>Wiedergeburt ${S.rebirths + 1}</h3>
       <p class="note">Setzt Gold, Seelen, alle Fertigkeiten und deinen Rekord auf null. Dafür bekommst du Sterne für dauerhafte Verbesserungen, neue Stufen und neue Inhalte. Runen und Sterne bleiben.</p>
       <p>Voraussetzung: <b>Stufe ${req}</b> · dein Rekord: <b>${S.best}</b> → ${gain ? `<b class="rl-cur star">${star}${gain} Sterne</b>` : 'noch nicht erreicht'}</p></div>
       <button class="btn ${confirm === 'rebirth' ? 'danger' : ''}" data-rl="rebirth" ${gain && inCamp() ? '' : 'disabled'}>${confirm === 'rebirth' ? 'Wirklich zurücksetzen?' : 'Wiedergeboren werden'}</button></div>`;
     html += tRb;
-    html += `<div class="rl-road">${ROADMAP.map(x => `<div class="rl-step ${S.rebirths >= x.r ? 'done' : S.rebirths + 1 === x.r ? 'next' : ''}"><span>${x.r}</span><div><b>${x.text}</b><small>Stufen bis ${CAPS[Math.min(x.r, CAPS.length - 1)]} · ${x.r + 1} Schlüssel pro Klasse</small></div></div>`).join('')}</div>`;
+    html += `<div class="rl-road">${ROADMAP.map(x => `<div class="rl-step ${S.rebirths >= x.r ? 'done' : S.rebirths + 1 === x.r ? 'next' : ''}"><span>${x.r}</span><div><b>${x.text}</b><small>Stufen bis ${CAPS[Math.min(x.r, CAPS.length - 1)]} · +1 Schlüsselsockel</small></div></div>`).join('')}</div>`;
     html += ascSection();
     html += shopHint('Sternen-Laden');
     return html;
@@ -1964,7 +2087,7 @@
       afterChange(); return;
     }
     const tb = e.target.closest('.rl-hero[data-tab], .rl-gotree[data-tab]');
-    if (tb) { tab = tb.dataset.tab; confirm = ''; renderTabs(); panel(); $('.rl-tabs').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    if (tb) { tab = tb.dataset.tab; confirm = ''; wRes = null; fRes = null; renderTabs(); panel(); $('.rl-tabs').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     const sk = e.target.closest('[data-sock]');
     if (sk) {
       const [hid, i] = sk.dataset.sock.split(':'); const slot = Number(i);
@@ -1980,9 +2103,17 @@
     if (b.dataset.compon) { toggleComp(S, b.dataset.compon); afterChange(); return; }
     if (b.dataset.board) { boardKey = b.dataset.board; panel(); return; }
     if (b.dataset.shoptab) { shopSel = b.dataset.shoptab; try { localStorage.setItem('fsg.ritter.shop', shopSel); } catch {} SND.play('tick'); panel(); return; }
-    if (b.dataset.runeview) { runeView = b.dataset.runeview; confirm = ''; SND.play('tick'); panel(); return; }
-    if (b.dataset.fsort) { forgeSort = b.dataset.fsort; forgeFilt = 'all'; confirm = ''; panel(); return; }
-    if (b.dataset.ffilt) { forgeFilt = b.dataset.ffilt; confirm = ''; panel(); return; }
+    if (b.dataset.runeview) { wRes = null; fRes = null; fSlots = []; runeView = b.dataset.runeview; confirm = ''; SND.play('tick'); panel(); return; }
+    if (b.dataset.fsort) { fRes = null; wRes = null; forgeSort = b.dataset.fsort; forgeFilt = 'all'; confirm = ''; panel(); return; }
+    if (b.dataset.ffilt) { fRes = null; wRes = null; forgeFilt = b.dataset.ffilt; confirm = ''; panel(); return; }
+    if (b.dataset.wsel) { const [t, tier] = b.dataset.wsel.split(':'), used = socketed(S); const r = S.runes.find(x => x.t === t && x.tier === Number(tier) && !used.has(x.id) && !wSel.includes(x.id)); if (r) { wRes = null; if (wSel.length >= 2) wSel = []; if (wSel.length === 1) { const a = S.runes.find(x => x.id === wSel[0]); if (!a || a.tier !== r.tier) wSel = []; } wSel.push(r.id); SND.play('tick'); } panel(); return; }
+    if (b.dataset.wrm) { wSel.splice(Number(b.dataset.wrm), 1); wRes = null; panel(); return; }
+    if (b.dataset.fpick) { const [t, tier] = b.dataset.fpick.split(':'), used = socketed(S); fRes = null;
+      const cur = fSlots.map(id => S.runes.find(r => r.id === id)).filter(Boolean); if (cur.length && (cur[0].t !== t || cur[0].tier !== Number(tier))) fSlots = [];
+      const free = S.runes.filter(x => x.t === t && x.tier === Number(tier) && !used.has(x.id) && !fSlots.includes(x.id));
+      if (!fSlots.length) fSlots = free.slice(0, 3).map(r => r.id); else if (fSlots.length < 3 && free.length) fSlots.push(free[0].id);
+      SND.play('tick'); panel(); return; }
+    if (b.dataset.frm) { fSlots.splice(Number(b.dataset.frm), 1); fRes = null; panel(); return; }
     if (b.dataset.fsel) { forgeSel = forgeSel === b.dataset.fsel ? null : b.dataset.fsel; confirm = ''; SND.play('tick'); panel(); return; }
     if (b.dataset.shopjump) { const el = document.getElementById('shop-' + b.dataset.shopjump); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     if (b.dataset.target) { S.exp.target = b.dataset.target; save(); panel(); return; }
@@ -2009,14 +2140,16 @@
     else if (a === 'trunes') { if (acct && acct.tester) { const got = []; for (let i = 0; i < 3; i++) { const r = addRune(S, RUNES[Math.floor(Math.random() * RUNES.length)].id, 1 + Math.floor(Math.random() * 3)); if (r) got.push(`${RUNE[r.t].name} ${ROMAN[r.tier]}`); }
         SND.play('rune'); toast(got.length ? `Neue Runen: ${got.join(', ')}` : 'Lager voll, als Splitter gutgeschrieben.'); afterChange(); } }
     else if (a === 'pres') { if (inCamp() && ask('pres', panel)) { const n = resetPerks(S); SND.play('buy'); toast(`Sternen-Laden zurückgesetzt: +${n} Sterne`, true); afterChange(); } }
-    else if (a === 'fup') { const g = forgeSel && forgeGroups().find(x => x.key === forgeSel); const r = g && S.runes.find(x => x.t === g.t && x.tier === g.tier); const nr = r && merge(S, r); if (nr) { SND.play('forge'); kHit(); toast(`${RUNE[nr.t].name} ${ROMAN[nr.tier]} geschmiedet!`, true); if (!forgeGroups().some(x => x.key === forgeSel)) forgeSel = nr.t + ':' + nr.tier; achCheck(); afterChange(); } }
-    else if (a === 'fdel') { const g = forgeSel && forgeGroups().find(x => x.key === forgeSel), used = socketed(S); const r = g && S.runes.find(x => x.t === g.t && x.tier === g.tier && !used.has(x.id)); if (r) { const d = dismantle(S, r); SND.play('crit'); kHit(); toast(`+${d} Runensplitter`); if (!forgeGroups().some(x => x.key === forgeSel)) forgeSel = null; afterChange(); } }
+    else if (a === 'wroll') { if (inCamp() && wSel.length === 2) { const nr = transmute(S, wSel[0], wSel[1]); if (nr) { wSel = []; wRes = nr; SND.play('soul'); setTimeout(() => SND.play('rune'), 900); setTimeout(() => toast(`Gewürfelt: ${RUNE[nr.t].name} ${ROMAN[nr.tier]}!`, true), 950); afterChange(); } } }
+    else if (a === 'fup') { const r = fSlots.length === 3 && S.runes.find(x => x.id === fSlots[0]); const nr = r && merge(S, r); if (nr) { fSlots = []; fRes = nr; SND.play('forge'); kHit(); setTimeout(() => toast(`${RUNE[nr.t].name} ${ROMAN[nr.tier]} geschmiedet!`, true), 700); achCheck(); afterChange(); } }
+    else if (a === 'fdel') { if (!inCamp()) return; const used = socketed(S); let d = 0, n = 0; for (const id of fSlots) { const r = S.runes.find(x => x.id === id); if (r && !used.has(r.id)) { d += dismantle(S, r); n++; } } fSlots = []; fRes = null; if (n) { SND.play('crit'); kHit(); toast(`${n} Rune${n > 1 ? 'n' : ''} zerstört: +${d} Runensplitter`); afterChange(); } }
     else if (a === 'fall') { if (!inCamp()) return;
       if (confirm === 'fall2') { confirm = ''; const used = socketed(S), keys = new Set(forgeFiltered(forgeGroups()).map(g => g.key)); let n = 0, d = 0;
         for (const r of [...S.runes]) if (keys.has(r.t + ':' + r.tier) && !used.has(r.id)) { d += dismantle(S, r); n++; }
         forgeSel = null; SND.play('forge'); kHit(); toast(`${n} Runen zerstört: +${d} Runensplitter`, true); afterChange(); }
       else { confirm = confirm === 'fall' ? 'fall2' : 'fall'; panel(); const c0 = confirm; setTimeout(() => { if (confirm === c0) { confirm = ''; panel(); } }, 5000); } }
-    else if (a === 'trebirth') { if (acct && acct.tester && inCamp()) { const team = HEROES.filter(h => st[h.id]).map(h => h.id); const g = rebirth(S, true); run = null; achCheck(); afterChange(); SND.play('rebirth'); toast(`Test-Wiedergeburt: +${g} Sterne`); playCine('rebirth', team); } }
+    else if (a === 'tunrb') { if (acct && acct.tester && inCamp() && ask('unrb', panel)) { const r = unrebirth(S); if (r) { run = null; SND.play('tick'); toast(`Zurück auf Wiedergeburt ${S.rebirths}: −${r.lost} Sterne, Sternen-Laden zurückgesetzt (+${r.back})`, true); afterChange(); } } }
+    else if (a === 'trebirth') { if (acct && acct.tester && inCamp()) { const team = HEROES.filter(h => st[h.id]).map(h => h.id); const g = rebirth(S, true); run = null; achCheck(); afterChange(); SND.play('rebirth'); toast(`Test-Wiedergeburt: +${g} Sterne`, true); playCine('rebirth', team); } }
     else if (a === 'lager') { if (inCamp() && buyLager(S)) { SND.play('forge'); toast(`Runen-Lager erweitert: jetzt ${runeCap(S)} Plätze`); afterChange(); } }
     else if (a === 'altar') { if (inCamp() && buyAltar(S)) { SND.play('soul'); toast(`Seelenaltar Stufe ${S.altar}: Seelen ×${altarMul(S).toFixed(2).replace('.', ',')}`, true); afterChange(); } }
     else if (a === 'sockadd') { if (inCamp() && addSock(S, tab)) { toast('Sockel gesetzt.'); afterChange(); } }
@@ -2289,6 +2422,11 @@
   }
   // Neuigkeiten: neueste Einträge oben. Neue Updates OBEN mit höherer id anhängen.
   const UPDATES = [
+    { id: 22, date: '13.10.2026', title: 'Runenwandler, Aufstellung & Geräte-Abgleich', items: [
+      ['Neu', 'Runenwandler (Runen → 🎲 Wandler): 2 Runen derselben Stufe rein, 1 zufällige Rune derselben Stufe raus, nie eine der beiden hineingelegten Arten. Ein Glücksspiel-Kobold würfelt für dich.'],
+      ['Neu', 'Aufstellung für alle: Ab 2 Helden kannst du im Lager jederzeit wählen, wer kämpft, zum Beispiel um einen Helden allein zu testen.'],
+      ['Neu', 'Kein Geräte-Fenster mehr: Wurde auf einem anderen Gerät gespielt, nimmt das Spiel automatisch den Stand mit mehr (oder gleich vielen) Läufen.'],
+    ] },
     { id: 21, date: '13.10.2026', title: 'Läden-Reiter & neuer Runenschmied', items: [
       ['Neu', 'Läden: Oben tippst du einen Laden an und siehst nur diesen, statt alle untereinander.'],
       ['Neu', 'Runen haben jetzt zwei Unterreiter: Ausrüstung und Schmied. Der Runenschmied ist aus den Läden in den Runen-Reiter umgezogen.'],
