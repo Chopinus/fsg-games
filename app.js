@@ -17,6 +17,14 @@ const GAMES = [
   { key: 'vier', title: 'Vier gewinnt', sub: '2 Spieler · weitere können zuschauen',
     art: '<span style="display:grid;grid-template-columns:repeat(4,16px);gap:3px;background:var(--cb);padding:5px;border-radius:6px">' +
       [0, 0, 0, 2, 0, 0, 2, 1, 0, 2, 1, 1, 2, 1, 1, 2].map(x => `<i style="width:16px;height:16px;border-radius:50%;background:${x === 1 ? 'var(--cr)' : x === 2 ? 'var(--cy)' : 'var(--bg)'}"></i>`).join('') + '</span>' },
+  { key: 'maler', title: 'Montagsmaler', sub: 'Einer zeichnet, alle raten · 2–12 Spieler',
+    art: '<svg width="96" height="56" viewBox="0 0 96 56" aria-hidden="true"><rect x="2" y="4" width="70" height="48" rx="6" fill="#fbf5e8"/><path d="M12 38c8-20 16-20 22-6s14 10 20-12" fill="none" stroke="#e5484d" stroke-width="5" stroke-linecap="round"/><circle cx="56" cy="40" r="5" fill="#3b7ad6"/><path d="M64 46l22-30 6 4-22 30-8 3z" fill="#ffb547" stroke="#2a1a00" stroke-width="2" stroke-linejoin="round"/></svg>' },
+  { key: 'slf', title: 'Stadt-Land-Fluss', sub: 'Ein Buchstabe, sieben Kategorien, wer ist schneller? · 2–12 Spieler',
+    art: ['S', 'L', 'F'].map((c, i) => `<span class="slf-tile" style="transform:rotate(${i * 7 - 7}deg)">${c}</span>`).join('') },
+  { key: 'spion', title: 'Wer ist der Spion?', sub: 'Alle kennen das Wort – bis auf einen · 3–12 Spieler',
+    art: '<svg width="96" height="56" viewBox="0 0 96 56" aria-hidden="true"><path d="M20 24h56l-6-16c-1-3-4-4-7-3l-9 3h-12l-9-3c-3-1-6 0-7 3z" fill="#30293f" stroke="#a99fbb" stroke-width="2"/><rect x="10" y="22" width="76" height="6" rx="3" fill="#a99fbb"/><circle cx="34" cy="40" r="9" fill="#15121c" stroke="#ffb547" stroke-width="3"/><circle cx="62" cy="40" r="9" fill="#15121c" stroke="#ffb547" stroke-width="3"/><path d="M43 40h10" stroke="#ffb547" stroke-width="3"/></svg>' },
+  { key: 'kniffel', title: 'Kniffel', sub: '5 Würfel, 3 Würfe, 13 Felder · 1–6 Spieler',
+    art: [[[0, 2, 4, 6, 8], -10], [[0, 2, 3, 5, 6, 8], 8], [[0, 4, 8], -2]].map(([pips, r]) => `<span class="die mini" style="transform:rotate(${r}deg)">${[...Array(9)].map((_, i) => `<i class="${pips.includes(i) ? 'on' : ''}"></i>`).join('')}</span>`).join('') },
   { key: 'party', title: 'Minispiel-Party', sub: 'Zufällige Minispiele à 1–2 Minuten, Punkte nach Platzierung · 2–12 Spieler',
     art: ['r', 'g', 'b', 'y'].map((c, i) => `<span class="s-${c}" style="width:28px;height:28px;border-radius:8px;display:inline-block;transform:rotate(${i * 9 - 12}deg)"></span>`).join('') },
 ];
@@ -46,6 +54,7 @@ function onMsg(m) {
     render();
   } else if (m.t === 'closed') { room = null; roomId = null; store.set('fsg.room', null); render(); }
   else if (m.t === 'err') toast(m.msg);
+  else if (m.t === 'cast') { if (window.Spiele2) Spiele2.cast(m.d); }
 }
 
 /* ---------- Helfer ---------- */
@@ -63,7 +72,7 @@ setInterval(() => {
 
 /* ---------- Hub ---------- */
 function renderTiles() {
-  $('#tiles').innerHTML = `<div class="tile wide solo-tile"><div class="art"><span class="rl-art"></span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b>Ritterlauf <span class="pill">Solo</span></b><span class="sub">Deine Heldengruppe kämpft sich von allein durch Gegnerwellen. Verbessere Ritter, Wächter und Schützin im Fertigkeitenbaum, werde wiedergeboren und komm immer weiter.</span></div>
+  $('#tiles').innerHTML = `<div class="tile wide solo-tile"><div class="art"><span class="rl-art"></span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b>Ritterlauf <span class="pill">Solo</span></b><span class="sub">Deine Heldengruppe kämpft sich von allein durch Gegnerwellen. Sechs Klassen, Fertigkeitenbäume, Runen, Wiedergeburt und Aufstieg – und eine Bestenliste mit deinen Freunden.</span></div>
       <button class="btn small" data-solo="1">Spielen</button></div>` + GAMES.map(g => g.key === 'party'
     ? `<div class="tile wide"><div class="art">${g.art}</div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b>${esc(g.title)}</b><span class="sub">${esc(g.sub)}</span></div>
       <button class="btn small" data-create="${g.key}">Party starten</button></div>`
@@ -112,6 +121,7 @@ function renderRoom() {
   else if (r.game === 'vier') renderVier(st, r.view);
   else if (r.game === 'maedn') renderMaedn(st, r.view);
   else if (r.game === 'party') renderParty(st, r.view);
+  else if (window.Spiele2 && Spiele2[r.game]) Spiele2[r.game](st, r.view);
 }
 function setMode(st, mode) { if (st.dataset.mode !== mode) { st.dataset.mode = mode; st.innerHTML = ''; } }
 function lobbyHTML() {

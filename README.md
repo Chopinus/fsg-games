@@ -8,8 +8,12 @@ Online-Spielehub für Freunde. Jeder spielt auf seinem eigenen iPad, Handy oder 
 - **Schach** – 2 Spieler, weitere schauen zu
 - **Mensch ärgere dich nicht** – 2–4 Spieler
 - **Vier gewinnt** – 2 Spieler, weitere schauen zu
+- **Montagsmaler** – 2–12 Spieler. Einer zeichnet mit dem Finger, alle anderen tippen ihren Tipp ein. Wer schneller rät, bekommt mehr Punkte.
+- **Stadt-Land-Fluss** – 2–12 Spieler. 5 Runden mit je einem Buchstaben und 7 Kategorien. Wer alles ausgefüllt hat, ruft STOPP. Danach prüft ihr gemeinsam die Antworten und streicht ungültige.
+- **Wer ist der Spion?** – 3–12 Spieler. Alle kennen das geheime Wort, nur der Spion nicht. Reihum gibt jeder einen Hinweis, dann stimmt ihr ab, wer der Spion ist.
+- **Kniffel** – 1–6 Spieler. Klassisches Würfelspiel mit 13 Feldern.
 - **Minispiel-Party** – 2–12 Spieler. Zufällige Action-Minispiele à 35–45 Sekunden: Ballon-Pumpe (im Takt tippen), Turbo-Rennen (Gas geben und richtig schalten), Pong-Mauer, Raketenflug und Stapelturm. Nach jedem Minispiel gibt es Punkte für die Platzierung (10, 7, 5, 4 …).
-- **Ritterlauf (Solo)** – Deine Heldengruppe kämpft sich von allein durch 150 Stufen. Sechs Klassen (Ritter, Wächter, Schützin, Magier, Priesterin, Tierbändiger) mit je eigenem Fertigkeitenbaum. Jede Wiedergeburt schaltet etwas Neues frei: neue Klassen, mehr Stufen, mehr Schlüssel-Fertigkeiten, Runen, Runenschmiede und Turm-Modus. Spielstand per Name und Passwort.
+- **Ritterlauf (Solo)** – Deine Heldengruppe kämpft sich von allein durch 150 Stufen. Sechs Klassen (Ritter, Wächter, Schützin, Magier, Priesterin, Tierbändiger) mit je eigenem Fertigkeitenbaum. Jede Wiedergeburt schaltet etwas Neues frei: neue Klassen, mehr Stufen, mehr Schlüssel-Fertigkeiten, Runen, Runenschmiede und Turm-Modus. Nach der 9. Wiedergeburt und Stufe 150 folgt der Aufstieg (Kronen, Kronen-Laden, endlose Albtraum-Stufen, Begleiter wie Drache, Eule, Golem und Phönix). Dazu kommen 29 Erfolge, eine wöchentliche Herausforderung mit wechselnden Regeln und eine gemeinsame Bestenliste. Spielstand per Name und Passwort.
 
 ---
 
@@ -26,9 +30,10 @@ Am einfachsten geht das an einem Computer. Auf dem iPad funktioniert es auch.
    - Wähle **Public**.
    - Tippe auf **Create repository**.
 4. Tippe auf der nächsten Seite auf **uploading an existing file**.
-5. Lade alle Dateien aus dem entpackten Ordner hoch. Das sind diese 14 Dateien:
+5. Lade alle Dateien aus dem entpackten Ordner hoch. Das sind diese 19 Dateien:
    - `server.js`, `uno.js`, `schach.js`, `maedn.js`, `vier.js`, `party.js`
-   - `index.html`, `app.js`, `style.css`, `mini.js`, `ritter.js`
+   - `maler.js`, `slf.js`, `spion.js`, `kniffel.js`
+   - `index.html`, `app.js`, `spiele2.js`, `style.css`, `mini.js`, `ritter.js`
    - `konten.js`, `package.json`, `README.md`
 6. Tippe unten auf **Commit changes**.
 

@@ -116,7 +116,32 @@ async function handle(action, body, ip) {
     const token = newToken(acc); acc.tokens = [acc.tokens[0]]; markDirty(); // andere Geräte abmelden
     return [200, { token }];
   }
+  if (action === 'board') return [200, board()];
   return [404, { error: 'Unbekannt' }];
+}
+
+// Bestenliste aus den gespeicherten Spielständen
+function weekId(d = new Date()) {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - day);
+  const y0 = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+  return `${t.getUTCFullYear()}-W${String(Math.ceil(((t - y0) / 864e5 + 1) / 7)).padStart(2, '0')}`;
+}
+let boardCache = null, boardAt = 0;
+function board() {
+  if (boardCache && Date.now() - boardAt < 20000) return boardCache;
+  const wk = weekId(), num = v => Math.max(0, Math.floor(Number(v) || 0));
+  const rows = Object.values(accounts).map(a => {
+    const d = a.data || {};
+    return { name: a.name, stage: Math.max(num(d.bestEver), num(d.best)), asc: num(d.asc), rebirths: num(d.rebirths), tower: num(d.towerBest),
+      ach: Object.keys(d.ach || {}).length, week: d.weekly && d.weekly.week === wk ? num(d.weekly.best) : 0 };
+  });
+  const top = (key, tie) => rows.filter(r => r[key] > 0 || (key === 'prestige' && (r.asc || r.rebirths)))
+    .sort((a, b) => (b[key] - a[key]) || (tie ? b[tie] - a[tie] : 0)).slice(0, 25);
+  rows.forEach(r => (r.prestige = r.asc * 100 + r.rebirths));
+  boardCache = { week: wk, players: rows.length, stage: top('stage'), prestige: top('prestige', 'stage'), tower: top('tower'), ach: top('ach'), weekly: top('week') };
+  boardAt = Date.now();
+  return boardCache;
 }
 
 load();

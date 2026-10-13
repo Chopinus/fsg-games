@@ -6,7 +6,7 @@
 // ändern. Die Reihenfolge der ersten Einträge (LEGACY) ist für alte Notfall-Codes festgelegt. Größere Umbauten
 // bekommen eine neue SAVE_VERSION und einen Schritt in migrate().
 (function () {
-  const SAVE_VERSION = 4;
+  const SAVE_VERSION = 5;
 
   /* ================= Klassen ================= */
   const HEROES = [
@@ -25,10 +25,10 @@
   const ROADMAP = [
     { r: 1, text: 'Wächter als neue Klasse' }, { r: 2, text: 'Schützin als neue Klasse' }, { r: 3, text: 'Runen: Bosse lassen Runen fallen, jede Klasse hat 3 Sockel' },
     { r: 4, text: 'Magier als neue Klasse' }, { r: 5, text: 'Runenschmiede: Runen verschmelzen und zerlegen' }, { r: 6, text: 'Priesterin als neue Klasse' },
-    { r: 7, text: 'Turm-Modus: endloser Turm mit dauerhaftem Bonus' }, { r: 8, text: 'Tierbändiger als neue Klasse' }, { r: 9, text: 'Alle 150 Stufen offen' },
+    { r: 7, text: 'Turm-Modus: endloser Turm mit dauerhaftem Bonus' }, { r: 8, text: 'Tierbändiger als neue Klasse' }, { r: 9, text: 'Alle 150 Stufen, danach endlose Albtraum-Stufen. Der Aufstieg wird möglich.' },
   ];
-  const capOf = S => CAPS[Math.min(S.rebirths, CAPS.length - 1)];
-  const reqOf = S => (S.rebirths < CAPS.length - 1 ? CAPS[S.rebirths] - 5 : 145);
+  const capOf = S => (S.rebirths >= CAPS.length ? Infinity : CAPS[Math.min(S.rebirths, CAPS.length - 1)]);
+  const reqOf = S => Math.max(15, (S.rebirths < CAPS.length - 1 ? CAPS[S.rebirths] - 5 : 145) - 5 * ((S.cperks && S.cperks.k_schnell) || 0));
   const keyLimit = S => S.rebirths + 1;
   const feature = (S, f) => S.rebirths >= ({ runen: 3, schmiede: 5, turm: 7 })[f];
 
@@ -249,7 +249,97 @@
     { id: 'p_seelenst', name: 'Seelenvorrat', desc: 'Nach einer Wiedergeburt startest du mit 3 Seelen je Stufe', max: 20, cost: r => 2 + r },
   ];
   const PERK = Object.fromEntries(PERKS.map(p => [p.id, p]));
-  const starsFor = (S, best = S.best) => (best < reqOf(S) ? 0 : Math.floor(Math.pow(best - 15, 1.35) / 3));
+  const starsFor = (S, best = S.best) => (best < reqOf(S) ? 0 : Math.floor(Math.pow(Math.max(1, best - 15), 1.35) / 3 * (1 + 0.5 * ((S.cperks && S.cperks.k_sterne) || 0))));
+
+  /* ================= Aufstieg (2. Prestige-Ebene) ================= */
+  const ASC_REQ_REBIRTHS = 9, ASC_REQ_STAGE = 150;
+  const CPERKS = [
+    { id: 'k_blut', name: 'Königsblut', desc: 'Alle Helden ×1,5 Schaden und Leben je Stufe', max: 999, cost: r => 3 + 2 * r },
+    { id: 'k_schatz', name: 'Schatzkammer', desc: 'Doppeltes Gold je Stufe', max: 999, cost: r => 3 + 2 * r },
+    { id: 'k_sterne', name: 'Sternenerbe', desc: '+50 % Sterne bei jeder Wiedergeburt je Stufe', max: 10, cost: r => 4 + 2 * r },
+    { id: 'k_seele', name: 'Seelenfluss', desc: 'Bosse geben doppelt so viele Seelen je Stufe', max: 5, cost: r => 4 + 3 * r },
+    { id: 'k_schnell', name: 'Schneller Weg', desc: 'Jede Wiedergeburt braucht 5 Stufen weniger je Stufe', max: 3, cost: r => 6 + 3 * r },
+    { id: 'k_veteran', name: 'Veteranen', desc: 'Angeheuerte Klassen bleiben bei Wiedergeburt und Aufstieg angeheuert', max: 1, cost: () => 8 },
+    { id: 'k_hand', name: 'Zweite Hand', desc: 'Jede Klasse bekommt einen zusätzlichen Platz für aktive Fähigkeiten', max: 1, cost: () => 15 },
+    { id: 'k_start', name: 'Königlicher Start', desc: 'Nach Wiedergeburt und Aufstieg startest du mit 5.000 Gold und 10 Seelen je Stufe', max: 10, cost: r => 2 + r },
+  ];
+  const CPERK = Object.fromEntries(CPERKS.map(p => [p.id, p]));
+  const crownsFor = S => (S.rebirths >= ASC_REQ_REBIRTHS && S.best >= ASC_REQ_STAGE ? 10 + Math.floor((S.best - ASC_REQ_STAGE) / 4) : 0);
+  const ASC_ROAD = [
+    { a: 1, text: 'Kronen-Laden mit dauerhaften Königs-Boni' }, { a: 2, text: 'Begleiter: Drache und Eule' }, { a: 3, text: 'Begleiter: Golem' },
+    { a: 4, text: 'Begleiter: Phönix und ein zweiter Begleiter-Platz' }, { a: 5, text: 'Begleiter bis Stufe 100' },
+  ];
+  const ascDiff = S => Math.pow(1.6, S.asc || 0);
+
+  /* ================= Begleiter ================= */
+  const COMPS = [
+    { id: 'drache', name: 'Drache', asc: 2, color: '#e5484d', desc: l => `Speit alle 3 s Feuer auf alle Gegner (${Math.round(30 * (1 + 0.2 * l))} % des Gruppenschadens)` },
+    { id: 'eule', name: 'Eule', asc: 2, color: '#d9c48a', desc: l => `+${(1.5 * l).toFixed(1).replace('.', ',')} % Krit-Chance für alle, +${5 * l} % Gold` },
+    { id: 'golem', name: 'Golem', asc: 3, color: '#9aa3ad', desc: l => `Alle Helden nehmen ${Math.min(30, 1.5 * l).toFixed(1).replace('.', ',')} % weniger Schaden und haben +${3 * l} % Leben` },
+    { id: 'phoenix', name: 'Phönix', asc: 4, color: '#ff9a3d', desc: l => `Heilt alle Helden um ${(0.15 * l).toFixed(2).replace('.', ',')} % pro Sekunde${l >= 10 ? ', belebt einmal pro Lauf alle Gefallenen wieder' : ' (ab Stufe 10: Wiederbelebung)'}` },
+  ];
+  const COMP = Object.fromEntries(COMPS.map(c => [c.id, c]));
+  const compMax = S => ((S.asc || 0) >= 5 ? 100 : 50);
+  const compSlots = S => ((S.asc || 0) >= 4 ? 2 : 1);
+  const compCost = lvl => Math.ceil(5 * Math.pow(1.28, lvl));
+
+  /* ================= Erfolge ================= */
+  const ACH = [
+    { id: 'st10', name: 'Erste Schritte', desc: 'Erreiche Stufe 10', ok: S => S.bestEver >= 10 },
+    { id: 'st25', name: 'Abenteurer', desc: 'Erreiche Stufe 25', ok: S => S.bestEver >= 25 },
+    { id: 'st50', name: 'Veteran', desc: 'Erreiche Stufe 50', ok: S => S.bestEver >= 50 },
+    { id: 'st100', name: 'Held', desc: 'Erreiche Stufe 100', ok: S => S.bestEver >= 100 },
+    { id: 'st150', name: 'Legende', desc: 'Erreiche Stufe 150', ok: S => S.bestEver >= 150 },
+    { id: 'st200', name: 'Albtraumjäger', desc: 'Erreiche Stufe 200', ok: S => S.bestEver >= 200 },
+    { id: 'rb1', name: 'Neues Leben', desc: 'Werde zum ersten Mal wiedergeboren', ok: S => S.rebirths >= 1 || S.asc > 0 },
+    { id: 'rb5', name: 'Kreislauf', desc: 'Werde 5-mal in einem Durchgang wiedergeboren', ok: S => S.rebirths >= 5 || S.asc > 0 },
+    { id: 'rb9', name: 'Vollendung', desc: 'Erreiche die 9. Wiedergeburt', ok: S => S.rebirths >= 9 || S.asc > 0 },
+    { id: 'asc1', name: 'Gekrönt', desc: 'Steige zum ersten Mal auf', ok: S => S.asc >= 1 },
+    { id: 'asc3', name: 'Dynastie', desc: 'Steige 3-mal auf', ok: S => S.asc >= 3 },
+    { id: 'k1k', name: 'Gegnerflut', desc: 'Besiege insgesamt 1.000 Gegner', ok: S => S.tot.kills >= 1000 },
+    { id: 'k10k', name: 'Schlachtfeld', desc: 'Besiege insgesamt 10.000 Gegner', ok: S => S.tot.kills >= 10000 },
+    { id: 'k100k', name: 'Armeebrecher', desc: 'Besiege insgesamt 100.000 Gegner', ok: S => S.tot.kills >= 100000 },
+    { id: 'gold1m', name: 'Wohlstand', desc: 'Besitze 1 Million Gold auf einmal', ok: S => S.gold >= 1e6 },
+    { id: 'gold1b', name: 'Drachenhort', desc: 'Besitze 1 Milliarde Gold auf einmal', ok: S => S.gold >= 1e9 },
+    { id: 'souls100', name: 'Seelensammler', desc: 'Sammle insgesamt 100 Seelen', ok: S => S.tot.souls >= 100 },
+    { id: 'souls1k', name: 'Seelenhirte', desc: 'Sammle insgesamt 1.000 Seelen', ok: S => S.tot.souls >= 1000 },
+    { id: 'party3', name: 'Trio', desc: 'Habe 3 Klassen gleichzeitig in der Gruppe', ok: S => HEROES.filter(h => hired(S, h.tree)).length >= 3 },
+    { id: 'party6', name: 'Volle Gruppe', desc: 'Habe alle 6 Klassen in der Gruppe', ok: S => HEROES.every(h => hired(S, h.tree)) },
+    { id: 'keys10', name: 'Schlüsselmeister', desc: 'Besitze 10 Schlüssel-Fertigkeiten gleichzeitig', ok: S => NODES.filter(n => n.kind === 'key' && S.nodes[n.id]).length >= 10 },
+    { id: 'rune5', name: 'Runenmeister', desc: 'Besitze eine Rune der Stufe V', ok: S => S.runes.some(r => r.tier >= 5) },
+    { id: 'runeset', name: 'Gleichklang', desc: 'Setze 3 gleiche Runen in eine Klasse ein', ok: S => HEROES.some(h => { const t = (S.sockets[h.id] || []).map(id => (S.runes.find(r => r.id === id) || {}).t).filter(Boolean); return t.length === 3 && t.every(x => x === t[0]); }) },
+    { id: 'tower10', name: 'Turmstürmer', desc: 'Erreiche Etage 10 im Turm', ok: S => S.towerBest >= 10 },
+    { id: 'tower30', name: 'Turmherr', desc: 'Erreiche Etage 30 im Turm', ok: S => S.towerBest >= 30 },
+    { id: 'clean50', name: 'Ohne Verluste', desc: 'Erreiche Stufe 50 in einem Lauf, ohne dass ein Held fällt', ok: (S, run) => run && run.mode === 'normal' && run.stage > 50 && !run.losses },
+    { id: 'week30', name: 'Herausforderer', desc: 'Erreiche Stufe 30 in einer Wochen-Herausforderung', ok: S => S.weekly.best >= 30 },
+    { id: 'comp10', name: 'Treuer Freund', desc: 'Bringe einen Begleiter auf Stufe 10', ok: S => Object.values(S.comps).some(l => l >= 10) },
+    { id: 'comp4', name: 'Menagerie', desc: 'Besitze alle 4 Begleiter', ok: S => COMPS.every(c => (S.comps[c.id] || 0) > 0) },
+  ];
+  const ACH_BONUS = 0.03; // +3 % Schaden und Leben je Erfolg (wächst aufeinander auf)
+
+  /* ================= Wochen-Herausforderung ================= */
+  const RULES = [
+    { id: 'speed', name: 'Eilige Gegner', desc: 'Gegner laufen und schlagen 50 % schneller' },
+    { id: 'boss', name: 'Bossparade', desc: 'Alle 5 Stufen kommt ein Boss' },
+    { id: 'noheal', name: 'Keine Heilung', desc: 'Keine Heilung und keine Regeneration' },
+    { id: 'glass', name: 'Glaskanonen', desc: 'Helden haben halbes Leben, machen aber doppelten Schaden' },
+    { id: 'elite', name: 'Eliteschar', desc: '40 % der Gegner sind Elite-Gegner' },
+    { id: 'giant', name: 'Riesen', desc: 'Gegner haben doppeltes Leben, Helden schlagen 50 % schneller zu' },
+    { id: 'trio', name: 'Kleine Gruppe', desc: 'Nur die drei vordersten Klassen kämpfen mit' },
+  ];
+  const RULE = Object.fromEntries(RULES.map(r => [r.id, r]));
+  const WEEK_TIERS = [{ st: 15, stars: 2 }, { st: 30, stars: 4 }, { st: 50, stars: 7 }, { st: 80, stars: 12 }, { st: 120, stars: 20, crown: 1 }];
+  function weekId(d = new Date()) {
+    const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - day);
+    const y0 = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+    return `${t.getUTCFullYear()}-W${String(Math.ceil(((t - y0) / 864e5 + 1) / 7)).padStart(2, '0')}`;
+  }
+  function weekRules(id) {
+    let h = 0; for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    const a = h % RULES.length; let b = ((Math.imul(h ^ (h >>> 13), 2654435761) >>> 0) >>> 5) % RULES.length; if (b === a) b = (b + 1) % RULES.length;
+    return [RULES[a].id, RULES[b].id];
+  }
 
   /* ================= Runen ================= */
   const RUNES = [
@@ -272,7 +362,8 @@
   /* ================= Spielstand ================= */
   function fresh() {
     return { v: SAVE_VERSION, gold: 0, souls: 0, best: 0, bestEver: 0, runs: 0, nodes: { start: 1 }, equip: [], speed: 1, stars: 0, rebirths: 0, perks: {},
-      runes: [], sockets: Object.fromEntries(HEROES.map(h => [h.id, [null, null, null]])), dust: 0, runeSeq: 1, towerBest: 0 };
+      runes: [], sockets: Object.fromEntries(HEROES.map(h => [h.id, [null, null, null]])), dust: 0, runeSeq: 1, towerBest: 0,
+      asc: 0, crowns: 0, cperks: {}, ach: {}, tot: { kills: 0, souls: 0 }, weekly: { week: '', best: 0, claimed: 0 }, comps: {}, compActive: [], seenIntro: false };
   }
   function migrate(d) {
     if (!d || typeof d !== 'object') return fresh();
@@ -293,6 +384,14 @@
       const arr = (d.sockets && Array.isArray(d.sockets[h.id]) ? d.sockets[h.id] : []).slice(0, 3);
       out.sockets[h.id] = [0, 1, 2].map(i => (ids.has(arr[i]) && !used.has(arr[i]) ? (used.add(arr[i]), arr[i]) : null));
     }
+    out.cperks = {}; for (const [id, r] of Object.entries(d.cperks || {})) if (CPERK[id]) out.cperks[id] = Math.max(0, Math.min(CPERK[id].max, Math.floor(Number(r) || 0)));
+    for (const k of ['asc', 'crowns']) out[k] = Math.max(0, Math.floor(Number(d[k]) || 0));
+    out.ach = {}; for (const a of ACH) if (d.ach && d.ach[a.id]) out.ach[a.id] = 1;
+    out.tot = { kills: Math.max(0, Math.floor(Number(d.tot?.kills) || 0)), souls: Math.max(0, Math.floor(Number(d.tot?.souls) || 0)) };
+    out.weekly = { week: String(d.weekly?.week || ''), best: Math.max(0, Math.floor(Number(d.weekly?.best) || 0)), claimed: Math.max(0, Math.floor(Number(d.weekly?.claimed) || 0)) };
+    out.comps = {}; for (const c of COMPS) { const l = Math.floor(Number(d.comps?.[c.id]) || 0); if (l > 0) out.comps[c.id] = Math.min(100, l); }
+    out.compActive = (Array.isArray(d.compActive) ? d.compActive : []).filter(id => out.comps[id]).slice(0, 2);
+    out.seenIntro = !!d.seenIntro || out.runs > 0;
     out.equip = [];
     for (const id of Array.isArray(d.equip) ? d.equip : []) if (NODE[id] && NODE[id].active && out.nodes[id] > 0 && !out.equip.includes(id)) out.equip.push(id);
     for (const h of HEROES) { const mine = out.equip.filter(id => NODE[id].tree === h.tree), lim = slotsOf(out, h.tree); if (mine.length > lim) out.equip = out.equip.filter(id => !mine.slice(lim).includes(id)); }
@@ -301,7 +400,8 @@
   }
   const rank = (S, id) => S.nodes[id] || 0;
   const perk = (S, id) => S.perks[id] || 0;
-  const slotsOf = (S, tree) => HERO[tree].slots + (tree === 'ritter' ? (S.perks?.p_platz || 0) : 0);
+  const slotsOf = (S, tree) => HERO[tree].slots + (tree === 'ritter' ? (S.perks?.p_platz || 0) : 0) + (S.cperks?.k_hand || 0);
+  const cperk = (S, id) => (S.cperks && S.cperks[id]) || 0;
   const hired = (S, tree) => tree === 'ritter' || rank(S, HERO[tree].hire) > 0;
   const classOpen = (S, tree) => S.rebirths >= HERO[tree].rebirth || hired(S, tree);
   const keysUsed = (S, tree) => NODES.filter(n => n.tree === tree && n.kind === 'key' && rank(S, n.id) > 0).length;
@@ -338,13 +438,59 @@
     if (perk(S, p.id) >= p.max || S.stars < perkCost(S, p)) return false;
     S.stars -= perkCost(S, p); S.perks[p.id] = perk(S, p.id) + 1; return true;
   }
+  function keepHires(S) { return perk(S, 'p_freunde') || cperk(S, 'k_veteran') ? HEROES.filter(h => h.hire && rank(S, h.hire)).map(h => h.hire) : []; }
   function rebirth(S) {
     const st = starsFor(S); if (!st) return 0;
     S.stars += st; S.rebirths++; S.bestEver = Math.max(S.bestEver, S.best);
-    const keep = perk(S, 'p_freunde') ? HEROES.filter(h => h.hire && rank(S, h.hire)).map(h => h.hire) : [];
+    const keep = keepHires(S);
     S.nodes = { start: 1 }; keep.forEach(id => (S.nodes[id] = 1));
-    S.gold = 500 * perk(S, 'p_zins'); S.souls = 3 * perk(S, 'p_seelenst'); S.best = 0; S.equip = [];
+    S.gold = 500 * perk(S, 'p_zins') + 5000 * cperk(S, 'k_start'); S.souls = 3 * perk(S, 'p_seelenst') + 10 * cperk(S, 'k_start'); S.best = 0; S.equip = [];
+    S.news = { kind: 'rebirth', n: S.rebirths, stars: st };
     return st;
+  }
+  function ascend(S) {
+    const k = crownsFor(S); if (!k) return 0;
+    S.crowns += k; S.asc++; S.bestEver = Math.max(S.bestEver, S.best);
+    const keep = cperk(S, 'k_veteran') ? keepHires(S) : [];
+    S.nodes = { start: 1 }; keep.forEach(id => (S.nodes[id] = 1));
+    S.rebirths = 0; S.stars = 0; S.perks = {}; S.best = 0; S.equip = [];
+    S.gold = 5000 * cperk(S, 'k_start'); S.souls = 10 * cperk(S, 'k_start');
+    for (const c of COMPS) if (S.asc >= c.asc && !S.comps[c.id]) S.comps[c.id] = 1;
+    if (!S.compActive.length && Object.keys(S.comps).length) S.compActive = [Object.keys(S.comps)[0]];
+    S.news = { kind: 'asc', n: S.asc, crowns: k };
+    return k;
+  }
+  const cperkCost = (S, p) => p.cost(cperk(S, p.id));
+  function buyCperk(S, p) {
+    if (cperk(S, p.id) >= p.max || S.crowns < cperkCost(S, p)) return false;
+    S.crowns -= cperkCost(S, p); S.cperks[p.id] = cperk(S, p.id) + 1; return true;
+  }
+  function levelComp(S, id) {
+    const l = S.comps[id] || 0; if (!l || l >= compMax(S)) return false;
+    const c = compCost(l); if (S.souls < c) return false;
+    S.souls -= c; S.comps[id] = l + 1; return true;
+  }
+  function toggleComp(S, id) {
+    if (!S.comps[id]) return;
+    const i = S.compActive.indexOf(id);
+    if (i >= 0) { S.compActive.splice(i, 1); return; }
+    if (S.compActive.length >= compSlots(S)) S.compActive.shift();
+    S.compActive.push(id);
+  }
+  function checkAch(S, run) {
+    const got = [];
+    for (const a of ACH) if (!S.ach[a.id] && a.ok(S, run)) { S.ach[a.id] = 1; got.push(a); }
+    return got;
+  }
+  function claimWeekly(S, run) {
+    const id = weekId();
+    if (S.weekly.week !== id) S.weekly = { week: id, best: 0, claimed: 0 };
+    const score = run.stage;
+    S.weekly.best = Math.max(S.weekly.best, score);
+    let stars = 0, crowns = 0;
+    WEEK_TIERS.forEach((t, i) => { if (S.weekly.best >= t.st && !(S.weekly.claimed & (1 << i))) { S.weekly.claimed |= 1 << i; stars += t.stars; crowns += t.crown || 0; } });
+    S.stars += stars; S.crowns += crowns;
+    return { stars, crowns };
   }
 
   /* ---------- Runen ---------- */
@@ -416,8 +562,15 @@
         if (e.h === 'all' && e.s === 'atk' && T.heal) T.heal *= Math.pow(e.pow, r);
       });
     }
-    const perm = Math.pow(1.2, perk(S, 'p_macht')) * (1 + 0.03 * S.towerBest);
-    g.gold *= 1 + 0.25 * perk(S, 'p_gold');
+    const achN = Object.keys(S.ach || {}).length;
+    const perm = Math.pow(1.2, perk(S, 'p_macht')) * (1 + 0.03 * S.towerBest) * Math.pow(1 + ACH_BONUS, achN) * Math.pow(1.5, cperk(S, 'k_blut'));
+    g.gold *= (1 + 0.25 * perk(S, 'p_gold')) * Math.pow(2, cperk(S, 'k_schatz'));
+    g.soulMul *= Math.pow(2, cperk(S, 'k_seele'));
+    const comp = {};
+    for (const id of S.compActive || []) { const l = (S.comps || {})[id] || 0; if (l) comp[id] = l; }
+    if (comp.eule) { g.gold *= 1 + 0.05 * comp.eule; Object.values(hs).forEach(T => (T.crit += 0.015 * comp.eule)); }
+    if (comp.golem) { g.partyDr += Math.min(0.3, 0.015 * comp.golem); g.partyHp *= 1 + 0.03 * comp.golem; }
+    if (comp.phoenix) g.partyRegen += 0.0015 * comp.phoenix;
     for (const [hid, T] of Object.entries(hs)) {
       const rb = runeBonus(S, hid);
       T.atk *= perm * g.partyAtk * (1 + (rb.kraft || 0)); T.hp *= perm * g.partyHp * (1 + (rb.leben || 0)); if (T.heal) T.heal *= perm * (1 + (rb.kraft || 0));
@@ -427,7 +580,22 @@
       g.gold *= 1 + (rb.glueck || 0); g.eliteSoul += rb.seele || 0;
     }
     const startStage = Math.max(1, Math.min(1 + 5 * perk(S, 'p_start'), (S.bestEver || 0) - 10, capOf(S)));
-    return { ...hs, ...Object.fromEntries(HEROES.filter(h => !hs[h.id]).map(h => [h.id, null])), g, soulBonus: perk(S, 'p_seele'), startStage, cap: capOf(S) };
+    const dragon = comp.drache ? 0.3 * (1 + 0.2 * comp.drache) * Object.values(hs).reduce((a, T) => a + T.atk, 0) : 0;
+    return { ...hs, ...Object.fromEntries(HEROES.filter(h => !hs[h.id]).map(h => [h.id, null])), g, soulBonus: perk(S, 'p_seele'), startStage, cap: capOf(S), comp, dragon };
+  }
+  // Werte mit den Regeln der Wochen-Herausforderung
+  function statsFor(S, mode) {
+    const st = stats(S);
+    if (mode !== 'weekly') return st;
+    const rules = weekRules(weekId());
+    for (const h of HEROES) { const T = st[h.id]; if (!T) continue;
+      if (rules.includes('glass')) { T.hp *= 0.5; T.atk *= 2; T.wolfAtk *= 2; }
+      if (rules.includes('giant')) { T.aps *= 1.5; T.wolfAps *= 1.5; }
+      if (rules.includes('noheal')) { T.regen = 0; T.lifesteal = 0; T.heal = 0; }
+    }
+    if (rules.includes('noheal')) st.g.partyRegen = 0;
+    st.cap = Infinity; st.startStage = 1; st.rules = rules;
+    return st;
   }
 
   /* ================= Aktive Fähigkeiten ================= */
@@ -470,24 +638,28 @@
   ];
   const zoneOf = stage => Math.floor((Math.max(1, stage) - 1) / 10);
   const biomeOf = stage => BIOMES[zoneOf(stage) % BIOMES.length];
-  const zoneName = stage => ZONES[Math.min(ZONES.length - 1, zoneOf(stage))];
+  const zoneName = stage => (zoneOf(stage) < ZONES.length ? ZONES[zoneOf(stage)] : `Albtraum ${ROMAN[Math.min(10, zoneOf(stage) - ZONES.length + 1)] || zoneOf(stage) - ZONES.length + 1}`);
+  const nightmare = stage => stage > 150;
   // Gegner werden pro Stufe stärker – anfangs schneller, später langsamer
   function grow(stage, a, b, c) { const s = stage - 1, s1 = Math.min(s, 30), s2 = Math.min(Math.max(s - 30, 0), 50), s3 = Math.max(s - 80, 0); return Math.exp(s1 * Math.log(a) + s2 * Math.log(b) + s3 * Math.log(c)); }
   const TUNE = { hp: [1.135, 1.115, 1.085], dmg: [1.12, 1.1, 1.075], gold: [1.14, 1.105, 1.08] };
-  function makeEnemy(stage, i, boss, eliteForce) {
-    const elite = !boss && (eliteForce || Math.random() < 0.12);
-    const m = boss ? 6 : elite ? 3 : 1;
-    const hp = 20 * grow(stage, ...TUNE.hp) * m;
-    return { x: 560 + i * 46, hp, max: hp, dmg: 4 * grow(stage, ...TUNE.dmg) * (boss ? 2 : elite ? 1.5 : 1), atkT: 1.2, rate: boss ? 1.6 : 1.3,
+  function makeEnemy(stage, i, boss, eliteForce, run) {
+    const elite = !boss && (eliteForce || Math.random() < ((run && run.eliteChance) || 0.12));
+    const m = boss ? 6 : elite ? 3 : 1, diff = (run && run.diff) || 1;
+    const hp = 20 * grow(stage, ...TUNE.hp) * m * diff * ((run && run.hpMul) || 1);
+    return { x: 560 + i * 46, hp, max: hp, dmg: 4 * grow(stage, ...TUNE.dmg) * (boss ? 2 : elite ? 1.5 : 1) * diff, atkT: 1.2, rate: (boss ? 1.6 : 1.3) / ((run && run.speed) || 1),
       gold: grow(stage, ...TUNE.gold) * (boss ? 10 : elite ? 4 : 1), boss, elite, type: biomeOf(stage).enemy, stun: 0, hitT: 0, poison: 0, poisonT: 0, burn: 0, burnT: 0, mark: 0, markT: 0, bob: Math.random() * 6 };
   }
   const FRONT = ['w', 'r', 't'], BACK = ['s', 'm', 'p'];
   function newRun(S, mode) {
-    const st = stats(S), tower = mode === 'tower';
-    const order = [...FRONT, ...BACK].filter(k => st[k]);
+    const st = statsFor(S, mode), tower = mode === 'tower', weekly = mode === 'weekly', rules = weekly ? st.rules : [];
+    let order = [...FRONT, ...BACK].filter(k => st[k]);
+    if (rules.includes('trio')) order = order.slice(0, 3);
     const pos = {}; order.forEach((k, i) => (pos[k] = 152 - i * 25));
     const h = {}; for (const k of order) h[k] = { hp: st[k].hp, alive: true, atkT: 0.3 + Math.random() * 0.4, wolfT: 0.5, swing: 0, hurtT: 0, revived: false, shield: 0 };
-    const run = { mode: tower ? 'tower' : 'normal', stage: tower ? 1 : st.startStage, startStage: tower ? 1 : st.startStage, kills: 0, gold: 0, souls: 0, runes: [], phoenixUsed: false, miracleUsed: false,
+    const run = { mode: tower ? 'tower' : weekly ? 'weekly' : 'normal', stage: tower || weekly ? 1 : st.startStage, startStage: tower || weekly ? 1 : st.startStage, rules, losses: 0,
+      diff: ascDiff(S), speed: rules.includes('speed') ? 1.5 : 1, hpMul: rules.includes('giant') ? 2 : 1, eliteChance: rules.includes('elite') ? 0.4 : 0.12, noheal: rules.includes('noheal'),
+      dragonT: 2, compRevive: false, bannerT: 0, kills: 0, gold: 0, souls: 0, runes: [], phoenixUsed: false, miracleUsed: false,
       fx: {}, cds: {}, buffT: 0, buffMul: 0, hautT: 0, racheT: 0, packT: 0, order, pos, frontX: pos[order[0]], h,
       enemies: [], floats: [], arrows: [], parts: [], scroll: 0, dead: false, victory: false, deadT: 0, time: 0, shake: 0 };
     spawnWave(run);
@@ -498,13 +670,13 @@
     run.enemies = [];
     if (run.mode === 'tower') {
       const s = towerStage(run.stage), boss = run.stage % 5 === 0;
-      for (let i = 0; i < 3; i++) run.enemies.push(makeEnemy(s, i, false, true));
-      if (boss) run.enemies.push(makeEnemy(s, 3.6, true));
+      for (let i = 0; i < 3; i++) run.enemies.push(makeEnemy(s, i, false, true, run));
+      if (boss) { run.enemies.push(makeEnemy(s, 3.6, true, false, run)); run.bannerT = 2.2; }
       return;
     }
-    const boss = run.stage % 10 === 0, n = boss ? 3 : 5;
-    for (let i = 0; i < n; i++) run.enemies.push(makeEnemy(run.stage, i, false));
-    if (boss) run.enemies.push(makeEnemy(run.stage, n + 0.6, true));
+    const boss = run.stage % (run.rules && run.rules.includes('boss') ? 5 : 10) === 0, n = boss ? 3 : 5;
+    for (let i = 0; i < n; i++) run.enemies.push(makeEnemy(run.stage, i, false, false, run));
+    if (boss) { run.enemies.push(makeEnemy(run.stage, n + 0.6, true, false, run)); run.bannerT = 2.2; }
   }
   function ctxFor(S, st, run) {
     const c = { S, st, run };
@@ -528,13 +700,13 @@
       return dmg;
     };
     c.healOne = (k, amt) => {
-      const h = run.h[k], T = st[k]; if (!h || !h.alive) return;
+      const h = run.h[k], T = st[k]; if (!h || !h.alive || run.noheal) return;
       const over = h.hp + amt - T.hp; h.hp = Math.min(T.hp, h.hp + amt);
       if (over > 0 && st.p && st.p.overShield) h.shield = Math.min(T.hp * 0.5, h.shield + over * st.p.overShield);
       c.float(k, '+' + fmt(amt), '#7ee08a', 12);
     };
     c.healAll = f => { run.order.forEach(k => run.h[k].alive && c.healOne(k, st[k].hp * f)); run.fx.heal = 0.5; };
-    c.healAllAbs = a => run.order.forEach(k => { const h = run.h[k]; if (h.alive) h.hp = Math.min(st[k].hp, h.hp + a); });
+    c.healAllAbs = a => !run.noheal && run.order.forEach(k => { const h = run.h[k]; if (h.alive) h.hp = Math.min(st[k].hp, h.hp + a); });
     return c;
   }
   function frontHero(run) { return run.order.find(k => run.h[k].alive); }
@@ -551,13 +723,13 @@
     if (h.hp <= 0) {
       if (st.p && st.p.miracle && !run.miracleUsed && run.h.p && run.h.p.alive) { run.miracleUsed = true; run.order.forEach(x => run.h[x].alive && (run.h[x].hp = st[x].hp)); h.hp = T.hp * 0.5; c.float(k, 'Wunder!', '#ffe48a', 18); run.fx.heal = 0.5; }
       else if (T.revive && !h.revived) { h.revived = true; h.hp = T.hp * (k === 'w' ? 1 : 0.5); c.float(k, k === 'w' ? 'Letzte Bastion!' : 'Zweites Leben!', '#ffb547', 16); }
-      else { h.hp = 0; h.alive = false; h.shield = 0; c.float(k, `${HERO_BY_ID[k].name} gefallen`, '#ff8a8a', 13); }
+      else { h.hp = 0; h.alive = false; h.shield = 0; run.losses++; c.float(k, `${HERO_BY_ID[k].name} gefallen`, '#ff8a8a', 13); }
     }
   }
   function step(S, st, run, dt) {
     if (run.dead) { run.deadT += dt; return; }
     const c = ctxFor(S, st, run);
-    run.time += dt; run.buffT -= dt; run.hautT -= dt; run.racheT -= dt; run.packT -= dt; run.shake = Math.max(0, run.shake - dt);
+    run.time += dt; run.bannerT -= dt; run.buffT -= dt; run.hautT -= dt; run.racheT -= dt; run.packT -= dt; run.shake = Math.max(0, run.shake - dt);
     for (const k of run.order) {
       const h = run.h[k]; if (!h.alive) continue;
       if (st[k].regen) h.hp = Math.min(st[k].hp, h.hp + st[k].hp * st[k].regen * dt);
@@ -573,7 +745,7 @@
     run.enemies.forEach((e, i) => {
       const target = run.frontX + 50 + i * 34 + (e.boss ? 10 : 0);
       if (e.stun > 0) e.stun -= dt;
-      else if (e.x > target) e.x = Math.max(target, e.x - 75 * dt);
+      else if (e.x > target) e.x = Math.max(target, e.x - 75 * run.speed * dt);
       else if (e.x < target) e.x = Math.min(target, e.x + 75 * dt);
       if (i === 0 && e.x <= target + 1) walking = false;
       e.hitT -= dt; e.markT -= dt; e.frozen -= dt; e.rooted -= dt;
@@ -581,6 +753,11 @@
       if (e.burnT > 0) { e.burnT -= dt; e.hp -= e.burn * dt; }
     });
     if (walking) run.scroll += 70 * dt;
+    // Begleiter
+    if (st.dragon && run.enemies.length && run.enemies[0].x < 440) {
+      run.dragonT -= dt;
+      if (run.dragonT <= 0) { run.dragonT = 3; run.fx.dragon = 0.6; run.enemies.filter(e => e.x < 480).forEach(e => { e.hp -= st.dragon; e.hitT = 0.15; c.efloat(e, fmt(st.dragon), '#ff9a6a', 13); }); }
+    }
     // Aktive Fähigkeiten
     for (const id of S.equip) {
       const n = NODE[id], hk = HERO[n.tree].id, h = run.h[hk];
@@ -632,9 +809,9 @@
     const g = st.g;
     for (const e of run.enemies) {
       if (e.hp > 0) continue;
-      run.kills++;
+      run.kills++; S.tot.kills++;
       c.burst(e.x, 200, e.boss ? '#c9a6ff' : '#ffffff', e.boss ? 24 : 8);
-      if (run.mode !== 'tower') {
+      if (run.mode === 'normal') {
         let gold = e.gold * g.gold * (e.boss || e.elite ? g.eliteGold : 1);
         if (Math.random() < g.chest) { gold *= 10; c.efloat(e, 'Truhe!', '#ffd23f', 16); }
         gold = Math.max(1, Math.round(gold));
@@ -645,8 +822,9 @@
       if (e.boss) souls = (1 + Math.floor(run.stage / 20)) * g.soulMul + st.soulBonus;
       else if (e.elite && Math.random() < g.eliteSoul) souls = 1;
       if (run.mode === 'tower') souls = e.boss ? 1 : 0;
-      if (souls) { S.souls += souls; run.souls += souls; run.floats.push({ x: e.x, y: 95, text: `+${souls} Seele${souls > 1 ? 'n' : ''}`, color: '#c9a6ff', size: 16, t: 1 }); }
-      if (feature(S, 'runen') && run.mode !== 'tower' && (e.boss || (e.elite && Math.random() < 0.03))) {
+      if (run.mode === 'weekly') souls = 0;
+      if (souls) { S.tot.souls += souls; S.souls += souls; run.souls += souls; run.floats.push({ x: e.x, y: 95, text: `+${souls} Seele${souls > 1 ? 'n' : ''}`, color: '#c9a6ff', size: 16, t: 1 }); }
+      if (feature(S, 'runen') && run.mode === 'normal' && (e.boss || (e.elite && Math.random() < 0.03))) {
         const tier = 1 + Math.floor(run.stage / 40) + (e.boss && Math.random() < 0.15 ? 1 : 0);
         const r = addRune(S, RUNES[Math.floor(Math.random() * RUNES.length)].id, tier);
         if (r) { run.runes.push(r); run.floats.push({ x: e.x, y: 75, text: `Rune: ${RUNE[r.t].name} ${ROMAN[r.tier]}`, color: RUNE[r.t].color, size: 14, t: 1.4 }); }
@@ -659,7 +837,7 @@
           S.towerBest = run.stage;
           if (run.stage % 5 === 0) { const r = addRune(S, RUNES[Math.floor(Math.random() * RUNES.length)].id, 1 + Math.floor(run.stage / 15)); if (r) run.runes.push(r); }
         }
-      } else {
+      } else if (run.mode === 'normal') {
         if (run.stage > S.best) S.best = run.stage;
         if (run.stage > S.bestEver) S.bestEver = run.stage;
         if (run.stage >= st.cap) { run.victory = true; run.dead = true; S.runs++; return 'dead'; }
@@ -674,6 +852,11 @@
     run.parts = run.parts.filter(p => p.t > 0);
     run.arrows.forEach(a => (a.t += dt));
     run.arrows = run.arrows.filter(a => a.t < a.d);
+    const alive = run.order.filter(k => run.h[k].alive).length;
+    if (st.comp.phoenix >= 10 && !run.compRevive && (alive === 0 || (alive === 1 && run.order.length >= 3))) {
+      run.compRevive = true; run.fx.phoenix = 1;
+      run.order.forEach(k => { const h = run.h[k]; if (!h.alive) { h.alive = true; h.hp = st[k].hp * 0.5; c.float(k, 'Phönix!', '#ff9a3d', 15); } });
+    }
     if (!run.order.some(k => run.h[k].alive)) { run.dead = true; S.runs++; return 'dead'; }
   }
   const tgtSafe = run => run.enemies[0];
@@ -702,10 +885,12 @@
   function encode(S) {
     const eq = S.equip.map(id => NODES.findIndex(n => n.id === id) + 1);
     const rIdx = id => (id ? S.runes.findIndex(r => r.id === id) + 1 : 0);
-    return packNums([4, S.gold, S.souls, S.best, S.bestEver, S.runs, S.stars, S.rebirths, S.dust, S.towerBest,
+    return packNums([5, S.gold, S.souls, S.best, S.bestEver, S.runs, S.stars, S.rebirths, S.dust, S.towerBest,
       NODES.length, ...NODES.map(n => rank(S, n.id)), PERKS.length, ...PERKS.map(p => perk(S, p.id)), eq.length, ...eq,
       S.runes.length, ...S.runes.flatMap(r => [RUNES.findIndex(x => x.id === r.t), r.tier]),
-      HEROES.length, ...HEROES.flatMap(h => (S.sockets[h.id] || [null, null, null]).map(rIdx))]);
+      HEROES.length, ...HEROES.flatMap(h => (S.sockets[h.id] || [null, null, null]).map(rIdx)),
+      S.asc, S.crowns, CPERKS.length, ...CPERKS.map(p => cperk(S, p.id)), ACH.length, ...ACH.map(a => (S.ach[a.id] ? 1 : 0)),
+      S.tot.kills, S.tot.souls, COMPS.length, ...COMPS.map(c => S.comps[c.id] || 0), ...[0, 1].map(i => (S.compActive[i] ? COMPS.findIndex(c => c.id === S.compActive[i]) + 1 : 0))]);
   }
   function decode(code) {
     const nums = unpackNums(code); if (!nums) return null;
@@ -715,16 +900,25 @@
       const readNodes = () => { const c = next(); for (let k = 0; k < c; k++) { const r = next(); if (NODES[k]) d.nodes[NODES[k].id] = r; } };
       const readEq = n => { for (let k = 0; k < n; k++) { const e = next(); if (e > 0 && NODES[e - 1]) d.equip.push(NODES[e - 1].id); } };
       if (v === 2) { d.gold = next(); d.souls = next(); d.best = next(); d.runs = next(); readNodes(); readEq(2); }
-      else if (v === 3 || v === 4) {
+      else if (v >= 3 && v <= 5) {
         d.gold = next(); d.souls = next(); d.best = next(); d.bestEver = next(); d.runs = next(); d.stars = next(); d.rebirths = next();
-        if (v === 4) { d.dust = next(); d.towerBest = next(); d.v = 4; }
+        if (v >= 4) { d.dust = next(); d.towerBest = next(); d.v = 4; }
         readNodes();
         const pc = next(); for (let k = 0; k < pc; k++) { const r = next(); if (PERKS[k]) d.perks[PERKS[k].id] = r; }
         readEq(next());
-        if (v === 4) {
+        if (v >= 4) {
           const rc = next(); for (let k = 0; k < rc; k++) { const t = next(), tier = next(); d.runes.push({ id: k + 1, t: RUNES[t] ? RUNES[t].id : 'kraft', tier }); }
           const hc = next(); for (let k = 0; k < hc; k++) { const arr = [next(), next(), next()]; if (HEROES[k]) d.sockets[HEROES[k].id] = arr.map(x => (x > 0 ? x : null)); }
           d.runeSeq = rc + 1;
+        }
+        if (v === 5) {
+          d.v = 5; d.asc = next(); d.crowns = next(); d.cperks = {}; d.ach = {}; d.comps = {}; d.compActive = [];
+          const cc = next(); for (let k = 0; k < cc; k++) { const r = next(); if (CPERKS[k]) d.cperks[CPERKS[k].id] = r; }
+          const ac = next(); for (let k = 0; k < ac; k++) { const r = next(); if (r && ACH[k]) d.ach[ACH[k].id] = 1; }
+          d.tot = { kills: next(), souls: next() };
+          const pc2 = next(); for (let k = 0; k < pc2; k++) { const l = next(); if (l && COMPS[k]) d.comps[COMPS[k].id] = l; }
+          for (let k = 0; k < 2; k++) { const e = next(); if (e > 0 && COMPS[e - 1]) d.compActive.push(COMPS[e - 1].id); }
+          d.seenIntro = true;
         }
       } else return null;
       return migrate(d);
@@ -739,7 +933,7 @@
   }
 
   const core = { HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
-    rebirth, starsFor, toggleEquip, slotsOf, hired, classOpen, keysUsed, keyLimit, capOf, reqOf, feature, encode, decode, fmt, socket, unsocket, merge, canMerge, dismantle, buyRune, runeVal, addRune };
+    rebirth, ascend, crownsFor, buyCperk, cperkCost, cperk, CPERKS, levelComp, toggleComp, compCost, compMax, compSlots, COMPS, checkAch, ACH, claimWeekly, weekId, weekRules, RULE, WEEK_TIERS, statsFor, starsFor, toggleEquip, slotsOf, hired, classOpen, keysUsed, keyLimit, capOf, reqOf, feature, encode, decode, fmt, socket, unsocket, merge, canMerge, dismantle, buyRune, runeVal, addRune };
   if (typeof module !== 'undefined') { module.exports = core; return; }
 
   /* ================= Oberfläche ================= */
@@ -787,8 +981,9 @@
   function tabsList() {
     const t = [];
     for (const h of HEROES) if (classOpen(S, h.tree) || S.rebirths + 1 >= h.rebirth) t.push({ id: h.tree, label: h.name, color: h.color, locked: !classOpen(S, h.tree) });
-    if (feature(S, 'runen')) t.push({ id: 'runen', label: 'Runen', color: '#ff7a3d' });
-    t.push({ id: 'ruhm', label: 'Wiedergeburt', color: '#c9a6ff' }, { id: 'stand', label: 'Spielstand', color: '#a99fbb' });
+    if (feature(S, 'runen') || S.runes.length) t.push({ id: 'runen', label: 'Runen', color: '#ff7a3d' });
+    if (S.asc >= 2 || Object.keys(S.comps).length) t.push({ id: 'begleiter', label: 'Begleiter', color: '#ff9a3d' });
+    t.push({ id: 'halle', label: 'Ruhmeshalle', color: '#ffd23f' }, { id: 'ruhm', label: S.asc || S.rebirths >= 9 ? 'Wiedergeburt & Aufstieg' : 'Wiedergeburt', color: '#c9a6ff' }, { id: 'stand', label: 'Spielstand', color: '#a99fbb' });
     return t;
   }
   function renderTabs() {
@@ -818,32 +1013,38 @@
       $('#rlPanel').addEventListener('submit', onSubmit);
     }
     sizeCanvas(); refresh();
+    if (!S.seenIntro) showIntro(); else if (S.news) showNews();
     last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
   }
-  function refresh() { st = stats(S); renderTabs(); hud(); heroes(); action(); panel(); }
+  function refresh() { st = run && !run.dead ? statsFor(S, run.mode) : stats(S); renderTabs(); hud(); heroes(); action(); panel(); }
+  function achCheck(run) { const got = checkAch(S, run); if (got.length) { st = run && !run.dead ? statsFor(S, run.mode) : stats(S); got.forEach((a, i) => setTimeout(() => toast(`Erfolg: ${a.name} (+3 % Stärke)`, true), i * 1800)); save(); } return got; }
   function close() { active = false; cancelAnimationFrame(raf); save(); cloudSave(true); $('#solo').hidden = true; $('#hub').hidden = false; }
   function sizeCanvas() {
     const host = $('#soloCanvas'); const w = Math.min(host.clientWidth || 360, 960);
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     cv.style.width = w + 'px'; cv.style.height = (w * H / W) + 'px'; cv.width = Math.round(w * dpr); cv.height = Math.round(w * H / W * dpr); scale = cv.width / W;
   }
-  function startRun(mode) { st = stats(S); run = newRun(S, mode); confirm = ''; notice = ''; heroes(); action(); panel(); }
+  function startRun(mode) { st = statsFor(S, mode); run = newRun(S, mode); confirm = ''; notice = ''; heroes(); action(); panel(); }
   function loop(now) {
     if (!active) return;
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
     if (run && !run.dead) for (let i = 0; i < S.speed; i++) {
-      if (step(S, st, run, dt) === 'dead') { save(); cloudSave(true); refresh(); break; }
+      if (step(S, st, run, dt) === 'dead') { endRun(); break; }
     } else if (run) run.deadT += dt;
     draw(now / 1000);
     hudT += dt; if (hudT > 0.2) { hudT = 0; hud(); if (run && !run.dead) heroes(); }
     raf = requestAnimationFrame(loop);
   }
 
+  function endRun() {
+    if (run.mode === 'weekly') { const r = claimWeekly(S, run); run.weeklyReward = r; if (r.stars || r.crowns) setTimeout(() => toast(`Wochen-Belohnung: +${r.stars} Sterne${r.crowns ? ` +${r.crowns} Krone` : ''}`, true), 300); }
+    achCheck(run); save(); cloudSave(true); refresh();
+  }
   /* ---------- Leisten ---------- */
-  const coin = '<i class="rl-coin" aria-hidden="true"></i>', soul = '<i class="rl-soulic" aria-hidden="true"></i>', star = '<i class="rl-star" aria-hidden="true"></i>', dust = '<i class="rl-dust" aria-hidden="true"></i>';
+  const crown = '<i class="rl-crown" aria-hidden="true"></i>', coin = '<i class="rl-coin" aria-hidden="true"></i>', soul = '<i class="rl-soulic" aria-hidden="true"></i>', star = '<i class="rl-star" aria-hidden="true"></i>', dust = '<i class="rl-dust" aria-hidden="true"></i>';
   function hud() {
-    $('#rlStat').innerHTML = `<span class="rl-cur gold">${coin}${fmt(S.gold)}</span><span class="rl-cur soul">${soul}${S.souls}</span>${S.stars || S.rebirths ? `<span class="rl-cur star">${star}${S.stars}</span>` : ''}${feature(S, 'schmiede') ? `<span class="rl-cur dust">${dust}${S.dust}</span>` : ''}
-      <span class="note">Rekord ${S.best} von ${capOf(S)} · ${S.rebirths ? `${S.rebirths}× wiedergeboren · ` : ''}${S.runs} Läufe</span>`;
+    $('#rlStat').innerHTML = `<span class="rl-cur gold">${coin}${fmt(S.gold)}</span><span class="rl-cur soul">${soul}${S.souls}</span>${S.stars || S.rebirths ? `<span class="rl-cur star">${star}${S.stars}</span>` : ''}${feature(S, 'schmiede') ? `<span class="rl-cur dust">${dust}${S.dust}</span>` : ''}${S.asc || S.crowns ? `<span class="rl-cur crown">${crown}${S.crowns}</span>` : ''}
+      <span class="note">Rekord ${S.best} von ${capOf(S) === Infinity ? '∞' : capOf(S)} · ${S.asc ? `Aufstieg ${S.asc} · ` : ''}${S.rebirths ? `${S.rebirths}× wiedergeboren · ` : ''}${S.runs} Läufe</span>`;
     $('#soloSpeed').textContent = `Tempo ×${S.speed}`;
   }
   function heroes() {
@@ -865,8 +1066,8 @@
   }
   function action() {
     const a = $('#rlAction');
-    if (inCamp()) a.innerHTML = `${feature(S, 'turm') ? `<button class="btn ghost" data-rl="tower">Turm${S.towerBest ? ` (Rekord ${S.towerBest})` : ''}</button>` : ''}<button class="btn rl-go" data-rl="start">${run ? 'Neuer Lauf' : 'Lauf starten'}${st.startStage > 1 ? ` ab Stufe ${st.startStage}` : ''}</button>`;
-    else a.innerHTML = `<button class="btn ${confirm === 'giveup' ? 'danger' : 'ghost'} small" data-rl="giveup">${confirm === 'giveup' ? 'Wirklich aufgeben?' : run.mode === 'tower' ? 'Turm verlassen' : 'Lauf aufgeben'}</button>`;
+    if (inCamp()) a.innerHTML = `<button class="btn ghost" data-rl="weekly">Woche</button>${feature(S, 'turm') ? `<button class="btn ghost" data-rl="tower">Turm${S.towerBest ? ` (Rekord ${S.towerBest})` : ''}</button>` : ''}<button class="btn rl-go" data-rl="start">${run ? 'Neuer Lauf' : 'Lauf starten'}${st.startStage > 1 ? ` ab Stufe ${st.startStage}` : ''}</button>`;
+    else a.innerHTML = `<button class="btn ${confirm === 'giveup' ? 'danger' : 'ghost'} small" data-rl="giveup">${confirm === 'giveup' ? 'Wirklich aufgeben?' : run.mode === 'tower' ? 'Turm verlassen' : run.mode === 'weekly' ? 'Herausforderung beenden' : 'Lauf aufgeben'}</button>`;
   }
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const costHTML = c => [c.g ? `<span class="rl-cur gold">${coin}${fmt(c.g)}</span>` : '', c.s ? `<span class="rl-cur soul">${soul}${c.s}</span>` : ''].join(' ');
@@ -917,10 +1118,12 @@
   function campInfo() {
     if (run && run.dead) {
       const extra = `${run.kills} Gegner besiegt${run.gold ? ` · ${coin}+${fmt(run.gold)}` : ''}${run.souls ? ` · ${soul}+${run.souls}` : ''}${run.runes.length ? ` · ${run.runes.length} Rune${run.runes.length > 1 ? 'n' : ''}` : ''}`;
+      if (run.mode === 'weekly') { const r = run.weeklyReward || {}; return `<div class="rl-dead week"><b>Wochen-Herausforderung: Stufe ${run.stage}</b><span>Bestes Ergebnis diese Woche: Stufe ${S.weekly.best}${r.stars ? ` · ${star}+${r.stars}` : ''}${r.crowns ? ` · ${crown}+${r.crowns}` : ''}</span><span class="note">Belohnungen und Bestenliste findest du in der Ruhmeshalle.</span></div>`; }
       if (run.mode === 'tower') return `<div class="rl-dead tower"><b>Turm: Etage ${run.stage} erreicht</b><span>${extra}</span><span class="note">Dein Turm-Rekord (${S.towerBest}) gibt allen Helden dauerhaft +${S.towerBest * 3} % Schaden und Leben.</span></div>`;
       if (run.victory) return `<div class="rl-dead win"><b>Stufengrenze ${capOf(S)} erreicht!</b><span>${extra}</span><span class="note">Weitere Stufen schaltest du mit der nächsten Wiedergeburt frei.</span></div>`;
       return `<div class="rl-dead"><b>Lauf vorbei auf Stufe ${run.stage}</b><span>${extra}</span><span class="note">Verbessere deine Helden und starte dann den nächsten Lauf.</span></div>`;
     }
+    if (!run && !acct && S.runs >= 2) return `<div class="rl-hint"><span><b>Tipp:</b> Sichere deinen Fortschritt mit Namen und Passwort, damit er nicht verloren geht.</span><button class="btn small" data-rl="gosave">Jetzt sichern</button></div>`;
     if (!run) return '<p class="note">Du bist im Lager. Hier verbesserst du deine Helden mit Gold und Seelen. Seelen gibt es von Bossen (alle 10 Stufen) und manchmal von Elite-Gegnern mit lila Schimmer.</p>';
     return '<p class="note">Der Lauf läuft. Verbessern kannst du erst danach im Lager.</p>';
   }
@@ -952,24 +1155,32 @@
   /* ---------- Wiedergeburt ---------- */
   function ruhmTab() {
     const gain = starsFor(S), req = reqOf(S);
+    if (S.rebirths >= 9) return ascSection(true) + starShop();
     let html = `<div class="rl-rebirth"><div><h3>Wiedergeburt ${S.rebirths + 1}</h3>
       <p class="note">Setzt Gold, Seelen, alle Fertigkeiten und deinen Rekord auf null. Dafür bekommst du Sterne für dauerhafte Verbesserungen, neue Stufen und neue Inhalte. Runen und Sterne bleiben.</p>
       <p>Voraussetzung: <b>Stufe ${req}</b> · dein Rekord: <b>${S.best}</b> → ${gain ? `<b class="rl-cur star">${star}${gain} Sterne</b>` : 'noch nicht erreicht'}</p></div>
       <button class="btn ${confirm === 'rebirth' ? 'danger' : ''}" data-rl="rebirth" ${gain && inCamp() ? '' : 'disabled'}>${confirm === 'rebirth' ? 'Wirklich zurücksetzen?' : 'Wiedergeboren werden'}</button></div>`;
     html += `<div class="rl-road">${ROADMAP.map(x => `<div class="rl-step ${S.rebirths >= x.r ? 'done' : S.rebirths + 1 === x.r ? 'next' : ''}"><span>${x.r}</span><div><b>${x.text}</b><small>Stufen bis ${CAPS[Math.min(x.r, CAPS.length - 1)]} · ${x.r + 1} Schlüssel pro Klasse</small></div></div>`).join('')}</div>`;
-    html += `<p class="note">Du hast <span class="rl-cur star">${star}${S.stars}</span> Sterne.</p><div class="rl-perks">`;
-    html += PERKS.map(p => {
+    html += ascSection();
+    html += `<h3 class="rl-h3">Sternen-Laden</h3><p class="note">Du hast <span class="rl-cur star">${star}${S.stars}</span> Sterne. Sterne bekommst du bei jeder Wiedergeburt und aus der Wochen-Herausforderung.</p><div class="rl-perks">`;
+    html += perkCards();
+    return html;
+  }
+  function starShop() { return `<h3 class="rl-h3">Sternen-Laden</h3><p class="note">Du hast <span class="rl-cur star">${star}${S.stars}</span> Sterne.</p><div class="rl-perks">${perkCards()}`; }
+  function perkCards() {
+    return PERKS.map(p => {
       const r = perk(S, p.id), maxed = r >= p.max, c = perkCost(S, p);
       return `<div class="rl-perk ${r ? 'has' : ''}"><b>${esc(p.name)}</b><span class="note">${p.max > 99 ? `Stufe ${r}` : `${r} / ${p.max}`}</span><p class="note">${esc(p.desc)}</p>
         <button class="btn small" data-perk="${p.id}" ${maxed || S.stars < c ? 'disabled' : ''}>${maxed ? 'Voll' : `${c} ${c === 1 ? 'Stern' : 'Sterne'}`}</button></div>`;
     }).join('') + '</div>';
-    return html;
   }
   function panel() {
     const p = $('#rlPanel');
     let html = notice ? `<p class="warn">${esc(notice)}</p>` : '';
     if (HERO[tab]) html += campInfo() + heroTab(tab);
     else if (tab === 'runen') html += campInfo() + runenTab();
+    else if (tab === 'begleiter') html += campInfo() + compTab();
+    else if (tab === 'halle') html += halleTab();
     else if (tab === 'ruhm') html += ruhmTab();
     else html += standHTML();
     const openDet = p.querySelector('details[open]');
@@ -1010,7 +1221,7 @@
     try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {}
     refresh();
   }
-  function toast(m) { const t = $('#toast'); t.textContent = m; t.className = 'toast'; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => (t.hidden = true), 3200); }
+  function toast(m, big) { const t = $('#toast'); t.textContent = m; t.className = 'toast' + (big ? ' gold' : ''); t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => (t.hidden = true), big ? 3600 : 3200); }
   function ask(key, redraw) { if (confirm === key) { confirm = ''; return true; } confirm = key; redraw(); setTimeout(() => { if (confirm === key) { confirm = ''; redraw(); } }, 4000); return false; }
   function afterChange() { save(); refresh(); }
   function onClick(e) {
@@ -1028,14 +1239,21 @@
     const rb = e.target.closest('[data-rune]');
     if (rb) { const id = Number(rb.dataset.rune); runeSel = runeSel === id ? null : id; panel(); return; }
     const b = e.target.closest('button'); if (!b || b.disabled) return;
+    if (b.dataset.cperk) { if (buyCperk(S, CPERKS.find(p => p.id === b.dataset.cperk))) afterChange(); return; }
+    if (b.dataset.complvl) { if (levelComp(S, b.dataset.complvl)) { achCheck(); afterChange(); } return; }
+    if (b.dataset.compon) { toggleComp(S, b.dataset.compon); afterChange(); return; }
+    if (b.dataset.board) { boardKey = b.dataset.board; panel(); return; }
     if (b.dataset.perk) { if (buyPerk(S, PERKS.find(p => p.id === b.dataset.perk))) afterChange(); return; }
     const a = b.dataset.rl;
     if (a === 'start') startRun();
+    else if (a === 'weekly') startRun('weekly');
+    else if (a === 'gosave') { tab = 'stand'; renderTabs(); panel(); }
+    else if (a === 'ascend') { if (ask('ascend', panel)) { const n = ascend(S); run = null; achCheck(); afterChange(); showNews(); void n; } }
     else if (a === 'tower') startRun('tower');
     else if (a === 'giveup') { if (ask('giveup', action)) { run.dead = true; S.runs++; save(); cloudSave(true); refresh(); } }
-    else if (a === 'buy') { if (inCamp() && buy(S, NODE[sel[tab]])) afterChange(); }
+    else if (a === 'buy') { if (inCamp() && buy(S, NODE[sel[tab]])) { achCheck(); afterChange(); } }
     else if (a === 'equip') { if (inCamp()) { toggleEquip(S, sel[tab]); afterChange(); } }
-    else if (a === 'rebirth') { if (ask('rebirth', panel)) { const n = rebirth(S); run = null; afterChange(); toast(`Wiedergeboren! +${n} Sterne`); } }
+    else if (a === 'rebirth') { if (ask('rebirth', panel)) { rebirth(S); run = null; achCheck(); afterChange(); showNews(); } }
     else if (a === 'merge') { const r = S.runes.find(x => x.id === runeSel); const nr = r && merge(S, r); if (nr) { runeSel = nr.id; toast(`${RUNE[nr.t].name} ${ROMAN[nr.tier]} geschmiedet`); afterChange(); } }
     else if (a === 'dismantle') { const r = S.runes.find(x => x.id === runeSel); if (r) { const d = dismantle(S, r); runeSel = null; toast(`+${d} Staub`); afterChange(); } }
     else if (a === 'buyrune') { const r = buyRune(S); if (r) { runeSel = r.id; toast(`Neue Rune: ${RUNE[r.t].name} I`); afterChange(); } }
@@ -1078,6 +1296,113 @@
         acct.token = r.token; setAcct(acct); toast('Passwort geändert'); panel();
       }
     } finally { btn.disabled = false; }
+  }
+
+  /* ---------- Aufstieg ---------- */
+  function ascSection(main) {
+    const k = crownsFor(S), can = S.rebirths >= ASC_REQ_REBIRTHS;
+    let html = `<div class="rl-asc"><div><h3>${S.asc ? `Aufstieg ${S.asc + 1}` : 'Aufstieg'}</h3>
+      <p class="note">Die zweite Prestige-Ebene. Setzt auch Wiedergeburten, Sterne und den Sternen-Laden zurück – dafür bekommst du Kronen für mächtige Königs-Boni. Runen, Turm-Rekord, Erfolge und Begleiter bleiben. Gegner werden mit jedem Aufstieg stärker.</p>
+      <p>Voraussetzung: <b>9. Wiedergeburt</b> und <b>Stufe ${ASC_REQ_STAGE}</b> · ${k ? `jetzt: <b class="rl-cur crown">${crown}${k} Kronen</b> (je 4 Stufen über 150 eine mehr)` : can ? `dein Rekord: ${S.best}` : `du bist bei Wiedergeburt ${S.rebirths}`}</p></div>
+      <button class="btn ${confirm === 'ascend' ? 'danger' : 'gold'}" data-rl="ascend" ${k && inCamp() ? '' : 'disabled'}>${confirm === 'ascend' ? 'Wirklich aufsteigen?' : 'Aufsteigen'}</button></div>`;
+    if (main || S.asc) html += `<div class="rl-road">${ASC_ROAD.map(x => `<div class="rl-step crown ${S.asc >= x.a ? 'done' : S.asc + 1 === x.a ? 'next' : ''}"><span>${x.a}</span><div><b>${x.text}</b><small>Gegner ×${Math.pow(1.6, x.a).toFixed(1).replace('.', ',')} stärker</small></div></div>`).join('')}</div>`;
+    if (S.asc || S.crowns) html += `<h3 class="rl-h3">Kronen-Laden</h3><p class="note">Du hast <span class="rl-cur crown">${crown}${S.crowns}</span> Kronen. Kronen-Boni bleiben für immer.</p><div class="rl-perks">${CPERKS.map(p => {
+      const r = cperk(S, p.id), maxed = r >= p.max, c = cperkCost(S, p);
+      return `<div class="rl-perk crown ${r ? 'has' : ''}"><b>${esc(p.name)}</b><span class="note">${p.max > 99 ? `Stufe ${r}` : `${r} / ${p.max}`}</span><p class="note">${esc(p.desc)}</p>
+        <button class="btn small gold" data-cperk="${p.id}" ${maxed || S.crowns < c ? 'disabled' : ''}>${maxed ? 'Voll' : `${c} ${c === 1 ? 'Krone' : 'Kronen'}`}</button></div>`;
+    }).join('')}</div>`;
+    return html;
+  }
+
+  /* ---------- Begleiter ---------- */
+  function compTab() {
+    let html = `<p class="note">Begleiter kämpfen an deiner Seite und bleiben für immer – auch bei Wiedergeburt und Aufstieg. Verbessern kostest Seelen. Aktive Begleiter: ${S.compActive.length}/${compSlots(S)}.</p><div class="rl-comps">`;
+    html += COMPS.map(c => {
+      const l = S.comps[c.id] || 0, on = S.compActive.includes(c.id), cost = compCost(l), max = compMax(S);
+      if (!l) return `<div class="rl-comp locked" style="--cc:${c.color}"><span class="cic">?</span><div><b>${c.name}</b><p class="note">Kommt mit dem ${c.asc}. Aufstieg.</p></div></div>`;
+      return `<div class="rl-comp ${on ? 'on' : ''}" style="--cc:${c.color}"><span class="cic">${{ drache: '♆', eule: '◉', golem: '▣', phoenix: '❂' }[c.id]}</span><div><b>${c.name}</b> <span class="note">Stufe ${l} / ${max}</span><p class="note">${c.desc(l)}</p>
+        <div class="row"><button class="btn small" data-complvl="${c.id}" ${l >= max || S.souls < cost ? 'disabled' : ''}>${l >= max ? 'Maximal' : `Verbessern ${soul}${cost}`}</button>
+        <button class="btn ghost small" data-compon="${c.id}">${on ? 'Ablegen' : 'Mitnehmen'}</button></div></div></div>`;
+    }).join('');
+    return html + '</div>';
+  }
+
+  /* ---------- Ruhmeshalle: Woche, Erfolge, Bestenliste ---------- */
+  let boardKey = 'stage', boardData = null, boardAt = 0;
+  function halleTab() {
+    const wk = weekId(), rules = weekRules(wk), mine = S.weekly.week === wk ? S.weekly : { best: 0, claimed: 0 };
+    let html = `<div class="rl-week"><div><h3>Wochen-Herausforderung</h3><p class="note">Woche ${wk.split('-W')[1]} · gleiche Regeln für alle bis Sonntag. Du startest bei Stufe 1 mit deinen aktuellen Helden. Es gibt kein Gold, dafür Sterne und Kronen.</p>
+      <div class="rl-rules">${rules.map(r => `<span class="rl-rule"><b>${RULE[r].name}</b>${RULE[r].desc}</span>`).join('')}</div>
+      <div class="rl-tiers">${WEEK_TIERS.map((t, i) => `<span class="rl-tier ${mine.claimed & (1 << i) ? 'done' : ''}"><b>Stufe ${t.st}</b>${star}${t.stars}${t.crown ? ` ${crown}${t.crown}` : ''}</span>`).join('')}</div>
+      <p>Dein Bestes diese Woche: <b>Stufe ${mine.best}</b></p></div>
+      <button class="btn" data-rl="weekly" ${inCamp() ? '' : 'disabled'}>Herausforderung starten</button></div>`;
+    const n = Object.keys(S.ach).length;
+    html += `<h3 class="rl-h3">Erfolge (${n}/${ACH.length})</h3><p class="note">Jeder Erfolg gibt allen Helden dauerhaft +3 % Schaden und Leben. Zusammen gerade: +${Math.round((Math.pow(1 + ACH_BONUS, n) - 1) * 100)} %.</p>
+      <div class="rl-achs">${ACH.map(a => `<div class="rl-ach ${S.ach[a.id] ? 'got' : ''}"><span>${S.ach[a.id] ? '★' : '☆'}</span><div><b>${esc(a.name)}</b><small>${esc(a.desc)}</small></div></div>`).join('')}</div>`;
+    const tabsB = [['stage', 'Höchste Stufe'], ['prestige', 'Wiedergeburten'], ['tower', 'Turm'], ['weekly', 'Diese Woche'], ['ach', 'Erfolge']];
+    html += `<h3 class="rl-h3">Bestenliste</h3><div class="rl-btabs">${tabsB.map(([k, l]) => `<button class="${boardKey === k ? 'on' : ''}" data-board="${k}">${l}</button>`).join('')}</div>`;
+    if (!acct) html += '<p class="note">Lege im Reiter „Spielstand“ einen Spielstand mit Namen und Passwort an, um in der Bestenliste zu erscheinen.</p>';
+    if (!boardData || Date.now() - boardAt > 30000) {
+      boardAt = Date.now();
+      api('board', {}).then(r => { if (!r.error) { boardData = r; if (tab === 'halle') panel(); } });
+    }
+    if (!boardData) html += '<p class="note">Bestenliste wird geladen …</p>';
+    else {
+      const list = boardData[boardKey] || [];
+      const val = r => (boardKey === 'stage' ? `Stufe ${r.stage}` : boardKey === 'prestige' ? `${r.asc ? `Aufstieg ${r.asc} · ` : ''}${r.rebirths} Wiedergeb.` : boardKey === 'tower' ? `Etage ${r.tower}` : boardKey === 'weekly' ? `Stufe ${r.week}` : `${r.ach} Erfolge`);
+      html += list.length ? `<ol class="rl-board">${list.map((r, i) => `<li class="${acct && r.name === acct.name ? 'me' : ''}"><span class="pl">${i + 1}</span><b>${esc(r.name)}</b><span>${val(r)}</span></li>`).join('')}</ol>` : '<p class="note">Noch keine Einträge.</p>';
+      html += `<p class="note">${boardData.players} Spielstände · wird alle 30 Sekunden aktualisiert</p>`;
+    }
+    return html;
+  }
+
+  /* ---------- Fenster: Willkommen und Neuigkeiten ---------- */
+  function modal(html) {
+    const p = $('#picker');
+    p.innerHTML = `<div class="sheet rl-modal" role="dialog">${html}</div>`;
+    p.hidden = false;
+    p.onclick = e => {
+      const b = e.target.closest('[data-m]');
+      if (!b) return;
+      p.hidden = true; p.onclick = null;
+      if (b.dataset.m === 'save') { tab = 'stand'; renderTabs(); panel(); $('.rl-tabs').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    };
+  }
+  function showIntro() {
+    S.seenIntro = true; save();
+    modal(`<span class="rl-mic">⚔</span><h2>Willkommen im Ritterlauf</h2>
+      <ul class="rl-list"><li>Deine Helden kämpfen sich <b>von allein</b> durch Gegnerwellen.</li>
+      <li>Nach jedem Lauf verbesserst du sie im <b>Lager</b> mit Gold und Seelen.</li>
+      <li>Später kommen <b>Wiedergeburten</b>, neue Klassen, Runen und vieles mehr dazu.</li></ul>
+      ${acct ? '' : `<div class="rl-savebox"><b>Wichtig: Sichere deinen Fortschritt!</b><span>Lege im Reiter „Spielstand“ einen Namen und ein Passwort fest. Dann geht nichts verloren und du kannst auf jedem Gerät weiterspielen.</span></div>`}
+      <div class="row" style="justify-content:center">${acct ? '' : '<button class="btn" data-m="save">Jetzt Spielstand anlegen</button>'}<button class="btn ghost" data-m="ok">${acct ? 'Los geht’s' : 'Später'}</button></div>`);
+  }
+  function newsList(n) {
+    const items = [];
+    if (n.kind === 'rebirth') {
+      const road = ROADMAP.find(x => x.r === n.n);
+      if (road) items.push(road.text);
+      items.push(`Stufen bis ${capOf(S) === Infinity ? '∞ (Albtraum-Stufen)' : capOf(S)} sind jetzt offen`);
+      items.push(`Du kannst jetzt ${keyLimit(S)} Schlüssel-Fertigkeiten pro Klasse lernen`);
+      items.push(`+${n.stars} Sterne für den Sternen-Laden`);
+      const nextR = ROADMAP.find(x => x.r === n.n + 1);
+      if (nextR) items.push(`Nächste Wiedergeburt ab Stufe ${reqOf(S)}: ${nextR.text}`);
+      if (n.n >= 9) items.push('Der Aufstieg ist jetzt möglich, sobald du Stufe 150 erreichst');
+    } else {
+      items.push(`+${n.crowns} Kronen für den Kronen-Laden`);
+      const road = ASC_ROAD.find(x => x.a === n.n); if (road) items.push(road.text);
+      items.push(`Gegner sind jetzt ×${Math.pow(1.6, n.n).toFixed(1).replace('.', ',')} so stark wie am Anfang`);
+      items.push('Der Wiedergeburt-Fahrplan beginnt von vorn – mit deinen Kronen-Boni geht es viel schneller');
+    }
+    return items;
+  }
+  function showNews() {
+    const n = S.news; if (!n) return;
+    S.news = null; save();
+    const title = n.kind === 'asc' ? `Aufstieg ${n.n}!` : `Wiedergeburt ${n.n}!`;
+    modal(`<span class="rl-mic ${n.kind === 'asc' ? 'crown' : ''}">${n.kind === 'asc' ? '♛' : '✦'}</span><h2>${title}</h2><p class="note">Das ist neu:</p>
+      <ul class="rl-list">${newsList(n).map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+      <div class="row" style="justify-content:center"><button class="btn" data-m="ok">Weiter</button></div>`);
   }
 
   /* ================= Zeichnen ================= */
@@ -1332,6 +1657,73 @@
     ctx.fillStyle = '#ffd23f'; ctx.fillRect(19, -22, 2, 2);
     ctx.restore(); ctx.globalAlpha = 1;
   }
+  function dragonC(x, y, t, a) {
+    const f = Math.sin(t * 8) * 10;
+    ctx.save(); ctx.translate(x, y + Math.sin(t * 2) * 6);
+    ctx.fillStyle = '#b8323a';
+    ctx.beginPath(); ctx.moveTo(-6, -2); ctx.lineTo(-22, -16 - f); ctx.lineTo(-2, -6); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(4, -2); ctx.lineTo(16, -18 - f); ctx.lineTo(10, -4); ctx.fill();
+    rr(-16, -6, 30, 12, 6); fillO('#e5484d');
+    ctx.beginPath(); ctx.moveTo(-16, 0); ctx.quadraticCurveTo(-30, 4, -34, -4); ctx.lineWidth = 4; ctx.strokeStyle = '#e5484d'; ctx.stroke();
+    ctx.beginPath(); ctx.arc(18, -6, 7, 0, 7); fillO('#e5484d');
+    ctx.fillStyle = '#ffd23f'; ctx.fillRect(20, -8, 2, 2);
+    ctx.fillStyle = '#7a1f22'; ctx.beginPath(); ctx.moveTo(14, -12); ctx.lineTo(12, -18); ctx.lineTo(17, -12); ctx.fill();
+    if (a > 0) { const g = ctx.createLinearGradient(24, 0, 260, 0); g.addColorStop(0, `rgba(255,200,90,${Math.min(1, a)})`); g.addColorStop(1, 'rgba(255,90,40,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(24, -6); ctx.lineTo(260, 60); ctx.lineTo(260, 120); ctx.closePath(); ctx.fill(); }
+    ctx.restore();
+  }
+  function owlC(x, y, t) {
+    ctx.save(); ctx.translate(x, y + Math.sin(t * 3) * 3);
+    const f = Math.sin(t * 14) * 5;
+    ctx.fillStyle = '#a88a5a'; ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(-16, -6 - f); ctx.lineTo(-4, 4); ctx.fill(); ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(16, -6 - f); ctx.lineTo(4, 4); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(0, 0, 8, 10, 0, 0, 7); fillO('#d9c48a');
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-3, -3, 3, 0, 7); ctx.arc(3, -3, 3, 0, 7); ctx.fill();
+    ctx.fillStyle = '#1b1726'; ctx.fillRect(-4, -4, 2, 2); ctx.fillRect(2, -4, 2, 2);
+    ctx.fillStyle = '#e0a020'; ctx.beginPath(); ctx.moveTo(-1, 0); ctx.lineTo(1, 0); ctx.lineTo(0, 3); ctx.fill();
+    ctx.restore();
+  }
+  function golemC(x, t) {
+    shadow(x, 18);
+    ctx.save(); ctx.translate(x, GROUND + Math.sin(t * 2) * 0.5);
+    rr(-12, -18, 9, 18, 3); fillO('#7d8590'); rr(3, -18, 9, 18, 3); fillO('#7d8590');
+    rr(-16, -52, 32, 36, 8); fillO('#9aa3ad');
+    rr(-24, -48, 10, 26, 4); fillO('#8a929c'); rr(14, -48, 10, 26, 4); fillO('#8a929c');
+    rr(-9, -66, 18, 15, 4); fillO('#aab3bd');
+    ctx.fillStyle = `rgba(127,220,255,${0.7 + 0.3 * Math.sin(t * 3)})`; ctx.fillRect(-5, -61, 3, 3); ctx.fillRect(2, -61, 3, 3);
+    ctx.fillStyle = 'rgba(127,220,255,.5)'; ctx.fillRect(-2, -42, 4, 12);
+    ctx.restore();
+  }
+  function phoenixC(x, y, t) {
+    ctx.save(); ctx.translate(x, y + Math.sin(t * 2.5) * 5);
+    for (let i = 0; i < 6; i++) { ctx.fillStyle = `rgba(255,${120 + i * 20},40,${0.5 - i * 0.07})`; ctx.beginPath(); ctx.arc(-10 - i * 6, Math.sin(t * 6 + i) * 3, Math.max(1, 5 - i * 0.6), 0, 7); ctx.fill(); }
+    const f = Math.sin(t * 10) * 9;
+    ctx.fillStyle = '#ff7a3d'; ctx.beginPath(); ctx.moveTo(-4, -2); ctx.lineTo(-14, -16 - f); ctx.lineTo(4, -4); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(0, 0, 10, 6, 0, 0, 7); fillO('#ff9a3d');
+    ctx.beginPath(); ctx.arc(10, -4, 5, 0, 7); fillO('#ffb547');
+    ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.moveTo(14, -4); ctx.lineTo(19, -3); ctx.lineTo(14, -1); ctx.fill();
+    ctx.restore();
+  }
+  function drawComps(t, R) {
+    const act = (S.compActive || []).filter(id => S.comps[id]);
+    if (act.includes('golem')) golemC(R ? R.frontX + 34 : 330, t);
+    if (act.includes('drache')) dragonC(R ? R.frontX - 40 : 70, R ? 70 : 108, t, R && R.fx.dragon > 0 ? R.fx.dragon : 0);
+    if (act.includes('eule')) owlC(R ? (R.pos.p || R.pos.s || R.frontX - 40) : 432, R ? 110 : 118, t);
+    if (act.includes('phoenix')) phoenixC(R ? R.frontX - 10 : 395, R ? 95 : 78, t);
+  }
+  function weather(stage, t) {
+    const z = zoneOf(stage) % 15;
+    if (z === 5 || z === 1) { ctx.strokeStyle = 'rgba(200,220,255,.35)'; ctx.lineWidth = 1; for (let i = 0; i < 40; i++) { const x = (hash(i) * W + t * 60) % W, y = (hash(i + 7) * H + t * 380) % GROUND; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 3, y + 9); ctx.stroke(); } }
+    if (z === 5 || z === 7) { const g = ctx.createLinearGradient(0, GROUND - 60, 0, GROUND + 10); g.addColorStop(0, 'rgba(220,220,235,0)'); g.addColorStop(1, 'rgba(220,220,235,.35)'); ctx.fillStyle = g; ctx.fillRect(0, GROUND - 60, W, 70); }
+    if (z === 9 || z === 14) for (let i = 0; i < 30; i++) { ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillRect((hash(i) * W + Math.sin(t + i) * 10 + W) % W, (hash(i + 4) * H + t * (25 + hash(i) * 20)) % GROUND, 2, 2); }
+    if (z === 8 || z === 13 || stage > 150) for (let i = 0; i < 18; i++) { ctx.fillStyle = 'rgba(255,150,70,.7)'; ctx.fillRect(hash(i) * W, GROUND - ((t * (15 + hash(i) * 25) + hash(i + 2) * 200) % 200), 2, 2); }
+  }
+  function grassFront(scroll, night) {
+    ctx.fillStyle = night ? 'rgba(20,30,20,.9)' : 'rgba(40,70,35,.85)';
+    for (let k = Math.floor(scroll * 1.3 / 40) - 1; k < Math.floor(scroll * 1.3 / 40) + 14; k++) {
+      if (hash(k * 1.7) < 0.5) continue;
+      const x = k * 40 - scroll * 1.3 + hash(k) * 20;
+      for (let j = 0; j < 4; j++) { ctx.beginPath(); ctx.moveTo(x + j * 3, H); ctx.quadraticCurveTo(x + j * 3 - 2, H - 10, x + j * 3 + 2 - j, H - 16 - hash(k + j) * 8); ctx.lineTo(x + j * 3 + 2, H); ctx.fill(); }
+    }
+  }
   const DRAW = { r: knight, w: guard, s: archer, m: mage, p: priest, t: tamer };
   const HCOL = Object.fromEntries(HEROES.map(h => [h.id, h.color]));
 
@@ -1345,12 +1737,14 @@
     const bm = biomeOf(stage), scroll = R ? R.scroll : 0, night = !R;
     sky(bm, t, night || tower);
     if (tower) { ctx.fillStyle = 'rgba(60,30,90,.35)'; ctx.fillRect(0, 0, W, H); }
+    if (R && !tower && nightmare(stage)) { ctx.fillStyle = 'rgba(120,10,30,.35)'; ctx.fillRect(0, 0, W, H); }
     range(night ? '#2a2745' : tower ? '#2b2140' : bm.far, 0.12, 150, 40, 0.01, scroll, true);
     range(night ? '#25313a' : tower ? '#3a2d55' : bm.hill[0], 0.3, 170, 22, 0.013, scroll);
     range(night ? '#1c2a22' : tower ? '#2a2140' : bm.hill[1], 0.55, 196, 14, 0.022, scroll);
     ground(bm, scroll, night || tower);
     if (R) {
       if (!tower) props(bm, scroll, t);
+      if (!tower) weather(stage, t);
       const walking = R.enemies.length && R.enemies[0].x > R.frontX + 54;
       [...R.enemies].sort((a, b) => b.x - a.x).forEach(e => enemy(e, t));
       if (R.fx.wurzel > 0 || R.enemies.some(e => e.rooted > 0)) R.enemies.filter(e => e.rooted > 0).forEach(e => { ctx.strokeStyle = '#5e8c3a'; ctx.lineWidth = 3; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(e.x - 12 + i * 12, GROUND); ctx.quadraticCurveTo(e.x - 18 + i * 12, GROUND - 14, e.x - 8 + i * 10, GROUND - 22); ctx.stroke(); } });
@@ -1369,6 +1763,7 @@
         if (h.shield > 0) { ctx.fillStyle = 'rgba(255,255,255,.8)'; rr(R.pos[k] - 14, y - 4, 28 * Math.min(1, h.shield / st[k].hp), 3, 1.5); ctx.fill();
           ctx.strokeStyle = 'rgba(255,228,138,.5)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(R.pos[k], GROUND - 40, 20, 46, 0, 0, 7); ctx.stroke(); }
       }
+      drawComps(t, R);
       // Geschosse
       for (const a of R.arrows) {
         const p = Math.min(1, a.t / a.d), arc = a.kind === 'hag' ? 50 : a.kind === 'feuer' || a.kind === 'licht' ? 6 : 14;
@@ -1394,6 +1789,8 @@
       if (fx.p_segen > 0 || fx.p_schild > 0) { const v = Math.max(fx.p_segen || 0, fx.p_schild || 0); ctx.fillStyle = `rgba(255,228,138,${v * 0.35})`; ctx.fillRect(0, 0, W, H); }
       if (fx.p_wieder > 0) { ctx.fillStyle = `rgba(255,240,180,${fx.p_wieder})`; ctx.fillRect(0, 0, W, 6); }
       if (R.buffT > 0) { ctx.strokeStyle = 'rgba(255,181,71,.45)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(R.frontX - 50, GROUND + 2, 90 + Math.sin(t * 10) * 3, 8, 0, 0, 7); ctx.stroke(); }
+      if (R.fx.phoenix > 0) { ctx.fillStyle = `rgba(255,154,61,${Math.min(1, R.fx.phoenix) * 0.4})`; ctx.fillRect(0, 0, W, H); }
+      grassFront(scroll, tower);
       for (const p of R.parts) { ctx.globalAlpha = Math.min(1, p.t * 2); ctx.fillStyle = p.c; ctx.fillRect(p.x, p.y, 3, 3); }
       ctx.globalAlpha = 1;
       for (const f of R.floats) { ctx.globalAlpha = Math.min(1, f.t * 2); ctx.font = `${f.size}px "Bungee","Arial Black",sans-serif`; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.strokeText(f.text, f.x, f.y); ctx.fillStyle = f.color; ctx.fillText(f.text, f.x, f.y); }
@@ -1403,10 +1800,18 @@
       ctx.font = '15px "Bungee","Arial Black",sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = '#fff';
       ctx.fillText(tower ? `Turm · Etage ${R.stage}` : `Stufe ${R.stage}`, 12, 22);
       ctx.font = '12px "Figtree",sans-serif';
-      const bossNow = tower ? R.stage % 5 === 0 : R.stage % 10 === 0;
+      const bossNow = tower || (R.rules && R.rules.includes('boss')) ? R.stage % 5 === 0 : R.stage % 10 === 0;
       ctx.fillStyle = bossNow ? '#c9a6ff' : 'rgba(255,255,255,.8)';
-      ctx.fillText(bossNow ? `Boss: ${bm.boss}` : tower ? `Rekord ${S.towerBest}` : `${zoneName(R.stage)} · Grenze ${st.cap}`, tower ? 170 : 106, 21);
-      ctx.textAlign = 'right'; ctx.fillStyle = '#ffcf4a'; if (!tower) ctx.fillText(`+${fmt(R.gold)} Gold`, W - 12, 21);
+      ctx.fillText(bossNow ? `Boss: ${bm.boss}` : tower ? `Rekord ${S.towerBest}` : `${zoneName(R.stage)} · Grenze ${st.cap === Infinity ? '∞' : st.cap}`, tower ? 170 : 106, 21);
+      ctx.textAlign = 'right'; ctx.fillStyle = '#ffcf4a'; if (R.mode === 'normal') ctx.fillText(`+${fmt(R.gold)} Gold`, W - 12, 21);
+      if (R.mode === 'weekly') { ctx.fillStyle = '#ffd23f'; ctx.fillText('Wochen-Herausforderung', W - 12, 21); }
+      if (R.bannerT > 0) {
+        const a = Math.max(0, Math.min(1, R.bannerT * 2, (2.2 - R.bannerT) * 4)), y = 92;
+        ctx.globalAlpha = a; ctx.fillStyle = 'rgba(30,10,40,.75)'; ctx.fillRect(0, y - 26, W, 44);
+        ctx.fillStyle = '#c9a6ff'; ctx.fillRect(0, y - 26, W, 2); ctx.fillRect(0, y + 16, W, 2);
+        ctx.textAlign = 'center'; ctx.font = '22px "Bungee","Arial Black",sans-serif'; ctx.fillStyle = '#fff'; ctx.fillText(`BOSS · ${bm.boss}`, W / 2 + (1 - a) * 40, y + 4);
+        ctx.globalAlpha = 1;
+      }
     } else {
       // Lager
       const fx = 250;
@@ -1422,6 +1827,7 @@
       const spots = { r: 205, w: 300, s: 175, m: 145, p: 115, t: 330 };
       camp.forEach(k => DRAW[k](spots[k], null, t, false));
       if (camp.includes('t')) wolf(362, t, false);
+      drawComps(t, null);
       ctx.textAlign = 'center'; ctx.font = '20px "Bungee","Arial Black",sans-serif'; ctx.fillStyle = '#ffb547';
       const done = run && run.dead;
       ctx.fillText(done ? (run.mode === 'tower' ? `Turm: Etage ${run.stage}` : run.victory ? `Stufengrenze ${st.cap} erreicht!` : `Gefallen auf Stufe ${run.stage}`) : 'Lager', W / 2, 42);
