@@ -12,10 +12,10 @@
   const HEROES = [
     { id: 'r', tree: 'ritter', name: 'Ritter', color: '#ffb547', slots: 2, rebirth: 0, line: 'front', desc: 'Kämpft vorne mit dem Schwert. Ausgewogen zwischen Angriff und Verteidigung.' },
     { id: 'w', tree: 'waechter', name: 'Wächter', color: '#7fb2ff', slots: 1, rebirth: 1, hire: 'w_hire', line: 'front', desc: 'Steht ganz vorne und fängt die Treffer ab. Viel Leben, wenig Schaden.' },
-    { id: 's', tree: 'schuetze', name: 'Schützin', color: '#7ee08a', slots: 1, rebirth: 2, hire: 's_hire', line: 'back', desc: 'Schießt aus der hinteren Reihe. Viel Schaden auf ein Ziel, wenig Leben.' },
+    { id: 's', tree: 'schuetze', name: 'Schützin', color: '#7ee08a', slots: 1, rebirth: 3, hire: 's_hire', line: 'back', desc: 'Schießt aus der hinteren Reihe. Viel Schaden auf ein Ziel, wenig Leben.' },
     { id: 'm', tree: 'magier', name: 'Magier', color: '#c08cff', slots: 1, rebirth: 5, hire: 'm_hire', line: 'back', desc: 'Zauber treffen mehrere Gegner gleichzeitig. Mächtige Fähigkeiten, sehr wenig Leben.' },
-    { id: 'p', tree: 'priester', name: 'Priesterin', color: '#ffe48a', slots: 1, rebirth: 6, hire: 'p_hire', line: 'back', desc: 'Heilt die Gruppe, gibt Schilde und belebt Gefallene wieder.' },
-    { id: 't', tree: 'baendiger', name: 'Tierbändiger', color: '#d9935a', slots: 1, rebirth: 8, hire: 't_hire', line: 'front', desc: 'Kämpft mit der Axt, sein Wolf greift zusätzlich an. Ruft im Notfall das ganze Rudel.' },
+    { id: 'p', tree: 'priester', name: 'Priesterin', color: '#ffe48a', slots: 1, rebirth: 7, hire: 'p_hire', line: 'back', desc: 'Heilt die Gruppe, gibt Schilde und belebt Gefallene wieder.' },
+    { id: 't', tree: 'baendiger', name: 'Tierbändiger', color: '#d9935a', slots: 1, rebirth: 9, hire: 't_hire', line: 'front', desc: 'Kämpft mit der Axt, sein Wolf greift zusätzlich an. Ruft im Notfall das ganze Rudel.' },
     { id: 'a', tree: 'assassine', name: 'Assassine', color: '#ff6b7a', slots: 1, rebirth: 99, puzzle: true, hire: 'a_hire', line: 'back', desc: 'Wirft Kunai aus der hinteren Reihe, trifft oft kritisch und macht Jagd auf Fernkämpfer.' },
     { id: 'n', tree: 'nekromant', name: 'Nekromant', color: '#6be0b8', slots: 1, rebirth: 99, puzzle: true, hire: 'n_hire', line: 'back', desc: 'Besiegte Gegner stehen als Skelett-Diener wieder auf und kämpfen für dich. Verflucht und raubt Leben.' },
     { id: 'b', tree: 'barde', name: 'Barde', color: '#ff8ac8', slots: 1, rebirth: 99, puzzle: true, hire: 'b_hire', line: 'back', desc: 'Sein Lied macht alle Helden stärker und schneller. Schläfert Gegner ein und stößt sie mit Schallwellen zurück.' },
@@ -32,14 +32,14 @@
   // Was jede Wiedergeburt freischaltet
   const CAPS = [30, 45, 60, 75, 90, 105, 120, 135, 150];
   const ROADMAP = [
-    { r: 1, text: 'Wächter als neue Klasse' }, { r: 2, text: 'Schützin als neue Klasse' }, { r: 3, text: 'Runen: Bosse lassen Runen fallen, jede Klasse hat 3 Sockel. Runen zerstören und das Lager mit Runensplittern erweitern' },
-    { r: 4, text: 'Runenschmied: 3 gleiche Runen verschmelzen, zufällige Runen kaufen' }, { r: 5, text: 'Magier als neue Klasse' }, { r: 6, text: 'Priesterin als neue Klasse' },
-    { r: 7, text: 'Turm-Modus: endloser Turm mit dauerhaftem Bonus' }, { r: 8, text: 'Tierbändiger als neue Klasse' }, { r: 9, text: 'Alle 150 Stufen, danach endlose Albtraum-Stufen. Der Aufstieg wird möglich.' },
+    { r: 1, text: 'Wächter als neue Klasse, dazu Seelenaltar und Tempo' }, { r: 2, text: 'Runen: Bosse lassen Runen fallen, jede Klasse hat 3 Sockel. Runen zerstören und das Lager mit Runensplittern erweitern' }, { r: 3, text: 'Schützin als neue Klasse' },
+    { r: 4, text: 'Runenschmied: 3 gleiche Runen verschmelzen, zufällige Runen kaufen' }, { r: 5, text: 'Magier als neue Klasse' }, { r: 6, text: 'Ahnenprüfung: 10 Missionen voller Bosse, am Ende wartet der Urahn mit einem Ahnensiegel' },
+    { r: 7, text: 'Priesterin als neue Klasse' }, { r: 8, text: 'Turm-Modus: endloser Turm mit dauerhaftem Bonus' }, { r: 9, text: 'Tierbändiger als neue Klasse. Alle 150 Stufen, danach endlose Albtraum-Stufen. Der Aufstieg wird möglich.' },
   ];
   const capOf = S => (S.rebirths >= CAPS.length ? Infinity : CAPS[Math.min(S.rebirths, CAPS.length - 1)]);
   const reqOf = S => Math.max(15, (S.rebirths < CAPS.length - 1 ? CAPS[S.rebirths] - 5 : 145) - 5 * ((S.cperks && S.cperks.k_schnell) || 0));
   const keyLimit = S => S.rebirths + 1;
-  const feature = (S, f) => S.rebirths >= ({ runen: 3, schmiede: 4, turm: 7 })[f];
+  const feature = (S, f) => S.rebirths >= ({ runen: 2, schmiede: 4, turm: 8, ahnen: 6 })[f] || (f === 'ahnen' && S.asc > 0);
 
   /* ================= Fertigkeitenbäume ================= */
   const G = (base, grow) => r => ({ g: Math.ceil(base * Math.pow(grow, r)), s: 0 });
@@ -525,12 +525,276 @@
   const runeCap = S => 40 + LAGER_STEP * (S.rlager || 0);
   const DUST_RUNE = 4;
   const shardOf = tier => Math.pow(3, tier - 1), mergeCost = tier => Math.pow(3, tier);
+  /* ================= Ahnenprüfung ================= */
+  // 10 Missionen mit je 5 eigenen Bossen (3 Phasen), am Ende von Mission 10 wartet der Urahn. Wer die Kette schafft, bekommt ein Ahnensiegel.
+  const AHN_TUNE = { hp: 22, dmg: 0.14, minHp: 0.55, waves: 2, lvl: 0.8, ahneHp: 1.2, enr: 140 };
+  // Fähigkeiten der Bosse. dmg-Werte sind Vielfache des Boss-Angriffs.
+  const AHN_ABIL = {
+    slam: { name: 'Erdstoß', desc: 'holt aus und trifft alle Helden', cd: 9, tele: 1.4 },
+    quake: { name: 'Beben', desc: 'betäubt alle Helden kurz', cd: 14 },
+    snipe: { name: 'Fernschlag', desc: 'trifft den hintersten Helden hart', cd: 7 },
+    rain: { name: 'Geschosshagel', desc: 'Geschosse auf zufällige Helden', cd: 10 },
+    bomb: { name: 'Zeitbombe', desc: 'eine Bombe explodiert nach 3 s an einem Helden', cd: 12 },
+    summon: { name: 'Ruf der Diener', desc: 'ruft zwei Diener vor sich', cd: 16 },
+    split: { name: 'Abspaltung', desc: 'teilt zu Beginn der Phase zwei Abbilder ab', cd: 0, start: true },
+    shield: { name: 'Schutzpanzer', desc: 'ein Schild schluckt Schaden, bis er bricht', cd: 18 },
+    reflect: { name: 'Spiegelhaut', desc: 'wirft 4 s lang Schaden auf den vordersten Helden zurück', cd: 15 },
+    heal: { name: 'Regeneration', desc: 'heilt sich 5 s lang', cd: 18 },
+    stun: { name: 'Betäubungshieb', desc: 'betäubt den vordersten Helden', cd: 11 },
+    poison: { name: 'Giftwolke', desc: 'alle Helden verlieren 6 s lang Leben', cd: 14 },
+    curse: { name: 'Fluch', desc: 'Heilung wirkt 7 s lang viel schwächer', cd: 15 },
+    silence: { name: 'Stille', desc: 'alle Fähigkeiten der Helden laden 4 s länger', cd: 15 },
+    frenzy: { name: 'Raserei', desc: 'greift 5 s lang doppelt so schnell an', cd: 14 },
+    mark: { name: 'Todesmarke', desc: 'ein Held nimmt 6 s lang doppelten Schaden', cd: 13 },
+    charge: { name: 'Ansturm', desc: 'stürmt auf den vordersten Helden und wirft ihn um', cd: 12 },
+    drain: { name: 'Lebensraub', desc: 'stiehlt dem vordersten Helden Leben', cd: 10 },
+    freeze: { name: 'Frosthauch', desc: 'Helden greifen 5 s lang halb so schnell an', cd: 14 },
+    blind: { name: 'Finsternis', desc: 'Helden verfehlen 5 s lang jeden dritten Angriff', cd: 15 },
+    vanish: { name: 'Schattenflucht', desc: 'wird 2 s unverwundbar und weicht zurück', cd: 16 },
+    burn: { name: 'Feuersbrunst', desc: 'der Boden brennt 6 s lang unter den Helden', cd: 14 },
+    chain: { name: 'Kettenblitz', desc: 'ein Blitz springt über drei Helden', cd: 10 },
+  };
+  const AHN_TRAIT = { armor: v => `nimmt ${Math.round(v * 100)} % weniger Schaden`, haste: v => `greift ${Math.round((v - 1) * 100)} % schneller an`, regen: v => `heilt ${(v * 100).toFixed(1).replace('.', ',')} % pro Sekunde` };
+  // b(name, Bossbild, Farbe, Größe, Effekt, Spruch, Phase 1, Phase 2, Phase 3); Phasen: [Fähigkeiten, Eigenschaften]
+  const ahnB = (name, bk, tint, sz, acc, quote, p1, p2, p3) => ({ name, bk, tint, sz, acc, quote, ph: [p1, p2, p3].map(p => ({ a: p[0], t: p[1] || {} })) });
+  const AHN_MISSIONS = [
+    { name: 'Wiesengrund', env: 0, minion: 'schleim', col: '#7ee08a', desc: 'Sanfte Hügel, aber die Bewohner sind alles andere als sanft.', bosses: [
+      ahnB('Glibberbaron', 0, '#ff7ab8', 1, 'blasen', 'Ich bin weich, aber ihr werdet nicht durchkommen!', [['summon']], [['slam'], { armor: 0.1 }], [['split', 'frenzy']]),
+      ahnB('Hauptmann Knirschzahn', 1, '#c9a64a', 1, 'staub', 'Meine Bande hat noch nie verloren.', [['charge']], [['rain', 'summon']], [['frenzy', 'stun']]),
+      ahnB('Der Moosgreis', 11, '#9be36b', 1, 'blaetter', 'Wurzeln vergessen nichts.', [['heal']], [['poison', 'snipe']], [['shield', 'quake']]),
+      ahnB('Königin Tauperle', 0, '#7ad7ff', 1.05, 'blasen', 'Jeder Tropfen gehorcht mir.', [['freeze']], [['split', 'heal']], [['rain', 'freeze'], { armor: 0.2 }]),
+      ahnB('Wächter des Hains', 10, '#b5e08a', 1, 'runen', 'Nur wer würdig ist, geht weiter.', [['snipe']], [['reflect', 'slam']], [['summon', 'blind']]),
+    ] },
+    { name: 'Finsterforst', env: 1, minion: 'goblin', col: '#3f8a5a', desc: 'Zwischen den Stämmen lauern Augen, die nie schlafen.', bosses: [
+      ahnB('Rabenfürst Krahl', 7, '#4a4a6a', 1, 'federn', 'Die Raben erzählen mir alles.', [['snipe', 'rain']], [['vanish', 'mark']], [['blind', 'chain']]),
+      ahnB('Borkenbrecher', 6, '#8a5a2b', 1.1, 'staub', 'Ich zerbreche Eichen. Und Helden.', [['slam']], [['charge'], { armor: 0.3 }], [['quake', 'frenzy']]),
+      ahnB('Hexe Nachtschatten', 5, '#7a5ad8', 1, 'schatten', 'Mein Kessel brodelt schon für euch.', [['curse']], [['poison', 'summon']], [['silence', 'mark']]),
+      ahnB('Grauklaue', 1, '#9aa3ad', 1.05, 'staub', 'Das Rudel jagt heute Helden.', [['charge', 'frenzy']], [['summon']], [['drain', 'frenzy'], { haste: 1.3 }]),
+      ahnB('Der Hirschkönig', 11, '#e8d9a8', 1.1, 'blaetter', 'Der Wald hat mich gekrönt.', [['stun']], [['heal', 'slam']], [['shield', 'rain', 'quake']]),
+    ] },
+    { name: 'Knochenacker', env: 2, minion: 'skelett', col: '#c9c0e0', desc: 'Hier ruhen die Gefallenen. Nicht alle bleiben liegen.', bosses: [
+      ahnB('Gebeinsammler', 2, '#e8e2d0', 1, 'knochen', 'Eure Knochen fehlen mir noch.', [['summon']], [['drain', 'curse']], [['split', 'summon']]),
+      ahnB('Grabwächter Morrak', 2, '#7a9a6a', 1.1, 'runen', 'Niemand stört die Toten.', [['shield']], [['slam'], { armor: 0.25 }], [['quake', 'stun']]),
+      ahnB('Die Klagende', 12, '#c8f5ff', 1, 'geister', 'Hört ihr mein Lied? Es ist euer letztes.', [['blind']], [['silence', 'vanish']], [['mark', 'chain']]),
+      ahnB('Pestdoktor Varn', 5, '#7a9a3a', 1, 'gift', 'Keine Sorge, das tut nur kurz weh.', [['poison']], [['curse', 'bomb']], [['poison', 'rain', 'heal']]),
+      ahnB('Knochendrache Ossar', 13, '#d8d0c0', 1, 'knochen', 'Ich war schon tot. Ihr habt keine Chance.', [['rain']], [['charge', 'burn']], [['quake', 'frenzy'], { armor: 0.2 }]),
+    ] },
+    { name: 'Glutschlund', env: 3, minion: 'daemon', col: '#ff7a3d', desc: 'Die Erde selbst brennt. Bleibt nicht zu lange stehen.', bosses: [
+      ahnB('Funkenkobold Zisch', 3, '#ffd23f', 0.95, 'funken', 'Bumm! Hihihi!', [['bomb']], [['rain', 'frenzy']], [['split', 'bomb']]),
+      ahnB('Schlackenkoloss', 8, '#6a5a5a', 1.1, 'funken', 'Ich bin aus erkaltetem Feuer gemacht.', [['slam'], { armor: 0.3 }], [['shield', 'quake']], [['burn', 'charge']]),
+      ahnB('Flammenzunge Ignara', 3, '#ff4a8a', 1, 'flammen', 'Tanzt für mich im Feuer!', [['burn']], [['snipe', 'mark']], [['frenzy', 'chain', 'burn']]),
+      ahnB('Aschefürst', 8, '#9a9aa8', 1.05, 'asche', 'Alles wird zu Asche. Auch ihr.', [['curse']], [['blind', 'burn']], [['summon', 'heal']]),
+      ahnB('Höllenhund Kerberos', 3, '#e5484d', 1.1, 'flammen', 'Drei Köpfe, drei Mal so hungrig.', [['charge', 'frenzy']], [['drain']], [['split', 'frenzy'], { haste: 1.3 }]),
+    ] },
+    { name: 'Frostkamm', env: 4, minion: 'golem', col: '#9fd0ff', desc: 'Eisige Winde, die jede Bewegung schwer machen.', bosses: [
+      ahnB('Eisjungfer Skadi', 4, '#bfe8ff', 0.95, 'schnee', 'Erstarrt in Ehrfurcht.', [['freeze']], [['snipe', 'shield']], [['rain', 'freeze']]),
+      ahnB('Gletscherbrecher', 4, '#6e8ba3', 1.15, 'schnee', 'Berge weichen mir aus.', [['slam']], [[], { armor: 0.35 }], [['quake', 'charge']]),
+      ahnB('Schneesturmgeist', 14, '#e8f4ff', 1, 'schnee', 'Ich bin der Wind, den ihr nicht seht.', [['chain']], [['blind', 'freeze']], [['vanish', 'rain']]),
+      ahnB('Kristallmatriarchin', 9, '#9fd0ff', 1, 'kristalle', 'Meine Kinder sind überall.', [['summon']], [['reflect', 'shield']], [['split', 'reflect']]),
+      ahnB('Der Weiße Wyrm', 13, '#f0faff', 1.05, 'schnee', 'Mein Atem ist der ewige Winter.', [['freeze', 'rain']], [['charge', 'mark']], [['quake', 'freeze', 'frenzy']]),
+    ] },
+    { name: 'Nebelsumpf', env: 5, minion: 'frosch', col: '#7ab87a', desc: 'Im Nebel verliert man den Weg. Und manchmal die Hoffnung.', bosses: [
+      ahnB('Krötenkönig Quarg', 0, '#6aa84a', 1.1, 'blasen', 'Quaaark! Verbeugt euch!', [['summon']], [['poison', 'split']], [['heal', 'frenzy']]),
+      ahnB('Moorhexe Grisla', 5, '#4a8a5a', 1, 'gift', 'Der Sumpf hat Hunger.', [['curse', 'poison']], [['silence']], [['mark', 'bomb']]),
+      ahnB('Sumpfhydra', 13, '#3a8a6a', 1.05, 'gift', 'Schlagt einen Kopf ab, und es wachsen zwei.', [['rain']], [['heal', 'drain']], [['split', 'chain']]),
+      ahnB('Irrlichtmutter', 12, '#c8ff9a', 1, 'irrlicht', 'Folgt dem Licht. Es führt euch heim.', [['blind']], [['vanish', 'snipe']], [['silence', 'chain', 'blind']]),
+      ahnB('Der Ertrunkene', 12, '#4a7a9a', 1.05, 'geister', 'Das Wasser ist so still. Kommt näher.', [['drain']], [['stun', 'curse']], [['quake', 'poison']]),
+    ] },
+    { name: 'Dornenlabyrinth', env: 6, minion: 'dorn', col: '#ff6b9a', desc: 'Jeder Weg sticht. Jede Abkürzung auch.', bosses: [
+      ahnB('Rosenkönigin Spina', 6, '#ff6b9a', 1, 'blueten', 'Schönheit hat ihren Preis.', [['reflect']], [['poison', 'snipe']], [['heal', 'reflect'], { armor: 0.2 }]),
+      ahnB('Distelriese', 6, '#9a7ad8', 1.15, 'blueten', 'Ich bin größer als die Hecke.', [['slam'], { armor: 0.25 }], [['rain']], [['quake', 'frenzy']]),
+      ahnB('Wurzelwürger', 11, '#6b4a2e', 1.05, 'blaetter', 'Ich halte euch fest. Für immer.', [['stun']], [['drain', 'summon']], [['stun', 'quake']]),
+      ahnB('Gärtner des Verfalls', 5, '#a8a04a', 1, 'blueten', 'Alles, was blüht, muss welken.', [['summon']], [['curse', 'burn']], [['split', 'heal']]),
+      ahnB('Dornendrache Spiral', 13, '#5a9a3a', 1, 'blueten', 'Meine Schuppen sind Stacheln.', [['charge']], [['rain', 'mark']], [['frenzy', 'burn', 'chain']]),
+    ] },
+    { name: 'Mitternachtskrypta', env: 7, minion: 'fleder', col: '#b06bff', desc: 'Hier herrscht ewige Nacht. Und sie hat Durst.', bosses: [
+      ahnB('Gräfin Sanguina', 7, '#e5484d', 1, 'blut', 'Ein Tropfen nur. Oder zwei.', [['drain']], [['summon', 'vanish']], [['drain', 'frenzy', 'heal']]),
+      ahnB('Schwarmfürst Nyx', 7, '#5a4a8a', 1, 'federn', 'Tausend Flügel, ein Wille.', [['rain']], [['blind', 'split']], [['chain', 'snipe']]),
+      ahnB('Kryptawächter', 2, '#8a7aa8', 1.15, 'runen', 'Die Siegel bleiben verschlossen.', [['shield']], [['stun'], { armor: 0.3 }], [['quake', 'silence']]),
+      ahnB('Seelenfänger Morn', 12, '#9a6be0', 1, 'geister', 'Eure Seelen glänzen so schön.', [['silence']], [['mark', 'curse']], [['vanish', 'bomb']]),
+      ahnB('Der Blutmond', 7, '#ff2a4a', 1.1, 'blut', 'Wenn ich aufgehe, fällt jeder Held.', [['mark']], [['frenzy', 'drain']], [['split', 'quake', 'frenzy']]),
+    ] },
+    { name: 'Sternenwacht', env: 10, minion: 'astral', col: '#ffd27a', desc: 'Am Rand des Himmels prüfen die Sterne selbst eure Stärke.', bosses: [
+      ahnB('Kometenreiter', 10, '#ffb547', 1, 'sterne', 'Ich falle schneller, als ihr schaut.', [['rain']], [['charge', 'burn']], [['bomb', 'frenzy']]),
+      ahnB('Nebulara', 10, '#c08cff', 1, 'sterne', 'Ich bin aus Sternenstaub geboren.', [['blind']], [['silence', 'heal']], [['vanish', 'chain']]),
+      ahnB('Sternenschmied', 8, '#ffd23f', 1.1, 'funken', 'Ich schmiede Sterne. Ihr seid nur Funken.', [['shield', 'slam']], [['bomb'], { armor: 0.3 }], [['quake', 'rain']]),
+      ahnB('Zeitweber Chronos', 14, '#9fd0ff', 1.05, 'runen', 'Eure Zeit ist längst abgelaufen.', [['silence']], [['freeze', 'mark']], [['stun', 'silence', 'frenzy']]),
+      ahnB('Leere-Titan', 14, '#3a2a6a', 1.15, 'leere', 'Hinter mir ist nichts. Nicht einmal Licht.', [['curse']], [['reflect', 'drain']], [['split', 'quake', 'blind']]),
+    ] },
+    { name: 'Halle der Ahnen', env: 'ahnen', minion: 'geist', col: '#ffd27a', desc: 'Die Echos der ersten Helden warten. Und hinter ihnen der Urahn.', bosses: [
+      ahnB('Echo des Ersten Ritters', 2, '#ffd27a', 1.1, 'echo', 'Ich stand hier, bevor es euch gab.', [['charge', 'stun']], [['frenzy', 'slam']], [['split', 'quake']]),
+      ahnB('Echo des Ewigen Wächters', 4, '#9fc8ff', 1.1, 'echo', 'Kein Schlag kommt an mir vorbei.', [['shield'], { armor: 0.2 }], [['reflect']], [['quake', 'shield', 'heal']]),
+      ahnB('Echo der Sternenschützin', 5, '#a8f0b0', 1, 'echo', 'Ich verfehle nie.', [['snipe', 'rain']], [['mark', 'vanish']], [['chain', 'rain', 'frenzy']]),
+      ahnB('Echo des Erzmagiers', 12, '#d8b8ff', 1.05, 'echo', 'Jeder Zauber, den ihr kennt, stammt von mir.', [['bomb', 'burn']], [['silence', 'chain']], [['freeze', 'blind', 'bomb']]),
+      ahnB('Echo der Lichtpriesterin', 10, '#fff2b0', 1, 'echo', 'Ich heile. Aber nicht euch.', [['heal', 'curse']], [['summon', 'shield']], [['heal', 'silence', 'reflect']]),
+    ] },
+  ];
+  // Drachen mit eigenem Bild statt eingefärbtem Grundbild
+  const AHN_ART = { 'Knochendrache Ossar': 'bone', 'Der Weiße Wyrm': 'frost', 'Sumpfhydra': 'hydra', 'Dornendrache Spiral': 'thorn' };
+  AHN_MISSIONS.forEach(M => M.bosses.forEach(d => { if (AHN_ART[d.name]) d.art = AHN_ART[d.name]; }));
+  const AHNE = { name: 'Der Urahn', ahne: true, bk: -1, tint: null, sz: 1, acc: 'ahne', quote: 'Ihr wollt das Siegel? Dann zeigt mir, dass ihr meiner würdig seid.',
+    ph: [{ n: 'Der König erwacht', a: ['slam', 'charge', 'summon'], t: {} }, { n: 'Klingen der Ahnen', a: ['rain', 'mark', 'shield'], t: { armor: 0.1 } }, { n: 'Flamme der Ewigkeit', a: ['quake', 'frenzy', 'chain', 'split'], t: { armor: 0.1, haste: 1.15 } }] };
+  const AHN_COUNT = AHN_MISSIONS.length;
+  const ahnOpen = S => feature(S, 'ahnen');
+  const ahnBossesOf = mi => (mi === AHN_COUNT - 1 ? [...AHN_MISSIONS[mi].bosses, AHNE] : AHN_MISSIONS[mi].bosses);
+  const ahnLevelFor = S => Math.max(10, Math.round(AHN_TUNE.lvl * Math.max(S.best || 0, 10)));
+  function ahnFix(d) {
+    const a = d && typeof d === 'object' ? d : {}, n = x => Math.max(0, Math.floor(Number(x) || 0));
+    const out = { m: Math.min(AHN_COUNT - 1, n(a.m)), lvl: n(a.lvl), sig: n(a.sig), got: n(a.got), place: {} };
+    for (const h of HEROES) if (a.place && a.place[h.id]) out.place[h.id] = 1;
+    return out;
+  }
+  function placeSigil(S, hid) {
+    if (!HERO_BY_ID[hid] || S.ahn.place[hid] || S.ahn.sig <= 0) return false;
+    S.ahn.sig--; S.ahn.place[hid] = 1; return true;
+  }
+  function ahnInit(S, run) {
+    if (!S.ahn.lvl) S.ahn.lvl = ahnLevelFor(S);
+    run.stage = run.startStage = S.ahn.lvl;
+    run.ahn = { mi: S.ahn.m, bi: 0, wave: 0, boss: null, fx: [], banner: null };
+  }
+  function ahnMinion(run, i, ranged, mul = 1) {
+    const e = makeEnemy(run.stage, i, false, false, run, ranged);
+    e.type = AHN_MISSIONS[run.ahn.mi].minion; e.hp *= AHN_TUNE.minHp * mul; e.max = e.hp;
+    return e;
+  }
+  function ahnSpawn(run) {
+    const A = run.ahn, list = ahnBossesOf(A.mi);
+    run.enemies = [];
+    if (A.wave < AHN_TUNE.waves) { for (let i = 0; i < 4; i++) run.enemies.push(ahnMinion(run, i, i === 3)); return; }
+    const def = list[A.bi], e = makeEnemy(run.stage, 1.2, true, false, run);
+    const hpMul = AHN_TUNE.hp * (def.ahne ? AHN_TUNE.ahneHp : 1);
+    e.hp *= hpMul; e.max = e.hp; e.dmg *= AHN_TUNE.dmg; e.lastHp = e.hp;
+    e.ahn = def; e.bk = def.bk; e.type = def.bk >= 0 && def.bk < 5 ? ENEMY_KINDS[def.bk] : AHN_MISSIONS[A.mi].minion;
+    e.reach = def.ahne ? 62 : 30; e.phase = 0; e.phaseT = 0; e.shieldHp = 0; e.invT = 0; e.reflT = 0; e.healT = 0; e.frenzyT = 0; e.x = 600;
+    ahnPhase(e, 0);
+    A.boss = e; A.banner = { t: def.ahne ? 5 : 3.2, title: def.name, sub: def.quote, ahne: !!def.ahne };
+    if (def.ahne) run.introT = 3.4;
+    run.enemies.push(e);
+  }
+  function ahnPhase(e, p) {
+    const P = e.ahn.ph[p];
+    e.phase = p; e.phaseT = 0; e.traits = P.t || {};
+    e.ab = P.a.filter(id => !AHN_ABIL[id].start).map((id, i) => ({ id, t: 2.5 + i * 1.8 }));
+    e.rate = 1.6 * (e.traits.haste ? 1 / e.traits.haste : 1);
+  }
+  const aliveHeroes = run => run.order.filter(k => run.h[k].alive);
+  function ahnCast(S, st, run, c, e, id) {
+    const D = e.dmg, A = run.ahn, al = aliveHeroes(run); if (!al.length) return;
+    const fk = al[0], back = al[al.length - 1], rnd = () => al[Math.floor(Math.random() * al.length)];
+    const hurt = (k, m) => hurtHero(c, k, D * m, null);
+    c.efloat(e, AHN_ABIL[id].name, '#ffd27a', 15); e.castT = 0.8; e.castId = id;
+    switch (id) {
+      case 'slam': A.fx.push({ kind: 'slam', t: AHN_ABIL.slam.tele, d: AHN_ABIL.slam.tele }); break;
+      case 'quake': al.forEach(k => { hurt(k, 0.4); run.h[k].stunT = Math.max(run.h[k].stunT || 0, 1); }); run.shake = 0.35; A.fx.push({ kind: 'quake', t: 0.6, d: 0.6 }); break;
+      case 'snipe': hurt(back, 1.6); run.eshots.push({ x: e.x - 20, y: 150, tx: run.pos[back], ty: 175, t: 0, d: 0.3, k: back, dmg: 0, kind: 'sturm' }); break;
+      case 'rain': for (let i = 0; i < 6; i++) { const k = rnd(); run.eshots.push({ x: e.x - 10, y: 120, tx: run.pos[k], ty: 180, t: -i * 0.12, d: 0.6, k, dmg: D * 0.35, kind: e.type }); } break;
+      case 'bomb': { const k = rnd(); A.fx.push({ kind: 'bomb', k, t: 3, d: 3 }); break; }
+      case 'summon': for (let i = 0; i < 2; i++) { const m = ahnMinion(run, 0, false, 0.6); m.x = e.x - 40 - i * 30; run.enemies.push(m); } c.burst(e.x - 40, 190, '#c9a6ff', 12); break;
+      case 'shield': e.shieldHp = Math.max(e.shieldHp, e.max * 0.03); break;
+      case 'reflect': e.reflT = 4; break;
+      case 'heal': e.healT = 5; break;
+      case 'stun': hurt(fk, 1); run.h[fk].stunT = Math.max(run.h[fk].stunT || 0, 2.5); break;
+      case 'poison': al.forEach(k => { run.h[k].dotT = 6; run.h[k].dotP = 0.012; }); A.fx.push({ kind: 'poison', t: 6, d: 6 }); break;
+      case 'curse': run.curseT = 7; break;
+      case 'silence': for (const id2 of S.equip) run.cds[id2] = (run.cds[id2] || 0) + 4; run.silT = 1.2; break;
+      case 'frenzy': e.frenzyT = 5; break;
+      case 'mark': { const k = rnd(); run.h[k].markT = 6; break; }
+      case 'charge': hurt(fk, 1.6); run.h[fk].stunT = Math.max(run.h[fk].stunT || 0, 1); e.lunge = 0.5; run.shake = 0.3; break;
+      case 'drain': { hurt(fk, 0.8); e.hp = Math.min(e.max * (3 - e.phase) / 3, e.hp + e.max * 0.006); e.lastHp = e.hp; A.fx.push({ kind: 'drain', k: fk, t: 0.8, d: 0.8 }); break; }
+      case 'freeze': run.slowT = 5; break;
+      case 'blind': run.blindT = 5; break;
+      case 'vanish': e.invT = 2; e.x += 40; break;
+      case 'burn': A.fx.push({ kind: 'burn', t: 6, d: 6, dps: D * 0.15 }); break;
+      case 'chain': { const ks = [...al].sort(() => Math.random() - 0.5).slice(0, 3); ks.forEach(k => hurt(k, 0.7)); A.fx.push({ kind: 'chain', ks, t: 0.5, d: 0.5 }); break; }
+      case 'split': for (let i = 0; i < 2; i++) { const m = makeEnemy(run.stage, 0, false, true, run); m.type = e.type; m.hp = m.max = e.max * 0.06; m.dmg = D * 0.35; m.x = e.x - 30 - i * 26; m.echo = e.ahn.tint || '#ffd27a'; run.enemies.push(m); } c.burst(e.x, 170, e.ahn.tint || '#ffd27a', 16); break;
+    }
+  }
+  // Wird jeden Schritt in der Ahnenprüfung aufgerufen
+  function ahnStep(S, st, run, c, dt) {
+    const A = run.ahn;
+    for (const k of run.order) {
+      const h = run.h[k]; if (!h.alive) continue;
+      if (h.stunT > 0) h.stunT -= dt; if (h.markT > 0) h.markT -= dt;
+      if (h.dotT > 0) { h.dotT -= dt; h.hp -= st[k].hp * h.dotP * dt; if (h.hp <= 0) { h.hp = 1; hurtHero(c, k, 2, null); } }
+    }
+    const rdt = dt / Math.max(1, S.speed || 1);
+    run.curseT -= dt; run.slowT -= dt; run.blindT -= dt; run.silT -= dt; if (run.introT > 0) run.introT -= rdt;
+    if (A.banner) { A.banner.t -= rdt; if (A.banner.t <= 0) A.banner = null; }
+    // Effekte mit Verzögerung
+    for (const f of A.fx) {
+      f.t -= dt;
+      if (f.kind === 'burn') aliveHeroes(run).forEach(k => { const h = run.h[k]; h.hp -= f.dps * dt * (1 - st[k].dr * 0.6); if (h.hp <= 0) { h.hp = 1; hurtHero(c, k, 2, null); } });
+      if (f.t <= 0 && !f.done) {
+        f.done = true;
+        const D = A.boss ? A.boss.dmg : 0;
+        if (f.kind === 'slam') { aliveHeroes(run).forEach(k => hurtHero(c, k, D * 0.9, null)); run.shake = 0.4; c.burst(run.frontX, 210, '#ffb070', 18); }
+        if (f.kind === 'bomb' && run.h[f.k] && run.h[f.k].alive) { hurtHero(c, f.k, D * 1.8, null); aliveHeroes(run).filter(k => k !== f.k).forEach(k => hurtHero(c, k, D * 0.4, null)); c.burst(run.pos[f.k], 180, '#ff9a3d', 20); run.shake = 0.3; }
+      }
+    }
+    A.fx = A.fx.filter(f => f.t > -0.3);
+    const e = A.boss;
+    if (!e || e.hp <= 0 && e.phase >= 2) return;
+    // Schaden am Boss: Schild, Panzerung, Spiegelhaut, Unverwundbarkeit
+    const lost = (e.lastHp || e.hp) - e.hp;
+    if (lost > 0) {
+      let back = 0;
+      if (e.invT > 0 || (run.introT > 0)) back = lost;
+      else {
+        if (e.shieldHp > 0) { const a = Math.min(e.shieldHp, lost); e.shieldHp -= a; back += a; if (e.shieldHp <= 0) c.efloat(e, 'Schild gebrochen!', '#9fd0ff', 16); }
+        if (e.traits.armor) back += (lost - back) * e.traits.armor;
+        if (e.reflT > 0) { const fk = frontHero(run); if (fk) hurtHero(c, fk, (lost - back) * 0.25, null); }
+      }
+      e.hp += back;
+    }
+    // Phasen bei 2/3 und 1/3
+    const thr = (2 - e.phase) / 3;
+    if (e.phase < 2 && e.hp <= e.max * thr) {
+      e.hp = e.max * thr; ahnPhase(e, e.phase + 1); e.invT = 1.4; run.shake = 0.4;
+      const P = e.ahn.ph[e.phase];
+      A.banner = { t: 2.4, title: `Phase ${e.phase + 1}`, sub: P.n || P.a.map(id => AHN_ABIL[id].name).join(' · '), phase: true };
+      P.a.filter(id => AHN_ABIL[id].start).forEach(id => ahnCast(S, st, run, c, e, id));
+      sfx('boss');
+    }
+    e.lastHp = e.hp;
+    e.invT -= dt; e.reflT -= dt; e.frenzyT -= dt; e.castT = (e.castT || 0) - dt; e.lunge = Math.max(0, (e.lunge || 0) - dt);
+    if (e.healT > 0) { e.healT -= dt; e.hp = Math.min(e.max * (3 - e.phase) / 3, e.hp + e.max * 0.0012 * dt); e.lastHp = e.hp; }
+    if (e.traits.regen) { e.hp = Math.min(e.max * (3 - e.phase) / 3, e.hp + e.max * e.traits.regen * dt); e.lastHp = e.hp; }
+    e.atkMul = e.frenzyT > 0 ? 2 : 1;
+    if (run.introT > 0 || e.stun > 0 || e.x > 470) return;
+    // Wut, wenn eine Phase zu lange dauert
+    e.phaseT += dt;
+    const en = e.phaseT > AHN_TUNE.enr ? 1 + 0.15 * Math.floor((e.phaseT - AHN_TUNE.enr) / 8 + 1) : 1;
+    if (en > (e.enrage || 1)) { e.enrage = en; c.efloat(e, `Wut ×${en.toFixed(1).replace('.', ',')}`, '#ff5a5a', 15); }
+    for (const ab of e.ab) { ab.t -= dt; if (ab.t <= 0) { ahnCast(S, st, run, c, e, ab.id); ab.t = AHN_ABIL[ab.id].cd * (0.85 + Math.random() * 0.3); } }
+  }
+  // Welle geschafft: nächste Welle, nächster Boss oder Mission gewonnen
+  function ahnNext(S, st, run, c) {
+    const A = run.ahn, list = ahnBossesOf(A.mi);
+    if (A.wave < AHN_TUNE.waves) A.wave++;
+    else {
+      A.bi++; A.wave = 0; A.boss = null; run.bossKills++;
+      if (A.bi >= list.length) { run.victory = true; run.dead = true; return 'dead'; }
+      // Die Ahnen stärken die Gruppe zwischen den Bossen
+      for (const k of run.order) { const h = run.h[k]; if (!h.alive) { h.alive = true; h.hp = st[k].hp * 0.35; h.revived = false; c.float(k, 'Ahnenkraft', '#ffd27a', 13); } else h.hp = Math.min(st[k].hp, h.hp + st[k].hp * 0.4); h.stunT = 0; h.markT = 0; h.dotT = 0; }
+      A.fx = []; run.curseT = 0; run.slowT = 0; run.blindT = 0;
+    }
+    for (const k of run.order) { const h = run.h[k]; if (h.alive) h.hp = Math.min(st[k].hp, h.hp + st[k].hp * 0.15); }
+    spawnWave(run);
+  }
+  function ahnClaim(S, run) {
+    if (!run.victory || !run.ahn) return null;
+    const mi = run.ahn.mi;
+    if (mi !== S.ahn.m) return null;
+    if (mi >= AHN_COUNT - 1) { S.ahn.m = 0; S.ahn.lvl = 0; S.ahn.sig++; S.ahn.got++; return { mission: mi, sigil: true }; }
+    S.ahn.m = mi + 1; return { mission: mi, sigil: false };
+  }
 
   /* ================= Spielstand ================= */
   function fresh() {
     return { v: SAVE_VERSION, gold: 0, souls: 0, best: 0, bestEver: 0, runs: 0, nodes: { start: 1 }, equip: [], speed: 1, stars: 0, rebirths: 0, perks: {},
       runes: [], sockets: Object.fromEntries(HEROES.map(h => [h.id, [null, null, null]])), dust: 0, runeSeq: 1, towerBest: 0,
-      asc: 0, crowns: 0, cperks: {}, ach: {}, tot: { kills: 0, souls: 0 }, weekly: { week: '', best: 0, claimed: 0 }, comps: {}, compActive: [], seenIntro: false, area: 0, tempo: 0, bench: [], altar: 0, seenField: false, exp: { spl: 0, done: 0, target: 'a', pieces: {} } };
+      asc: 0, crowns: 0, cperks: {}, ach: {}, tot: { kills: 0, souls: 0 }, weekly: { week: '', best: 0, claimed: 0 }, comps: {}, compActive: [], seenIntro: false, area: 0, tempo: 0, bench: [], altar: 0, seenField: false, exp: { spl: 0, done: 0, target: 'a', pieces: {} }, ahn: ahnFix() };
   }
   function migrate(d) {
     if (!d || typeof d !== 'object') return fresh();
@@ -595,6 +859,7 @@
     out.rbHist = (Array.isArray(d.rbHist) ? d.rbHist : []).map(x => Math.max(0, Math.floor(Number(x) || 0))).slice(-40);
     out.rlager = Math.max(0, Math.min(LAGER_MAX, Math.floor(Number(d.rlager) || 0)));
     out.altar = Math.max(0, Math.min(ALTAR_MAX, Math.floor(Number(d.altar) || 0)));
+    out.ahn = ahnFix(d.ahn);
     for (const h of [...HEROES].reverse()) while (kPlaced(out) > out.kslots && out.kplace[h.id]) { if (--out.kplace[h.id] <= 0) delete out.kplace[h.id]; }
     for (const h of HEROES) { const keys = NODES.filter(n => n.tree === h.tree && n.kind === 'key' && out.nodes[n.id]); for (const n of keys.slice(keyCap(out, h.tree))) { const c = n.cost(0); out.gold += c.g; out.souls += c.s; delete out.nodes[n.id]; } }
     delete out.reset;
@@ -925,6 +1190,7 @@
   function statsFor(S, mode) {
     const st = stats(S);
     if (mode === 'exp') { const m = MISSION[S.exp.mission] || MISSIONS[0]; st.cap = Infinity; st.startStage = expStage(S, m); st.rules = m.rules || []; return st; }
+    if (mode === 'ahnen') { st.cap = Infinity; return st; }
     if (mode !== 'weekly') return st;
     const rules = weekRules(weekId());
     for (const h of HEROES) { const T = st[h.id]; if (!T) continue;
@@ -938,8 +1204,8 @@
   }
 
   /* ================= Aktive Fähigkeiten ================= */
-  const near = run => run.enemies.filter(e => e.x < 300);
-  const engaged = run => run.enemies[0] && run.enemies[0].x < run.frontX + 70;
+  const near = run => run.enemies.filter(e => e.x < 300 + (e.reach || 0));
+  const engaged = run => run.enemies[0] && run.enemies[0].x < run.frontX + 70 + (run.enemies[0].reach || 0);
   const strongest = (run, maxX = 400) => run.enemies.filter(e => e.x < maxX).sort((a, b) => b.hp - a.hp)[0];
   const anyBelow = (run, st, f) => run.order.some(k => run.h[k].alive && run.h[k].hp < st[k].hp * f);
   const ACT = {
@@ -1042,7 +1308,7 @@
     if (rules.includes('trio')) order = order.slice(0, 3);
     const pos = {}; order.forEach((k, i) => (pos[k] = 152 - i * 25));
     const h = {}; for (const k of order) h[k] = { hp: st[k].hp, alive: true, atkT: 0.3 + Math.random() * 0.4, wolfT: 0.5, swing: 0, hurtT: 0, revived: false, shield: 0 };
-    const run = { mode: tower ? 'tower' : weekly ? 'weekly' : exp ? 'exp' : 'normal', stage: tower || weekly ? 1 : st.startStage, startStage: tower || weekly ? 1 : st.startStage, rules, losses: 0,
+    const run = { mode: tower ? 'tower' : weekly ? 'weekly' : exp ? 'exp' : mode === 'ahnen' ? 'ahnen' : 'normal', stage: tower || weekly ? 1 : st.startStage, startStage: tower || weekly ? 1 : st.startStage, rules, losses: 0,
       mission: exp ? (MISSION[S.exp.mission] ? S.exp.mission : 'streif') : null, waves: 0, bossKills: 0, minions: [], turretT: 1, extraTurretT: 0, songT: 0, songMul: 0, roarT: 0,
       hard: hardMul(S, exp), diff: ascDiff(S), speed: rules.includes('speed') ? 1.5 : 1, hpMul: rules.includes('giant') ? 2 : 1, eliteChance: rules.includes('elite') ? 0.4 : 0.12, noheal: rules.includes('noheal'),
       dragonT: 2, compRevive: false, bannerT: 0, kills: 0, gold: 0, souls: 0, runes: [], phoenixUsed: false, miracleUsed: false,
@@ -1061,12 +1327,14 @@
         if (g > 0) { S.gold = Math.min(1e18, S.gold + g); run.gold += g; run.floats.push({ x: 150, y: 122, text: `Beutezug: +${fmt(g)} Gold`, color: '#ffd23f', size: 14, t: 2.4 }); }
       }
     }
+    if (run.mode === 'ahnen') ahnInit(S, run);
     spawnWave(run);
     return run;
   }
   let SKIP_SOULS = Number((typeof process !== 'undefined' && process.env && process.env.SKIP) || 0.35);
   const towerStage = floor => 15 + floor * 2;
   function spawnWave(run) {
+    if (run.mode === 'ahnen') return ahnSpawn(run);
     run.enemies = [];
     if (run.mode === 'tower') {
       const s = towerStage(run.stage), boss = run.stage % 5 === 0;
@@ -1082,11 +1350,12 @@
   function ctxFor(S, st, run) {
     const c = { S, st, run };
     c.float = (k, text, color, size = 14) => run.floats.push({ x: run.pos[k] || 120, y: 110, text, color, size, t: 1 });
-    c.efloat = (e, text, color, size = 13) => run.floats.push({ x: e.x + (Math.random() * 16 - 8), y: 150 - (e.boss ? 40 : 0), text, color, size, t: 1 });
+    c.efloat = (e, text, color, size = 13) => run.floats.push({ x: e.x + (e.reach ? 52 : 0) + (Math.random() * 16 - 8), y: e.reach ? 168 + Math.random() * 14 : 150 - (e.boss ? 40 : 0), text, color, size, t: 1 });
     c.burst = (x, y, color, n = 8) => { for (let i = 0; i < n; i++) run.parts.push({ x, y, vx: (Math.random() - 0.5) * 160, vy: -Math.random() * 140 - 20, t: 0.6, c: color }); };
     c.arrow = (k, e, d, kind) => run.arrows.push({ x: (run.pos[k] || 60) + 8, y: 168, tx: e.x, ty: 188 - (e.boss ? 30 : 0), t: 0, d, kind: kind || k });
     c.hit = (k, e, mult, color, wolf) => {
       const T = st[k]; if (!T || !e) return 0;
+      if (run.blindT > 0 && Math.random() < 0.33) { c.efloat(e, 'Verfehlt', '#9aa3ad', 11); return 0; }
       let dmg = (wolf ? T.wolfAtk : T.atk) * mult * (run.buffT > 0 ? 1 + run.buffMul : 1) * (1 + (e.markT > 0 ? e.mark : 0));
       if ((e.boss || e.elite) && T.bossDmg) dmg *= 1 + T.bossDmg;
       const crit = Math.random() < (wolf ? T.crit + T.wolfCrit : T.crit);
@@ -1103,13 +1372,14 @@
     };
     c.healOne = (k, amt) => {
       const h = run.h[k], T = st[k]; if (!h || !h.alive || run.noheal) return;
+      if (run.curseT > 0) amt *= 0.4;
       const over = h.hp + amt - T.hp; h.hp = Math.min(T.hp, h.hp + amt);
       if (over > 0 && st.p && st.p.overShield) h.shield = Math.min(T.hp * 0.5, h.shield + over * st.p.overShield);
       c.float(k, '+' + fmt(amt), '#7ee08a', 12);
     };
     c.healAll = f => { run.order.forEach(k => run.h[k].alive && c.healOne(k, st[k].hp * f)); run.fx.heal = 0.5; };
     c.healSplit = (me, fMe, fOther) => { run.order.forEach(k => run.h[k].alive && c.healOne(k, st[k].hp * (k === me ? fMe : fOther))); run.fx.heal = 0.5; };
-    c.healAllAbs = a => !run.noheal && run.order.forEach(k => { const h = run.h[k]; if (h.alive) h.hp = Math.min(st[k].hp, h.hp + a); });
+    c.healAllAbs = a => !run.noheal && (a *= run.curseT > 0 ? 0.4 : 1) && run.order.forEach(k => { const h = run.h[k]; if (h.alive) h.hp = Math.min(st[k].hp, h.hp + a); });
     return c;
   }
   function frontHero(run) { return run.order.find(k => run.h[k].alive); }
@@ -1118,6 +1388,7 @@
     if (!h || !h.alive) return;
     const boss = attacker && attacker.boss;
     if (boss && attacker.enrage) raw *= attacker.enrage;
+    if (h.markT > 0) raw *= 2;
     if (T.block && Math.random() < T.block * (boss ? 0.5 : 1)) { c.float(k, 'Abgewehrt', '#9fd0ff', 12); return; }
     if (T.dodge && Math.random() < T.dodge) { c.float(k, 'Ausgewichen', '#c8f5cf', 12); return; }
     let d = raw * (1 - T.dr * (boss ? 0.6 : 1));
@@ -1138,7 +1409,7 @@
     run.time += dt; run.bannerT -= dt; run.buffT -= dt; run.hautT -= dt; run.racheT -= dt; run.packT -= dt; run.songT -= dt; run.roarT -= dt; run.extraTurretT -= dt; run.shake = Math.max(0, run.shake - dt);
     for (const k of run.order) {
       const h = run.h[k]; if (!h.alive) continue;
-      if (st[k].regen) h.hp = Math.min(st[k].hp, h.hp + st[k].hp * st[k].regen * dt);
+      if (st[k].regen) h.hp = Math.min(st[k].hp, h.hp + st[k].hp * st[k].regen * dt * (run.curseT > 0 ? 0.4 : 1));
       h.swing = Math.max(0, h.swing - dt * 4); h.hurtT -= dt;
     }
     for (const k in run.cds) run.cds[k] = Math.max(0, run.cds[k] - dt);
@@ -1150,7 +1421,7 @@
     run.enemies.sort((a, b) => a.x - b.x);
     let walking = true;
     run.enemies.forEach((e, i) => {
-      const target = run.frontX + 50 + i * 34 + (e.boss ? 10 : 0);
+      const target = run.frontX + 50 + i * 34 + (e.boss ? 10 : 0) + (e.reach || 0);
       if (e.stun > 0) e.stun -= dt;
       else if (e.x > target) e.x = Math.max(target, e.x - 75 * run.speed * (st.g.walk || 1) * dt);
       else if (e.x < target) e.x = Math.min(target, e.x + 75 * dt);
@@ -1168,18 +1439,18 @@
     // Aktive Fähigkeiten
     for (const id of S.equip) {
       const n = NODE[id], hk = HERO[n.tree].id, h = run.h[hk];
-      if (!h || !h.alive || !rank(S, id) || run.cds[id] > 0 || !run.enemies.length) continue;
+      if (!h || !h.alive || h.stunT > 0 || !rank(S, id) || run.cds[id] > 0 || !run.enemies.length) continue;
       if (!ACT[id].ready(run, st, S)) continue;
       ACT[id].cast(c, rank(S, id));
       run.cds[id] = ACT[id].cd(rank(S, id), S) * (1 - st[hk].cdr); run.fx[id] = 0.5; sfx('skill');
     }
-    const f = run.enemies[0], eng = f && f.x <= run.frontX + 52 + (f.boss ? 10 : 0);
+    const f = run.enemies[0], eng = f && f.x <= run.frontX + 52 + (f.boss ? 10 : 0) + (f.reach || 0);
     for (const k of run.order) {
-      const h = run.h[k], T = st[k]; if (!h.alive || !run.enemies.length) continue;
+      const h = run.h[k], T = st[k]; if (!h.alive || !run.enemies.length || h.stunT > 0) continue;
       const melee = FRONT.includes(k);
       if (melee && !eng) { h.atkT = Math.min(h.atkT, 0.3); continue; }
       if (!melee && run.enemies[0].x > 420) continue;
-      h.atkT -= dt * (run.songT > 0 ? 1 + run.songMul : 1);
+      h.atkT -= dt * (run.songT > 0 ? 1 + run.songMul : 1) * (run.slowT > 0 ? 0.5 : 1);
       if (h.atkT <= 0) {
         h.atkT += 1 / T.aps; h.swing = 1;
         const tgt = run.enemies[0];
@@ -1243,10 +1514,10 @@
       run.minions = run.minions.filter(m => m.t > 0 && alive);
     }
     // Boss-Wut: ein Boss wird mit der Zeit immer stärker, damit niemand ewig allein durchhält
-    if (f && f.boss && eng) { f.age = (f.age || 0) + dt; const en = f.age > 25 ? 1 + 0.2 * Math.floor((f.age - 25) / 5 + 1) : 1; if (en > (f.enrage || 1)) { f.enrage = en; c.efloat(f, en < 1.25 ? 'Wut!' : `Wut ×${en.toFixed(1).replace('.', ',')}`, '#ff5a5a', 15); } }
+    if (f && f.boss && eng && !f.ahn) { f.age = (f.age || 0) + dt; const en = f.age > 25 ? 1 + 0.2 * Math.floor((f.age - 25) / 5 + 1) : 1; if (en > (f.enrage || 1)) { f.enrage = en; c.efloat(f, en < 1.25 ? 'Wut!' : `Wut ×${en.toFixed(1).replace('.', ',')}`, '#ff5a5a', 15); } }
     // Gegner greifen an
     if (f && eng && f.stun <= 0 && !f.ranged) {
-      f.atkT -= dt;
+      f.atkT -= dt * (f.atkMul || 1);
       if (f.atkT <= 0 && f.hp > 0) {
         f.atkT += f.rate;
         f.atkAt = run.time;
@@ -1254,6 +1525,7 @@
         if (f.boss) { run.shake = 0.15; for (const k of run.order) if (k !== fk) hurtHero(c, k, f.dmg * 0.35, null); }
       }
     }
+    if (run.mode === 'ahnen') ahnStep(S, st, run, c, dt);
     // Besiegte Gegner
     const g = st.g;
     for (const e of run.enemies) {
@@ -1274,7 +1546,7 @@
       if (e.boss) souls = roundSouls((1 + Math.floor(run.stage / 20)) * g.soulMul) + st.soulBonus;
       else if (e.elite && Math.random() < g.eliteSoul) souls = Math.max(1, roundSouls(altarMul(S)));
       if (run.mode === 'tower') souls = e.boss ? 1 : 0;
-      if (run.mode === 'weekly' || run.mode === 'exp') souls = 0;
+      if (run.mode === 'weekly' || run.mode === 'exp' || run.mode === 'ahnen') souls = 0;
       if (souls) { sfx('soul'); S.tot.souls += souls; S.souls += souls; run.souls += souls; run.floats.push({ x: e.x, y: 95, text: `+${souls} Seele${souls > 1 ? 'n' : ''}`, color: '#c9a6ff', size: 16, t: 1 }); }
       if (feature(S, 'runen') && run.mode === 'normal' && (e.boss || (e.elite && Math.random() < 0.03))) {
         const tier = e.boss ? bossRuneTier(run.stage) : Math.min(10, 1 + Math.floor(run.stage / 40));
@@ -1289,6 +1561,7 @@
           S.towerBest = run.stage;
           if (run.stage % 5 === 0) { const r = addRune(S, RUNES[Math.floor(Math.random() * RUNES.length)].id, 1 + Math.floor(run.stage / 15)); if (r) run.runes.push(r); }
         }
+      } else if (run.mode === 'ahnen') { return ahnNext(S, st, run, c);
       } else if (run.mode === 'exp') {
         run.waves++;
         const m = MISSION[run.mission];
@@ -1404,7 +1677,7 @@
     return (n < 10 ? n.toFixed(2) : n < 100 ? n.toFixed(1) : Math.floor(n).toString()).replace('.', ',') + units[i];
   }
 
-  const core = { unrebirth, transmute, bossRuneTier, resetPerks, buyLager, lagerCost, LAGER_MAX, runeCap, shardOf, mergeCost, ALTAR_MAX, altarCost, altarMul, buyAltar, kSlots, kFree, keyCap, addSock, removeSock, removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, buyPiece, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
+  const core = { AHN_MISSIONS, AHN_ABIL, AHN_TRAIT, AHNE, AHN_TUNE, AHN_COUNT, ahnOpen, ahnBossesOf, ahnLevelFor, placeSigil, ahnClaim, unrebirth, transmute, bossRuneTier, resetPerks, buyLager, lagerCost, LAGER_MAX, runeCap, shardOf, mergeCost, ALTAR_MAX, altarCost, altarMul, buyAltar, kSlots, kFree, keyCap, addSock, removeSock, removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, buyPiece, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
     rebirth, ascend, crownsFor, buyCperk, cperkCost, cperk, CPERKS, levelComp, toggleComp, compCost, compMax, compSlots, COMPS, checkAch, ACH, claimWeekly, weekId, weekRules, RULE, WEEK_TIERS, statsFor, starsFor, toggleEquip, slotsOf, hired, classOpen, keysUsed, keyLimit, capOf, reqOf, feature, encode, decode, fmt, socket, unsocket, merge, canMerge, dismantle, buyRune, runeVal, addRune };
   if (typeof module !== 'undefined') { module.exports = core; return; }
 
@@ -1612,6 +1885,7 @@
     if (expOpen(S)) t.push({ id: 'exp', label: 'Expedition', color: '#9bd14a' });
     if (feature(S, 'runen') || S.runes.length) t.push({ id: 'runen', label: 'Runen', color: '#ff7a3d' });
     if (S.asc >= 2 || Object.keys(S.comps).length) t.push({ id: 'begleiter', label: 'Begleiter', color: '#ff9a3d' });
+    if (ahnOpen(S)) t.push({ id: 'ahnen', label: 'Ahnenprüfung', color: '#ffd27a' });
     t.push({ id: 'halle', label: 'Ruhmeshalle', color: '#ffd23f' }, { id: 'ruhm', label: S.asc || S.rebirths >= 9 ? 'Wiedergeburt & Aufstieg' : 'Wiedergeburt', color: '#c9a6ff' }, { id: 'stand', label: 'Spielstand', color: '#a99fbb' });
     return t;
   }
@@ -1697,6 +1971,7 @@
       const r = claimExp(S, run); run.expReward = r;
       if (r) { setTimeout(() => toast(`Mission geschafft: +${r.spl} Heldensplitter`, true), 200); if (r.piece != null) setTimeout(() => (r.complete ? heroDone(r.hero) : pieceFound(r.hero)), 900); }
     }
+    if (run.mode === 'ahnen') { const r = ahnClaim(S, run); run.ahnReward = r; ahnSel = null; if (r && r.sigil) setTimeout(sigilGot, 700); else if (r) setTimeout(() => toast(`Mission ${r.mission + 1} geschafft! Mission ${r.mission + 2} ist frei.`, true), 300); }
     if (run.mode === 'normal' && areaMax(S) > areaBefore) { const z = areaMax(S); setTimeout(() => toast(`Neues Startgebiet frei: ${zoneName(10 * z + 1)}`, true), 600); }
     SND.play(run.victory ? 'victory' : 'defeat');
     achCheck(run); save(); cloudSave(true); refresh();
@@ -1733,7 +2008,7 @@
   function action() {
     const a = $('#rlAction');
     if (inCamp()) a.innerHTML = `<button class="btn ghost" data-rl="weekly">Woche</button>${feature(S, 'turm') ? `<button class="btn ghost" data-rl="tower">Turm${S.towerBest ? ` (Rekord ${S.towerBest})` : ''}</button>` : ''}${areaMax(S) >= 1 ? `<button class="btn ghost rl-area" data-rl="area"><small>Startgebiet</small><b>${esc(zoneName(st.startStage))} ▾</b></button>` : ''}<button class="btn rl-go" data-rl="start">${run ? 'Neuer Lauf' : 'Lauf starten'}${st.startStage > 1 ? ` ab Stufe ${st.startStage}` : ''}</button>`;
-    else a.innerHTML = `<button class="btn ${confirm === 'giveup' ? 'danger' : 'ghost'} small" data-rl="giveup">${confirm === 'giveup' ? 'Wirklich aufgeben?' : run.mode === 'tower' ? 'Turm verlassen' : run.mode === 'weekly' ? 'Herausforderung beenden' : run.mode === 'exp' ? 'Mission abbrechen' : 'Lauf aufgeben'}</button>`;
+    else a.innerHTML = `<button class="btn ${confirm === 'giveup' ? 'danger' : 'ghost'} small" data-rl="giveup">${confirm === 'giveup' ? 'Wirklich aufgeben?' : run.mode === 'tower' ? 'Turm verlassen' : run.mode === 'weekly' ? 'Herausforderung beenden'   : run.mode === 'exp' || run.mode === 'ahnen' ? 'Mission abbrechen' : 'Lauf aufgeben'}</button>`;
   }
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const costHTML = c => [c.g ? `<span class="rl-cur gold">${coin}${fmt(c.g)}</span>` : '', c.s ? `<span class="rl-cur soul">${soul}${c.s}</span>` : ''].join(' ');
@@ -1805,6 +2080,7 @@
     if (run && run.dead) {
       const extra = `${run.kills} Gegner besiegt${run.gold ? ` · ${coin}+${fmt(run.gold)}` : ''}${run.souls ? ` · ${soul}+${run.souls}` : ''}${run.runes.length ? ` · ${run.runes.length} Rune${run.runes.length > 1 ? 'n' : ''}` : ''}`;
       if (run.mode === 'weekly') { const r = run.weeklyReward || {}; return `<div class="rl-dead week"><b>Wochen-Herausforderung: Stufe ${run.stage}</b><span>Bestes Ergebnis diese Woche: Stufe ${S.weekly.best}${r.stars ? ` · ${star}+${r.stars}` : ''}${r.crowns ? ` · ${crown}+${r.crowns}` : ''}</span><span class="note">Belohnungen und Bestenliste findest du in der Ruhmeshalle.</span></div>`; }
+      if (run.mode === 'ahnen') return ahnEndInfo();
       if (run.mode === 'exp') {
         const m = MISSION[run.mission], r = run.expReward;
         if (run.victory && r) return `<div class="rl-dead win"><b>Mission geschafft: ${esc(m.name)}</b><span>+${r.spl} Heldensplitter${r.piece != null ? ` · Puzzleteil für ${HERO_BY_ID[r.hero].name}!` : ''}</span><span class="note">Splitter: ${S.exp.spl} · Puzzleteile von ${HERO_BY_ID[S.exp.target].name}: ${pieceCount(S, S.exp.target)}/6</span></div>`;
@@ -2046,6 +2322,7 @@
     else if (tab === 'halle') html += halleTab();
     else if (tab === 'zeit' || tab === 'laeden') html += ladenTab();
     else if (tab === 'exp') html += campInfo() + expTab();
+    else if (tab === 'ahnen') html += campInfo() + ahnTab();
     else if (tab === 'ruhm') html += ruhmTab();
     else html += standHTML();
     const openDet = p.querySelector('details[open]');
@@ -2094,6 +2371,7 @@
   function ask(key, redraw) { if (confirm === key) { confirm = ''; return true; } confirm = key; redraw(); setTimeout(() => { if (confirm === key) { confirm = ''; redraw(); } }, 4000); return false; }
   function afterChange() { save(); refresh(); }
   function onClick(e) {
+    if (ahnClick(e)) return;
     const g = e.target.closest('[data-node]');
     if (g) { sel[tab] = g.dataset.node; panel(); return; }
     const tm = e.target.closest('[data-tmenu]');
@@ -2149,6 +2427,7 @@
     if (b.dataset.pathmode) { pathMode = b.dataset.pathmode; panel(); return; }
     if (b.dataset.perk) { if (buyPerk(S, PERKS.find(p => p.id === b.dataset.perk))) afterChange(); return; }
     const a = b.dataset.rl;
+    if (a && ahnAction(a, b)) return;
     if (a === 'start') startRun();
     else if (a === 'weekly') startRun('weekly');
     else if (a === 'mission') { S.exp.mission = b.dataset.m2; startRun('exp'); $('#soloCanvas').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
@@ -2519,6 +2798,18 @@
   }
   // Neuigkeiten: neueste Einträge oben. Neue Updates OBEN mit höherer id anhängen.
   const UPDATES = [
+    { id: 30, date: '14.10.2026', title: 'Sternenkarte und echte Drachen', items: [
+      ['Neu', 'Die Karte der Ahnenprüfung ist jetzt ein Sternenhimmel: Jede Mission ist eine schwebende Insel im Licht ihres Themas, verbunden durch Sternenbrücken. Mission 10 ist das goldene Schloss der Ahnen.'],
+      ['Neu', 'Knochendrache, Weißer Wyrm, Sumpfhydra und Dornendrache haben jetzt eigene Köpfe, Körper, Atemangriffe und Animationen. Die Hydra hat drei Köpfe.'],
+      ['Neu', 'Bosse zeigen beim Einsatz einer Fähigkeit einen Lichtring. Schadenszahlen verdecken die Köpfe der Bosse nicht mehr.'],
+      ['Neu', 'Tester: Jeden Boss der aktuellen Mission direkt starten.'],
+    ] },
+    { id: 29, date: '14.10.2026', title: 'Die Ahnenprüfung', items: [
+      ['Neu', 'Ab der 6. Wiedergeburt: die Ahnenprüfung. Eine Weltkarte mit 10 Missionen, jede mit 5 eigenen Bossen in 3 Phasen. Am Ende wartet der Urahn.'],
+      ['Neu', '51 neue Bosse mit über 20 Boss-Fähigkeiten: Schilde, Spiegelhaut, Zeitbomben, Flüche, Beben, Abspaltungen und mehr.'],
+      ['Neu', 'Wer den Urahn besiegt, bekommt ein Ahnensiegel. Die Prüfung ist danach wiederholbar. Die Baum-Erweiterungen für die Siegel kommen im nächsten Update.'],
+      ['Umstellung', 'Neue Reihenfolge der Wiedergeburten, immer abwechselnd Held und Feature: 1 Wächter, 2 Runen, 3 Schützin, 4 Runenschmied, 5 Magier, 6 Ahnenprüfung, 7 Priesterin, 8 Turm, 9 Tierbändiger und Aufstieg. Was du schon hast, behältst du.'],
+    ] },
     { id: 28, date: '13.10.2026', title: 'Runen-Update: Schutz, Eile, Fokus', items: [
       ['Neu', 'Schutz-Runen zählen jetzt immer voll und werden ab 50 % nicht mehr halbiert. Höchstens 72 % weniger Schaden.'],
       ['Neu', 'Eile-Runen sind stärker: 7 % statt 4 % Angriffstempo pro Stufe I, außerdem laden die Fähigkeiten etwas schneller.'],
@@ -2737,6 +3028,157 @@
     modal(`<span class="rl-mic ${n.kind === 'asc' ? 'crown' : ''}">${n.kind === 'asc' ? '♛' : '✦'}</span><h2>${title}</h2><p class="note">Das ist neu:</p>
       <ul class="rl-list">${newsList(n).map(x => `<li>${esc(x)}</li>`).join('')}</ul>
       <div class="row" style="justify-content:center"><button class="btn" data-m="ok">Weiter</button></div>`);
+  }
+  /* ---------- Ahnenprüfung: Karte, Missionen, Siegel ---------- */
+  let ahnSel = null;
+  // Schwebende Inseln im All, Mission 10 ist das Schloss der Ahnen
+  const AHN_PTS = [[58, 322], [148, 284], [90, 206], [176, 142], [268, 188], [338, 274], [430, 306], [432, 216], [366, 124], [516, 150]];
+  const ahnRnd = i => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+  function ahnIslandTop(i, c) {
+    // Themen-Akzente auf der Insel (Koordinaten: Mitte der Oberseite = 0,0)
+    const g = [];
+    const tree = (x, s, a, b) => `<g transform="translate(${x},0) scale(${s})"><rect x="-1.2" y="-6" width="2.4" height="6" fill="#6b4a2c"/><circle cy="-10" r="6" fill="${a}"/><circle cx="-3" cy="-8" r="4" fill="${b}"/></g>`;
+    const pine = (x, s, a) => `<g transform="translate(${x},0) scale(${s})"><rect x="-1" y="-4" width="2" height="4" fill="#3a2a1a"/><path d="M0,-20 L7,-4 L-7,-4 Z" fill="${a}"/><path d="M0,-25 L5,-12 L-5,-12 Z" fill="${a}" opacity=".85"/></g>`;
+    switch (i) {
+      case 0: g.push(tree(-12, 1, '#5fc45a', '#8ae07a'), tree(10, 0.8, '#4fae4e', '#7ed06e'), `<circle cx="-2" cy="-2" r="1.6" fill="#ffd23f"/><circle cx="4" cy="-1.5" r="1.4" fill="#ff8ab8"/><circle cx="18" cy="-2" r="1.5" fill="#fff"/>`); break;
+      case 1: g.push(pine(-14, 1, '#1f5a3a'), pine(-2, 1.25, '#174a30'), pine(12, 0.95, '#226240'), `<circle cx="4" cy="-14" r="1.5" fill="#ffe58a"/><circle cx="7" cy="-14" r="1.5" fill="#ffe58a"/>`); break;
+      case 2: g.push(`<path d="M-16,0 v-10 a5,5 0 0 1 10,0 v10 Z" fill="#8a84a8" stroke="#3a3450" stroke-width="1"/><path d="M4,0 v-8 h3 v-4 h3 v4 h3 v8 Z" fill="#a49ec0" stroke="#3a3450" stroke-width="1"/><path d="M-4,-1 h8 M-2,-3 l4,4" stroke="#e8e2d0" stroke-width="1.6"/><circle cx="-11" cy="-18" r="3" fill="#c9a6ff" opacity=".8"/>`); break;
+      case 3: g.push(`<path d="M-18,0 L-2,-22 L4,-18 L16,0 Z" fill="#4a2a24" stroke="#1b0e0c" stroke-width="1.2"/><path d="M-5,-18 L-2,-22 L4,-18 L1,-14 Z" fill="#ff7a3d"/><path d="M-1,-14 Q2,-6 -3,0" stroke="#ffb547" stroke-width="2" fill="none"/><circle cx="1" cy="-26" r="3" fill="#ff9a3d" opacity=".7" class="ahn-smoke"/>`); break;
+      case 4: g.push(`<path d="M-16,0 L-10,-16 L-6,-4 L0,-24 L5,-6 L10,-14 L16,0 Z" fill="#dff4ff" stroke="#6e8ba3" stroke-width="1"/><path d="M-3,-3 l3,-12 l3,12 Z" fill="#9fe0ff"/>`); break;
+      case 5: g.push(`<ellipse cx="2" cy="-2" rx="14" ry="3.5" fill="#3a6a5a"/><ellipse cx="2" cy="-2.5" rx="10" ry="2" fill="#5a9a7a"/><path d="M-14,0 v-12 M-11,0 v-9 M14,0 v-11" stroke="#6a8a4a" stroke-width="1.5"/><ellipse cx="-14" cy="-13" rx="1.4" ry="3" fill="#8a5a2b"/><ellipse cx="14" cy="-12" rx="1.4" ry="3" fill="#8a5a2b"/><ellipse cx="0" cy="-10" rx="18" ry="4" fill="#c8e8d0" opacity=".25"/>`); break;
+      case 6: g.push(`<path d="M-16,0 C-14,-14 -4,-6 -8,-20 M8,0 C12,-12 2,-10 6,-22 M-2,0 C0,-8 4,-6 2,-14" stroke="#3a6a2a" stroke-width="2.2" fill="none"/><circle cx="-8" cy="-20" r="3" fill="#ff6b9a"/><circle cx="6" cy="-22" r="3" fill="#ff8ab8"/><circle cx="2" cy="-14" r="2.4" fill="#ff6b9a"/>`); break;
+      case 7: g.push(`<path d="M-10,0 v-14 l5,-6 l5,6 v14 Z M2,0 v-20 l5,-10 l5,10 v20 Z" fill="#3a2a5a" stroke="#1a1030" stroke-width="1"/><rect x="5" y="-16" width="4" height="5" rx="2" fill="#ffd27a"/><path d="M-20,-24 q3,-3 6,0 q3,-3 6,0" stroke="#2a1a3a" stroke-width="1.5" fill="none"/>`); break;
+      case 8: g.push(`<path d="M-14,0 v-8 a14,12 0 0 1 28,0 v8 Z" fill="#e8e0ff" stroke="#4a3a7a" stroke-width="1.2"/><path d="M2,-16 l14,-10" stroke="#5a4a8a" stroke-width="3"/><circle cx="-6" cy="-24" r="1.6" fill="#fff"/><circle cx="12" cy="-30" r="1.2" fill="#ffd27a"/>`); break;
+    }
+    return g.join('');
+  }
+  function ahnIsland(i, x, y, st) {
+    const M = AHN_MISSIONS[i], c = M.col, last = i === AHN_COUNT - 1, w = last ? 62 : 34, d = last ? 50 : 30;
+    const glowA = st === 'done' ? 0.55 : st === 'cur' ? 0.75 : 0.35;
+    if (last) return ahnCastle(x, y, st);
+    let rocks = `<path d="M${-w},0 Q${-w * 0.7},${d * 0.5} ${-w * 0.35},${d * 0.7} L${-w * 0.15},${d} L0,${d * 1.25} L${w * 0.2},${d * 0.95} L${w * 0.45},${d * 0.6} Q${w * 0.8},${d * 0.4} ${w},0 Z" fill="url(#ahnRock)" stroke="#5a4a3a" stroke-width="1.2"/>`;
+    rocks += `<path d="M${-w * 0.5},${d * 0.25} L${-w * 0.2},${d * 0.55} L${w * 0.05},${d * 0.4} M${w * 0.25},${d * 0.2} L${w * 0.1},${d * 0.7}" stroke="#ffd27a" stroke-width="1.2" fill="none" opacity=".8"/>`;
+    rocks += `<path d="M${-w * 0.3},${d * 0.75} l2,8 l2,-8 M${w * 0.3},${d * 0.55} l1.5,7 l1.5,-7" fill="${c}" stroke="${c}" stroke-width="1" opacity=".9"/>`;
+    return `<g class="ahn-isl" style="animation-delay:${-ahnRnd(i) * 6}s">
+      <ellipse cx="0" cy="${d * 0.6}" rx="${w * 1.5}" ry="${d * 1.1}" fill="${c}" opacity="${glowA * 0.35}" filter="url(#ahnBlur)"/>
+      ${rocks}
+      <ellipse cx="0" cy="0" rx="${w}" ry="${w * 0.28}" fill="url(#ahnTop)" stroke="#fff6d8" stroke-width="1.4"/>
+      <ellipse cx="0" cy="-1" rx="${w * 0.86}" ry="${w * 0.2}" fill="${c}" opacity=".55"/>
+      ${ahnIslandTop(i, c)}
+    </g>`;
+  }
+  function ahnCastle(x, y, st) {
+    const tower = (tx, h, w, cap) => `<g transform="translate(${tx},0)"><rect x="${-w / 2}" y="${-h}" width="${w}" height="${h}" fill="url(#ahnWall)" stroke="#8a6a2a" stroke-width="1"/>
+      <path d="M${-w / 2 - 2},${-h} L0,${-h - cap} L${w / 2 + 2},${-h} Z" fill="url(#ahnGold)" stroke="#8a6a2a" stroke-width="1"/><rect x="-1.5" y="${-h + 6}" width="3" height="6" rx="1.5" fill="#ffe8a8"/>
+      <path d="M0,${-h - cap} v-8" stroke="#ffd27a" stroke-width="1"/><path d="M0,${-h - cap - 8} l7,2.5 l-7,2.5 Z" fill="#c9a6ff"/></g>`;
+    return `<g class="ahn-isl" style="animation-delay:-2s">
+      <g class="ahn-rays" opacity="${st === 'done' ? 0.6 : 0.85}">${[...Array(10)].map((_, k) => `<path d="M0,-50 L${Math.cos(k * 0.628) * 140},${-50 + Math.sin(k * 0.628) * 140} L${Math.cos(k * 0.628 + 0.12) * 140},${-50 + Math.sin(k * 0.628 + 0.12) * 140} Z" fill="#ffe8a8" opacity=".12"/>`).join('')}</g>
+      <circle cx="0" cy="-50" r="70" fill="url(#ahnHalo)"/>
+      <path d="M-70,0 Q-52,26 -28,34 L-10,52 L0,66 L12,50 L32,32 Q56,20 70,0 Z" fill="url(#ahnRock)" stroke="#8a6a2a" stroke-width="1.4"/>
+      <path d="M-40,12 L-20,30 L0,22 M24,10 L12,40" stroke="#ffd27a" stroke-width="1.6" fill="none"/>
+      <path d="M-18,40 l2,12 l2,-12 M20,30 l2,10 l2,-10 M0,60 l1.5,9 l1.5,-9" fill="#ffd27a" stroke="#ffd27a"/>
+      <ellipse cx="0" cy="0" rx="70" ry="16" fill="url(#ahnTop)" stroke="#fff6d8" stroke-width="1.6"/>
+      <rect x="-40" y="-26" width="80" height="26" fill="url(#ahnWall)" stroke="#8a6a2a" stroke-width="1"/>
+      ${[...Array(9)].map((_, k) => `<rect x="${-40 + k * 9.4}" y="-30" width="5" height="5" fill="#fff4dc" stroke="#8a6a2a" stroke-width=".6"/>`).join('')}
+      ${tower(-46, 46, 14, 16)}${tower(46, 46, 14, 16)}${tower(-24, 64, 12, 14)}${tower(24, 64, 12, 14)}${tower(0, 86, 18, 22)}
+      <path d="M-8,0 v-14 a8,8 0 0 1 16,0 v14 Z" fill="#3a2a10" stroke="#8a6a2a" stroke-width="1"/><path d="M-6,-1 v-12 a6,6 0 0 1 12,0 v12" fill="#ffd27a" opacity=".55"/>
+      <path d="M-12,-104 l-4,-9 l7,4 l5,-10 l4,10 l7,-4 l-4,9 Z" transform="translate(4,0)" fill="#ffd27a" stroke="#8a6a2a" stroke-width="1" class="ahn-crown"/>
+    </g>`;
+  }
+  function ahnMap() {
+    const cur = S.ahn.m, sel = ahnSel == null ? cur : ahnSel;
+    const stars = [...Array(90)].map((_, i) => { const r = ahnRnd(i * 3 + 1); return `<circle cx="${(ahnRnd(i * 7 + 2) * 600).toFixed(1)}" cy="${(ahnRnd(i * 11 + 5) * 380).toFixed(1)}" r="${(0.4 + r * 1.3).toFixed(2)}" fill="${r > 0.85 ? '#ffe8b0' : r > 0.7 ? '#c9d8ff' : '#fff'}" class="${i % 3 ? '' : 'ahn-tw'}" style="animation-delay:${(-r * 4).toFixed(2)}s"/>`; }).join('');
+    const bridges = AHN_PTS.slice(1).map(([x1, y1], i) => { const [x0, y0] = AHN_PTS[i], mx = (x0 + x1) / 2, my = (y0 + y1) / 2 - 26, done = i < cur;
+      return `<path d="M${x0},${y0} Q${mx},${my} ${x1},${y1}" fill="none" stroke="${done ? '#7fd4ff' : '#ffd27a'}" stroke-width="5" opacity="${done ? 0.35 : 0.18}" filter="url(#ahnBlur2)"/>
+        <path d="M${x0},${y0} Q${mx},${my} ${x1},${y1}" fill="none" stroke="${done ? '#bfeaff' : i === cur - 0 ? '#ffe8a8' : 'rgba(255,232,168,.5)'}" stroke-width="1.6" stroke-dasharray="2 6" stroke-linecap="round" class="ahn-flow"/>`; }).join('');
+    const isl = AHN_PTS.map(([x, y], i) => {
+      const st = i < cur ? 'done' : i === cur ? 'cur' : 'later', last = i === AHN_COUNT - 1, M = AHN_MISSIONS[i];
+      const bx = last ? 0 : 0, by = last ? 30 : 22, col = st === 'done' ? '#4fc3ff' : '#e5484d';
+      return `<g class="ahn-node ${st} ${i === sel ? 'sel' : ''}" data-ahn="${i}" transform="translate(${x},${y})" role="button" aria-label="Mission ${i + 1}: ${esc(M.name)}">
+        ${ahnIsland(i, x, y, st)}
+        <g transform="translate(${bx},${by})">${st === 'cur' ? `<circle r="15" fill="none" stroke="#ffb0b0" stroke-width="2.5" class="ahn-pulse"/>` : ''}
+          <circle r="10" fill="${col}" stroke="#fff6d8" stroke-width="2"/><text y="3.8" text-anchor="middle" class="ahn-num">${st === 'done' ? '✓' : i + 1}</text></g>
+        ${st === 'cur' ? `<g transform="translate(0,${last ? -128 : -46})"><g class="ahn-hero"><path d="M0,9 L-6,-2 L6,-2 Z" fill="#ffb547" stroke="#1b1726" stroke-width="1.4"/><circle cy="-6" r="6.5" fill="#ffb547" stroke="#1b1726" stroke-width="1.4"/><text y="-3" text-anchor="middle" font-size="8.5" fill="#2a1a00">⚔</text></g></g>` : ''}
+        ${i === sel ? `<ellipse cx="0" cy="${last ? 0 : 0}" rx="${last ? 76 : 40}" ry="${last ? 20 : 12}" fill="none" stroke="#fff" stroke-width="1.2" stroke-dasharray="3 4" class="ahn-selring"/>` : ''}
+      </g>`;
+    }).join('');
+    return `<div class="ahn-map"><svg viewBox="0 0 600 380" role="img" aria-label="Sternenkarte der Ahnenprüfung">
+      <defs>
+        <radialGradient id="ahnSpace" cx=".55" cy=".35" r=".9"><stop offset="0" stop-color="#1e1446"/><stop offset=".55" stop-color="#0c0824"/><stop offset="1" stop-color="#04030c"/></radialGradient>
+        <linearGradient id="ahnRock" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4ead2"/><stop offset=".45" stop-color="#c8b48a"/><stop offset="1" stop-color="#6a5a46"/></linearGradient>
+        <linearGradient id="ahnTop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffaf0"/><stop offset="1" stop-color="#e8d8b0"/></linearGradient>
+        <linearGradient id="ahnWall" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fffaf0"/><stop offset=".6" stop-color="#f0e2c0"/><stop offset="1" stop-color="#cdb888"/></linearGradient>
+        <linearGradient id="ahnGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff2b8"/><stop offset="1" stop-color="#d8a040"/></linearGradient>
+        <radialGradient id="ahnHalo"><stop offset="0" stop-color="#fff2c8" stop-opacity=".55"/><stop offset=".6" stop-color="#ffd27a" stop-opacity=".15"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient>
+        <filter id="ahnBlur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="8"/></filter>
+        <filter id="ahnBlur2"><feGaussianBlur stdDeviation="2.5"/></filter>
+        <filter id="ahnNeb" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="28"/></filter>
+      </defs>
+      <rect width="600" height="380" fill="url(#ahnSpace)"/>
+      <g filter="url(#ahnNeb)" opacity=".75"><ellipse cx="120" cy="90" rx="120" ry="60" fill="#5a2a9a"/><ellipse cx="470" cy="250" rx="130" ry="60" fill="#1a5a7a"/><ellipse cx="320" cy="120" rx="90" ry="40" fill="#8a3a6a" opacity=".6"/><ellipse cx="540" cy="60" rx="80" ry="50" fill="#b08a3a" opacity=".5"/></g>
+      ${stars}
+      <path d="M-20,60 L60,30" stroke="#fff" stroke-width="1.4" stroke-linecap="round" class="ahn-shoot"/>
+      <circle cx="552" cy="320" r="22" fill="#6a4aa8"/><circle cx="544" cy="314" r="22" fill="#8a6ac8" opacity=".5"/><ellipse cx="552" cy="320" rx="36" ry="7" fill="none" stroke="#c9a6ff" stroke-width="1.5" opacity=".7" transform="rotate(-15 552 320)"/>
+      ${bridges}
+      ${isl}
+    </svg></div>`;
+  }
+  function ahnAbilChips(ph) { return ph.map((p, i) => `<span class="ahn-ph"><b>P${i + 1}</b>${[...p.a.map(id => AHN_ABIL[id].name), ...Object.entries(p.t || {}).map(([k, v]) => AHN_TRAIT[k] ? AHN_TRAIT[k](v) : '')].filter(Boolean).join(' · ') || 'Grundangriff'}</span>`).join(''); }
+  function ahnTab() {
+    if (!ahnOpen(S)) return '<p class="note">Die Ahnenprüfung wird mit der 6. Wiedergeburt freigeschaltet.</p>';
+    const cur = S.ahn.m, sel = ahnSel == null ? cur : Math.max(0, Math.min(AHN_COUNT - 1, ahnSel)), M = AHN_MISSIONS[sel], lvl = S.ahn.lvl || ahnLevelFor(S);
+    const state = sel < cur ? 'done' : sel === cur ? 'cur' : 'later';
+    const bosses = ahnBossesOf(sel);
+    let html = `<div class="ahn-head"><div><h3 class="rl-h3">Ahnenprüfung</h3>
+      <p class="note">10 Missionen mit je 5 Bossen, jeder mit 3 Phasen. Am Ende der Kette wartet der Urahn, und wer ihn besiegt, bekommt ein <b>Ahnensiegel</b>. Danach beginnt die Prüfung von vorne, so oft du willst.</p></div>
+      <div class="ahn-stats"><span class="ahn-sig">✦ <b>${S.ahn.sig}</b> Siegel frei</span><span class="note">insgesamt ${S.ahn.got} erhalten</span></div></div>`;
+    html += ahnMap();
+    html += `<div class="ahn-mission" style="--mc:${M.col}"><div class="ahn-mhead"><span class="ahn-mnum">${sel + 1}</span><div><b>${esc(M.name)}</b><small>${esc(M.desc)}</small></div>
+      <span class="ahn-state ${state}">${state === 'done' ? 'Geschafft' : state === 'cur' ? 'Nächste Mission' : 'Noch gesperrt'}</span></div>
+      <ol class="ahn-bosses">${bosses.map((d, i) => `<li class="${d.ahne ? 'ahne' : ''}" style="--bc:${d.tint || '#ffd27a'}"><span class="ahn-bi">${d.ahne ? '♛' : i + 1}</span><div><b>${esc(d.name)}</b><i>„${esc(d.quote)}“</i><div class="ahn-phs">${ahnAbilChips(d.ph)}</div></div></li>`).join('')}</ol>
+      <p class="note">Vor jedem Boss kommen 2 Wellen Diener. Nach jedem Boss stehen gefallene Helden wieder auf. Scheitert die Mission, fängst du sie neu an. Gegnerstärke: <b>Stufe ${lvl}</b> (80 % deines Rekords${S.ahn.lvl ? ', festgelegt für diese Prüfung' : ', wird beim Start festgelegt'}).</p>
+      <div class="row">${state === 'cur' ? `<button class="btn gold" data-rl="ahnstart" ${inCamp() ? '' : 'disabled'}>Mission ${sel + 1} starten</button>` : ''}${ahnSel != null && ahnSel !== cur ? '<button class="btn ghost small" data-rl="ahncur">Zur nächsten Mission</button>' : ''}</div></div>`;
+    // Siegel setzen
+    const hiredH = HEROES.filter(h => hired(S, h.tree));
+    html += `<div class="ahn-sigils"><h3 class="rl-h3">Ahnensiegel</h3><p class="note">Ein Siegel setzt du auf einen Helden. Sein Fertigkeitenbaum wächst dann nach unten: neue passive Fähigkeiten, 3 neue aktive Fähigkeiten mit einem eigenen Platz und 4 neue Schlüssel. Die Erweiterungen kommen mit dem nächsten Update, deine Siegel bleiben bis dahin sicher.</p>
+      <div class="ahn-sgrid">${hiredH.map(h => { const on = S.ahn.place[h.id]; return `<button class="ahn-sh ${on ? 'on' : ''}" style="--hc:${h.color}" data-sig="${h.id}" ${on || S.ahn.sig <= 0 ? 'disabled' : ''}><span class="pt">${PORTRAIT[h.id]}</span><b>${h.name}</b><small>${on ? '✦ Siegel gesetzt' : S.ahn.sig > 0 ? 'Siegel setzen' : 'kein Siegel frei'}</small></button>`; }).join('')}</div></div>`;
+    if (acct && acct.tester) html += `<div class="rl-test"><b>🧪 Test</b> <button class="btn small" data-rl="tahnwin">Aktuelle Mission als geschafft werten</button> <button class="btn small" data-rl="tahnsig">+1 Siegel</button> <span class="note">Boss direkt starten:</span> ${ahnBossesOf(S.ahn.m).map((d, i) => `<button class="btn ghost small" data-rl="tahnboss" data-bi="${i}" title="${esc(d.name)}">${d.ahne ? '♛' : i + 1}</button>`).join('')} <button class="btn ghost small" data-rl="tahnreset">Prüfung zurücksetzen</button></div>`;
+    return html;
+  }
+  function ahnAction(a, b) {
+    if (a === 'ahnstart' || a === 'tahnboss') {
+      if (!inCamp() || !ahnOpen(S)) return true;
+      if (a === 'tahnboss' && !(acct && acct.tester)) return true;
+      startRun('ahnen');
+      if (a === 'tahnboss' && run && run.ahn) { const n = ahnBossesOf(run.ahn.mi).length; run.ahn.bi = Math.min(n - 1, b.dataset.bi != null ? Number(b.dataset.bi) : n - 1); run.ahn.wave = AHN_TUNE.waves; spawnWave(run); }
+      save(); $('#soloCanvas').scrollIntoView({ behavior: 'smooth', block: 'center' }); return true;
+    }
+    if (a === 'ahncur') { ahnSel = null; panel(); return true; }
+    if (!(acct && acct.tester) || !/^tahn/.test(a)) return false;
+    if (a === 'tahnwin') { const r = ahnClaim(S, { victory: true, ahn: { mi: S.ahn.m } }); ahnSel = null; if (r && r.sigil) sigilGot(); else toast(`Mission ${r.mission + 1} als geschafft gewertet`); afterChange(); }
+    if (a === 'tahnsig') { S.ahn.sig++; S.ahn.got++; toast('+1 Ahnensiegel'); afterChange(); }
+    if (a === 'tahnreset') { S.ahn = ahnFix(); ahnSel = null; toast('Ahnenprüfung zurückgesetzt'); afterChange(); }
+    return true;
+  }
+  function ahnClick(e) {
+    const n = e.target.closest('[data-ahn]');
+    if (n) { ahnSel = Number(n.dataset.ahn); SND.play('tick'); panel(); return true; }
+    const sg = e.target.closest('[data-sig]');
+    if (sg) { const h = HERO_BY_ID[sg.dataset.sig]; if (placeSigil(S, h.id)) { SND.play('forge'); toast(`Ahnensiegel auf ${h.name} gesetzt`, true); afterChange(); } return true; }
+    return false;
+  }
+  function sigilGot() {
+    SND.play('rebirth');
+    modal(`<span class="rl-mic ahn-mic">✦</span><h2>Ahnensiegel erhalten!</h2>
+      <p>Der Urahn ist besiegt. Du hast jetzt <b>${S.ahn.sig}</b> freie${S.ahn.sig === 1 ? 's' : ''} Siegel.</p>
+      <p class="note">Setze es im Reiter Ahnenprüfung auf einen Helden. Die Prüfung beginnt jetzt von vorne, mit neu festgelegter Gegnerstärke.</p>
+      <button class="btn gold" data-m="ok">Weiter</button>`);
+  }
+  function ahnEndInfo() {
+    const A = run.ahn, M = AHN_MISSIONS[A.mi], list = ahnBossesOf(A.mi), r = run.ahnReward;
+    if (run.victory) return `<div class="rl-dead win"><b>Mission ${A.mi + 1} geschafft: ${esc(M.name)}</b><span>${r && r.sigil ? '✦ Ahnensiegel erhalten!' : `Weiter geht es mit Mission ${A.mi + 2}: ${esc(AHN_MISSIONS[Math.min(AHN_COUNT - 1, A.mi + 1)].name)}`}</span><span class="note">Alle Bosse besiegt. Die Karte findest du im Reiter Ahnenprüfung.</span></div>`;
+    const d = list[A.bi], bs = A.boss;
+    return `<div class="rl-dead"><b>Mission ${A.mi + 1} gescheitert</b><span>${A.wave < AHN_TUNE.waves || !d ? `Bei den Dienern vor Boss ${A.bi + 1}` : `Bei ${esc(d.name)} (Boss ${A.bi + 1} von ${list.length}${bs ? `, Phase ${bs.phase + 1}` : ''})`}</span><span class="note">Die Mission fängt beim nächsten Versuch von vorne an. Stärkere Runen oder eine andere Aufstellung helfen.</span></div>`;
   }
 
   /* ================= Zeichnen ================= */
@@ -3180,18 +3622,20 @@
     const flash = e.hitT > 0, col = c => (flash ? '#ffffff' : c);
     const mv = e._px != null && Math.abs(e._px - e.x) > 0.05; e._px = e.x;
     const atk = run && e.atkAt != null ? Math.max(0, 1 - (run.time - e.atkAt) / 0.32) : 0;
-    if (e.boss) { ctx.save(); ctx.scale(1, 0.22); const ra = 58; ctx.fillStyle = RG(0, 0, ra * 1.3, 'rgba(190,120,255,.35)', 'rgba(190,120,255,0)'); ctx.beginPath(); ctx.arc(0, 0, ra * 1.3, 0, 7); ctx.fill();
+    if (e.ahn) ahnBoss(e, t, col);
+    else if (e.boss) { ctx.save(); ctx.scale(1, 0.22); const ra = 58; ctx.fillStyle = RG(0, 0, ra * 1.3, 'rgba(190,120,255,.35)', 'rgba(190,120,255,0)'); ctx.beginPath(); ctx.arc(0, 0, ra * 1.3, 0, 7); ctx.fill();
         ctx.strokeStyle = 'rgba(210,170,255,.55)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, ra, 0, 7); ctx.stroke(); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 0, ra * 0.78, 0, 7); ctx.stroke();
         for (let i = 0; i < 8; i++) { const a = t * 0.6 + i * Math.PI / 4; ctx.fillStyle = 'rgba(230,200,255,.8)'; ctx.fillRect(Math.cos(a) * ra * 0.89 - 2.5, Math.sin(a) * ra * 0.89 - 6, 5, 12); } ctx.restore();
         for (let i = 0; i < 5; i++) { const p = (t * 0.5 + i / 5) % 1; ctx.fillStyle = `rgba(210,170,255,${(1 - p) * 0.7})`; ctx.fillRect(Math.sin(i * 2.3) * 40, -p * 120, 2, 2); }
         if (e.enrage > 1) glowDot(0, -60, 95, '255,50,40', Math.min(0.55, (e.enrage - 1) * 0.7) * (0.8 + 0.2 * Math.sin(t * 8)));
         bossDraw(e, t, col); }
     else { const art = ENEMY_ART[e.type] || ENEMY_ART.schleim, G = (y0, y1, a, b) => (flash ? '#ffffff' : LG(y0, y1, a, b));
-      ctx.save(); ctx.translate(-Math.sin(atk * Math.PI) * 6, 0); const es = ENEMY_SIZE[e.type] || 1; ctx.scale(es, es); art(e, t, t + e.bob, col, G, atk, mv); ctx.restore(); ctx.globalAlpha = 1; }
+      ctx.save(); ctx.translate(-Math.sin(atk * Math.PI) * 6, 0); const es = ENEMY_SIZE[e.type] || 1; ctx.scale(es, es); if (e.echo) { ctx.globalAlpha = 0.8; tintDraw(() => art(e, t, t + e.bob, col, G, atk, mv), flash ? null : e.echo, 0.8, 50); } else art(e, t, t + e.bob, col, G, atk, mv); ctx.restore(); ctx.globalAlpha = 1; }
     if (false) { ctx.beginPath(); ctx.moveTo(-8, -52); ctx.lineTo(-8, -60); ctx.lineTo(-4, -55); ctx.lineTo(0, -62); ctx.lineTo(4, -55); ctx.lineTo(8, -60); ctx.lineTo(8, -52); ctx.closePath(); fillO('#ffd23f'); }
     if (e.stun > 0) for (let i = 0; i < 3; i++) { const a = t * 6 + i * 2.1; ctx.fillStyle = '#ffe58a'; ctx.beginPath(); ctx.arc(Math.cos(a) * 11, (e.boss ? -112 : -56) + Math.sin(a) * 3, 2.2, 0, 7); ctx.fill(); }
     if (e.poisonT > 0) for (let i = 0; i < 3; i++) { ctx.fillStyle = 'rgba(155,227,107,.8)'; ctx.beginPath(); ctx.arc(-6 + i * 6, -10 - ((t * 30 + i * 9) % 22), 2.5, 0, 7); ctx.fill(); }
     ctx.restore();
+    if (e.ahn) return;
     const bw = e.boss ? 72 : 30, by = GROUND - (e.boss ? 170 : e.elite ? 62 : 56);
     ctx.fillStyle = 'rgba(0,0,0,.5)'; rr(e.x - bw / 2, by, bw, 5, 2); ctx.fill();
     ctx.fillStyle = e.boss ? '#c9a6ff' : e.elite ? '#d7b5ff' : '#e5484d'; rr(e.x - bw / 2, by, bw * Math.max(0, e.hp / e.max), 5, 2); ctx.fill();
@@ -4285,6 +4729,460 @@
     front(t) { parts(t, 10, { type: 'glow', rgb: '200,160,255', vx: 2, vy: -8, size: 1.2, tw: 2, alpha: 0.7, seed: 31 }); grade('#7a4aff', 0.18); vignette(0.5); },
   };
   function envOf(stage, mode) { return mode === 'camp' ? ENV_CAMP : mode === 'tower' ? ENV_TOWER : ENV[zoneOf(stage) % ENV.length]; }
+  /* ================= Ahnenprüfung: Grafik ================= */
+  // Färbt eine Zeichnung ein: erst auf eine eigene Fläche zeichnen, dann mit der Farbe überziehen
+  let ahnCv = null, ahnCv2 = null;
+  function tintDraw(fn, tint, amount, halfW = 120) {
+    if (!tint || !cv) { fn(); return; }
+    if (!ahnCv) { ahnCv = document.createElement('canvas'); ahnCv2 = document.createElement('canvas'); }
+    for (const c of [ahnCv, ahnCv2]) if (c.width !== cv.width || c.height !== cv.height) { c.width = cv.width; c.height = cv.height; }
+    const main = ctx, oc = ahnCv.getContext('2d'), o2 = ahnCv2.getContext('2d'), m = main.getTransform(), a0 = main.globalAlpha;
+    const sx = Math.max(0, Math.floor(m.e - halfW * m.a)), sw = Math.min(cv.width - sx, Math.ceil(halfW * 2 * m.a));
+    if (sw <= 0) return;
+    oc.setTransform(1, 0, 0, 1, 0, 0); oc.clearRect(sx, 0, sw, cv.height); oc.globalAlpha = 1;
+    oc.setTransform(m); ctx = oc;
+    try { fn(); } finally { ctx = main; }
+    oc.setTransform(1, 0, 0, 1, 0, 0);
+    // Farbton übernehmen, Helligkeit behalten, dann auf die Form zuschneiden
+    o2.setTransform(1, 0, 0, 1, 0, 0); o2.globalCompositeOperation = 'source-over'; o2.globalAlpha = 1; o2.clearRect(sx, 0, sw, cv.height);
+    o2.drawImage(ahnCv, sx, 0, sw, cv.height, sx, 0, sw, cv.height);
+    o2.globalCompositeOperation = 'color'; o2.globalAlpha = amount; o2.fillStyle = tint; o2.fillRect(sx, 0, sw, cv.height);
+    const n = parseInt(tint.slice(1), 16), lum = (0.3 * ((n >> 16) & 255) + 0.59 * ((n >> 8) & 255) + 0.11 * (n & 255)) / 255;
+    if (lum > 0.7) { o2.globalAlpha = (lum - 0.6) * 1.1; o2.globalCompositeOperation = 'screen'; o2.fillRect(sx, 0, sw, cv.height); }
+    else if (lum < 0.3) { o2.globalAlpha = (0.35 - lum) * 1.2; o2.globalCompositeOperation = 'multiply'; o2.fillRect(sx, 0, sw, cv.height); }
+    o2.globalAlpha = 1; o2.globalCompositeOperation = 'destination-in'; o2.drawImage(ahnCv, sx, 0, sw, cv.height, sx, 0, sw, cv.height);
+    o2.globalCompositeOperation = 'source-over';
+    main.save(); main.setTransform(1, 0, 0, 1, 0, 0); main.globalAlpha = a0; main.drawImage(ahnCv2, sx, 0, sw, cv.height, sx, 0, sw, cv.height); main.restore();
+  }
+  const hexRgb = h => { const n = parseInt(h.slice(1), 16); return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`; };
+  // Effekte rund um die Bosse
+  function ahnAcc(kind, rgb, t, front, ph) {
+    const sp = 1 + ph * 0.35;
+    if (kind === 'blasen') { if (!front) return; for (let i = 0; i < 7; i++) { const p = (t * 0.35 * sp + i / 7) % 1; ctx.strokeStyle = `rgba(${rgb},${0.7 * (1 - p)})`; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(Math.sin(i * 2.3) * 40, -10 - p * 110, 2 + (i % 3), 0, 7); ctx.stroke(); } return; }
+    if (kind === 'staub') { if (front) return; for (let i = 0; i < 8; i++) { const p = (t * 0.5 * sp + i / 8) % 1; ctx.fillStyle = `rgba(190,160,120,${0.45 * (1 - p)})`; ctx.beginPath(); ctx.arc((i - 4) * 14 + p * 20, -4 - p * 20, 5 + p * 8, 0, 7); ctx.fill(); } return; }
+    if (kind === 'blaetter' || kind === 'blueten' || kind === 'federn' || kind === 'asche' || kind === 'schnee') {
+      if (!front) return;
+      const col = { blaetter: ['#7ac85a', '#c8a03a'], blueten: ['#ff8ab8', '#ffd0e0'], federn: ['#2a2a3a', '#5a5a7a'], asche: ['#8a8a96', '#4a4a52'], schnee: ['#ffffff', '#cfefff'] }[kind];
+      for (let i = 0; i < 10; i++) { const p = (t * 0.25 * sp + i / 10) % 1, x = Math.sin(i * 3.1) * 60 + Math.sin(t * 1.5 + i) * 10, y = -150 + p * 150; ctx.save(); ctx.translate(x, y); ctx.rotate(t * 2 + i); ctx.globalAlpha = (1 - p) * 0.9; ctx.fillStyle = col[i % 2];
+        if (kind === 'schnee' || kind === 'asche') { ctx.beginPath(); ctx.arc(0, 0, kind === 'schnee' ? 1.8 : 2.2, 0, 7); ctx.fill(); } else { ctx.beginPath(); ctx.ellipse(0, 0, kind === 'federn' ? 5 : 4, 2, 0, 0, 7); ctx.fill(); }
+        ctx.restore(); }
+      ctx.globalAlpha = 1; return;
+    }
+    if (kind === 'runen' || kind === 'echo') {
+      if (front) return;
+      ctx.save(); ctx.translate(0, -70); ctx.globalCompositeOperation = 'lighter';
+      const r = 62 + ph * 6; ctx.strokeStyle = `rgba(${rgb},${0.35 + ph * 0.12})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.stroke(); ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(0, 0, r - 9, 0, 7); ctx.stroke();
+      for (let i = 0; i < 12; i++) { const a = t * 0.4 * sp + i * Math.PI / 6; ctx.save(); ctx.rotate(a); ctx.translate(r - 4.5, 0); ctx.fillStyle = `rgba(${rgb},.7)`; ctx.fillRect(-1.5, -3, 3, 6); ctx.restore(); }
+      ctx.restore();
+      if (kind === 'echo') glowDot(0, -70, 90, rgb, 0.18 + 0.06 * Math.sin(t * 2));
+      return;
+    }
+    if (kind === 'schatten' || kind === 'leere') { if (front) return; for (let i = 0; i < 6; i++) { const p = (t * 0.3 * sp + i / 6) % 1; ctx.fillStyle = kind === 'leere' ? `rgba(20,10,40,${0.5 * (1 - p)})` : `rgba(30,20,50,${0.45 * (1 - p)})`; ctx.beginPath(); ctx.arc(Math.sin(i * 2.1) * 34, -20 - p * 100, 14 + p * 18, 0, 7); ctx.fill(); }
+      if (kind === 'leere') { ctx.strokeStyle = `rgba(${rgb},.5)`; ctx.lineWidth = 1.5; for (let i = 0; i < 3; i++) { const p = (t * 0.4 + i / 3) % 1; ctx.beginPath(); ctx.ellipse(0, -70, 30 + p * 60, (30 + p * 60) * 0.4, 0, 0, 7); ctx.globalAlpha = 1 - p; ctx.stroke(); } ctx.globalAlpha = 1; } return; }
+    if (kind === 'knochen') { if (front) return; for (let i = 0; i < 4; i++) { const a = t * 0.9 * sp + i * Math.PI / 2, x = Math.cos(a) * 58, y = -80 + Math.sin(a) * 18; ctx.save(); ctx.translate(x, y); ctx.rotate(a * 2); ctx.fillStyle = '#e8e2d0'; ctx.fillRect(-7, -1.5, 14, 3); ctx.beginPath(); ctx.arc(-7, -2, 2.4, 0, 7); ctx.arc(-7, 2, 2.4, 0, 7); ctx.arc(7, -2, 2.4, 0, 7); ctx.arc(7, 2, 2.4, 0, 7); ctx.fill(); ctx.restore(); } return; }
+    if (kind === 'geister' || kind === 'irrlicht') { if (!front) return; for (let i = 0; i < 5; i++) { const a = t * 0.7 * sp + i * 1.26, x = Math.cos(a) * 54, y = -84 + Math.sin(a * 1.4) * 34; glowDot(x, y, kind === 'irrlicht' ? 9 : 7, rgb, 0.75); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, 1.6, 0, 7); ctx.fill(); } return; }
+    if (kind === 'gift') { if (front) return; for (let i = 0; i < 6; i++) { const p = (t * 0.4 * sp + i / 6) % 1; ctx.fillStyle = `rgba(140,220,90,${0.35 * (1 - p)})`; ctx.beginPath(); ctx.arc(Math.sin(i * 1.7) * 36, -6 - p * 60, 8 + p * 14, 0, 7); ctx.fill(); } return; }
+    if (kind === 'funken' || kind === 'flammen' || kind === 'sterne') {
+      if (!front) { if (kind === 'flammen') for (let i = 0; i < 7; i++) { const h = 16 + Math.sin(t * 9 * sp + i * 1.9) * 7; ctx.fillStyle = ['#ff5a2a', '#ffb547', '#ffd23f'][i % 3]; ctx.beginPath(); ctx.moveTo(-42 + i * 12, 2); ctx.quadraticCurveTo(-38 + i * 12, -h, -32 + i * 12, 2); ctx.fill(); } return; }
+      for (let i = 0; i < 9; i++) { const p = (t * 0.6 * sp + i / 9) % 1, x = Math.sin(i * 2.7 + p * 3) * 50, y = -20 - p * 130;
+        if (kind === 'sterne') { ctx.fillStyle = `rgba(255,240,200,${1 - p})`; sparkle(x, y, 3 * (1 - p) + 1, 1 - p); } else { ctx.fillStyle = `rgba(255,${180 + (i % 3) * 25},80,${1 - p})`; ctx.fillRect(x, y, 2.2, 2.2); } }
+      return;
+    }
+    if (kind === 'kristalle') { if (front) return; for (let i = 0; i < 5; i++) { const a = t * 0.6 * sp + i * 1.26, x = Math.cos(a) * 60, y = -70 + Math.sin(a) * 22; ctx.save(); ctx.translate(x, y); ctx.rotate(Math.sin(t + i) * 0.3); poly([[0, -10], [5, 0], [0, 10], [-5, 0]], `rgba(${rgb},.85)`, true); ctx.restore(); } return; }
+    if (kind === 'blut') { if (front) return; for (let i = 0; i < 6; i++) { const p = (t * 0.5 * sp + i / 6) % 1; ctx.fillStyle = `rgba(200,20,40,${0.6 * (1 - p)})`; ctx.beginPath(); ctx.ellipse(Math.sin(i * 2.9) * 30, -100 + p * 100, 2, 3.5, 0, 0, 7); ctx.fill(); } glowDot(0, -60, 70, '200,20,40', 0.15); }
+  }
+  // Ein Boss der Ahnenprüfung: Grundbild + Farbe + Effekte + Phase
+  function ahnBoss(e, t, col) {
+    const d = e.ahn, ph = e.phase || 0, rgb = d.tint ? hexRgb(d.tint) : '255,210,122', lunge = (e.lunge || 0) * 2 * 40;
+    ctx.save(); ctx.translate(-lunge, 0);
+    // Bodenring in Bossfarbe, in Phase 3 heller und schneller
+    ctx.save(); ctx.scale(1, 0.22); const ra = 60;
+    ctx.fillStyle = RG(0, 0, ra * 1.4, `rgba(${rgb},${0.28 + ph * 0.1})`, `rgba(${rgb},0)`); ctx.beginPath(); ctx.arc(0, 0, ra * 1.4, 0, 7); ctx.fill();
+    ctx.strokeStyle = `rgba(${rgb},.6)`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, ra, 0, 7); ctx.stroke();
+    for (let i = 0; i < 3; i++) { ctx.fillStyle = i < ph + 1 ? `rgba(${rgb},.95)` : 'rgba(255,255,255,.2)'; const a = t * (0.5 + ph * 0.4) + i * 2.09; ctx.beginPath(); ctx.arc(Math.cos(a) * ra * 0.85, Math.sin(a) * ra * 0.85, 6, 0, 7); ctx.fill(); }
+    ctx.restore();
+    if (ph >= 2) glowDot(0, -64, 100, '255,80,50', 0.18 + 0.08 * Math.sin(t * 7));
+    if (d.ahne) { drawAhne(e, t, col); ctx.restore(); ahnBossFx(e, t, rgb); return; }
+    ahnAcc(d.acc, rgb, t, false, ph);
+    const sz = d.sz || 1, inv = e.invT > 0;
+    ctx.save(); ctx.scale(sz, sz); if (inv) ctx.globalAlpha = 0.55 + 0.3 * Math.sin(t * 30);
+    if (d.acc === 'echo') ctx.globalAlpha *= 0.82;
+    const hitT = e.hitT; e.hitT = 0;
+    if (d.art) drawDragon(e, t, d.art); else tintDraw(() => bossDraw(e, t, c => c), d.tint, d.acc === 'echo' ? 0.8 : 0.85, 130 * sz);
+    e.hitT = hitT; if (hitT > 0) glowDot(0, -60, 60, '255,255,255', 0.16);
+    ctx.restore(); ctx.globalAlpha = 1;
+    ahnAcc(d.acc, rgb, t, true, ph);
+    ctx.restore();
+    ahnBossFx(e, t, rgb);
+  }
+  function ahnBossFx(e, t, rgb) {
+    if (e.castT > 0 && !(e.ahn && e.ahn.art)) { const p = 1 - e.castT / 0.8; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(${rgb},${1 - p})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(0, -60, 30 + p * 70, (30 + p * 70) * 0.9, 0, 0, 7); ctx.stroke(); glowDot(0, -70, 50, rgb, 0.35 * (1 - p)); ctx.restore(); }
+    if (e.shieldHp > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(0, -70, 30, 0, -70, 82); g.addColorStop(0, 'rgba(120,190,255,0)'); g.addColorStop(0.85, 'rgba(140,200,255,.28)'); g.addColorStop(1, 'rgba(200,235,255,.6)'); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, -70, 70, 84, 0, 0, 7); ctx.fill();
+      ctx.strokeStyle = 'rgba(200,235,255,.7)'; ctx.lineWidth = 1.5; for (let i = 0; i < 6; i++) { const a = t * 0.8 + i * 1.05; ctx.beginPath(); ctx.arc(0, -70, 76, a, a + 0.4); ctx.stroke(); } ctx.restore(); }
+    if (e.reflT > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 5; i++) { const y = -140 + ((t * 120 + i * 30) % 150); ctx.fillStyle = 'rgba(230,240,255,.35)'; ctx.fillRect(-46, y, 92, 2); } ctx.restore(); }
+    if (e.healT > 0) for (let i = 0; i < 4; i++) { const p = (t * 0.9 + i / 4) % 1; ctx.fillStyle = `rgba(126,224,138,${1 - p})`; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('+', Math.sin(i * 2) * 30, -40 - p * 90); }
+    if (e.frenzyT > 0) glowDot(0, -60, 80, '255,40,40', 0.3 + 0.15 * Math.sin(t * 16));
+    if (e.enrage > 1) glowDot(0, -60, 95, '255,50,40', Math.min(0.55, (e.enrage - 1) * 0.7) * (0.8 + 0.2 * Math.sin(t * 8)));
+  }
+
+  /* ---------- Der Urahn ---------- */
+  const AHNE_PAL = [
+    { main: '#ffd27a', light: '#fff2c8', dark: '#8a5a1a', rgb: '255,205,110', cape: ['#4a1f7a', '#14071f'], eye: '255,240,180' },
+    { main: '#d8b8ff', light: '#f4ecff', dark: '#5a3a9a', rgb: '205,165,255', cape: ['#3a1260', '#0c0418'], eye: '235,200,255' },
+    { main: '#bff0ff', light: '#ffffff', dark: '#2a6a9a', rgb: '150,230,255', cape: ['#0c3060', '#030a18'], eye: '200,250,255' },
+  ];
+  function ahneSword(len, P, glow) {
+    if (glow) glowDot(0, -len * 0.5, len * 0.55, P.rgb, 0.25);
+    poly([[0, -len - 6], [3.4, -len], [3.4, 0], [-3.4, 0], [-3.4, -len]], P.light, true);
+    ctx.fillStyle = `rgba(${P.rgb},.8)`; ctx.fillRect(-0.8, -len + 2, 1.6, len - 4);
+    ctx.fillStyle = P.dark; ctx.fillRect(-9, -1, 18, 3.5); ctx.fillStyle = P.main; ctx.fillRect(-1.6, 2, 3.2, 8); ctx.beginPath(); ctx.arc(0, 11, 2.6, 0, 7); ctx.fill();
+  }
+  function drawAhne(e, t, col) {
+    const ph = e.phase || 0, P = AHNE_PAL[ph], hov = -10 + Math.sin(t * 1.4) * 4, inv = e.invT > 0, flash = false;
+    const C = c => c;
+    ctx.save(); ctx.translate(0, 10); ctx.scale(0.88, 0.88);
+    // Lichtstrahlen und Runenkreis hinter ihm
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 7; i++) { const a = -Math.PI / 2 + (i - 3) * 0.32 + Math.sin(t * 0.6 + i) * 0.05; ctx.fillStyle = `rgba(${P.rgb},${0.07 + (i % 2) * 0.04})`; ctx.beginPath(); ctx.moveTo(0, -110 + hov); ctx.lineTo(Math.cos(a - 0.06) * 260, -110 + hov + Math.sin(a - 0.06) * 260); ctx.lineTo(Math.cos(a + 0.06) * 260, -110 + hov + Math.sin(a + 0.06) * 260); ctx.closePath(); ctx.fill(); }
+    ctx.translate(0, -118 + hov);
+    const R1 = 74 + ph * 4;
+    ctx.strokeStyle = `rgba(${P.rgb},.55)`; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(0, 0, R1, 0, 7); ctx.stroke();
+    ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(0, 0, R1 - 10, 0, 7); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, R1 + 7, 0, 7); ctx.stroke();
+    ctx.save(); ctx.rotate(t * 0.25);
+    for (let i = 0; i < 16; i++) { ctx.rotate(Math.PI / 8); ctx.fillStyle = `rgba(${P.rgb},.75)`; if (i % 2) ctx.fillRect(R1 - 7, -1, 5, 2); else { ctx.beginPath(); ctx.moveTo(R1 - 8, 0); ctx.lineTo(R1 - 4, -3); ctx.lineTo(R1, 0); ctx.lineTo(R1 - 4, 3); ctx.fill(); } }
+    ctx.restore();
+    ctx.save(); ctx.rotate(-t * 0.4); ctx.strokeStyle = `rgba(${P.rgb},.35)`; ctx.lineWidth = 1.2; ctx.beginPath(); for (let i = 0; i <= 6; i++) { const a = i * Math.PI * 2 / 6 * 2; ctx[i ? 'lineTo' : 'moveTo'](Math.cos(a) * (R1 - 12), Math.sin(a) * (R1 - 12)); } ctx.stroke(); ctx.restore();
+    ctx.restore();
+    // Kreisende Geisterklingen (hinter dem Körper)
+    const nS = 2 + ph, swords = [];
+    for (let i = 0; i < nS; i++) { const a = t * (0.9 + ph * 0.25) + i * Math.PI * 2 / nS; swords.push({ a, x: Math.cos(a) * 84, y: -96 + hov + Math.sin(a) * 26, front: Math.sin(a) > 0 }); }
+    const drawS = s => { ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(Math.cos(s.a) * 0.5 + Math.PI); ctx.globalAlpha = s.front ? 0.95 : 0.55; ahneSword(30, P, true); ctx.restore(); ctx.globalAlpha = 1; };
+    swords.filter(s => !s.front).forEach(drawS);
+    ctx.save(); if (inv) ctx.globalAlpha = 0.6 + 0.3 * Math.sin(t * 30);
+    ctx.translate(0, hov);
+    // Umhang
+    const w1 = Math.sin(t * 1.8) * 6, w2 = Math.sin(t * 1.8 + 1.3) * 8;
+    const cg = ctx.createLinearGradient(0, -130, 0, 0); cg.addColorStop(0, P.cape[0]); cg.addColorStop(1, 'rgba(10,4,20,0)');
+    ctx.beginPath(); ctx.moveTo(-30, -128); ctx.bezierCurveTo(-60, -100, -78 + w1, -50, -70 + w2, 6); ctx.quadraticCurveTo(-30, -6 + w1, 4, 10); ctx.quadraticCurveTo(40, -2, 54 + w1, 4); ctx.bezierCurveTo(50, -50, 46, -100, 30, -128); ctx.closePath(); ctx.fillStyle = flash ? '#fff' : cg; ctx.fill();
+    ctx.strokeStyle = `rgba(${P.rgb},.75)`; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(-30, -128); ctx.bezierCurveTo(-60, -100, -78 + w1, -50, -70 + w2, 6); ctx.stroke();
+    for (let i = 0; i < 5; i++) { const p = (t * 0.4 + i / 5) % 1; ctx.fillStyle = `rgba(${P.rgb},${0.6 * (1 - p)})`; ctx.fillRect(-66 + i * 26 + Math.sin(t + i) * 6, 4 - p * 30, 2, 2); }
+    // Geisterhafter Unterleib
+    const tg = ctx.createLinearGradient(0, -78, 0, -4); tg.addColorStop(0, C(P.dark)); tg.addColorStop(0.6, `rgba(${P.rgb},.35)`); tg.addColorStop(1, `rgba(${P.rgb},0)`);
+    ctx.beginPath(); ctx.moveTo(-26, -78); ctx.quadraticCurveTo(-30 + w1 * 0.5, -40, -12 + w2 * 0.6, -4); ctx.quadraticCurveTo(0, 4, 10 + w1 * 0.6, -6); ctx.quadraticCurveTo(28, -40, 26, -78); ctx.closePath(); ctx.fillStyle = tg; ctx.fill();
+    for (let i = 0; i < 4; i++) { const sx = -16 + i * 11, sw = Math.sin(t * 2.4 + i) * 5; ctx.strokeStyle = `rgba(${P.rgb},.35)`; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(sx, -60); ctx.quadraticCurveTo(sx + sw, -30, sx - sw, -8); ctx.stroke(); }
+    // Gürtel
+    rr(-28, -82, 56, 10, 3); fillO(C(P.dark)); for (let i = 0; i < 5; i++) { rr(-24 + i * 10, -80, 8, 6, 1.5); fillO(C(P.main)); }
+    glowDot(0, -77, 9, P.rgb, 0.8); ctx.fillStyle = C(P.light); ctx.beginPath(); ctx.arc(0, -77, 3, 0, 7); ctx.fill();
+    // Brustpanzer
+    const bg = ctx.createLinearGradient(0, -134, 0, -80); bg.addColorStop(0, C(P.light)); bg.addColorStop(0.45, C(P.main)); bg.addColorStop(1, C(P.dark));
+    ctx.beginPath(); ctx.moveTo(-32, -132); ctx.lineTo(32, -132); ctx.quadraticCurveTo(34, -104, 26, -82); ctx.lineTo(-26, -82); ctx.quadraticCurveTo(-34, -104, -32, -132); ctx.closePath(); ctx.fillStyle = bg; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = OUT; ctx.stroke();
+    ctx.strokeStyle = `rgba(60,30,10,.45)`; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(0, -130); ctx.lineTo(0, -84); ctx.moveTo(-24, -118); ctx.quadraticCurveTo(-12, -110, -4, -96); ctx.moveTo(24, -118); ctx.quadraticCurveTo(12, -110, 4, -96); ctx.moveTo(-22, -92); ctx.lineTo(22, -92); ctx.stroke();
+    // Wappen mit Herzstein
+    ctx.save(); ctx.translate(0, -110); poly([[0, -12], [10, -6], [8, 8], [0, 14], [-8, 8], [-10, -6]], C(P.dark), true);
+    glowDot(0, 0, 18, P.rgb, 0.7 + 0.25 * Math.sin(t * 3)); ctx.fillStyle = C(P.light); ctx.beginPath(); ctx.moveTo(0, -7); ctx.lineTo(5, 0); ctx.lineTo(0, 8); ctx.lineTo(-5, 0); ctx.closePath(); ctx.fill(); ctx.restore();
+    // Schulterplatten mit Stacheln
+    for (const sg of [-1, 1]) {
+      ctx.save(); ctx.translate(sg * 33, -126); ctx.scale(sg, 1);
+      ctx.beginPath(); ctx.moveTo(-10, 8); ctx.quadraticCurveTo(-8, -14, 14, -12); ctx.quadraticCurveTo(24, -4, 20, 12); ctx.quadraticCurveTo(6, 6, -10, 8); ctx.closePath(); fillO(C(P.main));
+      ctx.fillStyle = `rgba(255,255,255,.35)`; ctx.beginPath(); ctx.ellipse(4, -6, 8, 3, -0.3, 0, 7); ctx.fill();
+      for (let k = 0; k < 3; k++) poly([[2 + k * 7, -10 - k], [6 + k * 7, -24 - k * 2], [9 + k * 7, -8 - k]], C(P.light), true);
+      if (ph >= 2) for (let k = 0; k < 4; k++) { const h = 10 + Math.sin(t * 10 + k * 1.7) * 4; ctx.fillStyle = k % 2 ? 'rgba(200,250,255,.9)' : 'rgba(110,200,255,.85)'; ctx.beginPath(); ctx.moveTo(-2 + k * 6, -8); ctx.quadraticCurveTo(k * 6, -8 - h, 3 + k * 6, -8); ctx.fill(); }
+      ctx.restore();
+    }
+    // Arme mit Panzerhandschuhen zum Schwertgriff
+    for (const sg of [-1, 1]) { ctx.save(); ctx.translate(sg * 26, -118); ctx.rotate(sg > 0 ? 0.55 : -0.25); rr(-6, 0, 12, 30, 5); fillO(C(P.dark)); ctx.translate(0, 28); ctx.rotate(sg > 0 ? -1.1 : -0.35); rr(-6, 0, 12, 22, 4); fillO(C(P.main)); ctx.restore(); }
+    // Großschwert vor ihm
+    ctx.save(); ctx.translate(-16, -76); ctx.rotate(Math.PI - 0.08);
+    glowDot(0, -46, 50, P.rgb, 0.3);
+    poly([[0, -96], [6, -86], [6, 0], [-6, 0], [-6, -86]], C(P.light), true);
+    ctx.fillStyle = `rgba(${P.rgb},.95)`; ctx.fillRect(-1.4, -84, 2.8, 80);
+    for (let i = 0; i < 5; i++) { const a = 0.4 + 0.6 * Math.abs(Math.sin(t * 2 + i)); ctx.fillStyle = `rgba(255,255,255,${a})`; ctx.fillRect(-3, -76 + i * 15, 6, 2); }
+    rr(-20, -4, 40, 7, 3); fillO(C(P.dark)); poly([[-20, -1], [-28, -8], [-24, 2]], C(P.main), true); poly([[20, -1], [28, -8], [24, 2]], C(P.main), true);
+    rr(-3.5, 3, 7, 16, 2); fillO(C(P.dark)); glowDot(0, 22, 8, P.rgb, 0.9); ctx.fillStyle = C(P.light); ctx.beginPath(); ctx.arc(0, 22, 3.4, 0, 7); ctx.fill();
+    ctx.restore();
+    ctx.save(); ctx.translate(-14, -84); rr(-8, -6, 16, 12, 4); fillO(C(P.main)); ctx.restore();
+    // Bart aus Licht
+    for (let i = 0; i < 7; i++) { const bx = -10 + i * 3.3, sw = Math.sin(t * 2 + i * 0.8) * 3; ctx.strokeStyle = `rgba(${P.rgb},${0.55 + (i % 2) * 0.2})`; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(bx, -140); ctx.quadraticCurveTo(bx + sw, -128, bx - 2 + sw * 1.4, -112 + (i % 3) * 4); ctx.stroke(); }
+    // Helm mit leuchtendem Visier
+    ctx.save(); ctx.translate(0, -152);
+    const hg2 = ctx.createLinearGradient(0, -18, 0, 16); hg2.addColorStop(0, C(P.light)); hg2.addColorStop(1, C(P.main));
+    ctx.beginPath(); ctx.moveTo(-15, 14); ctx.lineTo(-17, -6); ctx.quadraticCurveTo(-15, -20, 0, -22); ctx.quadraticCurveTo(15, -20, 17, -6); ctx.lineTo(15, 14); ctx.lineTo(6, 18); ctx.lineTo(-6, 18); ctx.closePath(); ctx.fillStyle = hg2; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = OUT; ctx.stroke();
+    ctx.fillStyle = C(P.dark); ctx.fillRect(-1.5, -20, 3, 12);
+    ctx.fillStyle = '#100818'; rr(-13, -4, 26, 5, 2); ctx.fill(); ctx.fillRect(-1.6, -4, 3.2, 16);
+    glowDot(-6, -1.5, 9, P.eye, 0.9); glowDot(6, -1.5, 9, P.eye, 0.9);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(-10, -2.5, 7, 2); ctx.fillRect(3, -2.5, 7, 2);
+    for (const sg of [-1, 1]) { ctx.save(); ctx.scale(sg, 1); ctx.beginPath(); ctx.moveTo(16, -8); ctx.quadraticCurveTo(30, -14, 34, -30); ctx.quadraticCurveTo(26, -18, 16, -14); ctx.closePath(); fillO(C(P.light)); ctx.restore(); }
+    ctx.restore();
+    // Schwebende Krone
+    ctx.save(); ctx.translate(0, -186 + Math.sin(t * 2) * 2); ctx.rotate(Math.sin(t * 0.9) * 0.05);
+    glowDot(0, -4, 34, P.rgb, 0.45 + 0.15 * Math.sin(t * 2.5));
+    ctx.beginPath(); ctx.moveTo(-18, 6); ctx.lineTo(-20, -8); ctx.lineTo(-12, -2); ctx.lineTo(-8, -16); ctx.lineTo(-3, -4); ctx.lineTo(0, -20); ctx.lineTo(3, -4); ctx.lineTo(8, -16); ctx.lineTo(12, -2); ctx.lineTo(20, -8); ctx.lineTo(18, 6); ctx.closePath(); fillO(C(P.main));
+    ctx.fillStyle = C(P.dark); ctx.fillRect(-18, 2, 36, 4);
+    for (const [gx, gy, gc] of [[0, -14, '#e5484d'], [-8, -10, '#4fc3ff'], [8, -10, '#7ee08a'], [0, 4, P.light]]) { ctx.fillStyle = gc; ctx.beginPath(); ctx.arc(gx, gy, 2.2, 0, 7); ctx.fill(); }
+    if (ph >= 2) for (let k = 0; k < 5; k++) { const h = 8 + Math.sin(t * 11 + k) * 3; ctx.fillStyle = 'rgba(200,250,255,.9)'; ctx.beginPath(); ctx.moveTo(-14 + k * 7, -6); ctx.quadraticCurveTo(-12 + k * 7, -10 - h, -9 + k * 7, -6); ctx.fill(); }
+    ctx.restore();
+    ctx.restore();
+    swords.filter(s => s.front).forEach(drawS);
+    // Glut steigt auf, in Phase 3 auch Risse im Boden
+    for (let i = 0; i < 14; i++) { const p = (t * (0.35 + ph * 0.15) + i / 14) % 1; ctx.fillStyle = `rgba(${P.rgb},${(1 - p) * 0.9})`; ctx.fillRect(Math.sin(i * 2.3 + p * 4) * 70, -10 - p * 200, 2, 2); }
+    if (ph >= 2) { ctx.strokeStyle = `rgba(150,230,255,${0.6 + 0.3 * Math.sin(t * 6)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-60, 2); ctx.lineTo(-40, -1); ctx.lineTo(-24, 3); ctx.lineTo(-8, 0); ctx.moveTo(10, 2); ctx.lineTo(30, -1); ctx.lineTo(52, 3); ctx.stroke(); }
+    if (e.hitT > 0) glowDot(0, -110, 70, '255,255,255', 0.18);
+    ctx.restore();
+  }
+
+  /* ---------- Halle der Ahnen ---------- */
+  function ahnStatue(x, y, s, kind) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.fillStyle = 'rgba(70,50,120,.75)';
+    rr(-14, -60, 28, 60, 6); ctx.fill(); ctx.beginPath(); ctx.arc(0, -70, 11, 0, 7); ctx.fill();
+    if (kind === 0) { ctx.fillRect(14, -96, 5, 70); ctx.fillRect(8, -34, 17, 4); }
+    if (kind === 1) { rr(-30, -54, 20, 34, 6); ctx.fill(); }
+    if (kind === 2) { ctx.strokeStyle = 'rgba(70,50,120,.75)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(18, -50, 22, -1.2, 1.2); ctx.stroke(); }
+    if (kind === 3) { ctx.fillRect(16, -100, 4, 100); ctx.beginPath(); ctx.arc(18, -104, 6, 0, 7); ctx.fill(); }
+    ctx.strokeStyle = 'rgba(255,210,122,.35)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(0, -70, 11, Math.PI, Math.PI * 1.6); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-14, -56); ctx.lineTo(-14, -4); ctx.stroke();
+    ctx.restore();
+  }
+  const ENV_AHNEN = {
+    back(t, sc) {
+      skyFill(['#0a0820', '#2a1a5a', '#6a3a7a', '#e0a060']);
+      stars(t, 70, 150, 0.9, 77);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (let b = 0; b < 3; b++) { ctx.beginPath(); for (let x = 0; x <= W; x += 8) { const y = 40 + b * 18 + Math.sin(x * 0.012 + t * 0.4 + b) * 14 + Math.sin(x * 0.03 + t * 0.7) * 5; ctx[x ? 'lineTo' : 'moveTo'](x, y); }
+        for (let x = W; x >= 0; x -= 8) { const y = 40 + b * 18 + 22 + Math.sin(x * 0.012 + t * 0.4 + b + 0.4) * 14; ctx.lineTo(x, y); } ctx.closePath();
+        ctx.fillStyle = vg([`rgba(${b === 1 ? '255,210,122' : '120,230,190'},0)`, `rgba(${b === 1 ? '255,210,122' : '120,230,190'},.14)`, 'rgba(0,0,0,0)'], 30 + b * 18, 100 + b * 18); ctx.fill(); }
+      ctx.restore();
+      disc(240, 150, 30, '#fff3d0', '255,210,140', 0.6);
+      each(sc, 0.05, 150, (x, k) => ahnStatue(x, 176, 0.9 + hash(k) * 0.2, k % 4), 0, 171);
+      ridge(sc, 0.1, 176, 18, 0.02, '#2a1a4a', { seed: 8 });
+      each(sc, 0.12, 210, (x, k) => { ctx.fillStyle = 'rgba(40,24,70,.9)'; ctx.beginPath(); ctx.moveTo(x - 30, 120 + hash(k) * 20); ctx.lineTo(x + 30, 120 + hash(k) * 20); ctx.lineTo(x + 10, 146 + hash(k) * 20); ctx.lineTo(x - 14, 150 + hash(k) * 20); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = 'rgba(255,210,122,.25)'; ctx.fillRect(x - 30, 119 + hash(k) * 20, 60, 2); }, 0.2, 172);
+      fog(t, 170, 30, '200,170,255', 0.18, 6, 5, 3);
+      each(sc, 0.35, 92, (x, k) => { pillar(x, 210, 1.05, '#3a2a5a', '#22183a', false, '#d8a84a', hash(k)); const fy = 128; ctx.fillStyle = '#2a1a3a'; ctx.fillRect(x - 7, fy, 14, 6); flame(x, fy, 1.3, t, k, '#7ac8ff', '#e8f8ff', '120,200,255'); lightPool(x, fy, 70, '120,200,255', 0.16); }, 0.3, 173);
+      groundBase('#3a2a52', '#241a38', '#0e0a18', '#d8a84a', sc, { speck: 'rgba(0,0,0,.25)', hi: 'rgba(255,210,122,.25)' });
+      tiles(sc, 'rgba(255,210,122,.22)', 9, 30);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = vg(['rgba(255,210,122,.18)', 'rgba(255,210,122,0)'], GROUND, H); ctx.fillRect(0, GROUND, W, H - GROUND); ctx.restore();
+    },
+    props(t, sc) {
+      each(sc, 1, 160, (x, k) => { ctx.fillStyle = '#2a1a3a'; ctx.fillRect(x - 1.5, GROUND - 74, 3, 74);
+        const sw = Math.sin(t * 1.2 + k) * 2; ctx.beginPath(); ctx.moveTo(x + 1, GROUND - 72); ctx.lineTo(x + 24 + sw, GROUND - 70); ctx.lineTo(x + 22 + sw * 1.5, GROUND - 34); ctx.lineTo(x + 13 + sw, GROUND - 40); ctx.lineTo(x + 3 + sw * 0.5, GROUND - 34); ctx.closePath(); fillO('#5a2a8a');
+        ctx.fillStyle = '#ffd27a'; ctx.beginPath(); ctx.arc(x + 12 + sw, GROUND - 56, 4, 0, 7); ctx.fill(); ctx.fillRect(x + 1, GROUND - 74, 24, 3); }, 0.25, 174);
+    },
+    front(t) {
+      parts(t, 16, { type: 'glow', rgb: '255,215,140', vx: 3, vy: -10, wob: 1, wa: 10, size: 1.4, tw: 2, alpha: 0.85, seed: 41 });
+      grade('#ffcf7a', 0.12); vignette(0.35, '20,6,40');
+    },
+  };
+  function ahnEnv(R) { const M = AHN_MISSIONS[R.ahn.mi]; return M.env === 'ahnen' ? ENV_AHNEN : ENV[M.env % ENV.length]; }
+
+  /* ---------- Effekte auf Helden und Bildschirm ---------- */
+  function ahnWorld(R, t) {
+    const A = R.ahn;
+    for (const f of A.fx) {
+      const p = 1 - Math.max(0, f.t) / f.d;
+      if (f.kind === 'slam' && f.t > 0) { const x0 = R.pos[R.order[R.order.length - 1]] - 30, x1 = R.frontX + 30; ctx.save(); ctx.fillStyle = `rgba(255,60,40,${0.12 + 0.25 * p})`; ctx.beginPath(); ctx.ellipse((x0 + x1) / 2, GROUND + 3, (x1 - x0) / 2 + 10, 10, 0, 0, 7); ctx.fill();
+        ctx.strokeStyle = `rgba(255,120,90,${0.5 + 0.5 * Math.sin(t * 20)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse((x0 + x1) / 2, GROUND + 3, ((x1 - x0) / 2 + 10) * p, 10 * p, 0, 0, 7); ctx.stroke(); ctx.restore(); }
+      if (f.kind === 'bomb' && f.t > 0 && R.h[f.k] && R.h[f.k].alive) { const x = R.pos[f.k], y = GROUND - 112 - Math.abs(Math.sin(t * 6)) * 4;
+        glowDot(x, y, 14, '255,90,40', 0.35 + 0.3 * p); ctx.fillStyle = '#1b1726'; ctx.beginPath(); ctx.arc(x, y, 7, 0, 7); ctx.fill(); ctx.fillStyle = Math.sin(t * 30) > 0 ? '#ffd23f' : '#ff5a2a'; ctx.fillRect(x + 3, y - 11, 2.5, 4);
+        ctx.font = '11px "Bungee","Arial Black",sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.fillText(Math.ceil(f.t), x, y + 4); }
+      if (f.kind === 'burn' && f.t > 0) { const x0 = R.pos[R.order[R.order.length - 1]] - 26, x1 = R.frontX + 26; for (let i = 0; i < 12; i++) { const x = x0 + (x1 - x0) * i / 11, h = 12 + Math.sin(t * 10 + i * 1.7) * 6; ctx.fillStyle = ['#ff5a2a', '#ffb547', '#ffd23f'][i % 3]; ctx.globalAlpha = 0.85; ctx.beginPath(); ctx.moveTo(x - 5, GROUND + 4); ctx.quadraticCurveTo(x - 2, GROUND - h, x + 4, GROUND + 4); ctx.fill(); } ctx.globalAlpha = 1; lightPool((x0 + x1) / 2, GROUND, 90, '255,120,40', 0.2); }
+      if (f.kind === 'poison' && f.t > 0) { ctx.fillStyle = 'rgba(120,200,80,.12)'; ctx.fillRect(0, GROUND - 120, R.frontX + 40, 124); }
+      if (f.kind === 'chain' && f.t > 0) { ctx.strokeStyle = `rgba(200,230,255,${1 - p})`; ctx.lineWidth = 2.5; ctx.beginPath(); let px = A.boss ? A.boss.x : 400, py = GROUND - 90; ctx.moveTo(px, py);
+        for (const k of f.ks) { const x = R.pos[k], y = GROUND - 50; for (let j = 1; j <= 3; j++) ctx.lineTo(px + (x - px) * j / 3 + (Math.random() - 0.5) * 12, py + (y - py) * j / 3 + (Math.random() - 0.5) * 12); px = x; py = y; } ctx.stroke(); }
+      if (f.kind === 'drain' && f.t > 0 && A.boss) { const x = R.pos[f.k]; ctx.strokeStyle = `rgba(220,40,70,${1 - p})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, GROUND - 50); ctx.quadraticCurveTo((x + A.boss.x) / 2, GROUND - 120, A.boss.x, GROUND - 80); ctx.stroke(); }
+      if (f.kind === 'quake' && f.t > 0) for (let i = 0; i < 10; i++) { ctx.fillStyle = `rgba(160,130,100,${0.6 * (1 - p)})`; ctx.beginPath(); ctx.arc(30 + i * 30, GROUND - p * 20, 6 + p * 10, 0, 7); ctx.fill(); }
+    }
+    for (const k of R.order) {
+      const h = R.h[k]; if (!h.alive) continue; const x = R.pos[k], top = GROUND - (k === 'w' ? 104 : 96);
+      if (h.stunT > 0) for (let i = 0; i < 3; i++) { const a = t * 6 + i * 2.1; ctx.fillStyle = '#ffe58a'; sparkle(x + Math.cos(a) * 11, top - 6 + Math.sin(a) * 3, 3, 1); }
+      if (h.markT > 0) { glowDot(x, top - 14, 10, '255,40,60', 0.6); ctx.font = '13px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.fillText('☠', x, top - 9); }
+      if (h.dotT > 0) for (let i = 0; i < 3; i++) { ctx.fillStyle = 'rgba(155,227,107,.8)'; ctx.beginPath(); ctx.arc(x - 6 + i * 6, GROUND - 30 - ((t * 30 + i * 9) % 30), 2.5, 0, 7); ctx.fill(); }
+      if (R.curseT > 0) for (let i = 0; i < 2; i++) { const p = (t * 0.8 + i / 2 + k.charCodeAt(0) * 0.1) % 1; ctx.fillStyle = `rgba(180,80,255,${1 - p})`; ctx.fillRect(x - 8 + i * 14, GROUND - 20 - p * 50, 2, 2); }
+      if (R.slowT > 0) { ctx.fillStyle = 'rgba(190,235,255,.22)'; ctx.beginPath(); ctx.ellipse(x, GROUND - 40, 16, 44, 0, 0, 7); ctx.fill(); }
+    }
+  }
+  function ahnScreen(R, t) {
+    const A = R.ahn;
+    if (R.blindT > 0) { const g = ctx.createRadialGradient(R.frontX, GROUND - 50, 40, R.frontX, GROUND - 50, 260); g.addColorStop(0, 'rgba(5,0,15,0)'); g.addColorStop(1, `rgba(5,0,15,${Math.min(0.75, R.blindT)})`); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
+    if (R.slowT > 0) { ctx.fillStyle = `rgba(190,235,255,${Math.min(0.12, R.slowT * 0.05)})`; ctx.fillRect(0, 0, W, H); }
+    if (R.silT > 0) { ctx.strokeStyle = `rgba(200,160,255,${R.silT * 0.5})`; ctx.lineWidth = 6; ctx.strokeRect(3, 3, W - 6, H - 6); }
+    // Auftritt des Urahns
+    if (R.introT > 0) {
+      const T = 3.4 - R.introT, a = Math.min(1, T * 2, R.introT * 2);
+      ctx.fillStyle = `rgba(8,4,20,${0.55 * a})`; ctx.fillRect(0, 0, W, H);
+      const bx = A.boss ? A.boss.x : 400, beam = Math.min(1, T / 0.8);
+      const g = ctx.createLinearGradient(0, 0, 0, GROUND); g.addColorStop(0, `rgba(255,236,170,${0.6 * a})`); g.addColorStop(1, `rgba(255,236,170,${0.15 * a})`); ctx.fillStyle = g; ctx.fillRect(bx - 30 * beam, 0, 60 * beam, GROUND);
+      ctx.save(); ctx.globalAlpha = Math.min(1, Math.max(0, (T - 0.6) * 2)) * a; ctx.textAlign = 'center';
+      ctx.font = '30px "Bungee","Arial Black",sans-serif'; ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(20,10,30,.85)'; ctx.strokeText('DER URAHN', W / 2, 92); const tg = ctx.createLinearGradient(0, 70, 0, 96); tg.addColorStop(0, '#fff6d8'); tg.addColorStop(1, '#ffb547'); ctx.fillStyle = tg; ctx.fillText('DER URAHN', W / 2, 92);
+      ctx.font = 'italic 12px "Figtree",sans-serif'; ctx.fillStyle = '#f4e8ff'; ctx.fillText('„Zeigt mir, dass ihr meiner würdig seid.“', W / 2, 114); ctx.restore();
+    }
+    // Banner bei Boss-Auftritt und Phasenwechsel
+    if (A.banner && !(R.introT > 0)) {
+      const b = A.banner, dur = b.phase ? 2.4 : b.ahne ? 5 : 3.2, a = Math.max(0, Math.min(1, b.t * 2, (dur - b.t) * 4)), y = b.phase ? 84 : 90;
+      ctx.save(); ctx.globalAlpha = a;
+      const bg = ctx.createLinearGradient(0, y - 30, 0, y + 22); bg.addColorStop(0, 'rgba(25,10,40,0)'); bg.addColorStop(0.3, 'rgba(25,10,40,.82)'); bg.addColorStop(0.7, 'rgba(25,10,40,.82)'); bg.addColorStop(1, 'rgba(25,10,40,0)');
+      ctx.fillStyle = bg; ctx.fillRect(0, y - 30, W, 52); ctx.fillStyle = b.phase ? '#ff7a5a' : '#ffd27a'; ctx.fillRect(W / 2 - 120 * a, y - 22, 240 * a, 1.5); ctx.fillRect(W / 2 - 120 * a, y + 14, 240 * a, 1.5);
+      ctx.textAlign = 'center'; ctx.font = `${b.phase ? 20 : 19}px "Bungee","Arial Black",sans-serif`; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.strokeText(b.title, W / 2 + (1 - a) * 30, y); ctx.fillStyle = b.phase ? '#ffb09a' : '#fff2c8'; ctx.fillText(b.title, W / 2 + (1 - a) * 30, y);
+      ctx.font = `${b.phase ? '600 11px' : 'italic 11px'} "Figtree",sans-serif`; ctx.fillStyle = 'rgba(255,255,255,.88)'; ctx.fillText(b.phase ? b.sub : `„${b.sub}“`, W / 2, y + 12 - 1);
+      ctx.restore();
+    }
+  }
+  function ahnHud(R, t) {
+    const A = R.ahn, M = AHN_MISSIONS[A.mi], list = ahnBossesOf(A.mi), e = A.boss && A.boss.hp > 0 ? A.boss : null;
+    ctx.font = '13px "Bungee","Arial Black",sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = '#ffd27a'; ctx.fillText(`Mission ${A.mi + 1}`, 12, 20);
+    ctx.font = '600 11px "Figtree",sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillText(M.name, 98, 19);
+    ctx.textAlign = 'right'; ctx.fillStyle = '#e8dcff';
+    ctx.fillText(`Boss ${Math.min(A.bi + 1, list.length)}/${list.length}${A.wave < AHN_TUNE.waves ? ` · Diener ${A.wave + 1}/${AHN_TUNE.waves}` : ''}`, W - 12, 19);
+    // Fortschritts-Punkte der Bosse
+    for (let i = 0; i < list.length; i++) { const x = W - 12 - (list.length - 1 - i) * 11, y = 28; ctx.fillStyle = i < A.bi ? '#4fc3ff' : i === A.bi ? '#ffd27a' : 'rgba(255,255,255,.25)'; ctx.beginPath(); list[i].ahne ? (ctx.moveTo(x - 4, y + 2), ctx.lineTo(x - 4, y - 3), ctx.lineTo(x - 2, y), ctx.lineTo(x, y - 4), ctx.lineTo(x + 2, y), ctx.lineTo(x + 4, y - 3), ctx.lineTo(x + 4, y + 2), ctx.closePath()) : ctx.arc(x, y, 3, 0, 7); ctx.fill(); }
+    if (!e || e.x > 520) return;
+    const d = e.ahn, bw = 250, bx = W / 2 - bw / 2, by = H - 26, col = d.ahne ? '#ffd27a' : d.tint || '#c9a6ff';
+    const pg = ctx.createLinearGradient(0, by - 22, 0, H); pg.addColorStop(0, 'rgba(10,6,18,0)'); pg.addColorStop(0.5, 'rgba(10,6,18,.55)'); pg.addColorStop(1, 'rgba(10,6,18,.8)'); ctx.fillStyle = pg; ctx.fillRect(0, by - 22, W, H - by + 22);
+    ctx.textAlign = 'center'; ctx.font = `${d.ahne ? 13 : 12}px "Bungee","Arial Black",sans-serif`; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.strokeText(d.name, W / 2, by - 4); ctx.fillStyle = d.ahne ? '#fff2c8' : '#fff'; ctx.fillText(d.name, W / 2, by - 4);
+    ctx.fillStyle = 'rgba(10,6,18,.85)'; rr(bx - 2, by, bw + 4, 10, 4); ctx.fill();
+    const f = Math.max(0, e.hp / e.max), g = ctx.createLinearGradient(0, by, 0, by + 8); g.addColorStop(0, '#fff'); g.addColorStop(0.25, col); g.addColorStop(1, e.phase >= 2 ? '#c03030' : '#5a2a8a');
+    ctx.fillStyle = g; rr(bx, by + 1, bw * f, 8, 3); ctx.fill();
+    if (e.shieldHp > 0) { ctx.fillStyle = 'rgba(160,215,255,.85)'; rr(bx, by + 1, Math.min(bw, bw * e.shieldHp / e.max * 3), 3, 1.5); ctx.fill(); }
+    ctx.fillStyle = 'rgba(10,6,18,.9)'; for (const q of [1 / 3, 2 / 3]) ctx.fillRect(bx + bw * q - 1, by, 2, 10);
+    for (let i = 0; i < 3; i++) { const x = bx + bw + 14 + i * 11, y = by + 5; ctx.fillStyle = i < e.phase ? 'rgba(255,255,255,.3)' : i === e.phase ? (e.phase >= 2 ? '#ff7a5a' : col) : 'rgba(255,255,255,.18)'; ctx.beginPath(); ctx.moveTo(x, y - 4); ctx.lineTo(x + 4, y); ctx.lineTo(x, y + 4); ctx.lineTo(x - 4, y); ctx.closePath(); ctx.fill(); }
+    if (e.enrage > 1) { ctx.font = '10px "Bungee","Arial Black",sans-serif'; ctx.fillStyle = '#ff6a5a'; ctx.textAlign = 'right'; ctx.fillText(`WUT ×${e.enrage.toFixed(1).replace('.', ',')}`, bx - 8, by + 9); }
+  }
+
+  /* ---------- Eigene Drachen der Ahnenprüfung ---------- */
+  const DRAKE = {
+    bone: { body: '#ece4d0', dark: '#8a8070', belly: '#cfc6ae', mem: 'rgba(90,60,130,.55)', eye: '200,140,255', br: '180,120,255' },
+    frost: { body: '#eef8ff', dark: '#7aa8c8', belly: '#c4e6fa', mem: 'rgba(170,225,255,.5)', eye: '120,220,255', br: '190,235,255' },
+    thorn: { body: '#4a8a40', dark: '#1f4a24', belly: '#b8e090', mem: '#5a9a44', eye: '255,120,170', br: '255,150,190' },
+    hydra: { body: '#3f9070', dark: '#1d5a44', belly: '#a8d8a8', mem: null, eye: '255,230,90', br: '150,230,90' },
+  };
+  function drakeWing(P, kind, front, flap, t) {
+    ctx.save(); ctx.rotate((front ? -0.15 : -0.45) + (front ? -flap : flap * 0.8)); if (!front) ctx.scale(0.85, 0.85);
+    const tips = [[-46, -64], [-62, -44], [-66, -20], [-54, 0]];
+    if (kind === 'thorn') {
+      for (let i = 0; i < 4; i++) { const [x, y] = tips[i]; ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(x * 0.5 - 10, y * 0.5 - 14, x, y); ctx.quadraticCurveTo(x * 0.6 + 8, y * 0.6 + 6, 0, 0); fillO(i % 2 ? P.mem : '#3a7a34'); ctx.strokeStyle = 'rgba(200,240,160,.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(x * 0.92, y * 0.92); ctx.stroke(); }
+      ctx.restore(); return;
+    }
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-20, -52); ctx.lineTo(tips[0][0], tips[0][1]);
+    for (let i = 1; i < 4; i++) { const [x0, y0] = tips[i - 1], [x1, y1] = tips[i]; ctx.quadraticCurveTo((x0 + x1) / 2 + 12, (y0 + y1) / 2 + 2, x1, y1); }
+    ctx.quadraticCurveTo(-24, 0, 0, 8); ctx.closePath();
+    ctx.fillStyle = P.mem; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = OUT; ctx.stroke();
+    if (kind === 'bone') { ctx.fillStyle = 'rgba(10,6,20,.85)'; for (const [hx, hy, r] of [[-38, -40, 5], [-50, -18, 4], [-30, -16, 3]]) { ctx.beginPath(); ctx.arc(hx, hy, r, 0, 7); ctx.fill(); } }
+    if (kind === 'frost') { ctx.fillStyle = 'rgba(255,255,255,.55)'; for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.moveTo(-14 - i * 10, -30 + i * 6); ctx.lineTo(-20 - i * 10, -40 + i * 6); ctx.lineTo(-24 - i * 10, -28 + i * 6); ctx.fill(); } }
+    ctx.strokeStyle = kind === 'bone' ? P.body : P.dark; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-20, -52); for (const [x, y] of tips) { ctx.moveTo(-20, -52); ctx.lineTo(x, y); } ctx.stroke();
+    ctx.restore();
+  }
+  function drakeHead(P, kind, open, t, k = 0) {
+    // Kopf schaut nach links, (0,0) = Ansatz am Hals
+    const eye = P.eye;
+    if (kind === 'bone') {
+      ctx.save(); ctx.translate(-10, 6); ctx.rotate(-open * 0.5);
+      poly([[0, 0], [-26, 2], [-30, 6], [-4, 8]], P.body, true); for (let i = 0; i < 5; i++) poly([[-6 - i * 5, 2], [-8 - i * 5, -2], [-10 - i * 5, 2]], '#fff', false);
+      ctx.restore();
+      ctx.beginPath(); ctx.moveTo(6, 4); ctx.quadraticCurveTo(8, -16, -8, -18); ctx.quadraticCurveTo(-24, -16, -34, -6); ctx.lineTo(-36, 2); ctx.lineTo(-8, 6); ctx.closePath(); fillO(P.body);
+      for (let i = 0; i < 5; i++) poly([[-12 - i * 5, 6], [-14 - i * 5, 11], [-16 - i * 5, 6]], '#fff', false);
+      ctx.fillStyle = '#140a20'; ctx.beginPath(); ctx.ellipse(-10, -8, 6, 5, -0.2, 0, 7); ctx.fill(); ctx.beginPath(); ctx.ellipse(-30, -4, 2, 1.4, 0, 0, 7); ctx.fill();
+      glowDot(-10, -8, 9, eye, 0.9); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-10, -8, 1.6, 0, 7); ctx.fill();
+      for (const sg of [0, 1]) poly([[2 - sg * 6, -14], [14 - sg * 4, -30 - sg * 4], [8 - sg * 6, -12]], P.dark, true);
+      ctx.strokeStyle = 'rgba(80,60,40,.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-2, -16); ctx.lineTo(0, -6); ctx.lineTo(-4, 2); ctx.stroke();
+      return;
+    }
+    if (kind === 'frost') {
+      ctx.save(); ctx.translate(-8, 4); ctx.rotate(-open * 0.45); poly([[0, 0], [-34, 3], [-30, 8], [-2, 8]], P.belly, true); ctx.restore();
+      ctx.beginPath(); ctx.moveTo(6, 6); ctx.quadraticCurveTo(10, -14, -6, -16); ctx.quadraticCurveTo(-28, -12, -40, -2); ctx.lineTo(-38, 4); ctx.lineTo(-6, 6); ctx.closePath(); fillO(P.body);
+      ctx.fillStyle = 'rgba(122,168,200,.35)'; ctx.beginPath(); ctx.moveTo(-6, -14); ctx.quadraticCurveTo(-26, -10, -38, -2); ctx.lineTo(-30, -4); ctx.quadraticCurveTo(-18, -10, -6, -10); ctx.fill();
+      for (const [x, y, l, a] of [[0, -14, 26, -0.5], [-4, -15, 22, -0.75], [4, -10, 20, -0.2], [-10, -14, 14, -1]]) { ctx.save(); ctx.translate(x, y); ctx.rotate(a); poly([[0, -3], [l, 0], [0, 3]], '#bfeaff', true); ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.fillRect(2, -1, l * 0.6, 1); ctx.restore(); }
+      for (let i = 0; i < 3; i++) poly([[-14 - i * 6, 6], [-16 - i * 6, 14 + i], [-18 - i * 6, 6]], '#dff4ff', true);
+      glowDot(-16, -6, 8, eye, 0.85); ctx.fillStyle = '#e8fbff'; ctx.beginPath(); ctx.ellipse(-16, -6, 3.2, 1.6, -0.2, 0, 7); ctx.fill();
+      for (let i = 0; i < 3; i++) { const p = (t * 0.7 + i / 3) % 1; ctx.fillStyle = `rgba(220,245,255,${0.6 * (1 - p)})`; ctx.beginPath(); ctx.arc(-40 - p * 14, -4 - p * 8 + Math.sin(t * 3 + i) * 2, 2 + p * 4, 0, 7); ctx.fill(); }
+      return;
+    }
+    if (kind === 'thorn') {
+      ctx.save(); ctx.translate(-8, 4); ctx.rotate(-open * 0.5); poly([[0, 0], [-28, 4], [-24, 9], [0, 8]], P.dark, true); ctx.restore();
+      for (let i = 0; i < 4; i++) { ctx.save(); ctx.translate(4, -6); ctx.rotate(-1.6 + i * 0.5); poly([[0, -4], [16, 0], [0, 4]], i % 2 ? '#5aa84a' : '#7ac860', true); ctx.restore(); }
+      ctx.beginPath(); ctx.moveTo(6, 6); ctx.lineTo(4, -12); ctx.lineTo(-10, -16); ctx.lineTo(-30, -8); ctx.lineTo(-34, 2); ctx.lineTo(-6, 7); ctx.closePath(); fillO(P.body);
+      for (let i = 0; i < 6; i++) poly([[-6 - i * 4, -12 + i * 1.4], [-4 - i * 4, -22 + i * 1.6], [-2 - i * 4, -12 + i * 1.4]], '#2a3a1a', true);
+      ctx.fillStyle = '#ff6b9a'; ctx.beginPath(); ctx.arc(-2, -18, 4, 0, 7); ctx.fill(); ctx.fillStyle = '#ffb0c8'; ctx.beginPath(); ctx.arc(-2, -18, 1.8, 0, 7); ctx.fill();
+      for (let i = 0; i < 4; i++) poly([[-12 - i * 5, 6], [-14 - i * 5, 10], [-16 - i * 5, 6]], '#f4f0d8', false);
+      glowDot(-14, -6, 7, eye, 0.9); ctx.fillStyle = '#fff0f4'; poly([[-18, -6], [-11, -8], [-12, -4]], '#fff0f4');
+      return;
+    }
+    // Hydra-Kopf
+    ctx.save(); ctx.translate(-6, 4); ctx.rotate(-open * 0.55); poly([[0, 0], [-22, 3], [-18, 7], [0, 6]], P.dark, true); ctx.restore();
+    ctx.beginPath(); ctx.moveTo(5, 5); ctx.quadraticCurveTo(6, -10, -6, -11); ctx.quadraticCurveTo(-20, -8, -26, 0); ctx.lineTo(-6, 5); ctx.closePath(); fillO(P.body);
+    poly([[2, -8], [12, -18 + Math.sin(t * 4 + k) * 2], [8, -4]], '#7ad0a0', true);
+    glowDot(-10, -4, 6, eye, 0.9); ctx.fillStyle = '#1b1726'; ctx.fillRect(-11, -5.5, 2, 3);
+    const dp = (t * 0.8 + k * 0.3) % 1; ctx.fillStyle = `rgba(150,230,90,${1 - dp})`; ctx.beginPath(); ctx.ellipse(-20, 6 + dp * 18, 1.6, 2.4, 0, 0, 7); ctx.fill();
+  }
+  function drakeBreath(P, kind, x, y, a, t) {
+    if (a <= 0) return;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    const len = 150 * a;
+    const g = ctx.createLinearGradient(x, y, x - len, y + 30); g.addColorStop(0, `rgba(${P.br},${0.7 * a})`); g.addColorStop(1, `rgba(${P.br},0)`);
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x, y - 3); ctx.lineTo(x - len, y + 30 - 26 * a); ctx.lineTo(x - len, y + 30 + 26 * a); ctx.closePath(); ctx.fill();
+    for (let i = 0; i < 14; i++) { const p = (t * 1.6 + i / 14) % 1, px = x - p * len, py = y + p * 30 + Math.sin(i * 2.7 + t * 9) * 16 * p;
+      if (kind === 'frost') { ctx.fillStyle = `rgba(255,255,255,${1 - p})`; sparkle(px, py, 3, 1 - p); }
+      else if (kind === 'thorn') { ctx.save(); ctx.translate(px, py); ctx.rotate(i + t * 6); ctx.fillStyle = i % 2 ? `rgba(255,140,190,${1 - p})` : `rgba(90,160,60,${1 - p})`; ctx.beginPath(); ctx.ellipse(0, 0, 4, 1.6, 0, 0, 7); ctx.fill(); ctx.restore(); }
+      else { glowDot(px, py, 6 + p * 6, P.br, (1 - p) * 0.8); } }
+    ctx.restore();
+  }
+  function drawDragon(e, t, kind) {
+    const P = DRAKE[kind], ph = t + e.bob, flap = Math.sin(ph * 3) * 0.25, br = Math.sin(ph * 1.6) * 2;
+    const ca = e.castT > 0 ? Math.sin((1 - e.castT / 0.8) * Math.PI) : 0, lx = -ca * 12;
+    const open = Math.max(ca, kind === 'bone' ? Math.max(0, Math.sin(ph * 5)) * 0.25 : 0.05 + Math.max(0, Math.sin(ph * 1.2)) * 0.12);
+    // Schwanz
+    const tw = Math.sin(ph * 1.8) * 8;
+    ctx.lineCap = 'round'; ctx.strokeStyle = OUT; ctx.lineWidth = 14; ctx.beginPath(); ctx.moveTo(24, -26); ctx.quadraticCurveTo(58, -18 + tw * 0.4, 84, -8 + tw); ctx.stroke();
+    ctx.strokeStyle = kind === 'bone' ? P.dark : P.body; ctx.lineWidth = 11; ctx.stroke();
+    if (kind === 'bone') { ctx.strokeStyle = P.body; ctx.lineWidth = 3; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]); }
+    ctx.save(); ctx.translate(84, -8 + tw);
+    if (kind === 'frost') poly([[0, -8], [16, 0], [0, 8], [4, 0]], '#bfeaff', true);
+    else if (kind === 'thorn') { ctx.fillStyle = '#ff6b9a'; for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.arc(Math.cos(i * 1.26) * 4, Math.sin(i * 1.26) * 4, 3.4, 0, 7); ctx.fill(); } ctx.fillStyle = '#ffd0e0'; ctx.beginPath(); ctx.arc(0, 0, 2, 0, 7); ctx.fill(); }
+    else if (kind === 'bone') poly([[0, -5], [14, 0], [0, 5]], P.body, true);
+    else poly([[0, -2], [12, -10], [8, 2], [12, 10], [0, 4]], '#7ad0a0', true);
+    ctx.restore();
+    // hinterer Flügel
+    if (P.mem) { ctx.save(); ctx.translate(12, -70); drakeWing(P, kind, false, flap, t); ctx.restore(); }
+    // Beine hinten
+    for (const lx2 of [6, 20]) { ctx.save(); ctx.translate(lx2, -30); rr(-7, 0, 14, 30, 6); fillO(lx2 === 6 ? P.dark : P.body); poly([[-8, 30], [-10, 34], [-4, 30]], '#f4f0e0'); poly([[-2, 30], [-4, 34], [2, 30]], '#f4f0e0'); ctx.restore(); }
+    // Körper
+    ctx.save(); ctx.translate(4, -48 - br);
+    const bg = ctx.createLinearGradient(0, -28, 0, 28); bg.addColorStop(0, P.body); bg.addColorStop(1, P.dark);
+    ctx.beginPath(); ctx.ellipse(0, 0, 36, 28, 0, 0, 7);
+    if (kind === 'bone') { ctx.fillStyle = 'rgba(30,16,46,.92)'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = OUT; ctx.stroke(); glowDot(-2, 2, 22, P.eye, 0.35 + 0.15 * Math.sin(ph * 3));
+      ctx.strokeStyle = P.body; ctx.lineWidth = 3.4; ctx.lineCap = 'round'; for (let i = 0; i < 6; i++) { const x = -22 + i * 9; ctx.beginPath(); ctx.moveTo(x, -22 + Math.abs(i - 2.5) * 2); ctx.quadraticCurveTo(x - 8, 2, x - 2, 20 - Math.abs(i - 2.5) * 2); ctx.stroke(); }
+      ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(-30, -18); ctx.quadraticCurveTo(0, -30, 32, -14); ctx.stroke(); }
+    else { ctx.fillStyle = bg; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = OUT; ctx.stroke();
+      ctx.fillStyle = P.belly; ctx.beginPath(); ctx.ellipse(-10, 6, 18, 18, 0.2, 0, 7); ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,.2)'; ctx.lineWidth = 1.2; for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.moveTo(-26, -6 + i * 6); ctx.lineTo(4, -4 + i * 6); ctx.stroke(); } }
+    for (let i = 0; i < 6; i++) { const x = -20 + i * 9, y = -26 + Math.abs(i - 2) * 1.5;
+      if (kind === 'frost') poly([[x - 3, y + 3], [x + 1, y - 12 - (i % 2) * 4], [x + 4, y + 3]], '#bfeaff', true);
+      else if (kind === 'thorn') poly([[x - 2, y + 2], [x + 3, y - 10], [x + 4, y + 3]], '#2a3a1a', true);
+      else if (kind === 'bone') { ctx.fillStyle = P.body; ctx.beginPath(); ctx.arc(x, y - 2, 3, 0, 7); ctx.fill(); }
+      else { ctx.fillStyle = '#7ad0a0'; ctx.beginPath(); ctx.ellipse(x, y - 1, 3, 5, 0.4, 0, 7); ctx.fill(); } }
+    if (kind === 'thorn') { ctx.strokeStyle = '#2a5a24'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-30, 10); ctx.bezierCurveTo(-10, -12, 10, 24, 30, -2); ctx.stroke(); for (const [rx, ry] of [[-14, 0], [12, 8]]) { ctx.fillStyle = '#ff6b9a'; ctx.beginPath(); ctx.arc(rx, ry, 3.6, 0, 7); ctx.fill(); } }
+    if (kind === 'hydra') for (let i = 0; i < 4; i++) { ctx.fillStyle = 'rgba(90,140,60,.7)'; ctx.beginPath(); ctx.ellipse(-20 + i * 12, -18 + (i % 2) * 6, 6, 2.4, 0.3, 0, 7); ctx.fill(); }
+    ctx.restore();
+    // Vorderbein
+    ctx.save(); ctx.translate(-22, -34); rr(-6, 0, 12, 34, 5); fillO(P.body); poly([[-7, 34], [-11, 38], [-3, 34]], '#f4f0e0'); poly([[-1, 34], [-4, 38], [3, 34]], '#f4f0e0'); ctx.restore();
+    // Hälse und Köpfe
+    const heads = kind === 'hydra' ? [[-36, -104, 0], [-12, -124, 1.7], [-58, -84, 3.1]] : [[-34, -108, 0]];
+    for (const [hx0, hy0, k] of heads) {
+      const sw = kind === 'hydra' ? Math.sin(ph * 1.7 + k) * 6 : Math.sin(ph * 1.2) * 3;
+      const hx = hx0 + lx + sw, hy = hy0 - br + (kind === 'hydra' ? Math.cos(ph * 1.3 + k) * 4 : 0);
+      ctx.lineCap = 'round'; ctx.strokeStyle = OUT; ctx.lineWidth = kind === 'hydra' ? 12 : 15; ctx.beginPath(); ctx.moveTo(-8, -60 - br); ctx.quadraticCurveTo(hx + 16, (hy - 60) / 2 - 10, hx + 6, hy + 2); ctx.stroke();
+      ctx.strokeStyle = kind === 'bone' ? P.dark : P.body; ctx.lineWidth = kind === 'hydra' ? 9 : 12; ctx.stroke();
+      if (kind === 'bone') { ctx.strokeStyle = P.body; ctx.lineWidth = 4; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]); }
+      else { ctx.strokeStyle = P.belly; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-14, -58 - br); ctx.quadraticCurveTo(hx + 10, (hy - 60) / 2 - 6, hx + 2, hy + 6); ctx.stroke(); }
+      ctx.save(); ctx.translate(hx, hy); drakeHead(P, kind, open, ph, k); ctx.restore();
+      drakeBreath(P, kind, hx - 34, hy + 4, kind === 'hydra' ? ca * 0.7 : ca, ph);
+    }
+    // vorderer Flügel
+    if (P.mem) { ctx.save(); ctx.translate(-4, -74 - br); drakeWing(P, kind, true, flap, t); ctx.restore(); }
+    // Umgebungsteilchen
+    for (let i = 0; i < 6; i++) { const p = (ph * 0.4 + i / 6) % 1, x = Math.sin(i * 2.1) * 50, y = -10 - p * 130;
+      if (kind === 'bone') glowDot(x, y, 4, P.eye, 0.6 * (1 - p)); else if (kind === 'frost') { ctx.fillStyle = `rgba(255,255,255,${1 - p})`; ctx.beginPath(); ctx.arc(x, y, 1.6, 0, 7); ctx.fill(); }
+      else if (kind === 'thorn') { ctx.fillStyle = `rgba(255,140,190,${1 - p})`; ctx.beginPath(); ctx.ellipse(x, -140 + p * 140, 3, 1.4, i, 0, 7); ctx.fill(); }
+      else { ctx.fillStyle = `rgba(150,220,120,${0.5 * (1 - p)})`; ctx.beginPath(); ctx.arc(x, -4 - p * 30, 3 + p * 4, 0, 7); ctx.fill(); } }
+  }
 
   // Neue Klassen
   // Helden aus den Expeditionen
@@ -4868,9 +5766,9 @@
     const tower = R && R.mode === 'tower';
     const stage = R ? (tower ? 15 + R.stage * 2 : R.stage) : 1;
     const bm = biomeOf(stage), scroll = R ? R.scroll : 0, night = !R;
-    const env = envOf(stage, night ? 'camp' : tower ? 'tower' : 'run');
+    const env = R && R.mode === 'ahnen' ? ahnEnv(R) : envOf(stage, night ? 'camp' : tower ? 'tower' : 'run');
     env.back(t, scroll); env.props(t, scroll);
-    if (R && !tower && nightmare(stage)) { ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = 'rgba(170,40,60,.7)'; ctx.fillRect(0, 0, W, H); ctx.restore(); ctx.fillStyle = 'rgba(90,0,20,.22)'; ctx.fillRect(0, 0, W, H); }
+    if (R && !tower && R.mode !== 'ahnen' && nightmare(stage)) { ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = 'rgba(170,40,60,.7)'; ctx.fillRect(0, 0, W, H); ctx.restore(); ctx.fillStyle = 'rgba(90,0,20,.22)'; ctx.fillRect(0, 0, W, H); }
     if (R) {
       const walking = R.enemies.length && R.enemies[0].x > R.frontX + 54;
       [...R.enemies].sort((a, b) => b.x - a.x).forEach(e => enemy(e, t));
@@ -4893,6 +5791,7 @@
         if (h.shield > 0) { ctx.fillStyle = 'rgba(255,255,255,.8)'; rr(R.pos[k] - 14, y - 4, 28 * Math.min(1, h.shield / st[k].hp), 3, 1.5); ctx.fill();
           ctx.strokeStyle = 'rgba(255,228,138,.5)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(R.pos[k], GROUND - 40, 20, 46, 0, 0, 7); ctx.stroke(); }
       }
+      if (R.mode === 'ahnen') ahnWorld(R, t);
       drawComps(t, R);
       // Geschosse
       for (const a of R.arrows) {
@@ -4951,13 +5850,15 @@
       if (R.buffT > 0) { ctx.strokeStyle = 'rgba(255,181,71,.45)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(R.frontX - 50, GROUND + 2, 90 + Math.sin(t * 10) * 3, 8, 0, 0, 7); ctx.stroke(); }
       if (R.fx.phoenix > 0) { ctx.fillStyle = `rgba(255,154,61,${Math.min(1, R.fx.phoenix) * 0.4})`; ctx.fillRect(0, 0, W, H); }
       env.front(t, scroll);
-      if (!tower && nightmare(stage)) { parts(t, 14, { type: 'ember', rgb: '255,60,60', vx: 4, vy: -18, size: 1.4, alpha: 0.8, seed: 40 }); vignette(0.45, '60,0,10'); }
+      if (R.mode === 'ahnen') ahnScreen(R, t);
+      if (!tower && R.mode !== 'ahnen' && nightmare(stage)) { parts(t, 14, { type: 'ember', rgb: '255,60,60', vx: 4, vy: -18, size: 1.4, alpha: 0.8, seed: 40 }); vignette(0.45, '60,0,10'); }
       for (const p of R.parts) { ctx.globalAlpha = Math.min(1, p.t * 2); ctx.fillStyle = p.c; ctx.fillRect(p.x, p.y, 3, 3); }
       ctx.globalAlpha = 1;
       for (const f of R.floats) { ctx.globalAlpha = Math.min(1, f.t * 2); ctx.font = `${f.size}px "Bungee","Arial Black",sans-serif`; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.strokeText(f.text, f.x, f.y); ctx.fillStyle = f.color; ctx.fillText(f.text, f.x, f.y); }
       ctx.globalAlpha = 1;
       const hg = ctx.createLinearGradient(0, 0, 0, 40); hg.addColorStop(0, 'rgba(15,12,22,.75)'); hg.addColorStop(1, 'rgba(15,12,22,0)');
       ctx.fillStyle = hg; ctx.fillRect(0, 0, W, 40);
+      if (R.mode === 'ahnen') ahnHud(R, t); else {
       ctx.font = '15px "Bungee","Arial Black",sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = '#fff';
       ctx.fillText(tower ? `Turm · Etage ${R.stage}` : `Stufe ${R.stage}`, 12, 22);
       ctx.font = '12px "Figtree",sans-serif';
@@ -4967,6 +5868,7 @@
       ctx.textAlign = 'right'; ctx.fillStyle = '#ffcf4a'; if (R.mode === 'normal') ctx.fillText(`+${fmt(R.gold)} Gold`, W - 12, 21);
       if (R.mode === 'weekly') { ctx.fillStyle = '#ffd23f'; ctx.fillText('Wochen-Herausforderung', W - 12, 21); }
       if (R.mode === 'exp') { const ms = MISSION[R.mission]; ctx.fillStyle = '#c8f08a'; ctx.fillText(`${ms.name}: ${ms.bosses ? `Bosse ${R.bossKills}/${ms.bosses}` : `Welle ${R.waves}/${ms.waves}`}`, W - 12, 21); }
+      }
       if (R.bannerT > 0) {
         const a = Math.max(0, Math.min(1, R.bannerT * 2, (2.2 - R.bannerT) * 4)), y = 92;
         ctx.globalAlpha = a; ctx.fillStyle = 'rgba(30,10,40,.75)'; ctx.fillRect(0, y - 26, W, 44);

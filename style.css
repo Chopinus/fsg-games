@@ -680,3 +680,72 @@ input{font:inherit;font-size:18px;color:var(--fg);background:var(--bg);border:1p
 .sq-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--rc);box-shadow:0 0 8px var(--rc);margin-right:5px;vertical-align:-1px}
 .sq-scene{position:relative;z-index:1;width:100%;aspect-ratio:480/270;cursor:pointer}
 .rl-canvas canvas{cursor:pointer}
+/* Ahnenprüfung */
+.ahn-head{display:flex;gap:14px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+.ahn-head>div:first-child{flex:1 1 320px;min-width:0}
+.ahn-stats{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.ahn-sig{font-family:var(--display);font-size:18px;color:#ffd27a;text-shadow:0 0 12px rgba(255,210,122,.5)}
+.ahn-sig b{font-weight:400;color:#fff6d8}
+.ahn-map{margin:12px 0 0;border-radius:20px;overflow:hidden;border:2px solid rgba(255,210,122,.35);box-shadow:0 10px 30px rgba(0,0,0,.45),inset 0 0 40px rgba(0,0,0,.25);background:#2a2f6a}
+.ahn-map svg{display:block;width:100%;height:auto}
+.ahn-node{cursor:pointer}
+.ahn-node .ahn-num{font-family:var(--display);font-size:13px;fill:#fff;paint-order:stroke;stroke:#1b1726;stroke-width:3px}
+.ahn-node.later{opacity:.72}
+.ahn-node.sel>circle:nth-of-type(2),.ahn-node.sel>circle:first-of-type{filter:drop-shadow(0 0 6px #fff)}
+.ahn-node:hover{filter:brightness(1.15)}
+.ahn-pulse{transform-origin:0 0;animation:ahnpulse 1.6s ease-out infinite}
+@keyframes ahnpulse{from{transform:scale(.75);opacity:1}to{transform:scale(1.35);opacity:0}}
+.ahn-hero{animation:ahnhop 1.1s ease-in-out infinite}
+@keyframes ahnhop{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.ahn-cloud{animation:ahncloud 22s linear infinite}
+@keyframes ahncloud{from{transform:translateX(-40px)}to{transform:translateX(40px)}}
+.ahn-water{animation:ahnwater 3s linear infinite}
+@keyframes ahnwater{to{stroke-dashoffset:-40}}
+.ahn-crown{animation:ahnglint 2.4s ease-in-out infinite}
+@keyframes ahnglint{0%,100%{opacity:.8}50%{opacity:1;filter:drop-shadow(0 0 4px #ffd27a)}}
+.ahn-mission{margin-top:14px;border:1px solid color-mix(in srgb,var(--mc) 45%,transparent);border-radius:18px;padding:14px;background:linear-gradient(180deg,color-mix(in srgb,var(--mc) 12%,rgba(255,255,255,.03)),rgba(255,255,255,.02))}
+.ahn-mhead{display:flex;align-items:center;gap:12px}
+.ahn-mhead>div{flex:1;min-width:0}
+.ahn-mhead b{display:block;font-family:var(--display);font-weight:400;font-size:18px;color:var(--mc)}
+.ahn-mhead small{color:var(--muted);font-size:13px}
+.ahn-mnum{width:38px;height:38px;flex:none;border-radius:50%;display:grid;place-items:center;font-family:var(--display);font-size:17px;background:var(--mc);color:#1b1726;box-shadow:0 0 0 3px rgba(0,0,0,.35)}
+.ahn-state{font-size:12px;font-weight:800;border-radius:999px;padding:4px 10px;background:rgba(229,72,77,.18);color:#ff9a9a}
+.ahn-state.done{background:rgba(79,195,255,.18);color:#9fdcff}
+.ahn-state.cur{background:rgba(255,210,122,.2);color:#ffd27a}
+.ahn-bosses{list-style:none;margin:12px 0 8px;padding:0;display:grid;gap:8px}
+.ahn-bosses li{display:flex;gap:10px;align-items:flex-start;border-radius:12px;padding:8px 10px;background:rgba(0,0,0,.18);border-left:3px solid var(--bc)}
+.ahn-bosses li.ahne{background:linear-gradient(90deg,rgba(255,210,122,.16),rgba(120,60,200,.12));border-left-color:#ffd27a;box-shadow:inset 0 0 0 1px rgba(255,210,122,.3)}
+.ahn-bosses li>div{min-width:0}
+.ahn-bosses b{font-size:14px}
+.ahn-bosses i{display:block;font-size:12px;color:var(--muted);margin-top:1px}
+.ahn-bi{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:12px;background:var(--bc);color:#1b1726}
+.ahn-phs{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+.ahn-ph{font-size:11px;border-radius:8px;padding:2px 7px;background:rgba(255,255,255,.06);color:#e8dcff}
+.ahn-ph b{color:var(--bc);margin-right:4px}
+.ahn-sigils{margin-top:18px}
+.ahn-sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-top:8px}
+.ahn-sh{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 8px;border-radius:14px;border:1.5px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:inherit;font:inherit;cursor:pointer}
+.ahn-sh .pt{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;border:2px solid var(--hc);color:var(--hc);font-size:16px}
+.ahn-sh small{font-size:11px;color:var(--muted)}
+.ahn-sh.on{border-color:#ffd27a;background:rgba(255,210,122,.1);box-shadow:0 0 14px rgba(255,210,122,.25)}
+.ahn-sh.on small{color:#ffd27a}
+.ahn-sh:disabled{cursor:default}
+.ahn-sh:not(:disabled):hover{border-color:var(--hc)}
+.ahn-mic{border-color:#ffd27a!important;color:#ffd27a!important;text-shadow:0 0 14px rgba(255,210,122,.8)}
+/* Ahnenprüfung: Sternenkarte */
+.ahn-map{background:#04030c;border-color:rgba(255,210,122,.4)}
+.ahn-isl{animation:ahnbob 6s ease-in-out infinite}
+@keyframes ahnbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.ahn-tw{animation:ahntw 3.2s ease-in-out infinite}
+@keyframes ahntw{0%,100%{opacity:1}50%{opacity:.25}}
+.ahn-flow{animation:ahnflow 1.8s linear infinite}
+@keyframes ahnflow{to{stroke-dashoffset:-16}}
+.ahn-shoot{stroke-dasharray:0 200;animation:ahnshoot 7s ease-in infinite}
+@keyframes ahnshoot{0%,82%{stroke-dasharray:0 200;transform:translate(0,0);opacity:0}85%{opacity:1;stroke-dasharray:40 200}100%{transform:translate(260px,-110px);opacity:0;stroke-dasharray:40 200}}
+.ahn-smoke{animation:ahnsmoke 2.4s ease-out infinite}
+@keyframes ahnsmoke{from{transform:translateY(0);opacity:.8}to{transform:translateY(-10px);opacity:0}}
+.ahn-rays{transform-origin:0 -50px;animation:ahnrays 40s linear infinite}
+@keyframes ahnrays{to{transform:rotate(360deg)}}
+.ahn-selring{animation:ahnflow 1.8s linear infinite}
+.ahn-node.later .ahn-isl{opacity:.82}
+@media (prefers-reduced-motion:reduce){.ahn-isl,.ahn-tw,.ahn-flow,.ahn-shoot,.ahn-rays,.ahn-hero,.ahn-pulse{animation:none}}
