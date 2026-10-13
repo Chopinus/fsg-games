@@ -57,15 +57,16 @@
   const dm = (h, s, v) => ({ h, s, dim: v }), pw = (h, s, v) => ({ h, s, pow: v }), ad = (h, s, v) => ({ h, s, add: v }), mu = (h, s, v) => ({ h, s, mul: v }), xx = (h, s, v) => ({ h, s, x: v });
   // Endlos-Fertigkeiten: jede Starter-Klasse hat ein eigenes Paar, die Expeditions-Helden teilen sich die Paare
   const INF = {
-    w: [[dm('all', 'dr', 0.03)], 'Alle Helden erleiden 3 % weniger Schaden je Stufe (wirkt immer etwas schwächer, höchstens 85 %)', [ad('all', 'thorns', 0.06)], 'Alle Helden werfen 6 % je Stufe des erlittenen Schadens zurück'],
+    w: [[dm('all', 'dr', 0.03)], 'Alle Helden erleiden 3 % weniger Schaden je Stufe (wirkt immer etwas schwächer). Ab Stufe 25: jede weitere Stufe +3 % Dornen (zurückgeworfener Schaden) für alle Helden', [ad('all', 'thorns', 0.06)], 'Alle Helden werfen 6 % je Stufe des erlittenen Schadens zurück', { g: { cap: 25, over: [ad('all', 'thorns', 0.03)] } }],
     s: [[dm('all', 'crit', 0.02)], '+2 % kritische Trefferchance für alle Helden je Stufe (wirkt immer etwas schwächer)', [ad('all', 'critD', 0.12)], '+12 % kritischer Schaden für alle Helden je Stufe'],
-    p: [[pw('g', 'walk', 1.03)], '+3 % Laufgeschwindigkeit der Gruppe je Stufe (höchstens ×3)', [pw('all', 'aps', 1.03)], '+3 % Angriffstempo aller Helden je Stufe'],
-    m: [[pw('all', 'actMul', 1.06)], '+6 % Schaden aller aktiven Fähigkeiten je Stufe', [dm('all', 'cdr', 0.02)], '−2 % Abklingzeit aller aktiven Fähigkeiten je Stufe (höchstens 60 %)'],
+    p: [[pw('g', 'walk', 1.03)], '+3 % Laufgeschwindigkeit der Gruppe je Stufe. Ab Stufe 37 (×3 Tempo): jede weitere Stufe +1,5 % Angriffstempo aller Helden', [pw('all', 'aps', 1.03)], '+3 % Angriffstempo aller Helden je Stufe', { g: { cap: 37, over: [pw('all', 'aps', 1.015)] } }],
+    m: [[pw('all', 'actMul', 1.06)], '+6 % Schaden aller aktiven Fähigkeiten je Stufe', [ad('all', 'cdr', 0.02)], '−2 % Abklingzeit aller aktiven Fähigkeiten je Stufe. Abklingzeit sinkt höchstens um 60 %, jeder Prozentpunkt darüber wird zu +2 % Schaden der aktiven Fähigkeiten'],
     t: [[pw('g', 'gold', 1.04)], '+4 % Gold je Stufe', [ad('all', 'regen', 0.001)], 'Alle Helden regenerieren 0,1 % ihres Lebens pro Sekunde je Stufe'],
   };
   const PAIR = { w: 'w', s: 's', p: 'p', m: 'm', t: 't', a: 's', n: 't', b: 'p', d: 'w', e: 'm' };
-  const infG = (h, base) => ({ max: 9999, cost: G(base, 1.35), kind: 'inf', fx: INF[PAIR[h]][0], desc: INF[PAIR[h]][1], icon: '∞' });
-  const infS = h => ({ max: 9999, cost: r => ({ g: 0, s: 6 + 2 * r }), kind: 'inf', fx: INF[PAIR[h]][2], desc: INF[PAIR[h]][3], icon: '∞' });
+  // Endlos-Fertigkeiten mit Grenze: ab cap wirkt jede weitere Stufe als Ersatz-Bonus (over), damit sie wirklich endlos bleiben
+  const infG = (h, base) => ({ max: 9999, cost: G(base, 1.35), kind: 'inf', fx: INF[PAIR[h]][0], desc: INF[PAIR[h]][1], icon: '∞', ...((INF[PAIR[h]][4] || {}).g || {}) });
+  const infS = h => ({ max: 9999, cost: r => ({ g: 0, s: 6 + 2 * r }), kind: 'inf', fx: INF[PAIR[h]][2], desc: INF[PAIR[h]][3], icon: '∞', ...((INF[PAIR[h]][4] || {}).s || {}) });
 
   // Ritter: Positionen wie bisher, damit alte Spielstände gleich aussehen
   const RITTER = [
@@ -508,10 +509,10 @@
   const RUNES = [
     { id: 'kraft', name: 'Kraft', color: '#e5484d', desc: v => `+${pct(v)} Schaden`, val: 0.08 },
     { id: 'leben', name: 'Leben', color: '#27a06a', desc: v => `+${pct(v)} Leben`, val: 0.08 },
-    { id: 'eile', name: 'Eile', color: '#f2be1a', desc: v => `+${pct(v)} Angriffstempo`, val: 0.04 },
-    { id: 'zorn', name: 'Zorn', color: '#ff7a3d', desc: v => `+${pct(v)} kritischer Schaden`, val: 0.12 },
-    { id: 'schutz', name: 'Schutz', color: '#7fb2ff', desc: v => `−${pct(v)} erlittener Schaden`, val: 0.025 },
-    { id: 'fokus', name: 'Fokus', color: '#c08cff', desc: v => `Fähigkeiten laden ${pct(v)} schneller`, val: 0.03 },
+    { id: 'eile', name: 'Eile', color: '#f2be1a', desc: v => `+${pct(v)} Angriffstempo, Fähigkeiten laden ${pct(v / 4)} schneller`, val: 0.07 },
+    { id: 'zorn', name: 'Zorn', color: '#ff7a3d', desc: v => `Kritische Treffer machen +${pct(v)} mehr Schaden`, val: 0.12 },
+    { id: 'schutz', name: 'Schutz', color: '#7fb2ff', desc: v => `−${pct(v)} erlittener Schaden (zählt immer voll, höchstens 72 %)`, val: 0.025 },
+    { id: 'fokus', name: 'Fokus', color: '#c08cff', desc: v => `Fähigkeiten laden ${pct(v)} schneller`, val: 0.04 },
     { id: 'glueck', name: 'Glück', color: '#ffcf4a', desc: v => `+${pct(v)} Gold für alle`, val: 0.06 },
     { id: 'seele', name: 'Seele', color: '#c9a6ff', desc: v => `+${pct(v)} Chance auf Seelen bei Elite-Gegnern`, val: 0.03 },
   ];
@@ -854,7 +855,9 @@
     const g = { gold: 1, chest: 0, eliteSoul: 0, soulMul: 1, partyAtk: 1, partyHp: 1, partyDr: 0, partyRegen: 0, eliteGold: 1, walk: 1 };
     const each = (h, fn) => (h === 'all' ? Object.values(hs).forEach(fn) : h === 'g' ? fn(g) : hs[h] && fn(hs[h]));
     for (const n of NODES) {
-      const r = rank(S, n.id); if (!r || !n.fx) continue;
+      const r0 = rank(S, n.id); if (!r0 || !n.fx) continue;
+      const r = n.cap ? Math.min(r0, n.cap) : r0;
+      if (n.over && r0 > n.cap) for (const e of n.over) each(e.h, T => { const ro = r0 - n.cap; if (e.pow) T[e.s] *= Math.pow(e.pow, ro); else if (e.add) T[e.s] += e.add * ro; });
       for (const e of n.fx) each(e.h, T => {
         if (e.pow) T[e.s] *= Math.pow(e.pow, r);
         else if (e.add) T[e.s] += e.add * r;
@@ -880,8 +883,12 @@
       if (bardOn) T.aps *= 1 + hs.b.songAps;
       T.atk *= perm * g.partyAtk * (1 + (rb.kraft || 0)); T.hp *= perm * g.partyHp * (1 + (rb.leben || 0)); if (T.heal) T.heal *= perm * (1 + (rb.kraft || 0));
       if (T.wolfAtk) T.wolfAtk *= perm * g.partyAtk * (1 + (rb.kraft || 0));
-      T.aps *= 1 + (rb.eile || 0); T.critD += rb.zorn || 0; T.cdr = Math.min(0.6, T.cdr + (rb.fokus || 0));
-      const drRaw = T.dr + g.partyDr + (rb.schutz || 0); T.dr = drRaw <= 0.5 ? drRaw : Math.min(0.72, 0.5 + (drRaw - 0.5) * 0.5); T.block = Math.min(0.35, T.block); T.regen += g.partyRegen;
+      T.aps *= 1 + (rb.eile || 0); T.critD *= 1 + (rb.zorn || 0);
+      // Abklingzeit höchstens 60 %: jeder Prozentpunkt darüber wird zu +2 % Schaden der Fähigkeiten
+      const cdrRaw = T.cdr + (rb.fokus || 0) + (rb.eile || 0) * 0.25;
+      T.cdr = Math.min(0.6, cdrRaw); if (cdrRaw > 0.6) T.actMul *= 1 + 2 * (cdrRaw - 0.6);
+      // Schadensreduktion: ab 50 % zählt der Rest halb, Schutz-Runen zählen immer voll (höchstens 72 %)
+      const drRaw = T.dr + g.partyDr; T.dr = Math.min(0.72, (drRaw <= 0.5 ? drRaw : 0.5 + (drRaw - 0.5) * 0.5) + (rb.schutz || 0)); T.block = Math.min(0.35, T.block); T.regen += g.partyRegen;
       g.gold *= 1 + (rb.glueck || 0); g.eliteSoul += rb.seele || 0;
     }
     g.walk = Math.min(3, g.walk);
@@ -936,12 +943,12 @@
   const strongest = (run, maxX = 400) => run.enemies.filter(e => e.x < maxX).sort((a, b) => b.hp - a.hp)[0];
   const anyBelow = (run, st, f) => run.order.some(k => run.h[k].alive && run.h[k].hp < st[k].hp * f);
   const ACT = {
-    wirbel: { cd: (r, S) => 19 - r - (rank(S, 'r_tanz') ? 3 : 0), ready: run => near(run).length >= 3 || near(run).some(e => e.boss), cast: (c, r) => near(c.run).forEach(e => c.hit('r', e, 2 + 0.5 * (r - 1))) },
+    wirbel: { cd: (r, S) => 19 - r - (rank(S, 'r_tanz') ? 3 : 0), ready: run => near(run).length >= 3 || near(run).some(e => e.boss), cast: (c, r) => near(c.run).forEach(e => c.hit('r', e, (2 + 0.5 * (r - 1)) * c.st.r.actMul)) },
     heil: { cd: () => 22, ready: (run, st) => anyBelow(run, st, 0.55), cast: (c, r) => c.healSplit('r', 0.4 + 0.08 * (r - 1), 0.1 + 0.03 * (r - 1)) },
-    blitz: { cd: () => 14, ready: run => !!strongest(run, 320), cast: (c, r) => { const t = strongest(c.run, 320); c.hit('r', t, 4 + 1.5 * (r - 1), '#cfe6ff'); c.run.fx.blitzX = t.x; c.run.shake = 0.25; } },
-    schild: { cd: () => 9, ready: engaged, cast: (c, r) => { const e = c.run.enemies[0]; c.hit('r', e, 1.5); e.stun = Math.max(e.stun, 1.5 + 0.5 * (r - 1)); } },
+    blitz: { cd: () => 14, ready: run => !!strongest(run, 320), cast: (c, r) => { const t = strongest(c.run, 320); c.hit('r', t, (4 + 1.5 * (r - 1)) * c.st.r.actMul, '#cfe6ff'); c.run.fx.blitzX = t.x; c.run.shake = 0.25; } },
+    schild: { cd: () => 9, ready: engaged, cast: (c, r) => { const e = c.run.enemies[0]; c.hit('r', e, 1.5 * c.st.r.actMul); e.stun = Math.max(e.stun, 1.5 + 0.5 * (r - 1)); } },
     schrei: { cd: () => 20, ready: engaged, cast: (c, r) => { c.run.buffT = 6; c.run.buffMul = 0.4 + 0.15 * (r - 1); c.float('r', 'Kriegsschrei!', '#ffb547'); } },
-    w_wall: { cd: () => 12, ready: run => near(run).length >= 2 || near(run).some(e => e.boss), cast: (c, r) => { near(c.run).forEach(e => { c.hit('w', e, 1.5 + 0.5 * (r - 1), '#cfe0ff'); e.stun = Math.max(e.stun, 1); }); c.run.shake = 0.2; } },
+    w_wall: { cd: () => 12, ready: run => near(run).length >= 2 || near(run).some(e => e.boss), cast: (c, r) => { near(c.run).forEach(e => { c.hit('w', e, (1.5 + 0.5 * (r - 1)) * c.st.w.actMul, '#cfe0ff'); e.stun = Math.max(e.stun, 1); }); c.run.shake = 0.2; } },
     w_haut: { cd: () => 16, ready: (run, st) => run.h.w.hp < st.w.hp * 0.7, cast: (c, r) => { c.run.hautT = 5 + r; c.float('w', 'Eiserne Haut', '#7fb2ff'); } },
     w_rache: { cd: () => 15, ready: engaged, cast: (c, r) => { c.run.racheT = 6 + r; c.float('w', 'Vergeltung', '#7fb2ff'); } },
     s_hagel: { cd: () => 14, ready: run => run.enemies.some(e => e.x < 380), cast: (c, r) => { const vis = c.run.enemies.filter(e => e.x < 380); for (let i = 0; i < 6; i++) { const e = vis[Math.floor(Math.random() * vis.length)]; c.arrow('s', e, 0.3 + i * 0.06, 'hag'); c.hit('s', e, (1.2 + 0.4 * (r - 1)) * c.st.s.actMul, '#c8f5cf'); } } },
@@ -954,8 +961,8 @@
     p_schild: { cd: () => 16, ready: engaged, cast: (c, r) => c.run.order.forEach(k => { const h = c.run.h[k]; if (h.alive) h.shield = Math.max(h.shield, c.st[k].hp * (0.2 + 0.05 * (r - 1))); }) },
     p_wieder: { cd: (r, S) => (rank(S, 'p_k2') ? 20 : 40), ready: run => run.order.some(k => !run.h[k].alive), cast: (c, r) => { const k = c.run.order.find(k => !c.run.h[k].alive); const h = c.run.h[k]; h.alive = true; h.hp = c.st[k].hp * (0.4 + 0.15 * (r - 1)); c.float(k, 'Wiederbelebt!', '#ffe48a'); } },
     t_rudel: { cd: () => 20, ready: engaged, cast: (c, r) => { c.run.packT = 8 + 2 * (r - 1); c.float('t', 'Rudelruf!', '#d9935a'); } },
-    t_wurzel: { cd: () => 15, ready: run => near(run).length >= 1, cast: (c, r) => c.run.enemies.filter(e => e.x < 460).forEach(e => { c.hit('t', e, 1.2, '#b5e08a'); e.stun = Math.max(e.stun, 2 + 0.5 * (r - 1)); e.rooted = 2; }) },
-    t_sprung: { cd: () => 12, ready: run => !!strongest(run, 360), cast: (c, r) => { const t = strongest(c.run, 360); c.hit('t', t, 6 + 2 * (r - 1), '#ffd2a8', true); c.run.fx.sprungX = t.x; } },
+    t_wurzel: { cd: () => 15, ready: run => near(run).length >= 1, cast: (c, r) => c.run.enemies.filter(e => e.x < 460).forEach(e => { c.hit('t', e, 1.2 * c.st.t.actMul, '#b5e08a'); e.stun = Math.max(e.stun, 2 + 0.5 * (r - 1)); e.rooted = 2; }) },
+    t_sprung: { cd: () => 12, ready: run => !!strongest(run, 360), cast: (c, r) => { const t = strongest(c.run, 360); c.hit('t', t, (6 + 2 * (r - 1)) * c.st.t.actMul, '#ffd2a8', true); c.run.fx.sprungX = t.x; } },
     a_schatten: { cd: () => 14, ready: run => run.enemies.some(e => e.x < 480), cast: (c, r) => {
       const vis = c.run.enemies.filter(e => e.x < 480), rng = vis.filter(e => e.ranged), ts = (rng.length ? rng : [...vis].sort((a, b) => b.x - a.x)).slice(0, 2);
       ts.forEach(e => c.hit('a', e, (6 + 2 * (r - 1)) * c.st.a.actMul * (e.ranged ? 1 + c.st.a.rangedDmg : 1), '#ff6b7a')); c.run.fx.shadowXs = ts.map(e => e.x); } },
@@ -1767,7 +1774,7 @@
       act += `<button class="btn ghost small" data-rl="equip" ${inCamp() ? '' : 'disabled'}>${on ? 'Ablegen' : used >= lim ? 'Ausrüsten (tauscht)' : 'Ausrüsten'}</button>`;
     }
     return `<div class="rl-detail" style="--hc:${h.color}"><div class="rl-dhead"><span class="rl-dic">${n.icon}</span><div><b>${esc(n.name)}</b><span class="pill">${type}</span></div></div>
-      ${n.max > 1 ? `<span class="note">${n.max > 99 ? `Stufe ${r}` : `Stufe ${r} von ${n.max}`}</span>` : ''}<p>${esc(n.desc)}</p><div class="row">${act}</div></div>`;
+      ${n.max > 1 ? `<span class="note">${n.max > 99 ? `Stufe ${r}` : `Stufe ${r} von ${n.max}`}</span>` : ''}<p>${esc(n.desc)}</p>${n.cap ? `<p class="note">${r >= n.cap ? `Grenze erreicht${r > n.cap ? ` · ${r - n.cap} Bonus-Stufen aktiv` : ''}` : `Noch ${n.cap - r} Stufen bis zur Grenze`}</p>` : ''}<div class="row">${act}</div></div>`;
   }
   function sockRow(tree) {
     const cap = keyCap(S, tree), used = keysUsed(S, tree), extra = cap - 1, free = kFree(S);
@@ -2512,6 +2519,24 @@
   }
   // Neuigkeiten: neueste Einträge oben. Neue Updates OBEN mit höherer id anhängen.
   const UPDATES = [
+    { id: 28, date: '13.10.2026', title: 'Runen-Update: Schutz, Eile, Fokus', items: [
+      ['Neu', 'Schutz-Runen zählen jetzt immer voll und werden ab 50 % nicht mehr halbiert. Höchstens 72 % weniger Schaden.'],
+      ['Neu', 'Eile-Runen sind stärker: 7 % statt 4 % Angriffstempo pro Stufe I, außerdem laden die Fähigkeiten etwas schneller.'],
+      ['Neu', 'Fokus-Runen sind stärker: 4 % statt 3 % pro Stufe I.'],
+      ['Neu', 'Abklingzeit sinkt höchstens um 60 %. Alles darüber geht nicht mehr verloren: Jeder Prozentpunkt zu viel wird zu +2 % Schaden der aktiven Fähigkeiten.'],
+      ['Info', 'Die rechte Endlos-Fertigkeit des Magiers (und der Tüftlerin) gibt jetzt immer −2 % Abklingzeit je Stufe. Über 60 % wird sie automatisch zu mehr Fähigkeiten-Schaden.'],
+      ['Fix', 'Wirbelwind, Blitzschlag, Schildstoß, Schildwall, Wurzeln und Raubtiersprung bekommen jetzt auch Boni auf Fähigkeiten-Schaden, zum Beispiel aus der Endlos-Fertigkeit des Magiers.'],
+    ] },
+    { id: 27, date: '13.10.2026', title: 'Zorn-Runen verstärkt', items: [
+      ['Neu', 'Zorn wirkt jetzt als finaler Krit-Schaden: Kritische Treffer machen den Wert der Rune mehr Schaden (Stufe III: +58 %). Vorher wurde der Wert nur zum Krit-Schaden addiert und brachte kaum etwas.'],
+      ['Info', 'Mit wenig Krit-Chance ist Kraft besser, mit ausgebauten Krit-Knoten (ab etwa 45 % Krit-Chance) ist Zorn etwas stärker. Deine vorhandenen Zorn-Runen wirken automatisch nach der neuen Regel.'],
+    ] },
+    { id: 26, date: '13.10.2026', title: 'Endlos-Fertigkeiten sind jetzt wirklich endlos', items: [
+      ['Neu', 'Drei Endlos-Fertigkeiten hatten eine Grenze. Ab der Grenze gibt jetzt jede weitere Stufe einen Ersatz-Bonus mit halber Stärke der Partner-Fertigkeit.'],
+      ['Info', 'Magier rechts (Abklingzeit): ab Stufe 25 +3 % Schaden aller aktiven Fähigkeiten je Stufe.'],
+      ['Info', 'Wächter links (weniger Schaden): ab Stufe 25 +3 % Dornen je Stufe. Priesterin links (Laufgeschwindigkeit): ab Stufe 37 +1,5 % Angriffstempo je Stufe. Das gilt auch für Druidin, Tüftlerin und Barde.'],
+      ['Neu', 'Tester: Knopf „Baum komplett ausbauen“ in jedem Fertigkeitenbaum.'],
+    ] },
     { id: 25, date: '13.10.2026', title: 'Neuer Look für die Schützin', items: [
       ['Neu', 'Die Schützin hat ein neues Aussehen: Gesicht mit grünen Augen und Kriegsbemalung, Kapuze mit roter Feder, Elfenohr, geflochtener Zopf, Lederweste mit Schnürung, Armschiene und ein Langbogen mit leuchtender Rune.'],
     ] },
