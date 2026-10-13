@@ -1782,7 +1782,17 @@
     const lockedNote = !classOpen(S, tree) ? `<p class="warn">${h.puzzle ? `Diese Klasse bekommst du mit 6 Puzzleteilen aus den Expeditionen (${pieceCount(S, h.id)}/6).` : `Diese Klasse wird mit der ${h.rebirth}. Wiedergeburt freigeschaltet.`} Du kannst dir den Baum schon ansehen.</p>` : '';
     return `${lockedNote}<div class="rl-hhead" style="--hc:${h.color}"><span class="pt">${PORTRAIT[h.id]}</span><div><h3>${h.name}</h3><p class="note">${h.desc}</p>
       ${ok ? `<p class="note">Aktive Fähigkeiten ${eq.length}/${slotsOf(S, tree)}: ${eq.length ? esc(eq.map(ACT_NAME).join(', ')) : 'noch keine'} </p>${sockRow(tree)}` : ''}</div></div>
+      ${acct && acct.tester ? `<div class="rl-test"><b>🧪 Test</b> <button class="btn small ${confirm === 'tbuild' ? 'danger' : ''}" data-rl="tbuild" ${inCamp() && classOpen(S, tree) ? '' : 'disabled'}>${confirm === 'tbuild' ? 'Wirklich den ganzen Baum setzen?' : 'Baum komplett ausbauen'}</button><span class="note">Alles auf voll, Schaden und Leben auf 20, linke Endlos-Fertigkeit auf 16, rechte auf 8. Kostet nichts. Schlüssel bleiben, wie sie sind.</span></div>` : ''}
       <div class="rl-treewrap"><div class="rl-treebox">${treeSVG(tree)}</div>${detailHTML(tree)}</div>`;
+  }
+  function testBuild(tree) {
+    const inf = NODES.filter(n => n.tree === tree && n.kind === 'inf');
+    for (const n of NODES) {
+      if (n.tree !== tree || n.kind === 'key') continue;
+      S.nodes[n.id] = n.kind === 'inf' ? (inf.indexOf(n) === 0 ? 16 : 8) : n.max === 30 ? 20 : n.max;
+    }
+    const acts = NODES.filter(n => n.tree === tree && n.active).map(n => n.id);
+    for (const id of acts) if (!S.equip.includes(id) && S.equip.filter(x => NODE[x].tree === tree).length < slotsOf(S, tree)) S.equip.push(id);
   }
   function campInfo() {
     if (run && run.dead) {
@@ -2159,6 +2169,7 @@
         forgeSel = null; SND.play('forge'); kHit(); toast(`${n} Runen zerstört: +${d} Runensplitter`, true); afterChange(); }
       else { confirm = confirm === 'fall' ? 'fall2' : 'fall'; panel(); const c0 = confirm; setTimeout(() => { if (confirm === c0) { confirm = ''; panel(); } }, 5000); } }
     else if (a === 'tunrb') { if (acct && acct.tester && inCamp() && ask('unrb', panel)) { const r = unrebirth(S); if (r) { run = null; SND.play('tick'); toast(`Zurück auf Wiedergeburt ${S.rebirths}: −${r.lost} Sterne, Sternen-Laden zurückgesetzt (+${r.back})`, true); afterChange(); } } }
+    else if (a === 'tbuild') { if (acct && acct.tester && inCamp() && HERO[tab] && classOpen(S, tab) && ask('tbuild', panel)) { testBuild(tab); achCheck(); afterChange(); SND.play('forge'); toast(`${HERO[tab].name}: Baum ausgebaut`, true); } }
     else if (a === 'trebirth') { if (acct && acct.tester && inCamp()) { const team = HEROES.filter(h => st[h.id]).map(h => h.id); const g = rebirth(S, true); run = null; achCheck(); afterChange(); SND.play('rebirth'); toast(`Test-Wiedergeburt: +${g} Sterne`, true); playCine('rebirth', team); } }
     else if (a === 'lager') { if (inCamp() && buyLager(S)) { SND.play('forge'); toast(`Runen-Lager erweitert: jetzt ${runeCap(S)} Plätze`); afterChange(); } }
     else if (a === 'altar') { if (inCamp() && buyAltar(S)) { SND.play('soul'); toast(`Seelenaltar Stufe ${S.altar}: Seelen ×${altarMul(S).toFixed(2).replace('.', ',')}`, true); afterChange(); } }
@@ -2501,6 +2512,9 @@
   }
   // Neuigkeiten: neueste Einträge oben. Neue Updates OBEN mit höherer id anhängen.
   const UPDATES = [
+    { id: 25, date: '13.10.2026', title: 'Neuer Look für die Schützin', items: [
+      ['Neu', 'Die Schützin hat ein neues Aussehen: Gesicht mit grünen Augen und Kriegsbemalung, Kapuze mit roter Feder, Elfenohr, geflochtener Zopf, Lederweste mit Schnürung, Armschiene und ein Langbogen mit leuchtender Rune.'],
+    ] },
     { id: 24, date: '13.10.2026', title: 'Neues Truppen-Menü', items: [
       ['Neu', 'Tippe im Lager aufs Lagerfeuer: Dort stellst du jetzt deine Truppe zusammen. Oben die Porträts, unten steht deine Truppe am Feuer.'],
       ['Neu', 'Farbige Kreise zeigen die Rolle: Lila Tank, Rot Nahkampf, Gelb Nahkampf-Helfer, Blau Fernkampf, Grün Unterstützung.'],
@@ -4509,32 +4523,84 @@
   }
 
   function archer(x, h, t, walk) {
-    const { step } = begin(x, h, t, walk, 13, 13), sw = h ? h.swing : 0;
-    cape(t, -50, '#3e7a3a', '#1f4a2a', 44, 18);
-    legs(step, '#7a5a3a', '#4a3424', '#3a2a1a', 6);
-    // Köcher
-    ctx.save(); ctx.translate(-9, -46); ctx.rotate(-0.35); rr(-4, 0, 8, 22, 2); fillO('#6b4a2e');
-    for (let i = 0; i < 3; i++) { ctx.fillStyle = '#c9cdd6'; ctx.fillRect(-3 + i * 2.5, -6, 1, 7); ctx.fillStyle = ['#e5484d', '#ffffff', '#7ee08a'][i]; ctx.beginPath(); ctx.moveTo(-3.5 + i * 2.5, -8); ctx.lineTo(-1.5 + i * 2.5, -8); ctx.lineTo(-2.5 + i * 2.5, -3); ctx.fill(); }
+    const { step } = begin(x, h, t, walk, 13, 13), sw = h ? h.swing : 0, wind = Math.sin(t * 2.3);
+    // Umhang mit Blattsaum
+    cape(t, -50, '#3e7a3a', '#1a3f24', 44, 18);
+    ctx.fillStyle = '#c9a64a'; for (let i = 0; i < 4; i++) { const cx = -14 - wind * 1.4 + i * 3, cy = -8 + i * 0.8; ctx.beginPath(); ctx.ellipse(cx, cy, 1.6, 0.9, 0.6, 0, 7); ctx.fill(); }
+    // Beine: Hose, Stiefel mit Umschlag
+    for (const [lx, sg] of [[-7, step], [1, -step]]) {
+      ctx.save(); ctx.translate(lx + sg * 3, 0);
+      rr(0, -22, 6, 20, 2); fillO(LG(-22, 0, '#5a4630', '#3a2c1e'));
+      rr(-1, -11, 8, 11, 2); fillO(LG(-11, 0, '#7a5232', '#4a3020'));
+      ctx.fillStyle = '#a67a48'; rr(-1.5, -12, 9, 3, 1.2); ctx.fill();
+      ctx.fillStyle = '#2a1c12'; ctx.fillRect(-1, -1.5, 9, 1.5);
+      ctx.restore();
+    }
+    // Köcher mit Federpfeilen
+    ctx.save(); ctx.translate(-9, -46); ctx.rotate(-0.35);
+    rr(-4.5, 0, 9, 23, 2.5); fillO(LG(0, 23, '#8a5e36', '#4e331c'));
+    ctx.fillStyle = '#c9a64a'; ctx.fillRect(-4.5, 3, 9, 1.6); ctx.fillRect(-4.5, 17, 9, 1.6);
+    ctx.fillStyle = '#e8d9a8'; ctx.beginPath(); ctx.arc(0, 10.5, 2, 0, 7); ctx.fill();
+    for (let i = 0; i < 4; i++) { const fx = -3.2 + i * 2.2; ctx.fillStyle = '#d8dce4'; ctx.fillRect(fx, -5, 0.9, 6); ctx.fillStyle = ['#e5484d', '#f2f2f2', '#7ee08a', '#ffd23f'][i]; ctx.beginPath(); ctx.moveTo(fx - 1, -10 - (i % 2)); ctx.lineTo(fx + 1.8, -9); ctx.lineTo(fx + 0.4, -3.5); ctx.closePath(); ctx.fill(); }
     ctx.restore();
-    rr(-9, -48, 18, 28, 5); fillO(LG(-48, -20, '#7ec85a', '#3e7a3a'));
-    ctx.strokeStyle = '#6b4a2e'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(-8, -46); ctx.lineTo(8, -24); ctx.stroke();
-    ctx.fillStyle = '#6b4a2e'; ctx.fillRect(-9, -26, 18, 3);
-    // Kopf mit Kapuze und Zopf
-    ctx.fillStyle = '#e8c05a'; ctx.beginPath(); ctx.moveTo(-6, -58); ctx.quadraticCurveTo(-14, -46, -10, -34); ctx.lineTo(-7, -35); ctx.quadraticCurveTo(-10, -46, -3, -56); ctx.fill();
-    ctx.beginPath(); ctx.arc(1, -56, 8, 0, 7); fillO('#f1c9a5');
-    ctx.fillStyle = '#e8c05a'; ctx.beginPath(); ctx.arc(1, -58, 8.2, Math.PI * 1.05, Math.PI * 1.75); ctx.lineTo(1, -56); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(-9, -54); ctx.quadraticCurveTo(-8, -70, 3, -68); ctx.quadraticCurveTo(12, -66, 10, -58); ctx.quadraticCurveTo(4, -64, -4, -60); ctx.closePath(); fillO(LG(-70, -54, '#5fae48', '#2f6b3f'));
-    ctx.fillStyle = '#2f7a3f'; ctx.fillRect(4, -57, 2, 2.2); ctx.fillStyle = 'rgba(255,140,150,.35)'; ctx.beginPath(); ctx.arc(6, -53, 1.6, 0, 7); ctx.fill();
-    ctx.fillStyle = '#f1c9a5'; ctx.beginPath(); ctx.moveTo(8, -59); ctx.lineTo(12, -63); ctx.lineTo(9, -56); ctx.fill();
-    // Langbogen
+    // Oberkörper: Tunika, Lederweste, Gürtel
+    ctx.beginPath(); ctx.moveTo(-9, -46); ctx.lineTo(9, -46); ctx.lineTo(10, -22); ctx.lineTo(12, -15); ctx.lineTo(-12, -15); ctx.lineTo(-10, -22); ctx.closePath(); fillO(LG(-46, -15, '#86d05f', '#2f6b34'));
+    ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.beginPath(); ctx.moveTo(-6, -44); ctx.lineTo(-2, -44); ctx.lineTo(-4, -24); ctx.lineTo(-7, -24); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-8, -42); ctx.lineTo(-2, -46); ctx.lineTo(1, -38); ctx.lineTo(4, -46); ctx.lineTo(8, -42); ctx.lineTo(8, -24); ctx.lineTo(-8, -24); ctx.closePath(); fillO(LG(-46, -24, '#8a5e36', '#5a3a20'));
+    ctx.strokeStyle = '#e8d9a8'; ctx.lineWidth = 0.8; ctx.beginPath(); for (let i = 0; i < 4; i++) { ctx.moveTo(-1, -40 + i * 4); ctx.lineTo(3, -38 + i * 4); ctx.moveTo(3, -40 + i * 4); ctx.lineTo(-1, -38 + i * 4); } ctx.stroke();
+    ctx.fillStyle = '#3a2616'; ctx.fillRect(-10, -26, 20, 3.5); ctx.fillStyle = '#ffd23f'; rr(-2.5, -27, 5, 5.5, 1); ctx.fill(); ctx.fillStyle = '#3a2616'; ctx.fillRect(-1, -25.5, 2, 2.5);
+    ctx.fillStyle = '#6b4a2e'; rr(5, -25, 5, 6, 1.5); ctx.fill();
+    // Schulterstück mit Blatt
+    ctx.beginPath(); ctx.ellipse(4, -44, 6, 4, -0.2, 0, 7); fillO(LG(-48, -40, '#a67a48', '#6b4a2e'));
+    ctx.fillStyle = '#7ee08a'; ctx.beginPath(); ctx.moveTo(1, -44); ctx.quadraticCurveTo(4, -48, 8, -45); ctx.quadraticCurveTo(4, -42, 1, -44); ctx.fill();
+    // Kragen / Halstuch
+    ctx.beginPath(); ctx.moveTo(-7, -48); ctx.quadraticCurveTo(1, -43, 8, -48); ctx.lineTo(7, -45); ctx.quadraticCurveTo(1, -40, -6, -45); ctx.closePath(); fillO('#2f6b3f');
+    // Zopf hinten (schwingt leicht)
+    ctx.save(); ctx.translate(-6, -56);
+    ctx.fillStyle = '#d9a83a'; for (let i = 0; i < 4; i++) { const bx = -4 - i * 1.2 - wind * i * 0.35, by = 3 + i * 4.2; ctx.beginPath(); ctx.ellipse(bx, by, 3.2 - i * 0.25, 2.6, 0.4, 0, 7); ctx.fill(); ctx.strokeStyle = 'rgba(120,80,20,.6)'; ctx.lineWidth = 0.7; ctx.stroke(); }
+    ctx.fillStyle = '#e5484d'; ctx.fillRect(-10.5 - wind * 1.3, 17.5, 4, 2); ctx.fillStyle = '#f0d070'; ctx.beginPath(); ctx.moveTo(-9.5 - wind * 1.4, 19.5); ctx.lineTo(-11.5 - wind * 1.8, 24); ctx.lineTo(-6.5 - wind * 1.4, 23); ctx.fill();
+    ctx.restore();
+    // Kopf
+    ctx.beginPath(); ctx.arc(1, -56, 8, 0, 7); fillO(RG(3, -57, 10, '#f8d9b8', '#e3b48c'));
+    // Gesicht
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(5, -56.5, 2.1, 2.5, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = '#2f9a4f'; ctx.beginPath(); ctx.arc(5.6, -56.2, 1.6, 0, 7); ctx.fill();
+    ctx.fillStyle = '#123018'; ctx.beginPath(); ctx.arc(5.8, -56.1, 0.8, 0, 7); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.fillRect(6, -57.3, 0.8, 0.8);
+    ctx.strokeStyle = '#3a2416'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(2.8, -58.6); ctx.quadraticCurveTo(5, -59.6, 7.3, -58.4); ctx.stroke();
+    ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(7.2, -58.4); ctx.lineTo(8.3, -59.2); ctx.stroke();
+    ctx.strokeStyle = '#9a6a3a'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(3.2, -60.6); ctx.quadraticCurveTo(5.5, -61.6, 7.8, -60.4); ctx.stroke();
+    ctx.fillStyle = '#d99a78'; ctx.beginPath(); ctx.moveTo(8.6, -55.5); ctx.lineTo(9.6, -53.4); ctx.lineTo(8.2, -53.2); ctx.fill();
+    ctx.strokeStyle = '#a0463c'; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(5.2, -51.4); ctx.quadraticCurveTo(7, -50.4, 8.4, -51.6); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,120,130,.38)'; ctx.beginPath(); ctx.ellipse(3.6, -53.2, 1.8, 1.1, 0, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#2f6b3f'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(1, -54); ctx.lineTo(1.6, -52.5); ctx.moveTo(2.4, -54.4); ctx.lineTo(2.9, -53); ctx.stroke();
+    // Haare: Pony unter der Kapuze
+    ctx.beginPath(); ctx.moveTo(-6, -61); ctx.quadraticCurveTo(1, -66.5, 8.6, -62.2); ctx.quadraticCurveTo(6, -62.4, 4.6, -61.4); ctx.quadraticCurveTo(3, -62.6, 1, -61.3); ctx.quadraticCurveTo(-1.5, -62, -4, -58.5); ctx.closePath();
+    ctx.fillStyle = LG(-66, -58, '#ffe596', '#d9a83a'); ctx.fill(); ctx.strokeStyle = 'rgba(150,100,30,.7)'; ctx.lineWidth = 0.7; ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.beginPath(); ctx.ellipse(2, -63.6, 2.4, 0.7, -0.2, 0, 7); ctx.fill();
+    // Kapuze mit Rand und Feder
+    ctx.beginPath(); ctx.moveTo(-9.5, -51); ctx.quadraticCurveTo(-12, -68, 0, -70); ctx.quadraticCurveTo(9, -70.5, 9.5, -64); ctx.quadraticCurveTo(5, -67, -1, -66); ctx.quadraticCurveTo(-6, -64.5, -6.5, -51); ctx.closePath(); fillO(LG(-70, -51, '#5fae48', '#24552f'));
+    ctx.strokeStyle = '#c9a64a'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(-6.7, -52); ctx.quadraticCurveTo(-6.2, -64.8, -1, -66.2); ctx.quadraticCurveTo(5, -67.2, 9.2, -64.3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-6, -58); ctx.quadraticCurveTo(-13, -63, -14, -67); ctx.quadraticCurveTo(-9, -63, -5, -55); ctx.closePath(); fillO('#efc39c');
+    ctx.save(); ctx.translate(-4, -68); ctx.rotate(-1.05 + wind * 0.05);
+    ctx.fillStyle = '#e5484d'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-4, -8, -1, -15); ctx.quadraticCurveTo(3, -8, 0, 0); ctx.fill();
+    ctx.strokeStyle = '#ffd2d4'; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-1, -8, -1, -14); ctx.stroke();
+    ctx.restore();
+    // Langbogen mit goldenen Enden und Rune
     const pull = sw > 0 ? Math.sin(sw * Math.PI) * 6 : 0;
-    ctx.save(); ctx.translate(12, -38);
-    ctx.strokeStyle = '#8a5a2b'; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-4, -22); ctx.quadraticCurveTo(10, 0, -4, 22); ctx.stroke();
-    ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(4, -6); ctx.lineTo(4, 6); ctx.stroke();
-    ctx.strokeStyle = 'rgba(240,240,240,.9)'; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(-4, -22); ctx.lineTo(-4 - pull, 0); ctx.lineTo(-4, 22); ctx.stroke();
-    if (pull > 1) { ctx.fillStyle = '#e8e2d0'; ctx.fillRect(-4 - pull, -0.7, 20, 1.4); ctx.fillStyle = '#c9cdd6'; ctx.beginPath(); ctx.moveTo(16 - pull, -2.5); ctx.lineTo(20 - pull, 0); ctx.lineTo(16 - pull, 2.5); ctx.fill(); glowDot(18 - pull, 0, 7, '126,224,138', 0.5); }
+    ctx.save(); ctx.translate(15, -38);
+    ctx.strokeStyle = '#4e2f16'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-5, -23); ctx.quadraticCurveTo(-1, -23, 2, -16); ctx.quadraticCurveTo(10, 0, 2, 16); ctx.quadraticCurveTo(-1, 23, -5, 23); ctx.stroke();
+    ctx.strokeStyle = '#a8703a'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.arc(-5, -23, 1.8, 0, 7); ctx.arc(-5, 23, 1.8, 0, 7); ctx.fill();
+    ctx.fillStyle = '#3a2616'; rr(3.2, -5, 3.6, 10, 1.4); ctx.fill();
+    glowDot(5, 0, 6, '126,224,138', 0.35 + 0.15 * Math.sin(t * 3)); ctx.fillStyle = '#b9ffc4'; ctx.fillRect(4.4, -2, 1.2, 4);
+    ctx.strokeStyle = 'rgba(245,245,240,.95)'; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(-5, -23); ctx.lineTo(-5 - pull, 0); ctx.lineTo(-5, 23); ctx.stroke();
+    if (pull > 1) { ctx.fillStyle = '#e8e2d0'; ctx.fillRect(-5 - pull, -0.7, 21, 1.4); ctx.fillStyle = '#e5484d'; ctx.fillRect(-5 - pull, -1.6, 3, 3.2); ctx.fillStyle = '#c9cdd6'; ctx.beginPath(); ctx.moveTo(16 - pull, -2.5); ctx.lineTo(20 - pull, 0); ctx.lineTo(16 - pull, 2.5); ctx.fill(); glowDot(18 - pull, 0, 7, '126,224,138', 0.6); }
     ctx.restore();
-    ctx.fillStyle = '#f1c9a5'; ctx.beginPath(); ctx.arc(8 - pull * 0.6, -38, 2.6, 0, 7); ctx.fill();
+    // Arm mit Armschiene
+    ctx.strokeStyle = '#2f6b34'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(5, -43); ctx.lineTo(12 - pull * 0.6, -38); ctx.stroke();
+    ctx.save(); ctx.translate(10.5 - pull * 0.6, -38.5); ctx.rotate(0.6); rr(-3, -2.4, 6, 4.8, 1.2); fillO('#8a5e36'); ctx.restore();
+    ctx.fillStyle = '#f1c9a5'; ctx.beginPath(); ctx.arc(13.5 - pull * 0.6, -38, 2.4, 0, 7); ctx.fill();
     hurt(h, 30, -72); ctx.restore();
   }
 
