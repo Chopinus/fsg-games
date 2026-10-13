@@ -551,3 +551,23 @@ input{font:inherit;font-size:18px;color:var(--fg);background:var(--bg);border:1p
 .rl-gohint{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--surface);border:1px dashed var(--line);border-radius:14px;padding:10px 14px;margin-top:12px}
 .rl-nextshop{text-align:center;margin-top:14px}
 .rl-shop .rl-h3,.rl-shop h3{font-size:20px;font-weight:900;margin:10px 0 2px}
+/* Ritterlauf: Schlüsselsockel */
+.rl-sockrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:6px}
+.rl-socks{display:flex;gap:4px}
+.rl-sock{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;font-size:14px;border:1.5px dashed var(--line);color:var(--muted)}
+.rl-sock.fix{border-style:solid}
+.rl-sock.on{background:linear-gradient(#ffe08a,#e0a83a);color:#3a2410;border:1.5px solid #ffcf4a}
+/* Ritterlauf: Neuigkeiten & Seelenaltar */
+.rl-topr{display:flex;gap:6px;align-items:center}
+.rl-newsbtn{position:relative;font-size:16px;padding-inline:10px}
+.rl-newsbtn .dot{position:absolute;top:-3px;right:-3px;width:11px;height:11px;border-radius:50%;background:#ff3b3b;box-shadow:0 0 0 2px var(--bg)}
+.rl-upd{text-align:left;max-height:60vh;overflow:auto;display:flex;flex-direction:column;gap:8px;margin:8px 0 12px}
+.rl-upd details{background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:8px 12px}
+.rl-upd summary{cursor:pointer;display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.rl-upd summary small{color:var(--muted)}
+.rl-upd ul{margin:8px 0 2px;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:7px}
+.rl-upd li{font-size:14px;line-height:1.4}
+.rl-upd .tag{display:inline-block;font-size:11px;font-weight:800;border-radius:6px;padding:1px 6px;margin-right:6px;color:#1b1726;background:var(--tc)}
+.rl-altar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 14px}
+.rl-altar>div:nth-child(2){display:flex;flex-direction:column;flex:1;min-width:160px}
+.rl-altar-ic{font-size:26px;width:44px;height:44px;display:grid;place-items:center;border-radius:12px;background:radial-gradient(circle,#4a3a7a,#241a40)}
