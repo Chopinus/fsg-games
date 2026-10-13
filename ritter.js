@@ -13,7 +13,7 @@
     { id: 'r', tree: 'ritter', name: 'Ritter', color: '#ffb547', slots: 2, rebirth: 0, line: 'front', desc: 'Kämpft vorne mit dem Schwert. Ausgewogen zwischen Angriff und Verteidigung.' },
     { id: 'w', tree: 'waechter', name: 'Wächter', color: '#7fb2ff', slots: 1, rebirth: 1, hire: 'w_hire', line: 'front', desc: 'Steht ganz vorne und fängt die Treffer ab. Viel Leben, wenig Schaden.' },
     { id: 's', tree: 'schuetze', name: 'Schützin', color: '#7ee08a', slots: 1, rebirth: 2, hire: 's_hire', line: 'back', desc: 'Schießt aus der hinteren Reihe. Viel Schaden auf ein Ziel, wenig Leben.' },
-    { id: 'm', tree: 'magier', name: 'Magier', color: '#c08cff', slots: 1, rebirth: 4, hire: 'm_hire', line: 'back', desc: 'Zauber treffen mehrere Gegner gleichzeitig. Mächtige Fähigkeiten, sehr wenig Leben.' },
+    { id: 'm', tree: 'magier', name: 'Magier', color: '#c08cff', slots: 1, rebirth: 5, hire: 'm_hire', line: 'back', desc: 'Zauber treffen mehrere Gegner gleichzeitig. Mächtige Fähigkeiten, sehr wenig Leben.' },
     { id: 'p', tree: 'priester', name: 'Priesterin', color: '#ffe48a', slots: 1, rebirth: 6, hire: 'p_hire', line: 'back', desc: 'Heilt die Gruppe, gibt Schilde und belebt Gefallene wieder.' },
     { id: 't', tree: 'baendiger', name: 'Tierbändiger', color: '#d9935a', slots: 1, rebirth: 8, hire: 't_hire', line: 'front', desc: 'Kämpft mit der Axt, sein Wolf greift zusätzlich an. Ruft im Notfall das ganze Rudel.' },
     { id: 'a', tree: 'assassine', name: 'Assassine', color: '#ff6b7a', slots: 1, rebirth: 99, puzzle: true, hire: 'a_hire', line: 'back', desc: 'Wirft Kunai aus der hinteren Reihe, trifft oft kritisch und macht Jagd auf Fernkämpfer.' },
@@ -28,14 +28,14 @@
   // Was jede Wiedergeburt freischaltet
   const CAPS = [30, 45, 60, 75, 90, 105, 120, 135, 150];
   const ROADMAP = [
-    { r: 1, text: 'Wächter als neue Klasse' }, { r: 2, text: 'Schützin als neue Klasse' }, { r: 3, text: 'Runen: Bosse lassen Runen fallen, jede Klasse hat 3 Sockel' },
-    { r: 4, text: 'Magier als neue Klasse' }, { r: 5, text: 'Runenschmiede: Runen verschmelzen und zerlegen' }, { r: 6, text: 'Priesterin als neue Klasse' },
+    { r: 1, text: 'Wächter als neue Klasse' }, { r: 2, text: 'Schützin als neue Klasse' }, { r: 3, text: 'Runen: Bosse lassen Runen fallen, jede Klasse hat 3 Sockel. Runen zerstören und das Lager mit Runensplittern erweitern' },
+    { r: 4, text: 'Runenschmied: 3 gleiche Runen verschmelzen, zufällige Runen kaufen' }, { r: 5, text: 'Magier als neue Klasse' }, { r: 6, text: 'Priesterin als neue Klasse' },
     { r: 7, text: 'Turm-Modus: endloser Turm mit dauerhaftem Bonus' }, { r: 8, text: 'Tierbändiger als neue Klasse' }, { r: 9, text: 'Alle 150 Stufen, danach endlose Albtraum-Stufen. Der Aufstieg wird möglich.' },
   ];
   const capOf = S => (S.rebirths >= CAPS.length ? Infinity : CAPS[Math.min(S.rebirths, CAPS.length - 1)]);
   const reqOf = S => Math.max(15, (S.rebirths < CAPS.length - 1 ? CAPS[S.rebirths] - 5 : 145) - 5 * ((S.cperks && S.cperks.k_schnell) || 0));
   const keyLimit = S => S.rebirths + 1;
-  const feature = (S, f) => S.rebirths >= ({ runen: 3, schmiede: 5, turm: 7 })[f];
+  const feature = (S, f) => S.rebirths >= ({ runen: 3, schmiede: 4, turm: 7 })[f];
 
   /* ================= Fertigkeitenbäume ================= */
   const G = (base, grow) => r => ({ g: Math.ceil(base * Math.pow(grow, r)), s: 0 });
@@ -54,10 +54,10 @@
   // Endlos-Fertigkeiten: jede Starter-Klasse hat ein eigenes Paar, die Expeditions-Helden teilen sich die Paare
   const INF = {
     w: [[dm('all', 'dr', 0.03)], 'Alle Helden erleiden 3 % weniger Schaden je Stufe (wirkt immer etwas schwächer, höchstens 85 %)', [ad('all', 'thorns', 0.06)], 'Alle Helden werfen 6 % je Stufe des erlittenen Schadens zurück'],
-    s: [[dm('all', 'crit', 0.01)], '+1 % kritische Trefferchance für alle Helden je Stufe (wirkt immer etwas schwächer)', [ad('all', 'critD', 0.06)], '+6 % kritischer Schaden für alle Helden je Stufe'],
-    p: [[pw('g', 'walk', 1.03)], '+3 % Laufgeschwindigkeit der Gruppe je Stufe (höchstens ×3)', [pw('all', 'aps', 1.015)], '+1,5 % Angriffstempo aller Helden je Stufe'],
-    m: [[pw('all', 'actMul', 1.05)], '+5 % Schaden aller aktiven Fähigkeiten je Stufe', [dm('all', 'cdr', 0.02)], '−2 % Abklingzeit aller aktiven Fähigkeiten je Stufe (höchstens 60 %)'],
-    t: [[pw('g', 'gold', 1.03)], '+3 % Gold je Stufe', [ad('all', 'regen', 0.0004)], 'Alle Helden regenerieren 0,04 % ihres Lebens pro Sekunde je Stufe'],
+    s: [[dm('all', 'crit', 0.02)], '+2 % kritische Trefferchance für alle Helden je Stufe (wirkt immer etwas schwächer)', [ad('all', 'critD', 0.12)], '+12 % kritischer Schaden für alle Helden je Stufe'],
+    p: [[pw('g', 'walk', 1.03)], '+3 % Laufgeschwindigkeit der Gruppe je Stufe (höchstens ×3)', [pw('all', 'aps', 1.03)], '+3 % Angriffstempo aller Helden je Stufe'],
+    m: [[pw('all', 'actMul', 1.06)], '+6 % Schaden aller aktiven Fähigkeiten je Stufe', [dm('all', 'cdr', 0.02)], '−2 % Abklingzeit aller aktiven Fähigkeiten je Stufe (höchstens 60 %)'],
+    t: [[pw('g', 'gold', 1.04)], '+4 % Gold je Stufe', [ad('all', 'regen', 0.001)], 'Alle Helden regenerieren 0,1 % ihres Lebens pro Sekunde je Stufe'],
   };
   const PAIR = { w: 'w', s: 's', p: 'p', m: 'm', t: 't', a: 's', n: 't', b: 'p', d: 'w', e: 'm' };
   const infG = (h, base) => ({ max: 9999, cost: G(base, 1.35), kind: 'inf', fx: INF[PAIR[h]][0], desc: INF[PAIR[h]][1], icon: '∞' });
@@ -117,7 +117,7 @@
       K3: { id: 'w_key3', name: 'Schildträger', icon: '⛉', max: 1, cost: KEYC(5000, 12), kind: 'key', fx: [ad('g', 'partyDr', 0.15)], desc: 'Schlüssel: alle Helden nehmen 15 % weniger Schaden' },
       K4: { id: 'w_key4', name: 'Racheengel', icon: '✠', max: 1, cost: KEYC(9000, 18), kind: 'key', fx: [xx('w', 'atk', 2)], desc: 'Schlüssel: Wächter macht doppelten Schaden' },
       K5: { id: 'w_key5', name: 'Unbezwingbar', icon: '◙', max: 1, cost: KEYC(9000, 18), kind: 'key', fx: [ad('w', 'block', 0.2)], desc: 'Schlüssel: +20 % Chance, Treffer abzuwehren' },
-      I1: { id: 'w_inf1', name: 'Festungsbau', ...infG('w', 3000) },
+      I1: { id: 'w_inf1', name: 'Festungsbau', ...infG('w', 2500) },
       I2: { id: 'w_inf2', name: 'Ewige Wacht', ...infS('w') },
     } },
     schuetze: { h: 's', nodes: {
@@ -144,7 +144,7 @@
       K3: { id: 's_key3', name: 'Giftmeisterin', icon: '☣', max: 1, cost: KEYC(8000, 15), kind: 'key', fx: [ad('s', 'cdr', 0.4)], desc: 'Schlüssel: Fähigkeiten der Schützin laden 40 % schneller' },
       K4: { id: 's_key4', name: 'Sturmköcher', icon: '≫', max: 1, cost: KEYC(12000, 20), kind: 'key', fx: [xx('s', 'aps', 1.5)], desc: 'Schlüssel: +50 % Angriffstempo' },
       K5: { id: 's_key5', name: 'Kopfgeldjägerin', icon: '♛', max: 1, cost: KEYC(12000, 20), kind: 'key', fx: [xx('g', 'eliteGold', 3)], desc: 'Schlüssel: Bosse und Elite-Gegner geben dreifaches Gold' },
-      I1: { id: 's_inf1', name: 'Pfeilmacherei', ...infG('s', 4000) },
+      I1: { id: 's_inf1', name: 'Pfeilmacherei', ...infG('s', 3000) },
       I2: { id: 's_inf2', name: 'Waldgeist', ...infS('s') },
     } },
     magier: { h: 'm', nodes: {
@@ -171,7 +171,7 @@
       K3: { id: 'm_k3', name: 'Erzmagier', icon: '✷', max: 1, cost: KEYC(9000, 16), kind: 'key', fx: [ad('m', 'shots', 1)], desc: 'Schlüssel: Der Magier wirft jedes Mal zwei Feuerbälle' },
       K4: { id: 'm_k4', name: 'Inferno', icon: '♨', max: 1, cost: KEYC(14000, 22), kind: 'key', fx: [ad('m', 'splash', 0.5)], desc: 'Schlüssel: Feuerbälle treffen nahe Gegner mit +50 % Schaden' },
       K5: { id: 'm_k5', name: 'Elementarbeherrschung', icon: '✺', max: 1, cost: KEYC(14000, 22), kind: 'key', fx: [ad('m', 'actMul', 1)], desc: 'Schlüssel: Fähigkeiten des Magiers machen doppelten Schaden' },
-      I1: { id: 'm_inf1', name: 'Arkane Bibliothek', ...infG('m', 6000) },
+      I1: { id: 'm_inf1', name: 'Arkane Bibliothek', ...infG('m', 3500) },
       I2: { id: 'm_inf2', name: 'Sternenstaub', ...infS('m') },
     } },
     priester: { h: 'p', nodes: {
@@ -198,7 +198,7 @@
       K3: { id: 'p_k3', name: 'Schutzpatronin', icon: '⛉', max: 1, cost: KEYC(12000, 20), kind: 'key', fx: [ad('g', 'partyDr', 0.1)], desc: 'Schlüssel: alle Helden nehmen 10 % weniger Schaden' },
       K4: { id: 'p_k4', name: 'Wunder', icon: '✺', max: 1, cost: KEYC(18000, 26), kind: 'key', fx: [ad('p', 'miracle', 1)], desc: 'Schlüssel: Würde ein Held fallen, werden einmal pro Lauf alle Helden voll geheilt' },
       K5: { id: 'p_k5', name: 'Lichtgestalt', icon: '☀', max: 1, cost: KEYC(18000, 26), kind: 'key', fx: [ad('p', 'splash', 0.6)], desc: 'Schlüssel: Lichtstrahlen treffen auch nahe Gegner mit 60 % Schaden' },
-      I1: { id: 'p_inf1', name: 'Tempelbau', ...infG('p', 8000) },
+      I1: { id: 'p_inf1', name: 'Tempelbau', ...infG('p', 3500) },
       I2: { id: 'p_inf2', name: 'Göttlicher Funke', ...infS('p') },
     } },
     baendiger: { h: 't', nodes: {
@@ -225,7 +225,7 @@
       K3: { id: 't_k3', name: 'Zweiter Wolf', icon: 'Ⅱ', max: 1, cost: KEYC(16000, 24), kind: 'key', fx: [ad('t', 'wolves', 1)], desc: 'Schlüssel: ein zweiter Wolf kämpft immer mit' },
       K4: { id: 't_k4', name: 'Symbiose', icon: '∞', max: 1, cost: KEYC(22000, 30), kind: 'key', fx: [ad('t', 'wolfHeal', 0.05)], desc: 'Schlüssel: Wolfsbisse heilen die Gruppe um 5 % des Schadens' },
       K5: { id: 't_k5', name: 'Wildnisruf', icon: '◬', max: 1, cost: KEYC(22000, 30), kind: 'key', fx: [ad('t', 'packBonus', 2)], desc: 'Schlüssel: Rudelruf ruft vier statt zwei Wölfe' },
-      I1: { id: 't_inf1', name: 'Wildgehege', ...infG('t', 10000) },
+      I1: { id: 't_inf1', name: 'Wildgehege', ...infG('t', 4000) },
       I2: { id: 't_inf2', name: 'Geist der Wildnis', ...infS('t') },
     } },
   };
@@ -275,7 +275,7 @@
       K3: { id: 'a_k3', name: 'Schattenmeisterin', icon: '⧗', max: 1, cost: KEYC(16000, 24), kind: 'key', fx: [ad('a', 'cdr', 0.35)], desc: 'Schlüssel: Fähigkeiten der Assassine laden 35 % schneller' },
       K4: { id: 'a_k4', name: 'Klingenregen', icon: '⋮', max: 1, cost: KEYC(22000, 30), kind: 'key', fx: [ad('a', 'shots', 1)], desc: 'Schlüssel: Die Assassine wirft jedes Mal zwei Kunai' },
       K5: { id: 'a_k5', name: 'Henkerin', icon: '☠', max: 1, cost: KEYC(22000, 30), kind: 'key', fx: [ad('a', 'rangedDmg', 1)], desc: 'Schlüssel: doppelter Schaden gegen Fernkämpfer' },
-      I1: { id: 'a_inf1', name: 'Klingenschmiede', ...infG('a', 10000) },
+      I1: { id: 'a_inf1', name: 'Klingenschmiede', ...infG('a', 4000) },
       I2: { id: 'a_inf2', name: 'Gilde der Schatten', ...infS('a') },
     } },
     nekromant: { h: 'n', nodes: {
@@ -302,7 +302,7 @@
       K3: { id: 'n_k3', name: 'Gruftkönig', icon: '♛', max: 1, cost: KEYC(16000, 24), kind: 'key', fx: [xx('n', 'minionMul', 2)], desc: 'Schlüssel: Skelette machen doppelten Schaden' },
       K4: { id: 'n_k4', name: 'Seelenbund', icon: '∞', max: 1, cost: KEYC(22000, 30), kind: 'key', fx: [ad('g', 'partyRegen', 0.004)], desc: 'Schlüssel: alle Helden heilen 0,4 % ihres Lebens pro Sekunde' },
       K5: { id: 'n_k5', name: 'Unsterblich', icon: 'Φ', max: 1, cost: KEYC(22000, 30), kind: 'key', fx: [ad('n', 'revive', 1)], desc: 'Schlüssel: Einmal pro Lauf steht der Nekromant mit halbem Leben wieder auf' },
-      I1: { id: 'n_inf1', name: 'Knochengrube', ...infG('n', 10000) },
+      I1: { id: 'n_inf1', name: 'Knochengrube', ...infG('n', 4000) },
       I2: { id: 'n_inf2', name: 'Seelenbrunnen', ...infS('n') },
     } },
     barde: { h: 'b', nodes: {
@@ -329,7 +329,7 @@
       K3: { id: 'b_k3', name: 'Zugabe', icon: '⧗', max: 1, cost: KEYC(16000, 24), kind: 'key', fx: [ad('b', 'cdr', 0.35)], desc: 'Schlüssel: Fähigkeiten des Barden laden 35 % schneller' },
       K4: { id: 'b_k4', name: 'Orchester', icon: '♫', max: 1, cost: KEYC(22000, 30), kind: 'key', fx: [mu('g', 'partyAtk', 0.15)], desc: 'Schlüssel: alle Helden machen 15 % mehr Schaden' },
       K5: { id: 'b_k5', name: 'Schutzlied', icon: '⛉', max: 1, cost: KEYC(22000, 30), kind: 'key', fx: [ad('g', 'partyDr', 0.1)], desc: 'Schlüssel: alle Helden nehmen 10 % weniger Schaden' },
-      I1: { id: 'b_inf1', name: 'Konzertsaal', ...infG('b', 10000) },
+      I1: { id: 'b_inf1', name: 'Konzertsaal', ...infG('b', 4000) },
       I2: { id: 'b_inf2', name: 'Sphärenklang', ...infS('b') },
     } },
     druidin: { h: 'd', nodes: {
@@ -356,7 +356,7 @@
       K3: { id: 'd_k3', name: 'Herz des Waldes', icon: '❀', max: 1, cost: KEYC(16000, 24), kind: 'key', fx: [ad('g', 'partyRegen', 0.006)], desc: 'Schlüssel: alle Helden heilen 0,6 % ihres Lebens pro Sekunde' },
       K4: { id: 'd_k4', name: 'Wildes Herz', icon: '≫', max: 1, cost: KEYC(22000, 30), kind: 'key', fx: [xx('d', 'aps', 1.4)], desc: 'Schlüssel: +40 % Angriffstempo der Druidin' },
       K5: { id: 'd_k5', name: 'Rindenhaut', icon: '◙', max: 1, cost: KEYC(22000, 30), kind: 'key', fx: [ad('d', 'block', 0.2)], desc: 'Schlüssel: +20 % Chance, Treffer abzuwehren' },
-      I1: { id: 'd_inf1', name: 'Heiliger Hain', ...infG('d', 10000) },
+      I1: { id: 'd_inf1', name: 'Heiliger Hain', ...infG('d', 4000) },
       I2: { id: 'd_inf2', name: 'Atem der Erde', ...infS('d') },
     } },
     tueftler: { h: 'e', nodes: {
@@ -383,7 +383,7 @@
       K3: { id: 'e_k3', name: 'Brandbomben', icon: '♨', max: 1, cost: KEYC(16000, 24), kind: 'key', fx: [ad('e', 'burn', 0.3)], desc: 'Schlüssel: Bomben brennen nach, +30 % Schaden über 2 s' },
       K4: { id: 'e_k4', name: 'Kettenreaktion', icon: '✷', max: 1, cost: KEYC(22000, 30), kind: 'key', fx: [ad('e', 'splash', 0.5)], desc: 'Schlüssel: Bomben treffen nahe Gegner mit +50 % Schaden' },
       K5: { id: 'e_k5', name: 'Automatik', icon: '⧗', max: 1, cost: KEYC(22000, 30), kind: 'key', fx: [ad('e', 'cdr', 0.35)], desc: 'Schlüssel: Fähigkeiten der Tüftlerin laden 35 % schneller' },
-      I1: { id: 'e_inf1', name: 'Werkstatt', ...infG('e', 10000) },
+      I1: { id: 'e_inf1', name: 'Werkstatt', ...infG('e', 4000) },
       I2: { id: 'e_inf2', name: 'Geniestreich', ...infS('e') },
     } },
   };
@@ -396,10 +396,10 @@
 
   // Dauerhafte Upgrades aus der Wiedergeburt (bezahlt mit Sternen)
   const PERKS = [
-    { id: 'p_macht', name: 'Heldenblut', desc: '+15 % Schaden und Leben aller Helden je Stufe (wächst aufeinander auf)', max: 999, cost: r => 1 + r },
+    { id: 'p_macht', name: 'Heldenblut', desc: '+10 % Schaden und Leben aller Helden je Stufe (wächst aufeinander auf)', max: 999, cost: r => 1 + r + Math.floor(r / 2) },
     { id: 'p_gold', name: 'Goldader', desc: '+15 % Gold je Stufe', max: 999, cost: r => 1 + r },
     { id: 'p_seele', name: 'Seelenquelle', desc: '+1 Seele pro besiegtem Boss je Stufe', max: 10, cost: r => 2 + 2 * r },
-    { id: 'p_start', name: 'Sprungstart', desc: 'Läufe beginnen 5 Stufen weiter je Stufe (höchstens bis 10 unter deinem Rekord seit der letzten Wiedergeburt)', max: 20, cost: r => 2 + r },
+    { id: 'p_start', name: 'Beutezug', desc: 'Startest du in einem späteren Gebiet, bekommst du 10 % je Stufe des Golds der übersprungenen Stufen und +10 % mehr Abkürzungs-Seelen', max: 10, cost: r => 2 + r },
     { id: 'p_freunde', name: 'Alte Freunde', desc: 'Angeheuerte Klassen bleiben nach einer Wiedergeburt angeheuert', max: 1, cost: () => 5 },
     { id: 'p_platz', name: 'Dritte Hand', desc: '+1 Platz für aktive Fähigkeiten des Ritters', max: 1, cost: () => 8 },
     { id: 'p_zins', name: 'Startkapital', desc: 'Nach einer Wiedergeburt startest du mit 500 Gold je Stufe', max: 30, cost: r => 1 + Math.floor(r / 2) },
@@ -515,8 +515,11 @@
   const pct = v => `${Math.round(v * 1000) / 10} %`.replace('.', ',');
   const runeVal = (type, tier) => RUNE[type].val * Math.pow(2.2, tier - 1);
   const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
-  const RUNE_CAP = 40;
-  const DUST_RUNE = 15;
+  const LAGER_STEP = 5, LAGER_MAX = 12;
+  const lagerCost = n => 10 * Math.pow(2, n);
+  const runeCap = S => 40 + LAGER_STEP * (S.rlager || 0);
+  const DUST_RUNE = 4;
+  const shardOf = tier => Math.pow(3, tier - 1), mergeCost = tier => Math.pow(3, tier);
 
   /* ================= Spielstand ================= */
   function fresh() {
@@ -578,6 +581,13 @@
       out.gold += g; out.souls += so; if ((g || so) && out.runs > 0) out.infNews = { g, s: so };
     }
     out.infV = 1;
+    if (!d.startV && out.perks.p_start) { const r0 = Math.floor(Number(d.perks && d.perks.p_start) || 0); let back = 0; for (let r = 0; r < r0; r++) back += 2 + r; out.stars += back; delete out.perks.p_start; if (out.runs > 0) out.startNews = back; }
+    out.startV = 1;
+    if (!d.shardV) out.dust = Math.ceil(out.dust / 2); // Runenstaub wird zu Runensplittern (neuer Kurs)
+    out.shardV = 1;
+    if (!d.starV && Object.keys(out.perks).length) { const back = resetPerks(out); if (out.runs > 0 && back) out.starNews = back; }
+    out.starV = 1;
+    out.rlager = Math.max(0, Math.min(LAGER_MAX, Math.floor(Number(d.rlager) || 0)));
     out.altar = Math.max(0, Math.min(ALTAR_MAX, Math.floor(Number(d.altar) || 0)));
     for (const h of [...HEROES].reverse()) while (kPlaced(out) > out.kslots && out.kplace[h.id]) { if (--out.kplace[h.id] <= 0) delete out.kplace[h.id]; }
     for (const h of HEROES) { const keys = NODES.filter(n => n.tree === h.tree && n.kind === 'key' && out.nodes[n.id]); for (const n of keys.slice(keyCap(out, h.tree))) { const c = n.cost(0); out.gold += c.g; out.souls += c.s; delete out.nodes[n.id]; } }
@@ -711,10 +721,12 @@
     return { stars, crowns };
   }
 
+  // Soundeffekte: im Browser setzt die Oberfläche hier die echte Funktion ein
+  let sfx = () => {};
   /* ---------- Runen ---------- */
   const runeById = (S, id) => S.runes.find(r => r.id === id);
   function addRune(S, t, tier) {
-    if (S.runes.length >= RUNE_CAP) { S.dust += 2 * Math.pow(3, tier - 1); return null; }
+    if (S.runes.length >= runeCap(S)) { S.dust += shardOf(tier); return null; }
     const r = { id: S.runeSeq++, t, tier }; S.runes.push(r); return r;
   }
   const socketed = S => new Set(Object.values(S.sockets).flat().filter(Boolean));
@@ -723,7 +735,7 @@
     S.sockets[hid][slot] = runeId;
   }
   function unsocket(S, hid, slot) { S.sockets[hid][slot] = null; }
-  function canMerge(S, r) { return feature(S, 'schmiede') && S.runes.filter(x => x.t === r.t && x.tier === r.tier).length >= 3 && r.tier < 10; }
+  function canMerge(S, r) { return feature(S, 'schmiede') && S.runes.filter(x => x.t === r.t && x.tier === r.tier).length >= 3 && r.tier < 10 && S.dust >= mergeCost(r.tier); }
   function merge(S, r) {
     if (!canMerge(S, r)) return null;
     const used = socketed(S);
@@ -731,18 +743,34 @@
     const keepSlot = Object.entries(S.sockets).flatMap(([hid, arr]) => arr.map((x, i) => (same.some(s => s.id === x) ? [hid, i] : null))).filter(Boolean)[0];
     S.runes = S.runes.filter(x => !same.includes(x));
     for (const h of HEROES) S.sockets[h.id] = S.sockets[h.id].map(x => (same.some(s => s.id === x) ? null : x));
+    S.dust -= mergeCost(r.tier);
     const nr = { id: S.runeSeq++, t: r.t, tier: r.tier + 1 }; S.runes.push(nr);
     if (keepSlot) S.sockets[keepSlot[0]][keepSlot[1]] = nr.id;
     return nr;
   }
+  // Sternen-Laden zurücksetzen: alle ausgegebenen Sterne kommen zurück
+  function resetPerks(S) {
+    let back = 0;
+    for (const p of PERKS) for (let r = 0; r < perk(S, p.id); r++) back += p.cost(r);
+    S.stars += back; S.perks = {}; S.bench = [];
+    return back;
+  }
+  // Boss-Runen kommen in einem Bereich: unter 25 nur I, ab 25 I–II, ab 50 II–III, ab 75 II–IV, ab 100 III–V …
+  function bossRuneTier(stage) {
+    const b = Math.min(10, 1 + Math.floor(stage / 25)), x = Math.random();
+    if (b === 1) return 1;
+    if (b <= 3) return x < 0.6 ? b - 1 : b;
+    return x < 0.4 ? b - 2 : x < 0.75 ? b - 1 : b;
+  }
+  function buyLager(S) { const n = S.rlager || 0; if (!feature(S, 'runen') || n >= LAGER_MAX || S.dust < lagerCost(n)) return false; S.dust -= lagerCost(n); S.rlager = n + 1; return true; }
   function dismantle(S, r) {
-    if (!feature(S, 'schmiede')) return 0;
+    if (!feature(S, 'runen')) return 0;
     for (const h of HEROES) S.sockets[h.id] = S.sockets[h.id].map(x => (x === r.id ? null : x));
     S.runes = S.runes.filter(x => x !== r);
-    const d = 2 * Math.pow(3, r.tier - 1); S.dust += d; return d;
+    const d = shardOf(r.tier); S.dust += d; return d;
   }
   function buyRune(S) {
-    if (!feature(S, 'schmiede') || S.dust < DUST_RUNE || S.runes.length >= RUNE_CAP) return null;
+    if (!feature(S, 'schmiede') || S.dust < DUST_RUNE || S.runes.length >= runeCap(S)) return null;
     S.dust -= DUST_RUNE; return addRune(S, RUNES[Math.floor(Math.random() * RUNES.length)].id, 1);
   }
   function runeBonus(S, hid) {
@@ -803,7 +831,7 @@
       });
     }
     const achN = Object.keys(S.ach || {}).length;
-    const perm = Math.pow(1.15, perk(S, 'p_macht')) * (1 + 0.03 * S.towerBest) * Math.pow(1 + ACH_BONUS, achN) * Math.pow(1.5, cperk(S, 'k_blut'));
+    const perm = Math.pow(1.1, perk(S, 'p_macht')) * (1 + 0.03 * S.towerBest) * Math.pow(1 + ACH_BONUS, achN) * Math.pow(1.5, cperk(S, 'k_blut'));
     g.gold *= (1 + 0.15 * perk(S, 'p_gold')) * Math.pow(2, cperk(S, 'k_schatz'));
     g.soulMul *= Math.pow(2, cperk(S, 'k_seele')) * altarMul(S);
     const comp = {};
@@ -824,7 +852,7 @@
     }
     g.walk = Math.min(3, g.walk);
     const area = Math.min(S.area || 0, areaMax(S));
-    const startStage = Math.max(1 + 10 * area, Math.min(1 + 5 * perk(S, 'p_start'), (S.best || 0) - 10, capOf(S)));
+    const startStage = 1 + 10 * area;
     const field = fieldOf(S);
     const dragon = comp.drache ? 0.3 * (1 + 0.2 * comp.drache) * field.reduce((a, k) => a + (hs[k] ? hs[k].atk : 0), 0) : 0;
     return { ...hs, ...Object.fromEntries(HEROES.filter(h => !hs[h.id]).map(h => [h.id, null])), g, soulBonus: perk(S, 'p_seele'), startStage, cap: capOf(S), comp, dragon, field, slots: fieldSlots(S) };
@@ -982,8 +1010,15 @@
     // Abkürzung: übersprungene Bosse geben einen Teil ihrer Seelen
     if (run.mode === 'normal' && run.stage > 10) {
       let skip = 0; for (let b = 10; b < run.stage; b += 10) skip += Math.round((1 + Math.floor(b / 20)) * st.g.soulMul) + st.soulBonus;
-      run.skipSouls = Math.floor(skip * SKIP_SOULS);
+      const beute = perk(S, 'p_start');
+      run.skipSouls = Math.floor(skip * (SKIP_SOULS + 0.1 * beute));
       if (run.skipSouls) { S.souls += run.skipSouls; S.tot.souls += run.skipSouls; run.souls += run.skipSouls; run.floats.push({ x: 150, y: 100, text: `Abkürzung: +${run.skipSouls} Seelen`, color: '#c9a6ff', size: 14, t: 2.2 }); }
+      // Beutezug (Sternen-Laden): Teil des Golds der übersprungenen Stufen
+      if (beute) {
+        let g = 0; for (let s2 = 1; s2 < run.stage; s2++) g += grow(s2, ...TUNE.gold) * (s2 % 10 === 0 ? 13 : 5) * 1.36;
+        g = Math.floor(g * st.g.gold * 0.1 * beute);
+        if (g > 0) { S.gold = Math.min(1e18, S.gold + g); run.gold += g; run.floats.push({ x: 150, y: 122, text: `Beutezug: +${fmt(g)} Gold`, color: '#ffd23f', size: 14, t: 2.4 }); }
+      }
     }
     spawnWave(run);
     return run;
@@ -1022,6 +1057,7 @@
       if (wolf && T.wolfHeal) c.healAllAbs(dmg * T.wolfHeal);
       c.efloat(e, fmt(dmg), crit ? '#ffd23f' : color || '#ffffff', crit ? 18 : 13);
       if (crit) c.burst(e.x, 190, '#ffd23f', 5);
+      sfx(crit ? 'crit' : 'hit');
       return dmg;
     };
     c.healOne = (k, amt) => {
@@ -1045,12 +1081,12 @@
     if (run.roarT > 0) d *= 0.6;
     if (k === 'w' && run.hautT > 0) d *= 0.4;
     if (h.shield > 0) { const a = Math.min(h.shield, d); h.shield -= a; d -= a; }
-    h.hp -= d; h.hurtT = 0.2;
+    h.hp -= d; h.hurtT = 0.2; sfx('hurt');
     if (attacker) { let refl = T.thorns; if (k === 'w' && run.racheT > 0) refl += 0.6; if (refl) attacker.hp -= raw * refl; }
     if (h.hp <= 0) {
       if (st.p && st.p.miracle && !run.miracleUsed && run.h.p && run.h.p.alive) { run.miracleUsed = true; run.order.forEach(x => run.h[x].alive && (run.h[x].hp = st[x].hp)); h.hp = T.hp * 0.5; c.float(k, 'Wunder!', '#ffe48a', 18); run.fx.heal = 0.5; }
       else if (T.revive && !h.revived) { h.revived = true; h.hp = T.hp * (k === 'w' ? 1 : 0.5); c.float(k, k === 'w' ? 'Letzte Bastion!' : 'Zweites Leben!', '#ffb547', 16); }
-      else { h.hp = 0; h.alive = false; h.shield = 0; h.deadAt = run.time; h.deadScroll = run.scroll; run.losses++; c.float(k, `${HERO_BY_ID[k].name} gefallen`, '#ff8a8a', 13); }
+      else { h.hp = 0; h.alive = false; h.shield = 0; h.deadAt = run.time; h.deadScroll = run.scroll; run.losses++; sfx('fall'); c.float(k, `${HERO_BY_ID[k].name} gefallen`, '#ff8a8a', 13); }
     }
   }
   function step(S, st, run, dt) {
@@ -1092,7 +1128,7 @@
       if (!h || !h.alive || !rank(S, id) || run.cds[id] > 0 || !run.enemies.length) continue;
       if (!ACT[id].ready(run, st, S)) continue;
       ACT[id].cast(c, rank(S, id));
-      run.cds[id] = ACT[id].cd(rank(S, id), S) * (1 - st[hk].cdr); run.fx[id] = 0.5;
+      run.cds[id] = ACT[id].cd(rank(S, id), S) * (1 - st[hk].cdr); run.fx[id] = 0.5; sfx('skill');
     }
     const f = run.enemies[0], eng = f && f.x <= run.frontX + 52 + (f.boss ? 10 : 0);
     for (const k of run.order) {
@@ -1179,13 +1215,14 @@
       if (e.hp > 0) continue;
       run.kills++; S.tot.kills++;
       if (e.boss) run.bossKills++;
+      sfx(e.boss ? 'boss' : 'kill');
       if (st.n && run.h.n && run.h.n.alive && run.minions.length < st.n.minionMax && Math.random() < st.n.raise) { run.minions.push({ t: st.n.minionDur, atkT: 0.6, swing: 0 }); c.efloat(e, 'Erhebe dich!', '#6be0b8', 12); }
       c.burst(e.x, 200, e.boss ? '#c9a6ff' : '#ffffff', e.boss ? 24 : 8);
       if (run.mode === 'normal') {
         let gold = e.gold * g.gold * (e.boss || e.elite ? g.eliteGold : 1);
         if (Math.random() < g.chest) { gold *= 10; c.efloat(e, 'Truhe!', '#ffd23f', 16); }
         gold = Math.max(1, Math.round(gold));
-        S.gold = Math.min(1e18, S.gold + gold); run.gold += gold;
+        S.gold = Math.min(1e18, S.gold + gold); run.gold += gold; sfx('coin');
         run.floats.push({ x: e.x, y: 130, text: '+' + fmt(gold), color: '#ffcf4a', size: 14, t: 1 });
       }
       let souls = 0;
@@ -1193,11 +1230,11 @@
       else if (e.elite && Math.random() < g.eliteSoul) souls = Math.max(1, roundSouls(altarMul(S)));
       if (run.mode === 'tower') souls = e.boss ? 1 : 0;
       if (run.mode === 'weekly' || run.mode === 'exp') souls = 0;
-      if (souls) { S.tot.souls += souls; S.souls += souls; run.souls += souls; run.floats.push({ x: e.x, y: 95, text: `+${souls} Seele${souls > 1 ? 'n' : ''}`, color: '#c9a6ff', size: 16, t: 1 }); }
+      if (souls) { sfx('soul'); S.tot.souls += souls; S.souls += souls; run.souls += souls; run.floats.push({ x: e.x, y: 95, text: `+${souls} Seele${souls > 1 ? 'n' : ''}`, color: '#c9a6ff', size: 16, t: 1 }); }
       if (feature(S, 'runen') && run.mode === 'normal' && (e.boss || (e.elite && Math.random() < 0.03))) {
-        const tier = 1 + Math.floor(run.stage / 40) + (e.boss && Math.random() < 0.15 ? 1 : 0);
+        const tier = e.boss ? bossRuneTier(run.stage) : Math.min(10, 1 + Math.floor(run.stage / 40));
         const r = addRune(S, RUNES[Math.floor(Math.random() * RUNES.length)].id, tier);
-        if (r) { run.runes.push(r); run.floats.push({ x: e.x, y: 75, text: `Rune: ${RUNE[r.t].name} ${ROMAN[r.tier]}`, color: RUNE[r.t].color, size: 14, t: 1.4 }); }
+        if (r) { sfx('rune'); run.runes.push(r); run.floats.push({ x: e.x, y: 75, text: `Rune: ${RUNE[r.t].name} ${ROMAN[r.tier]}`, color: RUNE[r.t].color, size: 14, t: 1.4 }); }
       }
     }
     run.enemies = run.enemies.filter(e => e.hp > 0);
@@ -1218,7 +1255,7 @@
         if (run.stage > S.bestEver) S.bestEver = run.stage;
         if (run.stage >= st.cap) { run.victory = true; run.dead = true; S.runs++; return 'dead'; }
       }
-      run.stage++;
+      run.stage++; if (run.mode === 'normal' || run.mode === 'tower') sfx('stage');
       for (const k of run.order) { const h = run.h[k]; if (h.alive) h.hp = Math.min(st[k].hp, h.hp + st[k].hp * 0.15); }
       spawnWave(run);
     }
@@ -1268,7 +1305,7 @@
       S.asc, S.crowns, CPERKS.length, ...CPERKS.map(p => cperk(S, p.id)), ACH.length, ...ACH.map(a => (S.ach[a.id] ? 1 : 0)),
       S.tot.kills, S.tot.souls, COMPS.length, ...COMPS.map(c => S.comps[c.id] || 0), ...[0, 1].map(i => (S.compActive[i] ? COMPS.findIndex(c => c.id === S.compActive[i]) + 1 : 0)), S.tempo || 0,
       S.exp.spl, S.exp.done, Math.max(0, PUZZLE.indexOf(S.exp.target)), PUZZLE.length, ...PUZZLE.map(id => pieceMask(S, id)),
-      1, kSlots(S), HEROES.length, ...HEROES.map(h => (S.kplace || {})[h.id] || 0), S.altar || 0, 1]);
+      1, kSlots(S), HEROES.length, ...HEROES.map(h => (S.kplace || {})[h.id] || 0), S.altar || 0, 1, 1, 1, S.rlager || 0, 1]);
   }
   function decode(code) {
     const nums = unpackNums(code); if (!nums) return null;
@@ -1305,6 +1342,10 @@
           if (i < nums.length) { d.keyV = next(); d.kslots = next(); d.kplace = {}; const hc2 = next(); for (let k = 0; k < hc2; k++) { const n = next(); if (HEROES[k] && n) d.kplace[HEROES[k].id] = n; } }
           if (i < nums.length) d.altar = next();
           if (i < nums.length) d.infV = next();
+          if (i < nums.length) d.startV = next();
+          if (i < nums.length) d.shardV = next();
+          if (i < nums.length) d.rlager = next();
+          if (i < nums.length) d.starV = next();
         }
       } else return null;
       return migrate(d);
@@ -1318,7 +1359,7 @@
     return (n < 10 ? n.toFixed(2) : n < 100 ? n.toFixed(1) : Math.floor(n).toString()).replace('.', ',') + units[i];
   }
 
-  const core = { ALTAR_MAX, altarCost, altarMul, buyAltar, kSlots, kFree, keyCap, addSock, removeSock, removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, buyPiece, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
+  const core = { bossRuneTier, resetPerks, buyLager, lagerCost, LAGER_MAX, runeCap, shardOf, mergeCost, ALTAR_MAX, altarCost, altarMul, buyAltar, kSlots, kFree, keyCap, addSock, removeSock, removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, buyPiece, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
     rebirth, ascend, crownsFor, buyCperk, cperkCost, cperk, CPERKS, levelComp, toggleComp, compCost, compMax, compSlots, COMPS, checkAch, ACH, claimWeekly, weekId, weekRules, RULE, WEEK_TIERS, statsFor, starsFor, toggleEquip, slotsOf, hired, classOpen, keysUsed, keyLimit, capOf, reqOf, feature, encode, decode, fmt, socket, unsocket, merge, canMerge, dismantle, buyRune, runeVal, addRune };
   if (typeof module !== 'undefined') { module.exports = core; return; }
 
@@ -1335,6 +1376,62 @@
   function load() { try { const raw = localStorage.getItem(KEY); if (raw) return migrate(JSON.parse(raw)); } catch {} return fresh(); }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} cloudDirty = true; }
   const inCamp = () => !run || run.dead;
+
+  /* ---------- Soundeffekte (werden live erzeugt, leise und weich) ---------- */
+  const SND = (() => {
+    let ac = null, master = null, nbuf = null;
+    let on = true; try { on = localStorage.getItem('fsg.ritter.snd') !== '0'; } catch {}
+    const last = {};
+    function init() {
+      if (ac) return; const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+      ac = new AC(); master = ac.createGain(); master.gain.value = 0.32;
+      const comp = ac.createDynamicsCompressor(); comp.threshold.value = -18; comp.ratio.value = 4; master.connect(comp); comp.connect(ac.destination);
+      nbuf = ac.createBuffer(1, ac.sampleRate * 0.5, ac.sampleRate); const d = nbuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    function unlock() { try { init(); if (ac && ac.state === 'suspended') ac.resume(); } catch {} }
+    function tone(f, dur, type = 'sine', vol = 0.1, when = 0, glide = 0) {
+      const t = ac.currentTime + when, o = ac.createOscillator(), g = ac.createGain();
+      o.type = type; o.frequency.setValueAtTime(f, t); if (glide) o.frequency.exponentialRampToValueAtTime(Math.max(30, f * glide), t + dur);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.05);
+    }
+    function noise(dur, vol, freq, when = 0, q = 1, to = 0) {
+      const t = ac.currentTime + when, src = ac.createBufferSource(), bp = ac.createBiquadFilter(), g = ac.createGain();
+      src.buffer = nbuf; bp.type = 'bandpass'; bp.frequency.setValueAtTime(freq, t); if (to) bp.frequency.exponentialRampToValueAtTime(to, t + dur); bp.Q.value = q;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      src.connect(bp); bp.connect(g); g.connect(master); src.start(t); src.stop(t + dur + 0.05);
+    }
+    const r = (a, b) => a + Math.random() * (b - a);
+    const notes = (fs, step, dur, type, vol) => fs.forEach((f, i) => tone(f, dur, type, vol, i * step));
+    const P = {
+      hit: () => { noise(0.06, 0.07, r(700, 1000), 0, 1.2); tone(r(150, 180), 0.07, 'sine', 0.06, 0, 0.6); },
+      crit: () => { noise(0.05, 0.08, 2600, 0, 2); tone(1318, 0.1, 'triangle', 0.06); tone(1976, 0.14, 'sine', 0.045, 0.025); },
+      kill: () => tone(r(480, 560), 0.09, 'sine', 0.09, 0, 1.8),
+      coin: () => { const b = r(1480, 1620); tone(b, 0.06, 'triangle', 0.045); tone(b * 1.335, 0.14, 'triangle', 0.04, 0.045); },
+      soul: () => { tone(880, 0.45, 'sine', 0.05); tone(1320, 0.5, 'sine', 0.04, 0.07); tone(1760, 0.6, 'sine', 0.03, 0.14); noise(0.5, 0.02, 3000, 0, 3, 6000); },
+      rune: () => notes([1047, 1319, 1568, 2093], 0.05, 0.3, 'triangle', 0.045),
+      boss: () => { notes([523, 659, 784, 1047], 0.07, 0.7, 'triangle', 0.07); noise(0.4, 0.05, 400, 0, 0.8, 120); },
+      stage: () => { tone(660, 0.12, 'triangle', 0.045); tone(990, 0.18, 'triangle', 0.045, 0.07); },
+      skill: () => { noise(0.28, 0.06, 500, 0, 1.2, 2400); tone(320, 0.25, 'sine', 0.04, 0, 2); },
+      hurt: () => tone(r(120, 140), 0.09, 'sine', 0.05, 0, 0.7),
+      fall: () => { tone(330, 0.55, 'triangle', 0.06, 0, 0.5); noise(0.3, 0.04, 300, 0.05, 1, 120); },
+      buy: () => { tone(784, 0.07, 'triangle', 0.06); tone(1175, 0.12, 'triangle', 0.05, 0.05); },
+      forge: () => { noise(0.07, 0.12, 3200, 0, 6); tone(1760, 0.6, 'sine', 0.05); tone(2637, 0.45, 'sine', 0.03, 0.01); notes([1047, 1568, 2093], 0.08, 0.35, 'triangle', 0.035); },
+      rebirth: () => { notes([392, 523, 659, 784, 1047, 1319], 0.09, 0.8, 'triangle', 0.06); noise(1.2, 0.03, 2000, 0, 2, 7000); },
+      victory: () => notes([523, 659, 784, 1047, 784, 1047], 0.1, 0.45, 'triangle', 0.06),
+      defeat: () => notes([392, 330, 262], 0.16, 0.5, 'sine', 0.05),
+      tick: () => tone(1200, 0.03, 'sine', 0.025),
+    };
+    const GAP = { hit: 0.11, crit: 0.12, kill: 0.08, coin: 0.12, hurt: 0.22, soul: 0.2, stage: 0.25, skill: 0.12, rune: 0.2, fall: 0.2 };
+    function play(n) {
+      if (!on || !ac || ac.state !== 'running' || document.hidden || !P[n]) return;
+      const now = ac.currentTime; if (last[n] && now - last[n] < (GAP[n] || 0.05)) return; last[n] = now;
+      try { P[n](); } catch {}
+    }
+    return { play, unlock, isOn: () => on, toggle() { on = !on; try { localStorage.setItem('fsg.ritter.snd', on ? '1' : '0'); } catch {} if (on) { unlock(); setTimeout(() => play('buy'), 60); } return on; } };
+  })();
+  sfx = n => { if (active && !cine) SND.play(n); };
+  document.addEventListener('pointerdown', () => SND.unlock(), true);
 
   /* ---------- Konto mit eigenem Namen und Passwort ---------- */
   const AKEY = 'fsg.ritter.konto';
@@ -1358,7 +1455,7 @@
     cloudBusy = false;
     if (r.conflict) { conflict = { data: r.data, updated: r.updated }; cloudMsg = 'Auf einem anderen Gerät wurde weitergespielt.'; if (active) showConflict(); return r; }
     if (r.error) { cloudDirty = true; cloudMsg = r.error; if (/anmelden/.test(r.error)) setAcct(null); }
-    else { acct.updated = r.updated; setAcct(acct); cloudMsg = `Gespeichert um ${timeStr(r.updated)}`; }
+    else { acct.updated = r.updated; acct.tester = !!r.tester; setAcct(acct); cloudMsg = `Gespeichert um ${timeStr(r.updated)}`; }
     if (tab === 'stand' && !typing() && active) panel();
     return r;
   }
@@ -1406,7 +1503,7 @@
     if (!cv) {
       $('#solo').innerHTML = `
         <div class="topbar"><button class="btn ghost small" id="soloBack">‹ Spiele</button><div class="title"><b>Ritterlauf</b><small>Solo</small></div>
-          <div class="rl-topr"><button class="btn ghost small rl-newsbtn" id="soloNews" aria-label="Neuigkeiten">📰<span class="dot" hidden></span></button><button class="btn ghost small" id="soloSpeed">Tempo ×1</button></div></div>
+          <div class="rl-topr"><button class="btn ghost small rl-newsbtn" id="soloSnd" aria-label="Ton an oder aus"></button><button class="btn ghost small rl-newsbtn" id="soloNews" aria-label="Neuigkeiten">📰<span class="dot" hidden></span></button><button class="btn ghost small" id="soloSpeed">Tempo ×1</button></div></div>
         <div class="rl-stage"><div id="soloCanvas" class="rl-canvas"></div></div>
         <div class="rl-heroes" id="rlHeroes"></div>
         <div class="rl-bar"><div class="rl-stat" id="rlStat"></div><div id="rlAction" class="row"></div></div>
@@ -1417,12 +1514,16 @@
       window.addEventListener('resize', sizeCanvas);
       $('#soloBack').onclick = close;
       $('#soloNews').onclick = showUpdates;
+      $('#soloSnd').onclick = () => { const on = SND.toggle(); $('#soloSnd').textContent = on ? '🔊' : '🔇'; toast(on ? 'Ton an' : 'Ton aus'); };
+      $('#soloSnd').textContent = SND.isOn() ? '🔊' : '🔇';
       $('#soloSpeed').onclick = () => { S.speed = S.speed >= maxSpeed(S) ? 1 : S.speed < 3 ? S.speed + 1 : S.speed + 0.5; save(); hud(); };
       $('.rl-tabs').onclick = e => { const b = e.target.closest('[data-tab]'); if (b) { tab = b.dataset.tab; confirm = ''; runeSel = null; renderTabs(); panel(); } };
       for (const id of ['#rlPanel', '#rlAction', '#rlHeroes']) $(id).addEventListener('click', onClick);
       $('#rlPanel').addEventListener('submit', onSubmit);
     }
     sizeCanvas(); refresh();
+    if (S.starNews) { const n = S.starNews; delete S.starNews; save(); setTimeout(() => toast(`Sternen-Laden zurückgesetzt: ${n} Sterne zurück. Verteile sie neu!`, true), 1200); }
+    if (S.startNews) { const n = S.startNews; delete S.startNews; save(); setTimeout(() => toast(`Sprungstart wurde zu Beutezug umgebaut: ${n} Sterne zurück.`, true), 600); }
     if (conflict) setTimeout(showConflict, 300); else if (acct) setTimeout(() => cloudSave(true), 800);
     if (!S.seenIntro) showIntro(); else if (S.news && !cine) showNews(); else if (S.keyNews != null) showKeyInfo(); else if (S.infNews) showInfInfo(); else if (!S.seenField && HEROES.filter(h => hired(S, h.tree)).length > fieldSlots(S)) showFieldInfo();
     else if (expOpen(S) && !S.seenExp) showExpInfo();
@@ -1465,12 +1566,13 @@
       if (r) { setTimeout(() => toast(`Mission geschafft: +${r.spl} Heldensplitter`, true), 200); if (r.piece != null) setTimeout(() => (r.complete ? heroDone(r.hero) : pieceFound(r.hero)), 900); }
     }
     if (run.mode === 'normal' && areaMax(S) > areaBefore) { const z = areaMax(S); setTimeout(() => toast(`Neues Startgebiet frei: ${zoneName(10 * z + 1)}`, true), 600); }
+    SND.play(run.victory ? 'victory' : 'defeat');
     achCheck(run); save(); cloudSave(true); refresh();
   }
   /* ---------- Leisten ---------- */
   const crown = '<i class="rl-crown" aria-hidden="true"></i>', coin = '<i class="rl-coin" aria-hidden="true"></i>', soul = '<i class="rl-soulic" aria-hidden="true"></i>', star = '<i class="rl-star" aria-hidden="true"></i>', dust = '<i class="rl-dust" aria-hidden="true"></i>';
   function hud() {
-    $('#rlStat').innerHTML = `<span class="rl-cur gold">${coin}${fmt(S.gold)}</span><span class="rl-cur soul">${soul}${S.souls}</span>${S.stars || S.rebirths ? `<span class="rl-cur star">${star}${S.stars}</span>` : ''}${feature(S, 'schmiede') ? `<span class="rl-cur dust">${dust}${S.dust}</span>` : ''}${S.asc || S.crowns ? `<span class="rl-cur crown">${crown}${S.crowns}</span>` : ''}
+    $('#rlStat').innerHTML = `<span class="rl-cur gold">${coin}${fmt(S.gold)}</span><span class="rl-cur soul">${soul}${S.souls}</span>${S.stars || S.rebirths ? `<span class="rl-cur star">${star}${S.stars}</span>` : ''}${feature(S, 'runen') ? `<span class="rl-cur dust">${dust}${S.dust}</span>` : ''}${S.asc || S.crowns ? `<span class="rl-cur crown">${crown}${S.crowns}</span>` : ''}
       <span class="note">Rekord ${S.best} von ${capOf(S) === Infinity ? '∞' : capOf(S)} · ${S.asc ? `Aufstieg ${S.asc} · ` : ''}${S.rebirths ? `${S.rebirths}× wiedergeboren · ` : ''}${S.runs} Läufe</span>`;
     { const d = $('#soloNews .dot'); if (d) d.hidden = newsSeen() >= UPDATES[0].id; }
     $('#soloSpeed').textContent = `Tempo ×${String(S.speed).replace('.', ',')}`;
@@ -1544,7 +1646,7 @@
   function sockRow(tree) {
     const cap = keyCap(S, tree), used = keysUsed(S, tree), extra = cap - 1, free = kFree(S);
     const dots = Array.from({ length: cap }, (_, i) => `<span class="rl-sock ${i < used ? 'on' : ''} ${i === 0 ? 'fix' : ''}" title="${i === 0 ? 'Fester Sockel' : 'Verteilbarer Sockel'}">⚿</span>`).join('');
-    return `<div class="rl-sockrow"><span class="note">Schlüsselsockel ${used}/${cap}</span><span class="rl-socks">${dots}</span>
+    return `<div class="rl-keyrow"><span class="note">Schlüsselsockel ${used}/${cap}</span><span class="rl-socks">${dots}</span>
       <button class="btn ghost small" data-rl="sockadd" ${free > 0 && inCamp() ? '' : 'disabled'}>+ Sockel setzen</button>
       <button class="btn ghost small" data-rl="sockdel" ${extra > 0 && inCamp() ? '' : 'disabled'}>− Sockel abnehmen</button>
       <span class="note">frei: <b>${free}</b> von ${kSlots(S)}</span></div>`;
@@ -1582,7 +1684,7 @@
     const selR = runeSel && S.runes.find(r => r.id === runeSel);
     let html = `<p class="note">Bosse lassen Runen fallen. Setze bis zu 3 Runen pro Klasse ein. Drei Runen der gleichen Art in einer Klasse geben +50 % Bonus. Runen bleiben bei der Wiedergeburt erhalten.</p>`;
     if (selR) html += `<div class="rl-runesel" style="--rc:${RUNE[selR.t].color}"><b>${RUNE[selR.t].name} ${ROMAN[selR.tier]}</b><span>${RUNE[selR.t].desc(runeVal(selR.t, selR.tier))}</span><span class="note">Tippe auf einen Sockel, um sie einzusetzen.</span>
-      ${feature(S, 'schmiede') ? `<div class="row"><button class="btn small" data-rl="merge" ${canMerge(S, selR) ? '' : 'disabled'}>3 verschmelzen → ${ROMAN[selR.tier + 1] || ''}</button><button class="btn ghost small" data-rl="dismantle">Zerlegen (+${2 * Math.pow(3, selR.tier - 1)} Staub)</button></div>` : ''}</div>`;
+      ${feature(S, 'runen') ? `<div class="row">${feature(S, 'schmiede') ? `<button class="btn small" data-rl="merge" ${canMerge(S, selR) ? '' : 'disabled'}>3 verschmelzen → ${ROMAN[selR.tier + 1] || ''} (${dust}${mergeCost(selR.tier)})</button>` : ''}<button class="btn ghost small" data-rl="dismantle">Zerstören (+${dust}${shardOf(selR.tier)})</button></div>` : ''}</div>`;
     html += '<div class="rl-sockets">' + HEROES.filter(h => st[h.id]).map(h => {
       const slots = S.sockets[h.id] || [null, null, null];
       const b = Object.entries((() => { const list = slots.map(id => id && S.runes.find(r => r.id === id)).filter(Boolean); const c = {}; list.forEach(r => (c[r.t] = (c[r.t] || 0) + 1)); return c; })()).filter(([, n]) => n >= 3);
@@ -1592,10 +1694,9 @@
       }).join('')}</div>${b.length ? `<span class="pill">Set: ${RUNE[b[0][0]].name}</span>` : ''}</div>`;
     }).join('') + '</div>';
     const free = S.runes.filter(r => !used.has(r.id)).sort((a, b) => b.tier - a.tier || a.t.localeCompare(b.t));
-    html += `<h3 class="rl-h3">Lager (${S.runes.length}/${RUNE_CAP})</h3><div class="rl-inv">${free.map(r => runeChip(r, r.id === runeSel ? 'on' : '')).join('') || '<p class="note">Noch keine freien Runen. Besiege Bosse, um welche zu finden.</p>'}</div>`;
-    if (feature(S, 'schmiede')) html += `<div class="rl-forge"><b>Runenschmiede</b><span class="note">Verschmilz 3 gleiche Runen zu einer stärkeren. Zerlege überflüssige Runen zu Staub. Für ${DUST_RUNE} Staub gibt es eine zufällige Rune.</span>
-      <button class="btn small" data-rl="buyrune" ${S.dust >= DUST_RUNE && S.runes.length < RUNE_CAP ? '' : 'disabled'}>Zufällige Rune kaufen (${dust}${DUST_RUNE})</button></div>`;
-    else html += '<p class="note">Mit der 5. Wiedergeburt kommt die Runenschmiede: Runen verschmelzen und zerlegen.</p>';
+    html += `<h3 class="rl-h3">Lager (${S.runes.length}/${runeCap(S)})</h3><div class="rl-inv">${free.map(r => runeChip(r, r.id === runeSel ? 'on' : '')).join('') || '<p class="note">Noch keine freien Runen. Besiege Bosse, um welche zu finden.</p>'}</div>`;
+    if (feature(S, 'runen')) html += `<div class="rl-forge"><b>Runenschmied</b><span class="note">Du hast ${dust}${S.dust} Runensplitter. Zerstören, Lager erweitern${feature(S, 'schmiede') ? ' und Verschmelzen' : ''} findest du übersichtlich im Reiter Läden.</span>
+      <button class="btn small rl-gotree" data-tab="laeden">Zum Runenschmied</button></div>`;
     return html;
   }
   /* ---------- Wiedergeburt ---------- */
@@ -1646,6 +1747,10 @@
         <div class="row"><button class="btn small" data-rl="cloudsave">Jetzt speichern</button><button class="btn ghost small" data-rl="logout">Abmelden</button></div>
         <h3>Passwort ändern</h3>
         <form class="rl-form" id="rlPwForm"><input id="rlNewPw" type="password" placeholder="Neues Passwort" autocomplete="new-password"><button class="btn small">Ändern</button></form>`;
+      if (acct.tester) html += `<div class="rl-test"><h3>🧪 Test-Werkzeuge</h3><p class="note">Nur für Test-Spielstände sichtbar. Zahlen auch wie 1e9 oder 5000000.</p>
+        <div class="numrow"><input id="rlTGold" inputmode="decimal" placeholder="Gold, z. B. 1e9" autocomplete="off"><button class="btn small" data-rl="tgold">Gold setzen</button></div>
+        <div class="numrow"><input id="rlTSouls" inputmode="decimal" placeholder="Seelen, z. B. 500" autocomplete="off"><button class="btn small" data-rl="tsouls">Seelen setzen</button></div>
+        <div class="row"><button class="btn small" data-rl="trunes">3 zufällige Runen ins Lager</button></div></div>`;
     } else {
       html += `<h3>Spielstand speichern</h3>
         <p class="note">Wähle einen Namen und ein Passwort. Damit lädst du deine Helden auf jedem Gerät, und sie werden ab dann automatisch gespeichert.</p>
@@ -1675,6 +1780,13 @@
   function onClick(e) {
     const g = e.target.closest('[data-node]');
     if (g) { sel[tab] = g.dataset.node; panel(); return; }
+    const rf = e.target.closest('[data-rforge]');
+    if (rf) {
+      const [op, t, tierS] = rf.dataset.rforge.split(':'), tier = Number(tierS), used = socketed(S);
+      if (op === 'd') { const r = S.runes.find(x => x.t === t && x.tier === tier && !used.has(x.id)); if (r) { const d = dismantle(S, r); SND.play('crit'); toast(`${RUNE[t].name} ${ROMAN[tier]} zerstört: +${d} Runensplitter`); afterChange(); } }
+      else { const r = S.runes.find(x => x.t === t && x.tier === tier); const nr = r && merge(S, r); if (nr) { SND.play('forge'); toast(`${RUNE[nr.t].name} ${ROMAN[nr.tier]} geschmiedet!`, true); achCheck(); afterChange(); } }
+      return;
+    }
     const lu = e.target.closest('[data-lineup]');
     if (lu) {
       if (!inCamp()) { toast('Die Aufstellung änderst du im Lager.'); return; }
@@ -1710,19 +1822,29 @@
     else if (a === 'weekly') startRun('weekly');
     else if (a === 'mission') { S.exp.mission = b.dataset.m2; startRun('exp'); $('#soloCanvas').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
     else if (a === 'gosave') { tab = 'stand'; renderTabs(); panel(); }
-    else if (a === 'ascend') { if (ask('ascend', panel)) { const team = HEROES.filter(h => st[h.id]).map(h => h.id); ascend(S); run = null; achCheck(); afterChange(); playCine('asc', team); } }
+    else if (a === 'ascend') { if (ask('ascend', panel)) { const team = HEROES.filter(h => st[h.id]).map(h => h.id); ascend(S); run = null; achCheck(); afterChange(); SND.play('rebirth'); playCine('asc', team); } }
     else if (a === 'tower') startRun('tower');
     else if (a === 'area') showAreas();
     else if (a === 'giveup') { if (ask('giveup', action)) { run.dead = true; S.runs++; save(); cloudSave(true); refresh(); } }
-    else if (a === 'altar') { if (inCamp() && buyAltar(S)) { toast(`Seelenaltar Stufe ${S.altar}: Seelen ×${altarMul(S).toFixed(2).replace('.', ',')}`, true); afterChange(); } }
+    else if (a === 'tgold' || a === 'tsouls') { if (acct && acct.tester) { const el = $(a === 'tgold' ? '#rlTGold' : '#rlTSouls'); let t = String(el.value).replace(/\s/g, '');
+        if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.'); else if (/^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, '');
+        const v = Number(t);
+        if (!(v >= 0) || !isFinite(v)) { toast('Bitte eine Zahl eingeben.'); return; }
+        if (a === 'tgold') S.gold = Math.min(1e18, Math.floor(v)); else S.souls = Math.min(1e15, Math.floor(v));
+        toast(a === 'tgold' ? `Gold: ${fmt(S.gold)}` : `Seelen: ${fmt(S.souls)}`); afterChange(); } }
+    else if (a === 'trunes') { if (acct && acct.tester) { const got = []; for (let i = 0; i < 3; i++) { const r = addRune(S, RUNES[Math.floor(Math.random() * RUNES.length)].id, 1 + Math.floor(Math.random() * 3)); if (r) got.push(`${RUNE[r.t].name} ${ROMAN[r.tier]}`); }
+        SND.play('rune'); toast(got.length ? `Neue Runen: ${got.join(', ')}` : 'Lager voll, als Splitter gutgeschrieben.'); afterChange(); } }
+    else if (a === 'pres') { if (inCamp() && ask('pres', panel)) { const n = resetPerks(S); SND.play('buy'); toast(`Sternen-Laden zurückgesetzt: +${n} Sterne`, true); afterChange(); } }
+    else if (a === 'lager') { if (inCamp() && buyLager(S)) { SND.play('forge'); toast(`Runen-Lager erweitert: jetzt ${runeCap(S)} Plätze`); afterChange(); } }
+    else if (a === 'altar') { if (inCamp() && buyAltar(S)) { SND.play('soul'); toast(`Seelenaltar Stufe ${S.altar}: Seelen ×${altarMul(S).toFixed(2).replace('.', ',')}`, true); afterChange(); } }
     else if (a === 'sockadd') { if (inCamp() && addSock(S, tab)) { toast('Sockel gesetzt.'); afterChange(); } }
     else if (a === 'sockdel') { if (inCamp()) { const r = removeSock(S, tab); if (r === 'used') toast('Alle Sockel sind belegt. Nimm zuerst eine Schlüssel-Fertigkeit ab.'); else if (r === 'ok') { toast('Sockel abgenommen. Du kannst ihn jetzt woanders setzen.'); afterChange(); } } }
     else if (a === 'unkey') { if (inCamp() && ask('unkey', panel)) { const n = NODE[sel[tab]], c = removeKey(S, n); if (c) { toast(`${n.name} abgenommen. Gold und Seelen sind zurück.`); afterChange(); } } }
-    else if (a === 'buy') { if (inCamp() && buy(S, NODE[sel[tab]])) { achCheck(); afterChange(); } }
+    else if (a === 'buy') { if (inCamp() && buy(S, NODE[sel[tab]])) { SND.play('buy'); achCheck(); afterChange(); } }
     else if (a === 'equip') { if (inCamp()) { toggleEquip(S, sel[tab]); afterChange(); } }
-    else if (a === 'rebirth') { if (ask('rebirth', panel)) { const team = HEROES.filter(h => st[h.id]).map(h => h.id); rebirth(S); run = null; achCheck(); afterChange(); playCine('rebirth', team); } }
+    else if (a === 'rebirth') { if (ask('rebirth', panel)) { const team = HEROES.filter(h => st[h.id]).map(h => h.id); rebirth(S); run = null; achCheck(); afterChange(); SND.play('rebirth'); playCine('rebirth', team); } }
     else if (a === 'merge') { const r = S.runes.find(x => x.id === runeSel); const nr = r && merge(S, r); if (nr) { runeSel = nr.id; toast(`${RUNE[nr.t].name} ${ROMAN[nr.tier]} geschmiedet`); afterChange(); } }
-    else if (a === 'dismantle') { const r = S.runes.find(x => x.id === runeSel); if (r) { const d = dismantle(S, r); runeSel = null; toast(`+${d} Staub`); afterChange(); } }
+    else if (a === 'dismantle') { const r = S.runes.find(x => x.id === runeSel); if (r) { const d = dismantle(S, r); runeSel = null; toast(`+${d} Runensplitter`); afterChange(); } }
     else if (a === 'buyrune') { const r = buyRune(S); if (r) { runeSel = r.id; toast(`Neue Rune: ${RUNE[r.t].name} I`); afterChange(); } }
     else if (a === 'cloudsave') { cloudMsg = 'Wird gespeichert …'; panel(); cloudSave(true); }
     else if (a === 'logout') { cloudSave(true).then(() => { conflict = null; setAcct(null); cloudMsg = ''; panel(); toast('Abgemeldet. Dein Spielstand bleibt auf dem Server.'); }); }
@@ -1747,12 +1869,12 @@
         if ($('#rlCPw').value !== $('#rlCPw2').value) { toast('Die Passwörter sind unterschiedlich.'); return; }
         const r = await api('create', { name: val('#rlCName'), pass: $('#rlCPw').value, data: S });
         if (r.error) { toast(r.error); return; }
-        setAcct({ name: r.name, token: r.token, updated: r.updated }); cloudMsg = `Gespeichert um ${timeStr(r.updated)}`; cloudDirty = false;
+        setAcct({ name: r.name, token: r.token, updated: r.updated, tester: !!r.tester }); cloudMsg = `Gespeichert um ${timeStr(r.updated)}`; cloudDirty = false;
         toast(`Spielstand „${r.name}“ angelegt`); panel();
       } else if (f.id === 'rlLogin') {
         const r = await api('login', { name: val('#rlLName'), pass: $('#rlLPw').value });
         if (r.error) { toast(r.error); return; }
-        setAcct({ name: r.name, token: r.token, updated: r.updated });
+        setAcct({ name: r.name, token: r.token, updated: r.updated, tester: !!r.tester });
         const old = !r.data || !r.data.v || r.data.v < 2;
         adopt(r.data || {}); cloudDirty = true;
         cloudMsg = `Geladen – zuletzt gespeichert um ${timeStr(r.updated)}`;
@@ -1868,22 +1990,37 @@
       <ul class="rl-list"><li>Alle 6 Puzzleteile sind zusammengesetzt.</li><li>${esc(h.desc)}</li><li>Heuere ${h.name} im neuen Reiter <b>${h.name}</b> an und stell den Helden in deine Aufstellung.</li><li>Freigeschaltete Helden bleiben für immer, auch nach Wiedergeburt und Aufstieg.</li></ul>
       <div class="row" style="justify-content:center"><button class="btn" data-m="ok">Los geht’s</button></div>`);
   }
+  // Runenschmied: Runen zerstören (gibt Runensplitter) und 3 gleiche verschmelzen (kostet so viel wie 3 zerstörte)
+  function forgeShop() {
+    const used = socketed(S), groups = {};
+    for (const r of S.runes) { const k = r.t + ':' + r.tier; (groups[k] = groups[k] || { t: r.t, tier: r.tier, n: 0, free: 0 }).n++; if (!used.has(r.id)) groups[k].free++; }
+    const list = Object.values(groups).sort((a, b) => b.tier - a.tier || RUNES.findIndex(x => x.id === a.t) - RUNES.findIndex(x => x.id === b.t));
+    const row = g => { const R = RUNE[g.t], mc = mergeCost(g.tier), canM = feature(S, 'schmiede') && g.n >= 3 && g.tier < 10 && S.dust >= mc;
+      return `<div class="rl-frow" style="--rc:${R.color}"><span class="rl-rune mini"><b>${ROMAN[g.tier]}</b></span><div class="nm"><b>${R.name} ${ROMAN[g.tier]}</b><small>${g.n}× im Besitz${g.n - g.free ? ` · ${g.n - g.free} eingesetzt` : ''}</small></div>
+        <button class="btn ghost small" data-rforge="d:${g.t}:${g.tier}" ${g.free ? '' : 'disabled title="Alle eingesetzt"'}>Zerstören +${dust}${shardOf(g.tier)}</button>
+        ${feature(S, 'schmiede') ? `<button class="btn small" data-rforge="m:${g.t}:${g.tier}" ${canM ? '' : 'disabled'}>${g.tier >= 10 ? 'Höchste Stufe' : `3 → ${ROMAN[g.tier + 1]} · ${dust}${mc}`}</button>` : ''}</div>`; };
+    const ln = S.rlager || 0, lc = lagerCost(ln);
+    return `<h3 class="rl-h3">Runenschmied</h3><p class="note">Zerstöre Runen, die du nicht brauchst, und bekomme <b>Runensplitter</b>. Mit Splittern erweiterst du dein <b>Runen-Lager</b>${feature(S, 'schmiede') ? ' und verschmilzt <b>3 gleiche Runen</b> zu einer Rune der nächsten Stufe. Ein Verschmelzen kostet genau so viel, wie 3 zerstörte Runen dieser Stufe geben' : '. Ab der 4. Wiedergeburt kannst du außerdem 3 gleiche Runen verschmelzen'}. Eingesetzte Runen werden nie zerstört.</p>
+      <div class="rl-wallet"><span class="rl-cur dust">${dust}${S.dust} Runensplitter</span><span class="note">Lager ${S.runes.length}/${runeCap(S)}</span>
+      <button class="btn small" data-rl="lager" ${ln < LAGER_MAX && S.dust >= lc && inCamp() ? '' : 'disabled'}>${ln >= LAGER_MAX ? 'Lager voll ausgebaut' : `Lager +5 Plätze (${dust}${lc})`}</button>
+      ${feature(S, 'schmiede') ? `<button class="btn ghost small" data-rl="buyrune" ${S.dust >= DUST_RUNE && S.runes.length < runeCap(S) ? '' : 'disabled'}>Zufällige Rune I (${dust}${DUST_RUNE})</button>` : ''}</div>
+      <div class="rl-forgelist">${list.map(row).join('') || '<p class="note">Noch keine Runen. Bosse lassen Runen fallen.</p>'}</div>`;
+  }
   function ladenTab() {
-    const open = { stern: S.rebirths >= 1 || S.stars > 0 || S.asc > 0, zeit: S.rebirths >= 1 || S.asc > 0 || S.tempo > 0, altar: S.rebirths >= 1 || S.asc > 0 || S.altar > 0, schmiede: feature(S, 'schmiede') || S.asc > 0, krone: S.asc > 0 || S.crowns > 0, puzzle: expOpen(S) };
+    const open = { stern: S.rebirths >= 1 || S.stars > 0 || S.asc > 0, zeit: S.rebirths >= 1 || S.asc > 0 || S.tempo > 0, altar: S.rebirths >= 1 || S.asc > 0 || S.altar > 0, schmiede: feature(S, 'runen') || S.asc > 0, krone: S.asc > 0 || S.crowns > 0, puzzle: expOpen(S) };
     const LIST = [
-      ['stern', 'Sternen-Laden', 'mit der 1. Wiedergeburt', star], ['zeit', 'Zeitbaum', 'mit der 1. Wiedergeburt', '⏱'], ['altar', 'Seelenaltar', 'mit der 1. Wiedergeburt', soul], ['schmiede', 'Runenschmiede', 'mit der 5. Wiedergeburt', dust],
+      ['stern', 'Sternen-Laden', 'mit der 1. Wiedergeburt', star], ['zeit', 'Zeitbaum', 'mit der 1. Wiedergeburt', '⏱'], ['altar', 'Seelenaltar', 'mit der 1. Wiedergeburt', soul], ['schmiede', 'Runenschmied', 'mit der 3. Wiedergeburt', dust],
       ['krone', 'Kronen-Laden', 'mit dem 1. Aufstieg', crown], ['puzzle', 'Puzzle-Laden', 'mit dem 1. Aufstieg (Expeditionen)', '◈'],
     ];
     let html = `<div class="rl-wallet"><span class="rl-cur gold">${coin}${fmt(S.gold)}</span><span class="rl-cur soul">${soul}${S.souls}</span><span class="rl-cur star">${star}${S.stars}</span>${open.schmiede ? `<span class="rl-cur dust">${dust}${S.dust}</span>` : ''}${open.krone ? `<span class="rl-cur crown">${crown}${S.crowns}</span>` : ''}${open.puzzle ? `<span class="rl-cur spl">◈ ${S.exp.spl}</span>` : ''}</div>
       <div class="rl-shopnav">${LIST.map(([id, name, when, ic]) => open[id] ? `<button data-shopjump="${id}">${ic} ${name}</button>` : `<span class="lock" title="Kommt ${when}">🔒 ${name}</span>`).join('')}</div>`;
-    if (open.stern) html += `<section id="shop-stern" class="rl-shop"><h3 class="rl-h3">Sternen-Laden</h3><p class="note">Du hast <span class="rl-cur star">${star}${S.stars}</span> Sterne. Sterne bekommst du bei jeder Wiedergeburt und aus der Wochen-Herausforderung. Beim Aufstieg werden die Sternen-Boni zurückgesetzt.</p><div class="rl-perks">${perkCards()}</div></section>`;
+    if (open.stern) html += `<section id="shop-stern" class="rl-shop"><h3 class="rl-h3">Sternen-Laden</h3><p class="note">Du hast <span class="rl-cur star">${star}${S.stars}</span> Sterne. Sterne bekommst du bei jeder Wiedergeburt und aus der Wochen-Herausforderung. Beim Aufstieg werden die Sternen-Boni zurückgesetzt.</p><div class="rl-perks">${perkCards()}</div><div class="row" style="margin-top:10px"><button class="btn ${confirm === 'pres' ? 'danger' : 'ghost'} small" data-rl="pres" ${inCamp() && Object.keys(S.perks).length ? '' : 'disabled'}>${confirm === 'pres' ? 'Wirklich alles zurücksetzen?' : '↺ Sternen-Laden zurücksetzen (alle Sterne zurück)'}</button></div></section>`;
     if (open.zeit) html += `<section id="shop-zeit" class="rl-shop">${zeitTab()}</section>`;
     if (open.altar) { const L = S.altar || 0, c = altarCost(L), maxed = L >= ALTAR_MAX;
       html += `<section id="shop-altar" class="rl-shop"><h3 class="rl-h3">Seelenaltar</h3><p class="note">Opfere Gold für mehr Seelen. Jede Stufe gibt <b>+15 % Seelen</b> von Bossen, Elite-Gegnern und Abkürzungen. Der Altar bleibt <b>für immer</b>, auch nach Wiedergeburt und Aufstieg. Tipp: Kurz vor einer Wiedergeburt brauchst du dein Gold sowieso nicht mehr.</p>
       <div class="rl-altar"><div class="rl-altar-ic">${soul}</div><div><b>Stufe ${L} von ${ALTAR_MAX}</b><span class="note">Seelen jetzt ×${altarMul(S).toFixed(2).replace('.', ',')}${maxed ? '' : ` · nächste Stufe ×${(altarMul(S) + 0.15).toFixed(2).replace('.', ',')}`}</span></div>
       <button class="btn small" data-rl="altar" ${!maxed && S.gold >= c && inCamp() ? '' : 'disabled'}>${maxed ? 'Voll ausgebaut' : `Opfern: ${coin}${fmt(c)}`}</button></div></section>`; }
-    if (open.schmiede) html += `<section id="shop-schmiede" class="rl-shop"><h3 class="rl-h3">Runenschmiede</h3><p class="note">Du hast <span class="rl-cur dust">${dust}${S.dust}</span> Runenstaub. Staub bekommst du beim Zerlegen von Runen (Reiter Runen). Platz für Runen: ${S.runes.length}/${RUNE_CAP}.</p>
-      <div class="row"><button class="btn small" data-rl="buyrune" ${S.dust >= DUST_RUNE && S.runes.length < RUNE_CAP ? '' : 'disabled'}>Zufällige Rune kaufen (${dust}${DUST_RUNE})</button></div></section>`;
+    if (open.schmiede) html += `<section id="shop-schmiede" class="rl-shop">${forgeShop()}</section>`;
     if (open.krone) html += `<section id="shop-krone" class="rl-shop">${crownShop()}</section>`;
     if (open.puzzle) html += `<section id="shop-puzzle" class="rl-shop"><h3 class="rl-h3">Puzzle-Laden</h3><p class="note">Du hast <b>◈ ${S.exp.spl}</b> Heldensplitter aus den Expeditionen. Tippe ein leeres Teil an, um es für ${PIECE_COST} Splitter zu kaufen.</p>
       <div class="rl-xheroes">${PUZZLE.map(id => { const h = HERO_BY_ID[id], done = assembled(S, id); return `<div class="rl-xhero ${done ? 'done' : ''}" style="--hc:${h.color}"><div class="top"><span class="pt">${PORTRAIT[id]}</span><div><b>${h.name}</b><small>${done ? 'Fertig' : `${pieceCount(S, id)}/6 Puzzleteile`}</small></div></div>${puzzleHTML(id, !done)}</div>`; }).join('')}</div></section>`;
@@ -1970,6 +2107,48 @@
   }
   // Neuigkeiten: neueste Einträge oben. Neue Updates OBEN mit höherer id anhängen.
   const UPDATES = [
+    { id: 18, date: '13.10.2026', title: 'Bessere Runen von späteren Bossen', items: [
+      ['Balance', 'Bosse lassen bessere Runen fallen, je weiter du bist, immer in einem Bereich: bis Stufe 24 nur I, ab 25 I–II, ab 50 II–III, ab 75 II–IV, ab 100 III–V, ab 150 V–VII (die niedrigste kommt am häufigsten).'],
+      ['Info', 'Höhere Runen geben beim Zerstören jeweils dreimal so viele Splitter wie die Stufe darunter (I: 1, II: 3, III: 9, IV: 27 …).'],
+    ] },
+    { id: 17, date: '13.10.2026', title: 'Endlos-Fertigkeiten ausgeglichen', items: [
+      ['Balance', 'Schützin und Assassine: +2 % Krit-Chance (statt 1 %) und +12 % Krit-Schaden (statt 6 %) je Stufe.'],
+      ['Balance', 'Priesterin und Barde: +3 % Angriffstempo je Stufe (statt 1,5 %).'],
+      ['Balance', 'Magier und Tüftlerin: +6 % Fähigkeiten-Schaden je Stufe (statt 5 %).'],
+      ['Balance', 'Tierbändiger und Nekromant: +4 % Gold (statt 3 %) und 0,1 % Heilung pro Sekunde (statt 0,04 %) je Stufe.'],
+      ['Balance', 'Gold-Endlos-Fertigkeiten kosten am Anfang weniger: 2.500 bis 4.000 Gold statt bis zu 10.000.'],
+      ['Info', 'Wächter und Druidin bleiben gleich, weil sich ihre Stufen gegenseitig verstärken.'],
+    ] },
+    { id: 16, date: '13.10.2026', title: 'Sterne zurück & Zurücksetzen-Knopf', items: [
+      ['Umstellung', 'Wegen der Heldenblut-Änderungen wurde der Sternen-Laden bei allen einmal zurückgesetzt. Alle ausgegebenen Sterne gab es zurück.'],
+      ['Neu', 'Im Sternen-Laden gibt es einen Knopf „Sternen-Laden zurücksetzen“: Du bekommst alle Sterne zurück und kannst sie jederzeit im Lager neu verteilen.'],
+    ] },
+    { id: 15, date: '13.10.2026', title: 'Heldenblut, Runen-Lager & neue Reihenfolge', items: [
+      ['Balance', 'Heldenblut gibt +10 % statt +15 % Schaden und Leben je Stufe. Die Gegner bleiben so stark wie bisher.'],
+      ['Neu', 'Runen-Lager erweitern: Im Runenschmied kaufst du mit Runensplittern +5 Plätze (10, 20, 40 … Splitter, bis 100 Plätze).'],
+      ['Umstellung', '3. Wiedergeburt: Runen, Runen zerstören und Lager erweitern. 4. Wiedergeburt: Verschmelzen und zufällige Runen im Runenschmied. 5. Wiedergeburt: Magier.'],
+      ['Info', 'Wer den Magier schon angeheuert hat, behält ihn.'],
+    ] },
+    { id: 14, date: '13.10.2026', title: 'Heldenblut teurer', items: [
+      ['Balance', 'Heldenblut wird jetzt abwechselnd um 1 und 2 Sterne teurer: 1, 2, 4, 5, 7, 8, 10 … Sterne statt 1, 2, 3, 4, 5 … Bereits gekaufte Stufen bleiben.'],
+    ] },
+    { id: 13, date: '13.10.2026', title: 'Soundeffekte', items: [
+      ['Neu', 'Leise, weiche Soundeffekte: Treffer, kritische Treffer, Münzen, Seelen, Runen, Bosse, Fähigkeiten, Kauf, Verschmelzen, Wiedergeburt, Sieg und Niederlage.'],
+      ['Neu', 'Mit dem Lautsprecher-Knopf oben rechts schaltest du den Ton an und aus. Die Einstellung bleibt gespeichert.'],
+      ['Info', 'Auf dem iPhone und iPad muss der Lautlos-Schalter aus sein, damit man etwas hört.'],
+    ] },
+    { id: 12, date: '13.10.2026', title: 'Runenschmied & neues Seelen-Symbol', items: [
+      ['Neu', 'Runenschmied im Reiter Läden: Runen zerstören gibt Runensplitter. 3 gleiche Runen verschmelzen kostet Splitter und gibt eine Rune der nächsten Stufe.'],
+      ['Neu', 'Kurs: Ein Verschmelzen kostet genau so viel, wie 3 zerstörte Runen derselben Stufe geben (Stufe I: 1 Splitter je Rune, 3 fürs Verschmelzen).'],
+      ['Neu', 'Der Runenschmied kommt jetzt schon mit der 3. Wiedergeburt (zusammen mit den Runen). Die 5. Wiedergeburt gibt dafür ein größeres Lager mit 60 Plätzen.'],
+      ['Neu', 'Neues Symbol für Seelen: eine leuchtende Seelenflamme.'],
+      ['Umstellung', 'Runenstaub heißt jetzt Runensplitter. Wegen des neuen Kurses wurde dein Vorrat halbiert, er ist aber genau so viel wert wie vorher.'],
+      ['Fix', 'Die Runen-Übersicht bei den Helden sah durch die Schlüsselsockel verschoben aus.'],
+    ] },
+    { id: 11, date: '13.10.2026', title: 'Beutezug statt Sprungstart', items: [
+      ['Umstellung', 'Sprungstart im Sternen-Laden war durch die Gebietswahl überflüssig und ist jetzt „Beutezug“. Alle Sterne für Sprungstart gab es zurück.'],
+      ['Neu', 'Beutezug: Startest du in einem späteren Gebiet, bekommst du je Stufe 10 % des Golds der übersprungenen Stufen und 10 % mehr Abkürzungs-Seelen (bis Stufe 10).'],
+    ] },
     { id: 10, date: '13.10.2026', title: 'Spielstand auf mehreren Geräten', items: [
       ['Fix', 'Ein Gerät mit altem Stand konnte den neueren Spielstand eines anderen Geräts auf dem Server überschreiben. Jetzt merkt das Spiel, wenn woanders weitergespielt wurde, und fragt, welchen Stand du behalten willst.'],
       ['Fix', 'Abmelden überschreibt keinen neueren Stand mehr.'],

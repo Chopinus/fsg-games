@@ -10,6 +10,9 @@ const REPO = process.env.SAVE_REPO || '';
 const FILE = 'ritter-spielstaende.json';
 const LOCAL = path.join(__dirname, 'spielstaende.local.json');
 const durable = !!(TOKEN && REPO);
+// Test-Werkzeuge nur für diese Spielstand-Namen (Umgebungsvariable TEST_NAMES, mit Komma getrennt). Stehen bewusst nicht im Code.
+const TESTERS = (process.env.TEST_NAMES || '').split(',').map(n => n.trim().toLowerCase()).filter(Boolean);
+const isTester = key => TESTERS.includes(key);
 
 let accounts = {};   // key (Name klein) -> { name, salt, hash, tokens: [sha256], data, updated }
 let sha = null, dirty = false, flushTimer = null, ready = false, lastError = '';
@@ -94,13 +97,13 @@ async function handle(action, body, ip) {
     const salt = crypto.randomBytes(16).toString('hex');
     const a = accounts[key] = { name, salt, hash: hashPw(body.pass, salt), tokens: [], data, updated: Date.now() };
     const token = newToken(a); markDirty();
-    return [200, { name, token, updated: a.updated, durable }];
+    return [200, { name, token, updated: a.updated, durable, tester: isTester(key) }];
   }
   if (action === 'login') {
     if (blocked(ip)) return [429, { error: 'Zu viele falsche Versuche. Warte eine Minute.' }];
     if (!acc || !checkPw(acc, body.pass || '')) { fail(ip); return [401, { error: 'Name oder Passwort stimmt nicht.' }]; }
     const token = newToken(acc); markDirty();
-    return [200, { name: acc.name, token, data: acc.data, updated: acc.updated, durable }];
+    return [200, { name: acc.name, token, data: acc.data, updated: acc.updated, durable, tester: isTester(key) }];
   }
   if (action === 'save') {
     if (!acc || !acc.tokens.includes(sha256(String(body.token || '')))) return [401, { error: 'Bitte melde dich neu an.' }];
@@ -111,7 +114,7 @@ async function handle(action, body, ip) {
     if (base && acc.updated > base && !body.force) return [409, { conflict: true, data: acc.data, updated: acc.updated, error: 'Auf einem anderen Gerät wurde weitergespielt.' }];
     if (body.force && base && acc.updated > base) acc.prev = { data: acc.data, updated: acc.updated }; // Sicherung des überschriebenen Stands
     acc.data = data; acc.updated = Date.now(); markDirty();
-    return [200, { updated: acc.updated, durable }];
+    return [200, { updated: acc.updated, durable, tester: isTester(key) }];
   }
   if (action === 'password') {
     if (!acc || !acc.tokens.includes(sha256(String(body.token || '')))) return [401, { error: 'Bitte melde dich neu an.' }];

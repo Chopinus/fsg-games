@@ -552,7 +552,7 @@ input{font:inherit;font-size:18px;color:var(--fg);background:var(--bg);border:1p
 .rl-nextshop{text-align:center;margin-top:14px}
 .rl-shop .rl-h3,.rl-shop h3{font-size:20px;font-weight:900;margin:10px 0 2px}
 /* Ritterlauf: Schlüsselsockel */
-.rl-sockrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:6px}
+.rl-keyrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px;padding:6px 10px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
 .rl-socks{display:flex;gap:4px}
 .rl-sock{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;font-size:14px;border:1.5px dashed var(--line);color:var(--muted)}
 .rl-sock.fix{border-style:solid}
@@ -571,3 +571,15 @@ input{font:inherit;font-size:18px;color:var(--fg);background:var(--bg);border:1p
 .rl-altar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 14px}
 .rl-altar>div:nth-child(2){display:flex;flex-direction:column;flex:1;min-width:160px}
 .rl-altar-ic{font-size:26px;width:44px;height:44px;display:grid;place-items:center;border-radius:12px;background:radial-gradient(circle,#4a3a7a,#241a40)}
+
+/* Ritterlauf: neue Symbole für Seelen (Seelenflamme) und Runensplitter */
+.rl-soulic{width:15px;height:20px;border-radius:0;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 32'%3E%3Cdefs%3E%3CradialGradient id='g' cx='50%25' cy='70%25' r='65%25'%3E%3Cstop offset='0' stop-color='%23ffffff'/%3E%3Cstop offset='.35' stop-color='%239ff3ff'/%3E%3Cstop offset='.75' stop-color='%235aa8ff'/%3E%3Cstop offset='1' stop-color='%237b4dff'/%3E%3C/radialGradient%3E%3CradialGradient id='h' cx='50%25' cy='65%25' r='50%25'%3E%3Cstop offset='0' stop-color='%237fe8ff' stop-opacity='.55'/%3E%3Cstop offset='1' stop-color='%237fe8ff' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Cellipse cx='12' cy='20' rx='12' ry='12' fill='url%28%23h%29'/%3E%3Cpath d='M12 1c1.5 4.5 6.5 7.5 7.5 13.5 1 6-2.6 12.5-7.5 12.5S3.5 21.5 4.5 15.5c.6-3.6 3.2-5 3.6-8.4 1.4 1.6 1.6 3.4 1.4 5C11.6 9.7 12.7 5.6 12 1z' fill='url%28%23g%29' stroke='%232b1d5c' stroke-width='1.1' stroke-linejoin='round'/%3E%3Cpath d='M12 13c.8 2.4 3.6 3.8 3.6 7a3.6 3.6 0 0 1-7.2 0c0-1.8 1-2.6 1.7-3.8.5.8.7 1.5.6 2.3C11.8 17 12.4 15.2 12 13z' fill='%23ffffff' opacity='.9'/%3E%3Ccircle cx='10.3' cy='21' r='.9' fill='%232b1d5c'/%3E%3Ccircle cx='13.7' cy='21' r='.9' fill='%232b1d5c'/%3E%3C/svg%3E") center/contain no-repeat;filter:drop-shadow(0 0 3px rgba(127,232,255,.6));vertical-align:-2px}
+.rl-dust{width:15px;height:15px;border-radius:0;transform:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3ClinearGradient id='a' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ffffff'/%3E%3Cstop offset='.4' stop-color='%23b9a2ff'/%3E%3Cstop offset='1' stop-color='%235b3fc4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M9 1l5 6-2 15-6-9z' fill='url%28%23a%29' stroke='%23241a40' stroke-width='1' stroke-linejoin='round'/%3E%3Cpath d='M9 1l3 7 2-1z' fill='%23fff' opacity='.7'/%3E%3Cpath d='M16 9l5 4-3 9-3-4z' fill='url%28%23a%29' stroke='%23241a40' stroke-width='1' stroke-linejoin='round'/%3E%3Cpath d='M3 14l3 3-1 5-3-3z' fill='url%28%23a%29' stroke='%23241a40' stroke-width='1' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;vertical-align:-2px}
+.rl-forgelist{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.rl-frow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 12px;border-radius:12px;border:1px solid color-mix(in srgb,var(--rc) 45%,var(--line));background:linear-gradient(120deg,color-mix(in srgb,var(--rc) 14%,var(--surface)),var(--surface))}
+.rl-frow .nm{display:flex;flex-direction:column;flex:1;min-width:130px}
+.rl-frow .nm small{color:var(--muted)}
+.rl-rune.mini{pointer-events:none;width:34px;height:34px;min-width:34px;padding:0;display:grid;place-items:center}
+.rl-cur.soul{color:#86f0d8}
+@media (max-width:430px){#solo .topbar .title{display:none}#solo .topbar{justify-content:space-between}.rl-newsbtn{padding-inline:8px}}
+.rl-test{margin-top:14px;padding:10px 14px;border:1px dashed #ffcf4a;border-radius:14px;background:rgba(255,207,74,.06)}
