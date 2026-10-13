@@ -489,3 +489,54 @@ input{font:inherit;font-size:18px;color:var(--fg);background:var(--bg);border:1p
 .rl-path .pin.me .flag{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 18%,var(--surface2))}
 .rl-path .pin.me .flag b{color:var(--accent)}
 .rl-path .pin.me .pole{background:var(--accent)}
+/* Ritterlauf: Zeitbaum */
+.rl-ztree{display:flex;align-items:center;flex-wrap:wrap;gap:0;row-gap:14px;padding:16px;background:linear-gradient(160deg,color-mix(in srgb,#5fd4c8 12%,var(--surface)),var(--surface));border:1px solid color-mix(in srgb,#5fd4c8 35%,var(--line));border-radius:16px;justify-content:center}
+.rl-znode{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:96px;padding:12px 10px;border-radius:14px;border:2px solid var(--line);background:var(--surface2);text-align:center}
+.rl-znode .ic{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:18px;background:var(--bg);border:2px solid var(--line)}
+.rl-znode b{font-family:var(--display);font-weight:400;font-size:20px}
+.rl-znode small{color:var(--muted);font-size:12px}
+.rl-znode.own{border-color:#5fd4c8}
+.rl-znode.own .ic{border-color:#5fd4c8;background:color-mix(in srgb,#5fd4c8 25%,var(--bg))}
+.rl-znode.own b{color:#5fd4c8}
+.rl-znode.next{border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,181,71,.18)}
+.rl-znode.next .ic{border-color:var(--accent)}
+.rl-znode.locked{opacity:.55}
+.rl-zlink{display:block;width:22px;height:4px;border-radius:2px;background:var(--line)}
+.rl-zlink.own{background:#5fd4c8}
+/* Ritterlauf: Aufstellung */
+.rl-lineup{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.rl-lineup b{margin-right:4px}
+.rl-lineup button{border:2px dashed var(--line);background:transparent;border-radius:999px;padding:6px 12px;font-weight:800;font-size:14px;color:var(--muted)}
+.rl-lineup button.on{border-style:solid;border-color:var(--hc);background:color-mix(in srgb,var(--hc) 22%,var(--surface2));color:var(--fg)}
+.rl-lineup small{flex-basis:100%;color:var(--muted);font-size:12px}
+.rl-hero.bench{opacity:.55;border-style:dashed}
+.rl-benchtag{font-style:normal;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 6px;margin-left:4px}
+/* Ritterlauf: Expeditionen */
+.rl-exp{display:flex;flex-direction:column;gap:12px}
+.rl-xhead{display:flex;gap:14px;align-items:flex-start;justify-content:space-between}
+.rl-spl{flex:none;display:flex;flex-direction:column;align-items:center;background:color-mix(in srgb,#9bd14a 15%,var(--surface));border:1px solid color-mix(in srgb,#9bd14a 45%,var(--line));border-radius:14px;padding:10px 16px;min-width:110px}
+.rl-spl span{color:#9bd14a;font-size:20px}
+.rl-spl b{font-family:var(--display);font-weight:400;font-size:26px}
+.rl-spl small{color:var(--muted);font-size:12px}
+.rl-missions{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.rl-mission{display:flex;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px}
+.rl-mission .ic{flex:none;width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:20px;background:color-mix(in srgb,#9bd14a 20%,var(--bg));color:#c8f08a}
+.rl-mission>div{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0}
+.rl-mission small{color:var(--muted);font-size:13px}
+.rl-xheroes{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.rl-xhero{display:flex;flex-direction:column;gap:8px;background:linear-gradient(160deg,color-mix(in srgb,var(--hc) 12%,var(--surface)),var(--surface));border:2px solid var(--line);border-radius:14px;padding:12px}
+.rl-xhero.on{border-color:var(--hc);box-shadow:0 0 0 3px color-mix(in srgb,var(--hc) 25%,transparent)}
+.rl-xhero .top{display:flex;gap:10px;align-items:center}
+.rl-xhero .top small{display:block;color:var(--muted);font-size:12px}
+.rl-xhero .pt{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:20px;border:2px solid var(--hc);background:color-mix(in srgb,var(--hc) 20%,var(--bg))}
+.rl-xhero .note{font-size:13px;margin:0}
+.rl-xhero .btn{align-self:stretch}
+.rl-puz{position:relative;width:150px;height:100px;margin:2px auto;display:block}
+.rl-puz .pc{position:absolute;left:calc(var(--x) * 50px);top:calc(var(--y) * 50px);width:48px;height:48px;border-radius:9px;border:2px dashed var(--line);background:var(--bg);display:grid;place-items:center;padding:0;color:var(--muted)}
+.rl-puz .pc.got{border:2px solid var(--hc);background:color-mix(in srgb,var(--hc) 35%,var(--surface2));color:#fff;font-size:20px}
+.rl-puz .pc.got i{font-style:normal}
+.rl-puz .pc.buy{cursor:pointer;font-weight:800;font-size:12px}
+.rl-puz .pc.buy b::before{content:"◈ ";color:#9bd14a}
+.rl-puz .pc.buy:not(:disabled):hover{border-color:#9bd14a}
+.rl-puz .pc.buy:disabled{opacity:.5;cursor:default}
+.rl-modal .rl-puz{margin:6px auto}
