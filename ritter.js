@@ -77,9 +77,9 @@
     { id: 'schrei', name: 'Kriegsschrei', icon: '▲', x: 6, y: 2, p: ['blitz'], max: 3, cost: ACTC, active: true, desc: 'Aktiv: alle Helden machen 6 s lang +40 % Schaden (+15 % je Stufe). Abklingzeit 20 s.' },
     { id: 'berserk', name: 'Berserker', icon: 'B', x: 1, y: 1, p: ['doppel', 'kritd'], max: 1, cost: () => ({ g: 3000, s: 10 }), kind: 'key', fx: [xx('r', 'atk', 1.4), xx('r', 'hp', 0.8)], desc: 'Schlüssel: Ritter +40 % Schaden, aber −20 % Leben' },
     { id: 'phoenix', name: 'Zweites Leben', icon: 'Φ', x: 3, y: 1, p: ['dorn', 'schild'], max: 1, cost: () => ({ g: 3000, s: 10 }), kind: 'key', fx: [ad('r', 'revive', 1)], desc: 'Schlüssel: Einmal pro Lauf steht der Ritter mit halbem Leben wieder auf' },
-    { id: 'ernte', name: 'Seelenernte', icon: '☽', x: 5, y: 1, p: ['habgier', 'schrei'], max: 1, cost: () => ({ g: 3000, s: 10 }), kind: 'key', fx: [xx('g', 'soulMul', 2)], desc: 'Schlüssel: Bosse geben doppelt so viele Seelen' },
-    { id: 'schmiede', name: 'Schmiedekunst', icon: '∞', x: 2, y: 0, p: ['berserk', 'phoenix'], max: 9999, cost: G(2500, 1.35), kind: 'inf', fx: [pw('all', 'atk', 1.03), pw('all', 'hp', 1.03)], desc: '+3 % Schaden und Leben aller Helden je Stufe, ohne Obergrenze' },
-    { id: 'ahnen', name: 'Ahnenkraft', icon: '∞', x: 4, y: 0, p: ['phoenix', 'ernte'], max: 9999, cost: r => ({ g: 0, s: 6 + 2 * r }), kind: 'inf', fx: [pw('all', 'atk', 1.05), pw('all', 'hp', 1.05)], desc: '+5 % Schaden und Leben aller Helden je Stufe, ohne Obergrenze' },
+    { id: 'ernte', name: 'Seelenernte', icon: '☽', x: 5, y: 1, p: ['habgier', 'schrei'], max: 1, cost: () => ({ g: 3000, s: 10 }), kind: 'key', fx: [xx('g', 'soulMul', 3), ad('g', 'eliteSoul', 0.25), mu('g', 'gold', 0.5)], desc: 'Schlüssel: Bosse geben dreimal so viele Seelen, Elite-Gegner lassen mit 25 % Chance eine Seele fallen und du bekommst +50 % Gold' },
+    { id: 'schmiede', name: 'Schmiedekunst', icon: '∞', x: 2, y: 0, p: ['berserk', 'phoenix'], max: 9999, cost: G(2500, 1.35), kind: 'inf', fx: [pw('all', 'atk', 1.05)], desc: '+5 % Schaden aller Helden je Stufe, ohne Obergrenze' },
+    { id: 'ahnen', name: 'Ahnenkraft', icon: '∞', x: 4, y: 0, p: ['phoenix', 'ernte'], max: 9999, cost: r => ({ g: 0, s: 6 + 2 * r }), kind: 'inf', fx: [pw('all', 'hp', 1.05)], desc: '+5 % Leben aller Helden je Stufe, ohne Obergrenze' },
   ];
   // Neue Klassen und Erweiterungen: Platz in der Vorlage → Knoten
   const KEYC = (g, s) => () => ({ g, s });
@@ -586,6 +586,13 @@
     S.gold -= c.g; S.souls -= c.s; S.nodes[n.id] = rank(S, n.id) + 1;
     if (n.active && S.nodes[n.id] === 1 && S.equip.filter(id => NODE[id].tree === n.tree).length < slotsOf(S, n.tree)) S.equip.push(n.id);
     return true;
+  }
+  // Schlüssel-Fertigkeit wieder abnehmen (Umskillen): Gold und Seelen kommen voll zurück
+  function removeKey(S, n) {
+    if (!n || n.kind !== 'key' || !rank(S, n.id)) return false;
+    const c = n.cost(0);
+    S.gold += c.g; S.souls += c.s; delete S.nodes[n.id];
+    return c;
   }
   function toggleEquip(S, id) {
     const n = NODE[id]; if (!n || !n.active || !rank(S, id)) return;
@@ -1243,7 +1250,7 @@
     return (n < 10 ? n.toFixed(2) : n < 100 ? n.toFixed(1) : Math.floor(n).toString()).replace('.', ',') + units[i];
   }
 
-  const core = { PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, buyPiece, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
+  const core = { removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, buyPiece, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
     rebirth, ascend, crownsFor, buyCperk, cperkCost, cperk, CPERKS, levelComp, toggleComp, compCost, compMax, compSlots, COMPS, checkAch, ACH, claimWeekly, weekId, weekRules, RULE, WEEK_TIERS, statsFor, starsFor, toggleEquip, slotsOf, hired, classOpen, keysUsed, keyLimit, capOf, reqOf, feature, encode, decode, fmt, socket, unsocket, merge, canMerge, dismantle, buyRune, runeVal, addRune };
   if (typeof module !== 'undefined') { module.exports = core; return; }
 
@@ -1431,7 +1438,8 @@
     const type = n.kind === 'start' ? (n.cost ? 'Anheuern' : 'Start') : n.active ? 'Aktive Fähigkeit' : n.kind === 'key' ? 'Schlüssel' : n.kind === 'inf' ? 'Endlos' : 'Passiv';
     let act = '';
     if (n.cost) {
-      if (maxed) act = '<span class="note">Voll ausgebaut</span>';
+      if (maxed && n.kind === 'key') { const c = nodeCost(S, { ...n, id: '_' }); act = `<button class="btn ${confirm === 'unkey' ? 'danger' : 'ghost'} small" data-rl="unkey" ${inCamp() ? '' : 'disabled'}>${confirm === 'unkey' ? 'Wirklich abnehmen?' : 'Schlüssel abnehmen'}</button><span class="note">Du bekommst ${costHTML(c)} zurück und kannst einen anderen Schlüssel wählen.</span>`; }
+      else if (maxed) act = '<span class="note">Voll ausgebaut</span>';
       else if (why) act = `<span class="note">${esc(why)}</span>`;
       else act = `<div class="rl-buy"><button class="btn small" data-rl="buy" ${inCamp() && canBuy(S, n) ? '' : 'disabled'}>${n.kind === 'start' ? 'Anheuern' : r ? 'Verbessern' : 'Freischalten'}</button>${costHTML(nodeCost(S, n))}</div>${inCamp() ? '' : '<span class="note">Verbessern geht nur im Lager nach dem Lauf.</span>'}`;
     }
@@ -1606,6 +1614,7 @@
     else if (a === 'tower') startRun('tower');
     else if (a === 'area') showAreas();
     else if (a === 'giveup') { if (ask('giveup', action)) { run.dead = true; S.runs++; save(); cloudSave(true); refresh(); } }
+    else if (a === 'unkey') { if (inCamp() && ask('unkey', panel)) { const n = NODE[sel[tab]], c = removeKey(S, n); if (c) { toast(`${n.name} abgenommen. Gold und Seelen sind zurück.`); afterChange(); } } }
     else if (a === 'buy') { if (inCamp() && buy(S, NODE[sel[tab]])) { achCheck(); afterChange(); } }
     else if (a === 'equip') { if (inCamp()) { toggleEquip(S, sel[tab]); afterChange(); } }
     else if (a === 'rebirth') { if (ask('rebirth', panel)) { const team = HEROES.filter(h => st[h.id]).map(h => h.id); rebirth(S); run = null; achCheck(); afterChange(); playCine('rebirth', team); } }
