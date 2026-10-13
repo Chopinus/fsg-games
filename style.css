@@ -540,3 +540,14 @@ input{font:inherit;font-size:18px;color:var(--fg);background:var(--bg);border:1p
 .rl-puz .pc.buy:not(:disabled):hover{border-color:#9bd14a}
 .rl-puz .pc.buy:disabled{opacity:.5;cursor:default}
 .rl-modal .rl-puz{margin:6px auto}
+/* Ritterlauf: Läden */
+.rl-wallet{display:flex;flex-wrap:wrap;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 14px;font-size:17px}
+.rl-cur.spl{color:#c8f08a;font-weight:800}
+.rl-shopnav{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 4px}
+.rl-shopnav button{border:1px solid var(--line);background:var(--surface2);border-radius:999px;padding:7px 14px;font-weight:800;font-size:14px;display:flex;gap:6px;align-items:center}
+.rl-shopnav button:hover{border-color:var(--accent)}
+.rl-shopnav .lock{border:1px dashed var(--line);border-radius:999px;padding:7px 14px;font-size:14px;color:var(--muted)}
+.rl-shop{scroll-margin-top:12px;margin-top:8px;padding-top:4px;border-top:1px solid var(--line)}
+.rl-gohint{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--surface);border:1px dashed var(--line);border-radius:14px;padding:10px 14px;margin-top:12px}
+.rl-nextshop{text-align:center;margin-top:14px}
+.rl-shop .rl-h3,.rl-shop h3{font-size:20px;font-weight:900;margin:10px 0 2px}
