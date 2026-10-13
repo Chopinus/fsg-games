@@ -617,3 +617,4 @@ input{font:inherit;font-size:18px;color:var(--fg);background:var(--bg);border:1p
 @keyframes khead{0%,100%{transform:rotate(0)}70%{transform:rotate(3deg)}}
 
 .rl-news-x{}
+.rl-tgrid{max-height:46vh;overflow:auto;padding:4px;grid-template-columns:repeat(auto-fill,minmax(62px,1fr))}
