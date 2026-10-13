@@ -1412,7 +1412,7 @@
   const inCamp = () => !run || run.dead;
 
   /* ---------- Soundeffekte (werden live erzeugt, leise und weich) ---------- */
-  let wSel = [], wRes = null;
+  let wSel = [], wRes = null, fSlots = [], fRes = null;
   let shopSel = 'stern', runeView = 'ausr', forgeSort = 'art', forgeFilt = 'all', forgeSel = null; try { shopSel = localStorage.getItem('fsg.ritter.shop') || 'stern'; } catch {}
   let lowFx = false, fxAvg = 1 / 60, fxClock = 0;
   const SND = (() => {
@@ -1630,7 +1630,7 @@
       $('#soloSnd').onclick = () => { const on = SND.toggle(); $('#soloSnd').textContent = on ? '🔊' : '🔇'; toast(on ? 'Ton an' : 'Ton aus'); };
       $('#soloSnd').textContent = SND.isOn() ? '🔊' : '🔇';
       $('#soloSpeed').onclick = () => { if (acct && acct.tester) { testSpeed(); return; } S.speed = S.speed >= maxSpeed(S) ? 1 : S.speed < 3 ? S.speed + 1 : S.speed + 0.5; save(); hud(); };
-      $('.rl-tabs').onclick = e => { const b = e.target.closest('[data-tab]'); if (b) { tab = b.dataset.tab; confirm = ''; runeSel = null; renderTabs(); panel(); } };
+      $('.rl-tabs').onclick = e => { const b = e.target.closest('[data-tab]'); if (b) { tab = b.dataset.tab; confirm = ''; runeSel = null; wRes = null; fRes = null; renderTabs(); panel(); } };
       for (const id of ['#rlPanel', '#rlAction', '#rlHeroes']) $(id).addEventListener('click', onClick);
       $('#rlPanel').addEventListener('submit', onSubmit);
     }
@@ -1959,27 +1959,33 @@
     return html;
   }
   function forgeView() {
-    const all = forgeGroups(), list = forgeFiltered(all), ln = S.rlager || 0, lc = lagerCost(ln), canForge = feature(S, 'schmiede');
+    const all = forgeGroups(), list = forgeFiltered(all), ln = S.rlager || 0, lc = lagerCost(ln), canForge = feature(S, 'schmiede'), used = socketed(S);
     const chips = forgeSort === 'art' ? [...new Set(all.map(g => g.t))].map(t => [t, RUNE[t].name, RUNE[t].color]) : [...new Set(all.map(g => g.tier))].sort((a, b) => a - b).map(n => [String(n), 'Stufe ' + ROMAN[n], '#c9a6ff']);
-    const sel = forgeSel && all.find(g => g.key === forgeSel);
+    fSlots = fSlots.filter(id => S.runes.some(r => r.id === id) && !used.has(id));
+    const sel = fSlots.map(id => S.runes.find(r => r.id === id)), g0 = sel[0];
+    const inUse = k => sel.filter(r => r.t + ':' + r.tier === k).length;
+    const mc = g0 ? mergeCost(g0.tier) : 0, canM = canForge && sel.length === 3 && g0.tier < 10 && S.dust >= mc;
     const killN = list.reduce((a, g) => a + g.free, 0), killS = list.reduce((a, g) => a + g.free * shardOf(g.tier), 0);
+    const slot = (r, i) => r ? `<button class="rl-wslot full" data-frm="${i}" style="--rc:${RUNE[r.t].color}"><b>${ROMAN[r.tier]}</b><small>${RUNE[r.t].name}</small><span class="x">✕</span></button>` : '<div class="rl-wslot"><span>?</span></div>';
     let html = `<div class="rl-forge2"><div class="rl-fmain">
       <div class="rl-wallet"><span class="rl-cur dust">${dust}${S.dust} Runensplitter</span><span class="note">Lager ${S.runes.length}/${runeCap(S)}</span>
         <button class="btn small" data-rl="lager" ${ln < LAGER_MAX && S.dust >= lc && inCamp() ? '' : 'disabled'}>${ln >= LAGER_MAX ? 'Lager voll ausgebaut' : `Lager +5 (${dust}${lc})`}</button>
         ${canForge ? `<button class="btn ghost small" data-rl="buyrune" ${S.dust >= DUST_RUNE && S.runes.length < runeCap(S) ? '' : 'disabled'}>Zufällige Rune (${dust}${DUST_RUNE})</button>` : ''}</div>
+      <p class="note">Tippe eine Rune an, um sie auf den Amboss zu legen (bis zu 3 gleiche). ${canForge ? '<b>3 gleiche</b> schmiedest du zu einer Rune der nächsten Stufe.' : 'Schmieden geht ab der 4. Wiedergeburt.'} Alles auf dem Amboss kannst du auch zerstören.</p>
+      <div class="rl-wmach">${slot(sel[0], 0)}<span class="plus">+</span>${slot(sel[1], 1)}<span class="plus">+</span>${slot(sel[2], 2)}<span class="plus">→</span>
+        <div class="rl-wslot res ${fRes ? 'reveal' : ''}" ${fRes ? `style="--rc:${RUNE[fRes.t].color}"` : ''}>${fRes ? `<span class="roll">⚒️</span><b>${ROMAN[fRes.tier]}</b><small>${RUNE[fRes.t].name}</small>` : (g0 && canForge && g0.tier < 10 ? `<b style="opacity:.35">${ROMAN[g0.tier + 1]}</b><small style="opacity:.5">${RUNE[g0.t].name}</small>` : '<span>⚒️</span>')}</div></div>
+      <div class="row" style="justify-content:center;margin:8px 0;flex-wrap:wrap">${canForge ? `<button class="btn" data-rl="fup" ${canM && inCamp() ? '' : 'disabled'}>⚒️ Schmieden${g0 ? ` (${dust}${mc})` : ''}</button>` : ''}
+        <button class="btn ghost" data-rl="fdel" ${sel.length && inCamp() ? '' : 'disabled'}>💥 Zerstören${sel.length ? ` (+${dust}${sel.reduce((a, r) => a + shardOf(r.tier), 0)})` : ''}</button></div>
       <div class="rl-fbar"><span class="note">Sortieren:</span><button data-fsort="art" class="${forgeSort === 'art' ? 'on' : ''}">nach Art</button><button data-fsort="stufe" class="${forgeSort === 'stufe' ? 'on' : ''}">nach Stufe</button></div>
       <div class="rl-fbar chips"><button data-ffilt="all" class="${forgeFilt === 'all' ? 'on' : ''}">Alle</button>${chips.map(([v, nm, c]) => `<button data-ffilt="${v}" class="${forgeFilt === v ? 'on' : ''}" style="--rc:${c}">${esc(nm)}</button>`).join('')}</div>
-      <div class="rl-fgrid">${list.map(g => { const R = RUNE[g.t]; return `<button class="rl-ftile ${forgeSel === g.key ? 'on' : ''}" data-fsel="${g.key}" style="--rc:${R.color}"><b>${ROMAN[g.tier]}</b><small>${R.name}</small><span class="cnt">×${g.n}</span>${g.n - g.free ? `<span class="lock" title="eingesetzt">⚑${g.n - g.free}</span>` : ''}</button>`; }).join('') || '<p class="note">Keine Runen. Bosse lassen Runen fallen.</p>'}</div>`;
-    if (sel) { const R = RUNE[sel.t], mc = mergeCost(sel.tier), canM = canForge && sel.n >= 3 && sel.tier < 10 && S.dust >= mc;
-      html += `<div class="rl-fsel" style="--rc:${R.color}"><div><b>${R.name} ${ROMAN[sel.tier]}</b><span class="note">${R.desc(runeVal(sel.t, sel.tier))} · ${sel.n}× im Besitz${sel.n - sel.free ? `, ${sel.n - sel.free} eingesetzt` : ''}</span></div>
-        <div class="row">${canForge ? `<button class="btn small" data-rl="fup" ${canM ? '' : 'disabled'}>${sel.tier >= 10 ? 'Höchste Stufe' : `⬆ Upgraden: 3 → ${ROMAN[sel.tier + 1]} (${dust}${mc})`}</button>` : '<span class="note">Upgraden ab der 4. Wiedergeburt</span>'}
-        <button class="btn ghost small" data-rl="fdel" ${sel.free ? '' : 'disabled'}>💥 Eine zerstören (+${dust}${shardOf(sel.tier)})</button></div></div>`; }
+      <div class="rl-fgrid">${list.map(g => { const R = RUNE[g.t], left = g.free - inUse(g.key); return `<button class="rl-ftile ${left ? '' : 'used'}" data-fpick="${g.key}" style="--rc:${R.color}" ${left ? '' : 'disabled'}><b>${ROMAN[g.tier]}</b><small>${R.name}</small><span class="cnt">×${left}</span>${g.n - g.free ? `<span class="lock" title="eingesetzt">⚑${g.n - g.free}</span>` : ''}</button>`; }).join('') || '<p class="note">Keine Runen. Bosse lassen Runen fallen.</p>'}</div>`;
     const lab = confirm === 'fall2' ? `Wirklich ${killN} Runen zerstören?` : confirm === 'fall' ? 'Sicher? Nochmal tippen' : `Alle ${forgeFilt === 'all' ? '' : 'gefilterten '}freien zerstören (${killN} Runen, +${killS} Splitter)`;
     html += `<div class="row" style="margin-top:10px"><button class="btn small ${confirm ? 'danger' : 'ghost'}" data-rl="fall" ${killN && inCamp() ? '' : 'disabled'}>💥 ${lab}</button></div>
-      <p class="note">Eingesetzte Runen (⚑) werden nie zerstört. Upgraden kostet so viel, wie 3 zerstörte Runen dieser Stufe geben.</p></div>
-      <div class="rl-kobold" aria-hidden="true">${KOBOLD_SVG}</div></div>`;
+      <p class="note">Eingesetzte Runen (⚑) werden nie zerstört. Schmieden kostet so viel, wie 3 zerstörte Runen dieser Stufe geben.</p></div>
+      <div class="rl-kobold ${fRes ? 'hit' : ''}" aria-hidden="true">${KOBOLD_SVG}</div></div>`;
     return html;
   }
+
   /* ---------- Wiedergeburt ---------- */
   function ruhmTab() {
     const gain = starsFor(S), req = reqOf(S);
@@ -2081,7 +2087,7 @@
       afterChange(); return;
     }
     const tb = e.target.closest('.rl-hero[data-tab], .rl-gotree[data-tab]');
-    if (tb) { tab = tb.dataset.tab; confirm = ''; renderTabs(); panel(); $('.rl-tabs').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    if (tb) { tab = tb.dataset.tab; confirm = ''; wRes = null; fRes = null; renderTabs(); panel(); $('.rl-tabs').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     const sk = e.target.closest('[data-sock]');
     if (sk) {
       const [hid, i] = sk.dataset.sock.split(':'); const slot = Number(i);
@@ -2097,11 +2103,17 @@
     if (b.dataset.compon) { toggleComp(S, b.dataset.compon); afterChange(); return; }
     if (b.dataset.board) { boardKey = b.dataset.board; panel(); return; }
     if (b.dataset.shoptab) { shopSel = b.dataset.shoptab; try { localStorage.setItem('fsg.ritter.shop', shopSel); } catch {} SND.play('tick'); panel(); return; }
-    if (b.dataset.runeview) { wRes = null; runeView = b.dataset.runeview; confirm = ''; SND.play('tick'); panel(); return; }
-    if (b.dataset.fsort) { forgeSort = b.dataset.fsort; forgeFilt = 'all'; confirm = ''; panel(); return; }
-    if (b.dataset.ffilt) { forgeFilt = b.dataset.ffilt; confirm = ''; panel(); return; }
+    if (b.dataset.runeview) { wRes = null; fRes = null; fSlots = []; runeView = b.dataset.runeview; confirm = ''; SND.play('tick'); panel(); return; }
+    if (b.dataset.fsort) { fRes = null; wRes = null; forgeSort = b.dataset.fsort; forgeFilt = 'all'; confirm = ''; panel(); return; }
+    if (b.dataset.ffilt) { fRes = null; wRes = null; forgeFilt = b.dataset.ffilt; confirm = ''; panel(); return; }
     if (b.dataset.wsel) { const [t, tier] = b.dataset.wsel.split(':'), used = socketed(S); const r = S.runes.find(x => x.t === t && x.tier === Number(tier) && !used.has(x.id) && !wSel.includes(x.id)); if (r) { wRes = null; if (wSel.length >= 2) wSel = []; if (wSel.length === 1) { const a = S.runes.find(x => x.id === wSel[0]); if (!a || a.tier !== r.tier) wSel = []; } wSel.push(r.id); SND.play('tick'); } panel(); return; }
     if (b.dataset.wrm) { wSel.splice(Number(b.dataset.wrm), 1); wRes = null; panel(); return; }
+    if (b.dataset.fpick) { const [t, tier] = b.dataset.fpick.split(':'), used = socketed(S); fRes = null;
+      const cur = fSlots.map(id => S.runes.find(r => r.id === id)).filter(Boolean); if (cur.length && (cur[0].t !== t || cur[0].tier !== Number(tier))) fSlots = [];
+      const free = S.runes.filter(x => x.t === t && x.tier === Number(tier) && !used.has(x.id) && !fSlots.includes(x.id));
+      if (!fSlots.length) fSlots = free.slice(0, 3).map(r => r.id); else if (fSlots.length < 3 && free.length) fSlots.push(free[0].id);
+      SND.play('tick'); panel(); return; }
+    if (b.dataset.frm) { fSlots.splice(Number(b.dataset.frm), 1); fRes = null; panel(); return; }
     if (b.dataset.fsel) { forgeSel = forgeSel === b.dataset.fsel ? null : b.dataset.fsel; confirm = ''; SND.play('tick'); panel(); return; }
     if (b.dataset.shopjump) { const el = document.getElementById('shop-' + b.dataset.shopjump); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     if (b.dataset.target) { S.exp.target = b.dataset.target; save(); panel(); return; }
@@ -2129,8 +2141,8 @@
         SND.play('rune'); toast(got.length ? `Neue Runen: ${got.join(', ')}` : 'Lager voll, als Splitter gutgeschrieben.'); afterChange(); } }
     else if (a === 'pres') { if (inCamp() && ask('pres', panel)) { const n = resetPerks(S); SND.play('buy'); toast(`Sternen-Laden zurückgesetzt: +${n} Sterne`, true); afterChange(); } }
     else if (a === 'wroll') { if (inCamp() && wSel.length === 2) { const nr = transmute(S, wSel[0], wSel[1]); if (nr) { wSel = []; wRes = nr; SND.play('soul'); setTimeout(() => SND.play('rune'), 900); setTimeout(() => toast(`Gewürfelt: ${RUNE[nr.t].name} ${ROMAN[nr.tier]}!`, true), 950); afterChange(); } } }
-    else if (a === 'fup') { const g = forgeSel && forgeGroups().find(x => x.key === forgeSel); const r = g && S.runes.find(x => x.t === g.t && x.tier === g.tier); const nr = r && merge(S, r); if (nr) { SND.play('forge'); kHit(); toast(`${RUNE[nr.t].name} ${ROMAN[nr.tier]} geschmiedet!`, true); if (!forgeGroups().some(x => x.key === forgeSel)) forgeSel = nr.t + ':' + nr.tier; achCheck(); afterChange(); } }
-    else if (a === 'fdel') { const g = forgeSel && forgeGroups().find(x => x.key === forgeSel), used = socketed(S); const r = g && S.runes.find(x => x.t === g.t && x.tier === g.tier && !used.has(x.id)); if (r) { const d = dismantle(S, r); SND.play('crit'); kHit(); toast(`+${d} Runensplitter`); if (!forgeGroups().some(x => x.key === forgeSel)) forgeSel = null; afterChange(); } }
+    else if (a === 'fup') { const r = fSlots.length === 3 && S.runes.find(x => x.id === fSlots[0]); const nr = r && merge(S, r); if (nr) { fSlots = []; fRes = nr; SND.play('forge'); kHit(); setTimeout(() => toast(`${RUNE[nr.t].name} ${ROMAN[nr.tier]} geschmiedet!`, true), 700); achCheck(); afterChange(); } }
+    else if (a === 'fdel') { if (!inCamp()) return; const used = socketed(S); let d = 0, n = 0; for (const id of fSlots) { const r = S.runes.find(x => x.id === id); if (r && !used.has(r.id)) { d += dismantle(S, r); n++; } } fSlots = []; fRes = null; if (n) { SND.play('crit'); kHit(); toast(`${n} Rune${n > 1 ? 'n' : ''} zerstört: +${d} Runensplitter`); afterChange(); } }
     else if (a === 'fall') { if (!inCamp()) return;
       if (confirm === 'fall2') { confirm = ''; const used = socketed(S), keys = new Set(forgeFiltered(forgeGroups()).map(g => g.key)); let n = 0, d = 0;
         for (const r of [...S.runes]) if (keys.has(r.t + ':' + r.tier) && !used.has(r.id)) { d += dismantle(S, r); n++; }
@@ -2410,6 +2422,11 @@
   }
   // Neuigkeiten: neueste Einträge oben. Neue Updates OBEN mit höherer id anhängen.
   const UPDATES = [
+    { id: 23, date: '13.10.2026', title: 'Schmied mit Amboss-Slots', items: [
+      ['Neu', 'Der Runenschmied hat jetzt dieselbe Slot-Ansicht wie der Wandler: 3 Runen auf den Amboss legen, schmieden oder zerstören.'],
+      ['Neu', 'Tester: Test-Wiedergeburt gibt immer Sterne, „Eine Wiedergeburt zurück“ ist neu.'],
+      ['Fix', 'Ergebnisse im Schmied und Wandler verschwinden, wenn du den Reiter wechselst.'],
+    ] },
     { id: 22, date: '13.10.2026', title: 'Runenwandler, Aufstellung & Geräte-Abgleich', items: [
       ['Neu', 'Runenwandler (Runen → 🎲 Wandler): 2 Runen derselben Stufe rein, 1 zufällige Rune derselben Stufe raus, nie eine der beiden hineingelegten Arten. Ein Glücksspiel-Kobold würfelt für dich.'],
       ['Neu', 'Aufstellung für alle: Ab 2 Helden kannst du im Lager jederzeit wählen, wer kämpft, zum Beispiel um einen Helden allein zu testen.'],
@@ -2520,7 +2537,7 @@
   function showUpdates() {
     try { localStorage.setItem('fsg.ritter.news', String(UPDATES[0].id)); } catch {}
     hud();
-    modal(`<span class="rl-mic">📰</span><h2>Neuigkeiten</h2><div class="rl-upd">${UPDATES.map((u, i) => `<details ${i === 0 ? 'open' : ''}><summary><b>${esc(u.title)}</b><small>${u.date}</small></summary>
+    modal(`<span class="rl-mic">📰</span><h2>Neuigkeiten</h2><p class="note">Spielversion ${UPDATES[0].id}</p><div class="rl-upd">${UPDATES.map((u, i) => `<details ${i === 0 ? 'open' : ''}><summary><b>${esc(u.title)}</b><small>${u.date}</small></summary>
       <ul>${u.items.map(([tag, txt]) => `<li><span class="tag" style="--tc:${TAGC[tag] || '#aaa'}">${tag}</span>${esc(txt)}</li>`).join('')}</ul></details>`).join('')}</div>
       <div class="row" style="justify-content:center"><button class="btn" data-m="ok">Schließen</button></div>`);
   }
