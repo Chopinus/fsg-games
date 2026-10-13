@@ -11,7 +11,7 @@ const FILE = 'ritter-spielstaende.json';
 const LOCAL = path.join(__dirname, 'spielstaende.local.json');
 const durable = !!(TOKEN && REPO);
 // Test-Werkzeuge nur für diese Spielstand-Namen (Umgebungsvariable TEST_NAMES, mit Komma getrennt). Stehen bewusst nicht im Code.
-const TESTERS = (process.env.TEST_NAMES || '').split(',').map(n => n.trim().toLowerCase()).filter(Boolean);
+const TESTERS = (process.env.TEST_NAMES || '').split(/[,;\n]/).map(n => n.replace(/["'`]/g, '').trim().replace(/\s+/g, ' ').toLowerCase()).filter(Boolean);
 const isTester = key => TESTERS.includes(key);
 
 let accounts = {};   // key (Name klein) -> { name, salt, hash, tokens: [sha256], data, updated }
@@ -86,7 +86,7 @@ const fail = ip => fails.set(ip, [...recent(ip), Date.now()]);
 async function handle(action, body, ip) {
   if (!ready) return [503, { error: 'Der Speicher startet noch. Versuch es in ein paar Sekunden noch mal.' }];
   const name = cleanName(body.name), key = keyOf(name), acc = accounts[key];
-  if (action === 'status') return [200, { durable, error: lastError || null }];
+  if (action === 'status') return [200, { durable, error: lastError || null, testers: TESTERS.length }];
   if (action === 'create') {
     if (!validName(name)) return [400, { error: 'Der Name braucht 3 bis 20 Zeichen (Buchstaben, Zahlen, Leerzeichen, - _ .).' }];
     if (String(body.pass || '').length < 4) return [400, { error: 'Das Passwort braucht mindestens 4 Zeichen.' }];
