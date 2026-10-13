@@ -509,10 +509,10 @@
   const RUNES = [
     { id: 'kraft', name: 'Kraft', color: '#e5484d', desc: v => `+${pct(v)} Schaden`, val: 0.08 },
     { id: 'leben', name: 'Leben', color: '#27a06a', desc: v => `+${pct(v)} Leben`, val: 0.08 },
-    { id: 'eile', name: 'Eile', color: '#f2be1a', desc: v => `+${pct(v)} Angriffstempo, Fähigkeiten laden ${pct(v / 4)} schneller`, val: 0.07 },
+    { id: 'eile', name: 'Eile', color: '#f2be1a', desc: v => `+${pct(v)} Angriffstempo, Fähigkeiten laden ${pct(v / 4)} schneller (über 60 % Abklingzeit wird daraus mehr Fähigkeiten-Schaden)`, val: 0.07 },
     { id: 'zorn', name: 'Zorn', color: '#ff7a3d', desc: v => `Kritische Treffer machen +${pct(v)} mehr Schaden`, val: 0.12 },
     { id: 'schutz', name: 'Schutz', color: '#7fb2ff', desc: v => `−${pct(v)} erlittener Schaden (zählt immer voll, höchstens 72 %)`, val: 0.025 },
-    { id: 'fokus', name: 'Fokus', color: '#c08cff', desc: v => `Fähigkeiten laden ${pct(v)} schneller`, val: 0.04 },
+    { id: 'fokus', name: 'Fokus', color: '#c08cff', desc: v => `Fähigkeiten laden ${pct(v)} schneller. Abklingzeit sinkt höchstens um 60 %, jeder Prozentpunkt darüber wird zu +2 % Schaden der aktiven Fähigkeiten`, val: 0.04 },
     { id: 'glueck', name: 'Glück', color: '#ffcf4a', desc: v => `+${pct(v)} Gold für alle`, val: 0.06 },
     { id: 'seele', name: 'Seele', color: '#c9a6ff', desc: v => `+${pct(v)} Chance auf Seelen bei Elite-Gegnern`, val: 0.03 },
   ];
