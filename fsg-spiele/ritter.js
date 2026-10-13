@@ -667,8 +667,8 @@
     S.stars -= perkCost(S, p); S.perks[p.id] = perk(S, p.id) + 1; if (p.id === 'p_feld') S.bench = []; return true;
   }
   function keepHires(S) { return perk(S, 'p_freunde') || cperk(S, 'k_veteran') ? HEROES.filter(h => h.hire && rank(S, h.hire)).map(h => h.hire) : []; }
-  function rebirth(S) {
-    const st = starsFor(S); if (!st) return 0;
+  function rebirth(S, force) {
+    const st = starsFor(S); if (!st && !force) return 0;
     S.stars += st; S.rebirths++; S.kslots = kSlots(S) + 1; S.bestEver = Math.max(S.bestEver, S.best);
     const keep = keepHires(S);
     S.nodes = { start: 1 }; keep.forEach(id => (S.nodes[id] = 1));
@@ -1382,6 +1382,7 @@
   const inCamp = () => !run || run.dead;
 
   /* ---------- Soundeffekte (werden live erzeugt, leise und weich) ---------- */
+  let shopSel = 'stern', runeView = 'ausr', forgeSort = 'art', forgeFilt = 'all', forgeSel = null; try { shopSel = localStorage.getItem('fsg.ritter.shop') || 'stern'; } catch {}
   let lowFx = false, fxAvg = 1 / 60, fxClock = 0;
   const SND = (() => {
     let ac = null, master = null, nbuf = null;
@@ -1474,10 +1475,11 @@
   function testMenu(key) {
     const i = testInfo(key); if (!i) return;
     modal(`<span class="rl-mic">🧪</span><h2>${esc(i.name)}</h2><p class="note">Stufe ${i.r}${i.max < 9999 ? ` von ${i.max}` : ''} · Test-Werkzeug</p>
+      <div class="numrow" style="justify-content:center;margin:6px 0 10px"><label class="note" for="rlTAmt">Anzahl Stufen</label><input id="rlTAmt" type="number" inputmode="numeric" min="1" value="1" style="max-width:110px;text-align:center"></div>
       <div class="row" style="justify-content:center;flex-wrap:wrap;gap:8px">
-        <button class="btn" data-m="ok" data-tdo="buy:${key}" ${i.can && inCamp() ? '' : 'disabled'}>1. Kaufen (${i.cost})</button>
+        <button class="btn" data-m="ok" data-tdo="buy:${key}" ${i.can && inCamp() ? '' : 'disabled'}>1. Kaufen (nächste: ${i.cost})</button>
         <button class="btn" data-m="ok" data-tdo="free:${key}" ${i.r < i.max ? '' : 'disabled'}>2. Kostenlos kaufen</button>
-        <button class="btn ghost" data-m="ok" data-tdo="sell:${key}" ${i.r > 0 ? '' : 'disabled'}>3. Eine Stufe verkaufen</button>
+        <button class="btn ghost" data-m="ok" data-tdo="sell:${key}" ${i.r > 0 ? '' : 'disabled'}>3. Verkaufen</button>
         <button class="btn ghost" data-m="ok">Abbrechen</button></div>`);
   }
   document.addEventListener('click', e => {
@@ -1485,11 +1487,13 @@
     const [mode, kind, id] = b.dataset.tdo.split(':');
     const store = kind === 'n' ? S.nodes : kind === 'p' ? S.perks : S.cperks;
     const max = kind === 'n' ? NODE[id].max : (kind === 'p' ? PERKS : CPERKS).find(x => x.id === id).max;
-    const r = store[id] || 0;
-    if (mode === 'buy') { const ok = kind === 'n' ? buy(S, NODE[id]) : kind === 'p' ? buyPerk(S, PERKS.find(x => x.id === id)) : buyCperk(S, CPERKS.find(x => x.id === id)); if (!ok) return; }
-    else if (mode === 'free') { if (r >= max) return; store[id] = r + 1; if (kind === 'n' && NODE[id].active && r === 0 && S.equip.filter(x => NODE[x].tree === NODE[id].tree).length < slotsOf(S, NODE[id].tree)) S.equip.push(id); }
-    else { if (r <= 0) return; if (r > 1) store[id] = r - 1; else { delete store[id]; if (kind === 'n') S.equip = S.equip.filter(x => x !== id); } if (kind === 'n') S.nodes.start = 1; }
-    SND.play(mode === 'sell' ? 'tick' : 'buy'); toast(`${mode === 'sell' ? 'Verkauft' : 'Gekauft'}: jetzt Stufe ${store[id] || 0}`); setTimeout(afterChange, 0);
+    const r = store[id] || 0, amtEl = document.getElementById('rlTAmt'), amt = Math.max(1, Math.min(100000, Math.floor(Number(amtEl && amtEl.value) || 1)));
+    let done = 0;
+    if (mode === 'buy') { for (; done < amt; done++) { const ok = kind === 'n' ? buy(S, NODE[id]) : kind === 'p' ? buyPerk(S, PERKS.find(x => x.id === id)) : buyCperk(S, CPERKS.find(x => x.id === id)); if (!ok) break; } }
+    else if (mode === 'free') { done = Math.min(amt, max - r); if (done <= 0) return; store[id] = r + done; if (kind === 'n' && NODE[id].active && r === 0 && S.equip.filter(x => NODE[x].tree === NODE[id].tree).length < slotsOf(S, NODE[id].tree)) S.equip.push(id); }
+    else { done = Math.min(amt, r); if (done <= 0) return; if (r - done > 0) store[id] = r - done; else { delete store[id]; if (kind === 'n') S.equip = S.equip.filter(x => x !== id); } if (kind === 'n') S.nodes.start = 1; }
+    if (!done) { toast('Nicht genug Gold, Seelen, Sterne oder Kronen.'); return; }
+    SND.play(mode === 'sell' ? 'tick' : 'buy'); toast(`${done} Stufe${done > 1 ? 'n' : ''} ${mode === 'sell' ? 'verkauft' : 'gekauft'}: jetzt Stufe ${store[id] || 0}`); setTimeout(afterChange, 0);
   }, true);
   function showConflict() {
     if (!conflict) return;
@@ -1730,18 +1734,110 @@
     }).join('') + '</div>';
     const free = S.runes.filter(r => !used.has(r.id)).sort((a, b) => b.tier - a.tier || a.t.localeCompare(b.t));
     html += `<h3 class="rl-h3">Lager (${S.runes.length}/${runeCap(S)})</h3><div class="rl-inv">${free.map(r => runeChip(r, r.id === runeSel ? 'on' : '')).join('') || '<p class="note">Noch keine freien Runen. Besiege Bosse, um welche zu finden.</p>'}</div>`;
-    if (feature(S, 'runen')) html += `<div class="rl-forge"><b>Runenschmied</b><span class="note">Du hast ${dust}${S.dust} Runensplitter. Zerstören, Lager erweitern${feature(S, 'schmiede') ? ' und Verschmelzen' : ''} findest du übersichtlich im Reiter Läden.</span>
-      <button class="btn small rl-gotree" data-tab="laeden">Zum Runenschmied</button></div>`;
+    return html;
+  }
+  const KOBOLD_SVG = `<svg viewBox="0 0 200 230" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<radialGradient id="kfg" cx="50%" cy="78%" r="60%"><stop offset="0" stop-color="#ff9a3d" stop-opacity=".55"/><stop offset=".55" stop-color="#ff6a2a" stop-opacity=".18"/><stop offset="1" stop-color="#ff6a2a" stop-opacity="0"/></radialGradient>
+<linearGradient id="kskin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9ccf5a"/><stop offset="1" stop-color="#5e8f34"/></linearGradient>
+<linearGradient id="kanv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8a909c"/><stop offset=".25" stop-color="#5a606c"/><stop offset="1" stop-color="#2e323a"/></linearGradient>
+<linearGradient id="khot" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ff7a2a"/><stop offset=".5" stop-color="#fff2a8"/><stop offset="1" stop-color="#ff7a2a"/></linearGradient>
+<linearGradient id="kapr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8a5a34"/><stop offset="1" stop-color="#5a3a20"/></linearGradient>
+</defs>
+<ellipse cx="100" cy="175" rx="100" ry="70" fill="url(#kfg)" class="kglow"/>
+<ellipse cx="100" cy="214" rx="78" ry="9" fill="rgba(0,0,0,.35)"/>
+<!-- Beine -->
+<rect x="112" y="168" width="12" height="40" rx="5" fill="#4a3a2a" stroke="#1e1610" stroke-width="2"/>
+<rect x="134" y="168" width="12" height="40" rx="5" fill="#4a3a2a" stroke="#1e1610" stroke-width="2"/>
+<ellipse cx="117" cy="208" rx="11" ry="5" fill="#2a1e14"/><ellipse cx="141" cy="208" rx="11" ry="5" fill="#2a1e14"/>
+<!-- Körper mit Schürze -->
+<path d="M104 120 Q129 104 154 120 L158 176 Q129 186 100 176 Z" fill="#a0603a" stroke="#1e1610" stroke-width="2.5"/>
+<path d="M110 128 Q129 120 148 128 L150 182 Q129 190 108 182 Z" fill="url(#kapr)" stroke="#1e1610" stroke-width="2"/>
+<rect x="104" y="150" width="50" height="6" fill="#3a2614"/><rect x="125" y="149" width="8" height="8" rx="1.5" fill="#e0b84a"/>
+<!-- hinterer Arm hält das Werkstück mit Zange -->
+<path d="M108 132 Q86 146 76 160" fill="none" stroke="#1e1610" stroke-width="11" stroke-linecap="round"/>
+<path d="M108 132 Q86 146 76 160" fill="none" stroke="url(#kskin)" stroke-width="7" stroke-linecap="round"/>
+<path d="M76 160 L52 166 M76 160 L52 160" stroke="#3a3a44" stroke-width="3" stroke-linecap="round"/>
+<!-- Kopf -->
+<g class="khead">
+<path d="M106 84 L74 66 L98 96 Z" fill="url(#kskin)" stroke="#1e1610" stroke-width="2.5" stroke-linejoin="round"/>
+<path d="M152 84 L186 64 L160 96 Z" fill="url(#kskin)" stroke="#1e1610" stroke-width="2.5" stroke-linejoin="round"/>
+<path d="M104 82 L84 72 L100 92 Z" fill="#d88f86"/><path d="M154 82 L176 70 L158 92 Z" fill="#d88f86"/>
+<circle cx="129" cy="92" r="27" fill="url(#kskin)" stroke="#1e1610" stroke-width="2.5"/>
+<path d="M104 80 Q129 58 154 80 L154 74 Q129 52 104 74 Z" fill="#7a3a24" stroke="#1e1610" stroke-width="2"/>
+<rect x="106" y="70" width="46" height="9" rx="4" fill="#5a3a24" stroke="#1e1610" stroke-width="1.6"/>
+<circle cx="118" cy="74" r="7" fill="#9fd8f2" stroke="#2a2a30" stroke-width="2.5"/><circle cx="140" cy="74" r="7" fill="#9fd8f2" stroke="#2a2a30" stroke-width="2.5"/>
+<circle cx="116" cy="72" r="2.2" fill="#fff" opacity=".8"/><circle cx="138" cy="72" r="2.2" fill="#fff" opacity=".8"/>
+<ellipse cx="119" cy="92" rx="5.5" ry="6" fill="#fff6a0" stroke="#1e1610" stroke-width="1.6"/><ellipse cx="139" cy="92" rx="5.5" ry="6" fill="#fff6a0" stroke="#1e1610" stroke-width="1.6"/>
+<circle cx="117.5" cy="93" r="2.6" fill="#1e1610"/><circle cx="137.5" cy="93" r="2.6" fill="#1e1610"/>
+<path d="M126 96 Q122 106 128 107 Q133 106 131 97 Z" fill="#7aa848" stroke="#1e1610" stroke-width="1.6"/>
+<path d="M114 108 Q129 120 144 108 Q129 114 114 108 Z" fill="#2a1410" stroke="#1e1610" stroke-width="1.4"/>
+<path d="M118 109 L120 113 L122 110 Z M136 110 L138 113 L140 109 Z" fill="#fff"/>
+<circle cx="111" cy="102" r="3" fill="#ff9a8a" opacity=".45"/><circle cx="147" cy="102" r="3" fill="#ff9a8a" opacity=".45"/>
+</g>
+<!-- Amboss -->
+<path d="M48 150 L150 150 Q160 150 160 158 L150 164 L118 166 L124 190 L136 196 L136 204 L60 204 L60 196 L72 190 L78 166 L56 164 Q30 160 22 152 Q36 150 48 150 Z" fill="url(#kanv)" stroke="#14161a" stroke-width="2.5" stroke-linejoin="round"/>
+<path d="M50 152 L150 152" stroke="#b8bec8" stroke-width="2" opacity=".7"/>
+<!-- glühendes Werkstück -->
+<rect x="56" y="143" width="44" height="8" rx="3" fill="url(#khot)" class="khot"/>
+<ellipse cx="78" cy="146" rx="30" ry="10" fill="#ffb060" opacity=".25" class="khot"/>
+<!-- Arm mit Hammer (animiert) -->
+<g class="karm">
+<path d="M150 126 Q164 108 150 92" fill="none" stroke="#1e1610" stroke-width="12" stroke-linecap="round"/>
+<path d="M150 126 Q164 108 150 92" fill="none" stroke="url(#kskin)" stroke-width="8" stroke-linecap="round"/>
+<rect x="146" y="40" width="7" height="58" rx="3" fill="#7a5230" stroke="#1e1610" stroke-width="2" transform="rotate(55 150 92)"/>
+<rect x="132" y="30" width="34" height="18" rx="3" fill="#6a707c" stroke="#14161a" stroke-width="2.5" transform="rotate(55 150 92)"/>
+<rect x="134" y="32" width="30" height="5" rx="2" fill="#b8bec8" opacity=".6" transform="rotate(55 150 92)"/>
+</g>
+<!-- Funken -->
+<g class="ksparks"><circle cx="80" cy="138" r="2.2" fill="#ffe08a"/><circle cx="92" cy="134" r="1.6" fill="#ffb347"/><circle cx="70" cy="132" r="1.8" fill="#fff2a8"/><circle cx="100" cy="128" r="1.4" fill="#ffd27a"/><circle cx="62" cy="128" r="1.4" fill="#ffb347"/></g>
+</svg>`;
+  const kHit = () => setTimeout(() => { const el = document.querySelector('.rl-kobold'); if (el) { el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit'); } }, 30);
+  function runenWrap() {
+    if (!feature(S, 'runen')) return runenTab();
+    return `<div class="rl-subtabs"><button data-runeview="ausr" class="${runeView === 'ausr' ? 'on' : ''}">🛡️ Ausrüstung</button><button data-runeview="schmied" class="${runeView === 'schmied' ? 'on' : ''}">⚒️ Schmied</button></div>`
+      + (runeView === 'schmied' ? forgeView() : runenTab());
+  }
+  // Runenschmied: Stapel als Kacheln, sortierbar nach Art oder Stufe, mit Kobold am Amboss
+  function forgeGroups() {
+    const used = socketed(S), groups = {};
+    for (const r of S.runes) { const k = r.t + ':' + r.tier; (groups[k] = groups[k] || { key: k, t: r.t, tier: r.tier, n: 0, free: 0 }).n++; if (!used.has(r.id)) groups[k].free++; }
+    const ti = t => RUNES.findIndex(x => x.id === t);
+    return Object.values(groups).sort(forgeSort === 'art' ? (a, b) => ti(a.t) - ti(b.t) || b.tier - a.tier : (a, b) => b.tier - a.tier || ti(a.t) - ti(b.t));
+  }
+  function forgeFiltered(all) { return forgeFilt === 'all' ? all : all.filter(g => (forgeSort === 'art' ? g.t === forgeFilt : String(g.tier) === forgeFilt)); }
+  function forgeView() {
+    const all = forgeGroups(), list = forgeFiltered(all), ln = S.rlager || 0, lc = lagerCost(ln), canForge = feature(S, 'schmiede');
+    const chips = forgeSort === 'art' ? [...new Set(all.map(g => g.t))].map(t => [t, RUNE[t].name, RUNE[t].color]) : [...new Set(all.map(g => g.tier))].sort((a, b) => a - b).map(n => [String(n), 'Stufe ' + ROMAN[n], '#c9a6ff']);
+    const sel = forgeSel && all.find(g => g.key === forgeSel);
+    const killN = list.reduce((a, g) => a + g.free, 0), killS = list.reduce((a, g) => a + g.free * shardOf(g.tier), 0);
+    let html = `<div class="rl-forge2"><div class="rl-fmain">
+      <div class="rl-wallet"><span class="rl-cur dust">${dust}${S.dust} Runensplitter</span><span class="note">Lager ${S.runes.length}/${runeCap(S)}</span>
+        <button class="btn small" data-rl="lager" ${ln < LAGER_MAX && S.dust >= lc && inCamp() ? '' : 'disabled'}>${ln >= LAGER_MAX ? 'Lager voll ausgebaut' : `Lager +5 (${dust}${lc})`}</button>
+        ${canForge ? `<button class="btn ghost small" data-rl="buyrune" ${S.dust >= DUST_RUNE && S.runes.length < runeCap(S) ? '' : 'disabled'}>Zufällige Rune (${dust}${DUST_RUNE})</button>` : ''}</div>
+      <div class="rl-fbar"><span class="note">Sortieren:</span><button data-fsort="art" class="${forgeSort === 'art' ? 'on' : ''}">nach Art</button><button data-fsort="stufe" class="${forgeSort === 'stufe' ? 'on' : ''}">nach Stufe</button></div>
+      <div class="rl-fbar chips"><button data-ffilt="all" class="${forgeFilt === 'all' ? 'on' : ''}">Alle</button>${chips.map(([v, nm, c]) => `<button data-ffilt="${v}" class="${forgeFilt === v ? 'on' : ''}" style="--rc:${c}">${esc(nm)}</button>`).join('')}</div>
+      <div class="rl-fgrid">${list.map(g => { const R = RUNE[g.t]; return `<button class="rl-ftile ${forgeSel === g.key ? 'on' : ''}" data-fsel="${g.key}" style="--rc:${R.color}"><b>${ROMAN[g.tier]}</b><small>${R.name}</small><span class="cnt">×${g.n}</span>${g.n - g.free ? `<span class="lock" title="eingesetzt">⚑${g.n - g.free}</span>` : ''}</button>`; }).join('') || '<p class="note">Keine Runen. Bosse lassen Runen fallen.</p>'}</div>`;
+    if (sel) { const R = RUNE[sel.t], mc = mergeCost(sel.tier), canM = canForge && sel.n >= 3 && sel.tier < 10 && S.dust >= mc;
+      html += `<div class="rl-fsel" style="--rc:${R.color}"><div><b>${R.name} ${ROMAN[sel.tier]}</b><span class="note">${R.desc(runeVal(sel.t, sel.tier))} · ${sel.n}× im Besitz${sel.n - sel.free ? `, ${sel.n - sel.free} eingesetzt` : ''}</span></div>
+        <div class="row">${canForge ? `<button class="btn small" data-rl="fup" ${canM ? '' : 'disabled'}>${sel.tier >= 10 ? 'Höchste Stufe' : `⬆ Upgraden: 3 → ${ROMAN[sel.tier + 1]} (${dust}${mc})`}</button>` : '<span class="note">Upgraden ab der 4. Wiedergeburt</span>'}
+        <button class="btn ghost small" data-rl="fdel" ${sel.free ? '' : 'disabled'}>💥 Eine zerstören (+${dust}${shardOf(sel.tier)})</button></div></div>`; }
+    const lab = confirm === 'fall2' ? `Wirklich ${killN} Runen zerstören?` : confirm === 'fall' ? 'Sicher? Nochmal tippen' : `Alle ${forgeFilt === 'all' ? '' : 'gefilterten '}freien zerstören (${killN} Runen, +${killS} Splitter)`;
+    html += `<div class="row" style="margin-top:10px"><button class="btn small ${confirm ? 'danger' : 'ghost'}" data-rl="fall" ${killN && inCamp() ? '' : 'disabled'}>💥 ${lab}</button></div>
+      <p class="note">Eingesetzte Runen (⚑) werden nie zerstört. Upgraden kostet so viel, wie 3 zerstörte Runen dieser Stufe geben.</p></div>
+      <div class="rl-kobold" aria-hidden="true">${KOBOLD_SVG}</div></div>`;
     return html;
   }
   /* ---------- Wiedergeburt ---------- */
   function ruhmTab() {
     const gain = starsFor(S), req = reqOf(S);
-    if (S.rebirths >= 9) return ascSection(true) + shopHint('Sternen-Laden');
+    const tRb = acct && acct.tester ? `<div class="rl-test"><b>🧪 Test</b> <button class="btn small" data-rl="trebirth" ${inCamp() ? '' : 'disabled'}>Sofort wiedergeboren werden</button><span class="note">ohne Voraussetzung, gibt die Sterne für deinen aktuellen Rekord</span></div>` : '';
+    if (S.rebirths >= 9) return tRb + ascSection(true) + shopHint('Sternen-Laden');
     let html = `<div class="rl-rebirth"><div><h3>Wiedergeburt ${S.rebirths + 1}</h3>
       <p class="note">Setzt Gold, Seelen, alle Fertigkeiten und deinen Rekord auf null. Dafür bekommst du Sterne für dauerhafte Verbesserungen, neue Stufen und neue Inhalte. Runen und Sterne bleiben.</p>
       <p>Voraussetzung: <b>Stufe ${req}</b> · dein Rekord: <b>${S.best}</b> → ${gain ? `<b class="rl-cur star">${star}${gain} Sterne</b>` : 'noch nicht erreicht'}</p></div>
       <button class="btn ${confirm === 'rebirth' ? 'danger' : ''}" data-rl="rebirth" ${gain && inCamp() ? '' : 'disabled'}>${confirm === 'rebirth' ? 'Wirklich zurücksetzen?' : 'Wiedergeboren werden'}</button></div>`;
+    html += tRb;
     html += `<div class="rl-road">${ROADMAP.map(x => `<div class="rl-step ${S.rebirths >= x.r ? 'done' : S.rebirths + 1 === x.r ? 'next' : ''}"><span>${x.r}</span><div><b>${x.text}</b><small>Stufen bis ${CAPS[Math.min(x.r, CAPS.length - 1)]} · ${x.r + 1} Schlüssel pro Klasse</small></div></div>`).join('')}</div>`;
     html += ascSection();
     html += shopHint('Sternen-Laden');
@@ -1760,7 +1856,7 @@
     const p = $('#rlPanel');
     let html = notice ? `<p class="warn">${esc(notice)}</p>` : '';
     if (HERO[tab]) html += campInfo() + heroTab(tab);
-    else if (tab === 'runen') html += campInfo() + runenTab();
+    else if (tab === 'runen') html += campInfo() + runenWrap();
     else if (tab === 'begleiter') html += campInfo() + compTab();
     else if (tab === 'halle') html += halleTab();
     else if (tab === 'zeit' || tab === 'laeden') html += ladenTab();
@@ -1848,6 +1944,11 @@
     if (b.dataset.complvl) { if (levelComp(S, b.dataset.complvl)) { achCheck(); afterChange(); } return; }
     if (b.dataset.compon) { toggleComp(S, b.dataset.compon); afterChange(); return; }
     if (b.dataset.board) { boardKey = b.dataset.board; panel(); return; }
+    if (b.dataset.shoptab) { shopSel = b.dataset.shoptab; try { localStorage.setItem('fsg.ritter.shop', shopSel); } catch {} SND.play('tick'); panel(); return; }
+    if (b.dataset.runeview) { runeView = b.dataset.runeview; confirm = ''; SND.play('tick'); panel(); return; }
+    if (b.dataset.fsort) { forgeSort = b.dataset.fsort; forgeFilt = 'all'; confirm = ''; panel(); return; }
+    if (b.dataset.ffilt) { forgeFilt = b.dataset.ffilt; confirm = ''; panel(); return; }
+    if (b.dataset.fsel) { forgeSel = forgeSel === b.dataset.fsel ? null : b.dataset.fsel; confirm = ''; SND.play('tick'); panel(); return; }
     if (b.dataset.shopjump) { const el = document.getElementById('shop-' + b.dataset.shopjump); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     if (b.dataset.target) { S.exp.target = b.dataset.target; save(); panel(); return; }
     if (b.dataset.piece) { const [hid, i] = b.dataset.piece.split(':'); if (buyPiece(S, hid, Number(i))) { const h = HERO_BY_ID[hid]; if (assembled(S, hid)) heroDone(hid); else toast(`Puzzleteil ${pieceCount(S, hid)}/6 für ${h.name}`); afterChange(); } return; }
@@ -1872,6 +1973,14 @@
     else if (a === 'trunes') { if (acct && acct.tester) { const got = []; for (let i = 0; i < 3; i++) { const r = addRune(S, RUNES[Math.floor(Math.random() * RUNES.length)].id, 1 + Math.floor(Math.random() * 3)); if (r) got.push(`${RUNE[r.t].name} ${ROMAN[r.tier]}`); }
         SND.play('rune'); toast(got.length ? `Neue Runen: ${got.join(', ')}` : 'Lager voll, als Splitter gutgeschrieben.'); afterChange(); } }
     else if (a === 'pres') { if (inCamp() && ask('pres', panel)) { const n = resetPerks(S); SND.play('buy'); toast(`Sternen-Laden zurückgesetzt: +${n} Sterne`, true); afterChange(); } }
+    else if (a === 'fup') { const g = forgeSel && forgeGroups().find(x => x.key === forgeSel); const r = g && S.runes.find(x => x.t === g.t && x.tier === g.tier); const nr = r && merge(S, r); if (nr) { SND.play('forge'); kHit(); toast(`${RUNE[nr.t].name} ${ROMAN[nr.tier]} geschmiedet!`, true); if (!forgeGroups().some(x => x.key === forgeSel)) forgeSel = nr.t + ':' + nr.tier; achCheck(); afterChange(); } }
+    else if (a === 'fdel') { const g = forgeSel && forgeGroups().find(x => x.key === forgeSel), used = socketed(S); const r = g && S.runes.find(x => x.t === g.t && x.tier === g.tier && !used.has(x.id)); if (r) { const d = dismantle(S, r); SND.play('crit'); kHit(); toast(`+${d} Runensplitter`); if (!forgeGroups().some(x => x.key === forgeSel)) forgeSel = null; afterChange(); } }
+    else if (a === 'fall') { if (!inCamp()) return;
+      if (confirm === 'fall2') { confirm = ''; const used = socketed(S), keys = new Set(forgeFiltered(forgeGroups()).map(g => g.key)); let n = 0, d = 0;
+        for (const r of [...S.runes]) if (keys.has(r.t + ':' + r.tier) && !used.has(r.id)) { d += dismantle(S, r); n++; }
+        forgeSel = null; SND.play('forge'); kHit(); toast(`${n} Runen zerstört: +${d} Runensplitter`, true); afterChange(); }
+      else { confirm = confirm === 'fall' ? 'fall2' : 'fall'; panel(); const c0 = confirm; setTimeout(() => { if (confirm === c0) { confirm = ''; panel(); } }, 5000); } }
+    else if (a === 'trebirth') { if (acct && acct.tester && inCamp()) { const team = HEROES.filter(h => st[h.id]).map(h => h.id); const g = rebirth(S, true); run = null; achCheck(); afterChange(); SND.play('rebirth'); toast(`Test-Wiedergeburt: +${g} Sterne`); playCine('rebirth', team); } }
     else if (a === 'lager') { if (inCamp() && buyLager(S)) { SND.play('forge'); toast(`Runen-Lager erweitert: jetzt ${runeCap(S)} Plätze`); afterChange(); } }
     else if (a === 'altar') { if (inCamp() && buyAltar(S)) { SND.play('soul'); toast(`Seelenaltar Stufe ${S.altar}: Seelen ×${altarMul(S).toFixed(2).replace('.', ',')}`, true); afterChange(); } }
     else if (a === 'sockadd') { if (inCamp() && addSock(S, tab)) { toast('Sockel gesetzt.'); afterChange(); } }
@@ -2046,20 +2155,20 @@
   function ladenTab() {
     const open = { stern: S.rebirths >= 1 || S.stars > 0 || S.asc > 0, zeit: S.rebirths >= 1 || S.asc > 0 || S.tempo > 0, altar: S.rebirths >= 1 || S.asc > 0 || S.altar > 0, schmiede: feature(S, 'runen') || S.asc > 0, krone: S.asc > 0 || S.crowns > 0, puzzle: expOpen(S) };
     const LIST = [
-      ['stern', 'Sternen-Laden', 'mit der 1. Wiedergeburt', star], ['zeit', 'Zeitbaum', 'mit der 1. Wiedergeburt', '⏱'], ['altar', 'Seelenaltar', 'mit der 1. Wiedergeburt', soul], ['schmiede', 'Runenschmied', 'mit der 3. Wiedergeburt', dust],
+      ['stern', 'Sternen-Laden', 'mit der 1. Wiedergeburt', star], ['zeit', 'Zeitbaum', 'mit der 1. Wiedergeburt', '⏱'], ['altar', 'Seelenaltar', 'mit der 1. Wiedergeburt', soul],
       ['krone', 'Kronen-Laden', 'mit dem 1. Aufstieg', crown], ['puzzle', 'Puzzle-Laden', 'mit dem 1. Aufstieg (Expeditionen)', '◈'],
     ];
+    let cur = shopSel; if (!LIST.some(([id]) => id === cur && open[id])) cur = (LIST.find(([id]) => open[id]) || ['stern'])[0];
     let html = `<div class="rl-wallet"><span class="rl-cur gold">${coin}${fmt(S.gold)}</span><span class="rl-cur soul">${soul}${S.souls}</span><span class="rl-cur star">${star}${S.stars}</span>${open.schmiede ? `<span class="rl-cur dust">${dust}${S.dust}</span>` : ''}${open.krone ? `<span class="rl-cur crown">${crown}${S.crowns}</span>` : ''}${open.puzzle ? `<span class="rl-cur spl">◈ ${S.exp.spl}</span>` : ''}</div>
-      <div class="rl-shopnav">${LIST.map(([id, name, when, ic]) => open[id] ? `<button data-shopjump="${id}">${ic} ${name}</button>` : `<span class="lock" title="Kommt ${when}">🔒 ${name}</span>`).join('')}</div>`;
-    if (open.stern) html += `<section id="shop-stern" class="rl-shop"><h3 class="rl-h3">Sternen-Laden</h3><p class="note">Du hast <span class="rl-cur star">${star}${S.stars}</span> Sterne. Sterne bekommst du bei jeder Wiedergeburt und aus der Wochen-Herausforderung. Beim Aufstieg werden die Sternen-Boni zurückgesetzt.</p><div class="rl-perks">${perkCards()}</div><div class="row" style="margin-top:10px"><button class="btn ${confirm === 'pres' ? 'danger' : 'ghost'} small" data-rl="pres" ${inCamp() && Object.keys(S.perks).length ? '' : 'disabled'}>${confirm === 'pres' ? 'Wirklich alles zurücksetzen?' : '↺ Sternen-Laden zurücksetzen (alle Sterne zurück)'}</button></div></section>`;
-    if (open.zeit) html += `<section id="shop-zeit" class="rl-shop">${zeitTab()}</section>`;
-    if (open.altar) { const L = S.altar || 0, c = altarCost(L), maxed = L >= ALTAR_MAX;
+      <div class="rl-shopnav">${LIST.map(([id, name, when, ic]) => open[id] ? `<button data-shoptab="${id}" class="${id === cur ? 'on' : ''}">${ic} ${name}</button>` : `<span class="lock" title="Kommt ${when}">🔒 ${name}</span>`).join('')}</div>`;
+    if (open.stern && cur === 'stern') html += `<section id="shop-stern" class="rl-shop"><h3 class="rl-h3">Sternen-Laden</h3><p class="note">Du hast <span class="rl-cur star">${star}${S.stars}</span> Sterne. Sterne bekommst du bei jeder Wiedergeburt und aus der Wochen-Herausforderung. Beim Aufstieg werden die Sternen-Boni zurückgesetzt.</p><div class="rl-perks">${perkCards()}</div><div class="row" style="margin-top:10px"><button class="btn ${confirm === 'pres' ? 'danger' : 'ghost'} small" data-rl="pres" ${inCamp() && Object.keys(S.perks).length ? '' : 'disabled'}>${confirm === 'pres' ? 'Wirklich alles zurücksetzen?' : '↺ Sternen-Laden zurücksetzen (alle Sterne zurück)'}</button></div></section>`;
+    if (open.zeit && cur === 'zeit') html += `<section id="shop-zeit" class="rl-shop">${zeitTab()}</section>`;
+    if (open.altar && cur === 'altar') { const L = S.altar || 0, c = altarCost(L), maxed = L >= ALTAR_MAX;
       html += `<section id="shop-altar" class="rl-shop"><h3 class="rl-h3">Seelenaltar</h3><p class="note">Opfere Gold für mehr Seelen. Jede Stufe gibt <b>+15 % Seelen</b> von Bossen, Elite-Gegnern und Abkürzungen. Der Altar bleibt <b>für immer</b>, auch nach Wiedergeburt und Aufstieg. Tipp: Kurz vor einer Wiedergeburt brauchst du dein Gold sowieso nicht mehr.</p>
       <div class="rl-altar"><div class="rl-altar-ic">${soul}</div><div><b>Stufe ${L} von ${ALTAR_MAX}</b><span class="note">Seelen jetzt ×${altarMul(S).toFixed(2).replace('.', ',')}${maxed ? '' : ` · nächste Stufe ×${(altarMul(S) + 0.15).toFixed(2).replace('.', ',')}`}</span></div>
       <button class="btn small" data-rl="altar" ${!maxed && S.gold >= c && inCamp() ? '' : 'disabled'}>${maxed ? 'Voll ausgebaut' : `Opfern: ${coin}${fmt(c)}`}</button></div></section>`; }
-    if (open.schmiede) html += `<section id="shop-schmiede" class="rl-shop">${forgeShop()}</section>`;
-    if (open.krone) html += `<section id="shop-krone" class="rl-shop">${crownShop()}</section>`;
-    if (open.puzzle) html += `<section id="shop-puzzle" class="rl-shop"><h3 class="rl-h3">Puzzle-Laden</h3><p class="note">Du hast <b>◈ ${S.exp.spl}</b> Heldensplitter aus den Expeditionen. Tippe ein leeres Teil an, um es für ${PIECE_COST} Splitter zu kaufen.</p>
+    if (open.krone && cur === 'krone') html += `<section id="shop-krone" class="rl-shop">${crownShop()}</section>`;
+    if (open.puzzle && cur === 'puzzle') html += `<section id="shop-puzzle" class="rl-shop"><h3 class="rl-h3">Puzzle-Laden</h3><p class="note">Du hast <b>◈ ${S.exp.spl}</b> Heldensplitter aus den Expeditionen. Tippe ein leeres Teil an, um es für ${PIECE_COST} Splitter zu kaufen.</p>
       <div class="rl-xheroes">${PUZZLE.map(id => { const h = HERO_BY_ID[id], done = assembled(S, id); return `<div class="rl-xhero ${done ? 'done' : ''}" style="--hc:${h.color}"><div class="top"><span class="pt">${PORTRAIT[id]}</span><div><b>${h.name}</b><small>${done ? 'Fertig' : `${pieceCount(S, id)}/6 Puzzleteile`}</small></div></div>${puzzleHTML(id, !done)}</div>`; }).join('')}</div></section>`;
     const next = LIST.find(([id]) => !open[id]);
     if (next) html += `<p class="note rl-nextshop">Als Nächstes kommt der <b>${next[1]}</b> ${next[2]}.</p>`;
@@ -2144,6 +2253,12 @@
   }
   // Neuigkeiten: neueste Einträge oben. Neue Updates OBEN mit höherer id anhängen.
   const UPDATES = [
+    { id: 21, date: '13.10.2026', title: 'Läden-Reiter & neuer Runenschmied', items: [
+      ['Neu', 'Läden: Oben tippst du einen Laden an und siehst nur diesen, statt alle untereinander.'],
+      ['Neu', 'Runen haben jetzt zwei Unterreiter: Ausrüstung und Schmied. Der Runenschmied ist aus den Läden in den Runen-Reiter umgezogen.'],
+      ['Neu', 'Im Schmied hämmert ein Kobold am Amboss. Deine Runen liegen als Stapel-Kacheln da, sortierbar nach Art oder Stufe und filterbar. Rune antippen, dann upgraden oder zerstören.'],
+      ['Neu', 'Alle gefilterten freien Runen auf einmal zerstören, mit doppelter Sicherheitsabfrage. Eingesetzte Runen werden nie zerstört.'],
+    ] },
     { id: 20, date: '13.10.2026', title: 'Kein unsterblicher Wächter mehr', items: [
       ['Balance', 'Weniger Schaden nehmen stapelt sich jetzt abgeschwächt: Bis 50 % zählt alles voll, darüber nur noch die Hälfte, höchstens 72 % (vorher 85 %).'],
       ['Balance', 'Treffer abwehren geht höchstens mit 35 % Chance (vorher bis 50 %).'],
