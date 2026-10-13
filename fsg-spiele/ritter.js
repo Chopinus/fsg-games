@@ -1466,6 +1466,41 @@
     return r;
   }
   // Test-Werkzeug: Stufe kaufen, kostenlos kaufen oder eine Stufe zurücknehmen
+  // Test: beliebiges Tempo
+  function testSpeed() {
+    modal(`<span class="rl-mic">⏩</span><h2>Tempo (Test)</h2><p class="note">Beliebige Zahl, z. B. 0,5 oder 10. Normal geht bis ×${String(maxSpeed(S)).replace('.', ',')}.</p>
+      <div class="numrow" style="justify-content:center;margin:8px 0"><input id="rlTSpeed" inputmode="decimal" value="${String(S.speed).replace('.', ',')}" style="max-width:120px;text-align:center"></div>
+      <div class="row" style="justify-content:center;flex-wrap:wrap"><button class="btn" data-m="ok" data-tspeed="set">Setzen</button><button class="btn ghost" data-m="ok" data-tspeed="cycle">Normal weiterschalten</button><button class="btn ghost" data-m="ok">Abbrechen</button></div>`);
+  }
+  // Test: bestimmte Rune auswählen
+  let tRSort = 'art', tRFilt = 'all';
+  function testRunePicker(amt = 1) {
+    const chips = tRSort === 'art' ? RUNES.map(r => [r.id, r.name, r.color]) : Array.from({ length: 10 }, (_, i) => [String(i + 1), 'Stufe ' + ROMAN[i + 1], '#c9a6ff']);
+    const tiles = [];
+    for (const R of RUNES) for (let tier = 1; tier <= 10; tier++) {
+      if (tRFilt !== 'all' && (tRSort === 'art' ? R.id !== tRFilt : String(tier) !== tRFilt)) continue;
+      tiles.push({ R, tier });
+    }
+    if (tRSort === 'stufe') tiles.sort((a, b) => a.tier - b.tier);
+    modal(`<span class="rl-mic">🧪</span><h2>Rune bekommen</h2><p class="note">Lager ${S.runes.length}/${runeCap(S)} · ist das Lager voll, gibt es Splitter.</p>
+      <div class="numrow" style="justify-content:center;margin:4px 0"><label class="note" for="rlTRAmt">Anzahl</label><input id="rlTRAmt" type="number" min="1" value="${amt}" style="max-width:90px;text-align:center"></div>
+      <div class="rl-fbar" style="justify-content:center"><span class="note">Sortieren:</span><button data-trsort="art" class="${tRSort === 'art' ? 'on' : ''}">nach Art</button><button data-trsort="stufe" class="${tRSort === 'stufe' ? 'on' : ''}">nach Stufe</button></div>
+      <div class="rl-fbar chips" style="justify-content:center"><button data-trfilt="all" class="${tRFilt === 'all' ? 'on' : ''}">Alle</button>${chips.map(([v, nm, c]) => `<button data-trfilt="${v}" class="${tRFilt === v ? 'on' : ''}" style="--rc:${c}">${esc(nm)}</button>`).join('')}</div>
+      <div class="rl-fgrid rl-tgrid">${tiles.map(({ R, tier }) => `<button class="rl-ftile" data-tgive="${R.id}:${tier}" style="--rc:${R.color}" title="${esc(R.desc(runeVal(R.id, tier)))}"><b>${ROMAN[tier]}</b><small>${R.name}</small></button>`).join('')}</div>
+      <div class="row" style="justify-content:center;margin-top:10px"><button class="btn" data-m="ok">Fertig</button></div>`);
+  }
+  document.addEventListener('click', e => {
+    if (!(acct && acct.tester) || !e.target.closest) return;
+    const sp = e.target.closest('[data-tspeed]');
+    if (sp) { if (sp.dataset.tspeed === 'set') { const v = Number(String($('#rlTSpeed').value).replace(',', '.')); if (v > 0 && v <= 100) { S.speed = v; save(); hud(); toast(`Tempo ×${String(v).replace('.', ',')}`); } else toast('Bitte eine Zahl zwischen 0,1 und 100.'); }
+      else { S.speed = S.speed >= maxSpeed(S) ? 1 : S.speed < 3 ? Math.floor(S.speed) + 1 : S.speed + 0.5; if (S.speed > maxSpeed(S)) S.speed = 1; save(); hud(); } return; }
+    const amtNow = () => Math.max(1, Math.min(200, Math.floor(Number($('#rlTRAmt') && $('#rlTRAmt').value) || 1)));
+    const so = e.target.closest('[data-trsort]'); if (so) { tRSort = so.dataset.trsort; tRFilt = 'all'; testRunePicker(amtNow()); e.stopPropagation(); return; }
+    const fi = e.target.closest('[data-trfilt]'); if (fi) { tRFilt = fi.dataset.trfilt; testRunePicker(amtNow()); e.stopPropagation(); return; }
+    const gv = e.target.closest('[data-tgive]');
+    if (gv) { const [t, tier] = gv.dataset.tgive.split(':'), n = amtNow(); let got = 0; for (let i = 0; i < n; i++) if (addRune(S, t, Number(tier))) got++;
+      SND.play('rune'); toast(got ? `${got}× ${RUNE[t].name} ${ROMAN[tier]} ins Lager` : 'Lager voll, als Splitter gutgeschrieben.'); save(); if (active) refresh(); testRunePicker(n); e.stopPropagation(); }
+  }, true);
   function testInfo(key) {
     const [kind, id] = key.split(':');
     if (kind === 'n') { const n = NODE[id]; return n && { name: n.name, r: rank(S, id), max: n.max, can: canBuy(S, n), cost: (c => [c.g ? `${fmt(c.g)} Gold` : '', c.s ? `${c.s} Seelen` : ''].filter(Boolean).join(' + ') || 'gratis')(nodeCost(S, n)) }; }
@@ -1552,7 +1587,7 @@
       $('#soloNews').onclick = showUpdates;
       $('#soloSnd').onclick = () => { const on = SND.toggle(); $('#soloSnd').textContent = on ? '🔊' : '🔇'; toast(on ? 'Ton an' : 'Ton aus'); };
       $('#soloSnd').textContent = SND.isOn() ? '🔊' : '🔇';
-      $('#soloSpeed').onclick = () => { S.speed = S.speed >= maxSpeed(S) ? 1 : S.speed < 3 ? S.speed + 1 : S.speed + 0.5; save(); hud(); };
+      $('#soloSpeed').onclick = () => { if (acct && acct.tester) { testSpeed(); return; } S.speed = S.speed >= maxSpeed(S) ? 1 : S.speed < 3 ? S.speed + 1 : S.speed + 0.5; save(); hud(); };
       $('.rl-tabs').onclick = e => { const b = e.target.closest('[data-tab]'); if (b) { tab = b.dataset.tab; confirm = ''; runeSel = null; renderTabs(); panel(); } };
       for (const id of ['#rlPanel', '#rlAction', '#rlHeroes']) $(id).addEventListener('click', onClick);
       $('#rlPanel').addEventListener('submit', onSubmit);
@@ -1561,8 +1596,8 @@
     if (S.starNews) { const n = S.starNews; delete S.starNews; save(); setTimeout(() => toast(`Sternen-Laden zurückgesetzt: ${n} Sterne zurück. Verteile sie neu!`, true), 1200); }
     if (S.startNews) { const n = S.startNews; delete S.startNews; save(); setTimeout(() => toast(`Sprungstart wurde zu Beutezug umgebaut: ${n} Sterne zurück.`, true), 600); }
     if (conflict) setTimeout(showConflict, 300); else if (acct) setTimeout(() => cloudSave(true), 800);
-    if (!S.seenIntro) showIntro(); else if (S.news && !cine) showNews(); else if (S.keyNews != null) showKeyInfo(); else if (S.infNews) showInfInfo(); else if (!S.seenField && HEROES.filter(h => hired(S, h.tree)).length > fieldSlots(S)) showFieldInfo();
-    else if (expOpen(S) && !S.seenExp) showExpInfo();
+    if (!betaShown) { betaShown = true; showBeta(); } else openChain();
+
     last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
   }
   function refresh() { st = run && !run.dead ? statsFor(S, run.mode) : stats(S); renderTabs(); hud(); heroes(); action(); panel(); }
@@ -1881,7 +1916,7 @@
       if (acct.tester) html += `<div class="rl-test"><h3>🧪 Test-Werkzeuge</h3><p class="note">Nur für Test-Spielstände sichtbar. Zahlen auch wie 1e9 oder 5000000.</p>
         <div class="numrow"><input id="rlTGold" inputmode="decimal" placeholder="Gold, z. B. 1e9" autocomplete="off"><button class="btn small" data-rl="tgold">Gold setzen</button></div>
         <div class="numrow"><input id="rlTSouls" inputmode="decimal" placeholder="Seelen, z. B. 500" autocomplete="off"><button class="btn small" data-rl="tsouls">Seelen setzen</button></div>
-        <div class="row"><button class="btn small" data-rl="trunes">3 zufällige Runen ins Lager</button></div></div>`;
+        <div class="row"><button class="btn small" data-rl="trunepick">Rune auswählen …</button><button class="btn ghost small" data-rl="trunes">3 zufällige Runen ins Lager</button></div></div>`;
     } else {
       html += `<h3>Spielstand speichern</h3>
         <p class="note">Wähle einen Namen und ein Passwort. Damit lädst du deine Helden auf jedem Gerät, und sie werden ab dann automatisch gespeichert.</p>
@@ -1970,6 +2005,7 @@
         if (!(v >= 0) || !isFinite(v)) { toast('Bitte eine Zahl eingeben.'); return; }
         if (a === 'tgold') S.gold = Math.min(1e18, Math.floor(v)); else S.souls = Math.min(1e15, Math.floor(v));
         toast(a === 'tgold' ? `Gold: ${fmt(S.gold)}` : `Seelen: ${fmt(S.souls)}`); afterChange(); } }
+    else if (a === 'trunepick') { if (acct && acct.tester) testRunePicker(); }
     else if (a === 'trunes') { if (acct && acct.tester) { const got = []; for (let i = 0; i < 3; i++) { const r = addRune(S, RUNES[Math.floor(Math.random() * RUNES.length)].id, 1 + Math.floor(Math.random() * 3)); if (r) got.push(`${RUNE[r.t].name} ${ROMAN[r.tier]}`); }
         SND.play('rune'); toast(got.length ? `Neue Runen: ${got.join(', ')}` : 'Lager voll, als Splitter gutgeschrieben.'); afterChange(); } }
     else if (a === 'pres') { if (inCamp() && ask('pres', panel)) { const n = resetPerks(S); SND.play('buy'); toast(`Sternen-Laden zurückgesetzt: +${n} Sterne`, true); afterChange(); } }
@@ -2369,6 +2405,16 @@
       <li>Deine bisher gekauften Endlos-Stufen wurden zurückgegeben: <b>${coin}${fmt(r.g)}</b> und <b>${soul}${fmt(r.s)}</b>. Damit kannst du sie neu verteilen.</li>
       <li>Die Endlos-Fertigkeiten des Ritters (Schaden und Leben) bleiben unverändert.</li></ul>
       <div class="row" style="justify-content:center"><button class="btn" data-m="ok">Verstanden</button></div>`);
+  }
+  // Hinweis bei jedem Start: Testphase
+  function openChain() { if (!S.seenIntro) showIntro(); else if (S.news && !cine) showNews(); else if (S.keyNews != null) showKeyInfo(); else if (S.infNews) showInfInfo(); else if (!S.seenField && HEROES.filter(h => hired(S, h.tree)).length > fieldSlots(S)) showFieldInfo(); else if (expOpen(S) && !S.seenExp) showExpInfo(); }
+  document.addEventListener('click', e => { if (e.target.closest && e.target.closest('[data-beta]')) setTimeout(() => { if (active) openChain(); }, 80); }, true);
+  let betaShown = false;
+  function showBeta() {
+    modal(`<span class="rl-mic">🧪</span><h2>Testphase</h2>
+      <p>Ritterlauf wird gerade auf <b>Balancing und Design</b> getestet. Deshalb werden <b>alle Spielstände demnächst zurückgesetzt</b>.</p>
+      <p class="note">Ihr könnt das Spiel aber trotzdem gerne testen. Über Rückmeldungen freuen wir uns!</p>
+      <div class="row" style="justify-content:center"><button class="btn" data-m="ok" data-beta="1">Alles klar, los geht's</button></div>`);
   }
   function showKeyInfo() {
     const back = S.keyNews, inf = S.infNews; delete S.keyNews; delete S.infNews; save();
