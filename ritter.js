@@ -24,6 +24,10 @@
   ];
   const HERO = Object.fromEntries(HEROES.map(h => [h.tree, h]));
   const HERO_BY_ID = Object.fromEntries(HEROES.map(h => [h.id, h]));
+  // Rollen für die Truppe: bestimmen Farbe des Kreises und die Reihenfolge von vorne nach hinten
+  const ROLE = { w: 'tank', r: 'melee', t: 'melee', d: 'msup', s: 'ranged', a: 'ranged', m: 'ranged', n: 'ranged', e: 'ranged', b: 'sup', p: 'sup' };
+  const ROLE_INFO = { tank: { name: 'Tank', col: '#b06bff' }, melee: { name: 'Nahkampf', col: '#ff4d5e' }, msup: { name: 'Nahkampf-Helfer', col: '#ffd23f' }, ranged: { name: 'Fernkampf', col: '#4fc3ff' }, sup: { name: 'Unterstützung', col: '#5be37d' } };
+  const LINE_ORDER = ['w', 'r', 't', 'd', 's', 'a', 'm', 'n', 'e', 'b', 'p'];
 
   // Was jede Wiedergeburt freischaltet
   const CAPS = [30, 45, 60, 75, 90, 105, 120, 135, 150];
@@ -1024,7 +1028,7 @@
     return { x: 560 + i * 46, hp, max: hp, dmg: 4 * hm[1] * (boss ? Math.sqrt(hm[2]) : 1) * grow(stage, ...TUNE.dmg) * (boss ? 2 : elite ? 1.5 : 1) * diff, atkT: 1.2, rate: (boss ? 1.6 : 1.3) / ((run && run.speed) || 1),
       gold: grow(stage, ...TUNE.gold) * (boss ? 10 : elite ? 4 : 1), boss, bk: zoneOf(stage) % BOSS_NAMES.length, elite, ranged: !!ranged, shotT: 0.8 + Math.random() * 1.2, type: ENEMY_KINDS[zoneOf(stage) % ENEMY_KINDS.length], stun: 0, hitT: 0, poison: 0, poisonT: 0, burn: 0, burnT: 0, mark: 0, markT: 0, bob: Math.random() * 6 };
   }
-  const FRONT = ['w', 'r', 't', 'd'], BACK = ['s', 'a', 'm', 'n', 'b', 'e', 'p'];
+  const FRONT = LINE_ORDER.filter(k => HERO_BY_ID[k].line === 'front'), BACK = LINE_ORDER.filter(k => HERO_BY_ID[k].line !== 'front');
   function newRun(S, mode) {
     const st = statsFor(S, mode), tower = mode === 'tower', weekly = mode === 'weekly', exp = mode === 'exp', rules = weekly || exp ? st.rules : [];
     let order = [...FRONT, ...BACK].filter(k => st[k] && (!st.field || st.field.includes(k)));
@@ -1623,8 +1627,13 @@
         <div class="rl-tabs" role="tablist"></div>
         <div id="rlPanel"></div>`;
       cv = document.createElement('canvas'); $('#soloCanvas').appendChild(cv); ctx = cv.getContext('2d');
-      cv.addEventListener('click', () => { if (cine && cine.t > 0.4) cine.t = Math.max(cine.t, cine.dur - 0.25); });
-      window.addEventListener('resize', sizeCanvas);
+      cv.addEventListener('click', e => {
+        if (cine) { if (cine.t > 0.4) cine.t = Math.max(cine.t, cine.dur - 0.25); return; }
+        if (!inCamp()) return;
+        const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W, y = (e.clientY - r.top) / r.height * H;
+        if (x > 90 && x < 400 && y > 80) openSquad();
+      });
+      window.addEventListener('resize', () => { sizeCanvas(); if (squad && !squad.el.hidden) sizeSquad(); });
       $('#soloBack').onclick = close;
       $('#soloNews').onclick = showUpdates;
       $('#soloSnd').onclick = () => { const on = SND.toggle(); $('#soloSnd').textContent = on ? '🔊' : '🔇'; toast(on ? 'Ton an' : 'Ton aus'); };
@@ -1644,7 +1653,7 @@
   }
   function refresh() { st = run && !run.dead ? statsFor(S, run.mode) : stats(S); renderTabs(); hud(); heroes(); action(); panel(); }
   function achCheck(run) { const got = checkAch(S, run); if (got.length) { st = run && !run.dead ? statsFor(S, run.mode) : stats(S); got.forEach((a, i) => setTimeout(() => toast(`Erfolg: ${a.name} (+3 % Stärke)`, true), i * 1800)); save(); } return got; }
-  function close() { active = false; cancelAnimationFrame(raf); save(); cloudSave(true); $('#solo').hidden = true; $('#hub').hidden = false; }
+  function close() { closeSquad(); active = false; cancelAnimationFrame(raf); save(); cloudSave(true); $('#solo').hidden = true; $('#hub').hidden = false; }
   function sizeCanvas() {
     const host = $('#soloCanvas'); const w = Math.min(host.clientWidth || 360, 960);
     const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -1670,6 +1679,7 @@
       for (let i = 0; i < n; i++) if (step(S, st, run, sdt) === 'dead') { endRun(); break; }
     } else if (run) run.deadT += dt;
     draw(now / 1000);
+    if (squad && !squad.el.hidden) drawSquad(now / 1000, squad);
     hudT += dt; if (hudT > 0.2) { hudT = 0; hud(); if (run && !run.dead) heroes(); }
     raf = requestAnimationFrame(loop);
   }
@@ -1697,7 +1707,7 @@
     const list = HEROES.filter(h => hired(S, h.tree) || classOpen(S, h.tree));
     const next = HEROES.find(h => !h.puzzle && !classOpen(S, h.tree));
     const field = fieldOf(S), slots = fieldSlots(S), hiredN = HEROES.filter(h => hired(S, h.tree)).length;
-    const bar = !live && hiredN > 1 ? `<div class="rl-lineup"><b>Aufstellung ${field.length}/${slots}</b>${HEROES.filter(h => hired(S, h.tree)).map(h => `<button class="${field.includes(h.id) ? 'on' : ''}" data-lineup="${h.id}" style="--hc:${h.color}">${PORTRAIT[h.id]} ${h.name}</button>`).join('')}<small>Tippe einen Helden an, um ihn ein- oder auszuwechseln.${slots < 6 ? ` Mehr Plätze: ${perk(S, 'p_feld') ? '' : 'Fünfter Platz im Sternen-Laden'}${!perk(S, 'p_feld') && !cperk(S, 'k_feld') ? ', ' : ''}${cperk(S, 'k_feld') ? '' : 'Sechster Platz im Kronen-Laden'}.` : ''}</small></div>` : '';
+    const bar = '';
     $('#rlHeroes').innerHTML = bar + list.map(h => {
       const sh = st[h.id];
       if (!sh) return `<button class="rl-hero locked" data-tab="${h.tree}" style="--hc:${h.color}"><span class="pt">${PORTRAIT[h.id]}</span><span class="hn"><b>${h.name}</b><small>Im Baum anheuern</small></span></button>`;
@@ -2383,6 +2393,75 @@
     return html;
   }
 
+  /* ---------- Truppe: Helden aufstellen ---------- */
+  let squad = null;
+  function squadHeroes() {
+    if (S.asc) return HEROES;
+    const own = HEROES.filter(h => hired(S, h.tree)), nx = HEROES.find(h => !h.puzzle && !hired(S, h.tree));
+    return nx ? [...own, nx] : own;
+  }
+  function lockReason(h) {
+    if (h.puzzle) return `${h.name}: Setze das Puzzle aus den Expeditionen zusammen.`;
+    if (S.rebirths < h.rebirth) return `${h.name} kommt mit der ${h.rebirth}. Wiedergeburt.`;
+    return `${h.name} kannst du jetzt in seinem Baum anheuern.`;
+  }
+  function openSquad() {
+    if (!inCamp()) return;
+    if (!squad) {
+      const el = document.createElement('div'); el.className = 'rl-squad'; el.hidden = true;
+      el.innerHTML = `<div class="sq-panel" role="dialog" aria-label="Truppe"><canvas class="sq-bg"></canvas><div class="sq-top"><div class="sq-head"><h2>Truppe</h2><span class="sq-count"></span><button class="sq-x" aria-label="Schließen">✕</button></div><div class="sq-row"></div><p class="sq-tip"></p><div class="sq-legend"></div></div><div class="sq-scene" aria-hidden="true"></div></div>`;
+      document.body.appendChild(el);
+      squad = { el, cv: el.querySelector('.sq-bg'), ids: [], slots: 4, off: 0, spots: null };
+      el.addEventListener('click', onSquadClick);
+    }
+    squad.el.hidden = false; renderSquad(); sizeSquad(); SND.play('tick');
+  }
+  function closeSquad() { if (squad) squad.el.hidden = true; }
+  function sizeSquad() {
+    const c = squad.cv, sc = squad.el.querySelector('.sq-scene'), dpr = Math.min(2, window.devicePixelRatio || 1), w = c.clientWidth, h = c.clientHeight;
+    if (!w) return;
+    c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); squad.offL = sc.offsetTop * W / w;
+  }
+  function renderSquad() {
+    const field = fieldOf(S), slots = fieldSlots(S), el = squad.el;
+    squad.ids = field; squad.slots = slots;
+    el.querySelector('.sq-count').textContent = `${field.length} / ${slots} Plätze`;
+    const list = squadHeroes();
+    el.querySelector('.sq-row').innerHTML = list.map(h => {
+      const own = hired(S, h.tree), on = field.includes(h.id), col = ROLE_INFO[ROLE[h.id]].col;
+      return `<button class="sq-tile ${own ? (on ? 'on' : 'bench') : 'locked'}" data-sq="${h.id}" style="--rc:${col}"><span class="pic"><img src="${portraitURL(h.id)}" alt="">${own ? '' : '<b class="lk">🔒</b>'}</span><span class="nm">${h.name}</span>${on ? '<em>✓</em>' : ''}</button>`;
+    }).join('');
+    el.querySelector('.sq-tip').textContent = `Tippe ein Porträt an, um den Helden ein- oder auszuwechseln. Rechts steht die vorderste Reihe.${slots < 6 ? ` Mehr Plätze: ${perk(S, 'p_feld') ? '' : 'Fünfter Platz im Sternen-Laden'}${!perk(S, 'p_feld') && !cperk(S, 'k_feld') ? ', ' : ''}${cperk(S, 'k_feld') ? '' : 'Sechster Platz im Kronen-Laden'}.` : ''}`;
+    const roles = [...new Set(LINE_ORDER.filter(k => list.some(h => h.id === k)).map(k => ROLE[k]))];
+    el.querySelector('.sq-legend').innerHTML = roles.map(r => `<span style="--rc:${ROLE_INFO[r].col}"><i></i>${ROLE_INFO[r].name}</span>`).join('');
+    sizeSquad();
+  }
+  function squadToggle(id) {
+    if (!inCamp()) { toast('Die Truppe änderst du im Lager.'); return; }
+    const r = toggleField(S, id);
+    if (r === 'full') toast('Alle Plätze sind belegt. Nimm zuerst jemanden raus.');
+    else if (r === 'last') toast('Mindestens ein Held muss kämpfen.');
+    else SND.play(r === 'in' ? 'buy' : 'tick');
+    afterChange(); renderSquad();
+  }
+  function onSquadClick(e) {
+    if (e.target === squad.el || e.target.closest('.sq-x')) { closeSquad(); return; }
+    const t = e.target.closest('[data-sq]');
+    if (t) {
+      const h = HERO_BY_ID[t.dataset.sq];
+      if (hired(S, h.tree)) squadToggle(h.id);
+      else if (!h.puzzle && S.rebirths >= h.rebirth) { closeSquad(); tab = h.tree; confirm = ''; renderTabs(); panel(); $('.rl-tabs').scrollIntoView({ behavior: 'smooth', block: 'start' }); toast(lockReason(h)); }
+      else toast(lockReason(h));
+      return;
+    }
+    const sc = e.target.closest('.sq-scene');
+    if (sc && squad.spots) {
+      const r = sc.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W;
+      const hit = squad.spots.heroes.find(s => Math.abs(s.x - x) < 24);
+      if (hit) squadToggle(hit.k); else if (squad.spots.empty.some(ex => Math.abs(ex - x) < 24)) toast('Tippe oben ein Porträt an, um den Platz zu füllen.');
+    }
+  }
+
   /* ---------- Fenster: Willkommen und Neuigkeiten ---------- */
   function modal(html) {
     const p = $('#picker');
@@ -2422,6 +2501,11 @@
   }
   // Neuigkeiten: neueste Einträge oben. Neue Updates OBEN mit höherer id anhängen.
   const UPDATES = [
+    { id: 24, date: '13.10.2026', title: 'Neues Truppen-Menü', items: [
+      ['Neu', 'Tippe im Lager aufs Lagerfeuer: Dort stellst du jetzt deine Truppe zusammen. Oben die Porträts, unten steht deine Truppe am Feuer.'],
+      ['Neu', 'Farbige Kreise zeigen die Rolle: Lila Tank, Rot Nahkampf, Gelb Nahkampf-Helfer, Blau Fernkampf, Grün Unterstützung.'],
+      ['Info', 'Die Helden stellen sich immer von vorne nach hinten in dieser Reihenfolge auf.'],
+    ] },
     { id: 23, date: '13.10.2026', title: 'Schmied mit Amboss-Slots', items: [
       ['Neu', 'Der Runenschmied hat jetzt dieselbe Slot-Ansicht wie der Wandler: 3 Runen auf den Amboss legen, schmieden oder zerstören.'],
       ['Neu', 'Tester: Test-Wiedergeburt gibt immer Sterne, „Eine Wiedergeburt zurück“ ist neu.'],
@@ -4806,10 +4890,8 @@
       ctx.beginPath(); ctx.moveTo(350, GROUND); ctx.lineTo(400, GROUND - 70); ctx.lineTo(450, GROUND); fillO('#7a6046');
       ctx.fillStyle = '#2a1f17'; ctx.beginPath(); ctx.moveTo(390, GROUND); ctx.lineTo(400, GROUND - 32); ctx.lineTo(410, GROUND); ctx.fill();
       ctx.fillStyle = '#e5484d'; ctx.beginPath(); ctx.moveTo(400, GROUND - 70); ctx.lineTo(400, GROUND - 88); ctx.lineTo(417, GROUND - 82); ctx.lineTo(400, GROUND - 76); ctx.fill();
-      shadow(fx, 26);
-      ctx.fillStyle = '#5a3d25'; ctx.save(); ctx.translate(fx, GROUND - 3); ctx.rotate(0.25); ctx.fillRect(-20, -3, 40, 6); ctx.rotate(-0.5); ctx.fillRect(-20, -3, 40, 6); ctx.restore();
-      for (let i = 0; i < 6; i++) { const h = 20 + Math.sin(t * 9 + i * 1.7) * 7; ctx.fillStyle = ['#e5484d', '#ffb547', '#ffd23f'][i % 3]; ctx.beginPath(); ctx.moveTo(fx - 15 + i * 6, GROUND - 6); ctx.quadraticCurveTo(fx - 12 + i * 5, GROUND - 6 - h, fx - 7 + i * 6, GROUND - 6); ctx.fill(); }
-      for (let i = 0; i < 6; i++) { const p = ((t * 0.6 + i / 6) % 1); ctx.fillStyle = `rgba(255,200,120,${1 - p})`; ctx.fillRect(fx + Math.sin(i * 3 + t) * 10, GROUND - 20 - p * 70, 2, 2); }
+      campFire(fx, t, true);
+      if (!(run && run.dead)) { const pa = 0.25 + 0.2 * Math.sin(t * 3); ctx.strokeStyle = `rgba(255,210,140,${pa})`; ctx.lineWidth = 2; ctx.setLineDash([5, 5]); ctx.beginPath(); ctx.ellipse(fx, GROUND + 2, 40, 9, 0, 0, 7); ctx.stroke(); ctx.setLineDash([]); }
       const camp = HEROES.filter(h => st[h.id] && (!st.field || st.field.includes(h.id))).map(h => h.id);
       const spots = {}; let fr = 0, bk = 0;
       for (const k of ['w', 'd', 't']) if (camp.includes(k)) spots[k] = 296 + 30 * fr++;
@@ -4823,11 +4905,84 @@
       const done = run && run.dead;
       ctx.fillText(done ? (run.mode === 'tower' ? `Turm: Etage ${run.stage}` : run.victory ? `Stufengrenze ${st.cap} erreicht!` : `Gefallen auf Stufe ${run.stage}`) : 'Lager', W / 2, 42);
       ctx.font = '12px "Figtree",sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.85)';
-      ctx.fillText(done ? `${run.kills} Gegner${run.gold ? ` · +${fmt(run.gold)} Gold` : ''}${run.souls ? ` · +${run.souls} Seelen` : ''}${run.runes.length ? ` · ${run.runes.length} Runen` : ''}` : 'Verbessere deine Helden und starte dann einen Lauf', W / 2, 64);
+      ctx.fillText(done ? `${run.kills} Gegner${run.gold ? ` · +${fmt(run.gold)} Gold` : ''}${run.souls ? ` · +${run.souls} Seelen` : ''}${run.runes.length ? ` · ${run.runes.length} Runen` : ''}` : 'Tippe aufs Lagerfeuer, um deine Truppe anzupassen', W / 2, 64);
     }
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
     const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.45, W / 2, H / 2, W * 0.75); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.35)');
     ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+  }
+  function campFire(fx, t, pool) {
+    if (!pool) { lightPool(fx, GROUND - 14, 120 + Math.sin(t * 5) * 6, '255,150,60', 0.3); lightPool(fx, GROUND - 8, 50, '255,200,120', 0.25); }
+    shadow(fx, 26);
+    ctx.fillStyle = '#5a3d25'; ctx.save(); ctx.translate(fx, GROUND - 3); ctx.rotate(0.25); ctx.fillRect(-20, -3, 40, 6); ctx.rotate(-0.5); ctx.fillRect(-20, -3, 40, 6); ctx.restore();
+    for (let i = 0; i < 6; i++) { const h = 20 + Math.sin(t * 9 + i * 1.7) * 7; ctx.fillStyle = ['#e5484d', '#ffb547', '#ffd23f'][i % 3]; ctx.beginPath(); ctx.moveTo(fx - 15 + i * 6, GROUND - 6); ctx.quadraticCurveTo(fx - 12 + i * 5, GROUND - 6 - h, fx - 7 + i * 6, GROUND - 6); ctx.fill(); }
+    for (let i = 0; i < 6; i++) { const p = ((t * 0.6 + i / 6) % 1); ctx.fillStyle = `rgba(255,200,120,${1 - p})`; ctx.fillRect(fx + Math.sin(i * 3 + t) * 10, GROUND - 20 - p * 70, 2, 2); }
+  }
+  // ---------- Truppen-Menü: Porträts und Szene ----------
+  const PORT = {};
+  function portraitURL(k) {
+    if (PORT[k]) return PORT[k];
+    const Z = 3, c = document.createElement('canvas'); c.width = 120 * Z; c.height = 130 * Z;
+    const main = ctx; ctx = c.getContext('2d');
+    try { ctx.setTransform(Z, 0, 0, Z, 0, 0); ctx.translate(0, 120 - GROUND); DRAW[k](60, null, 0.3, false); } finally { ctx = main; }
+    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, w = c.width;
+    let top = c.height;
+    for (let y = 0; y < 110 * Z && top === c.height; y++) for (let x = 50 * Z; x < 70 * Z; x++) if (d[(y * w + x) * 4 + 3] > 80) { top = y; break; }
+    const dy = { m: 12, r: 4, b: 4, n: 2 }[k] || 0, size = 42 * Z, out = document.createElement('canvas'); out.width = out.height = 120;
+    out.getContext('2d').drawImage(c, 60 * Z - size / 2 + 2 * Z, Math.max(0, top + (dy - 4) * Z), size, size, 0, 0, 120, 120);
+    return (PORT[k] = out.toDataURL());
+  }
+  function squadSpots(ids, slots) {
+    const ord = LINE_ORDER.filter(k => ids.includes(k)), n = Math.max(slots, ord.length), gap = Math.min(58, 300 / Math.max(1, n - 1)), c = 280;
+    const xs = Array.from({ length: n }, (_, i) => c + (n - 1) * gap / 2 - i * gap);
+    return { heroes: ord.map((k, i) => ({ k, x: xs[i] })), empty: xs.slice(ord.length) };
+  }
+  function roleRing(x, col, t, empty) {
+    ctx.save();
+    if (empty) {
+      ctx.setLineDash([4, 4]); ctx.strokeStyle = 'rgba(220,215,255,.4)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, GROUND + 3, 21, 6.5, 0, 0, 7); ctx.stroke();
+      ctx.setLineDash([]); ctx.fillStyle = 'rgba(220,215,255,.45)'; ctx.font = '16px "Bungee","Arial Black",sans-serif'; ctx.textAlign = 'center'; ctx.fillText('+', x, GROUND - 14);
+      ctx.restore(); return;
+    }
+    const p = 0.5 + 0.5 * Math.sin(t * 2.6 + x * 0.05);
+    ctx.globalAlpha = 0.35 + 0.25 * p; ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(x, GROUND + 3, 26 + p * 2, 8 + p, 0, 0, 7); ctx.fill();
+    ctx.globalAlpha = 1; ctx.shadowColor = col; ctx.shadowBlur = 10; ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, GROUND + 3, 22, 6.5, 0, 0, 7); ctx.stroke();
+    ctx.shadowBlur = 0; ctx.globalAlpha = 0.7; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(x, GROUND + 3, 14, 4, 0, 0, 7); ctx.stroke();
+    ctx.restore();
+  }
+  function drawSquad(t, sq) {
+    const main = ctx; ctx = sq.cv.getContext('2d');
+    try {
+      const sc = sq.cv.width / W, off = sq.offL != null ? sq.offL : Math.max(0, sq.cv.height / sc - H);
+      ctx.setTransform(sc, 0, 0, sc, 0, 0);
+      // Oben: die Leere
+      const g = ctx.createLinearGradient(0, 0, 0, off + 60); g.addColorStop(0, '#020309'); g.addColorStop(0.55, '#060920'); g.addColorStop(1, '#060920');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, off + 60);
+      // Unten: das Lager mit der Truppe
+      ctx.save(); ctx.translate(0, off); ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
+      ENV_CAMP.back(t, 0); ENV_CAMP.props(t, 0);
+      campFire(64, t);
+      const sp = squadSpots(sq.ids, sq.slots);
+      sp.empty.forEach(x => roleRing(x, null, t, true));
+      sp.heroes.forEach(({ k, x }) => roleRing(x, ROLE_INFO[ROLE[k]].col, t));
+      [...sp.heroes].sort((a, b) => a.x - b.x).forEach(({ k, x }) => DRAW[k](x, null, t, false));
+      ENV_CAMP.front(t, 0);
+      ctx.textAlign = 'center'; ctx.font = '700 10px "Figtree",sans-serif';
+      sp.heroes.forEach(({ k, x }) => { ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillText(HERO_BY_ID[k].name, x + 0.8, GROUND + 25.8); ctx.fillStyle = ROLE_INFO[ROLE[k]].col; ctx.fillText(HERO_BY_ID[k].name, x, GROUND + 25); });
+      ctx.restore();
+      // Übergang von der Leere ins Lager
+      const b = ctx.createLinearGradient(0, off - 4, 0, off + 120); b.addColorStop(0, 'rgba(6,9,32,1)'); b.addColorStop(0.5, 'rgba(6,9,32,.55)'); b.addColorStop(1, 'rgba(6,9,32,0)');
+      ctx.fillStyle = b; ctx.fillRect(0, off - 4, W, 124);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 5; i++) {
+        const nx = (hash(i + 40) * W + Math.sin(t * 0.07 + i) * 30), ny = hash(i + 50) * (off + 40), r = 80 + hash(i + 60) * 90;
+        const ng = ctx.createRadialGradient(nx, ny, 0, nx, ny, r); ng.addColorStop(0, i % 2 ? 'rgba(110,70,220,.16)' : 'rgba(40,110,230,.13)'); ng.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = ng; ctx.fillRect(nx - r, ny - r, r * 2, r * 2);
+      }
+      for (let i = 0; i < 110; i++) { const a = 0.25 + 0.6 * hash(i + 70) * (0.6 + 0.4 * Math.sin(t * (1 + hash(i) * 2) + i)); ctx.fillStyle = `rgba(${200 + hash(i + 5) * 55 | 0},${210 + hash(i + 6) * 45 | 0},255,${a})`; const s = hash(i + 80) > 0.9 ? 2 : 1.2; ctx.fillRect(hash(i + 11) * W, hash(i + 23) * (off + 40), s, s); }
+      ctx.restore();
+      sq.off = off; sq.spots = sp;
+    } finally { ctx = main; }
   }
   // ---------- Animationen: Wiedergeburt und Krönung (Aufstieg) ----------
   const clamp01 = x => Math.max(0, Math.min(1, x));
