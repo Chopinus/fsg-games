@@ -1345,20 +1345,40 @@
     try {
       const res = await fetch('/api/' + action, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), keepalive: !!keepalive });
       const j = await res.json().catch(() => ({}));
-      return res.ok ? j : { error: j.error || 'Der Server antwortet gerade nicht.' };
+      return res.ok ? j : { ...j, error: j.error || 'Der Server antwortet gerade nicht.' };
     } catch { return { error: 'Keine Verbindung zum Server.' }; }
   }
   const timeStr = t => new Date(t).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
   const typing = () => document.activeElement?.closest?.('#rlPanel form');
-  async function cloudSave(force, keepalive) {
-    if (!acct || cloudBusy || (!cloudDirty && !force)) return;
+  let conflict = null; // neuerer Stand von einem anderen Gerät, wartet auf Entscheidung
+  async function cloudSave(force, keepalive, keep) {
+    if (!acct || cloudBusy || (conflict && !keep) || (!cloudDirty && !force)) return {};
     cloudBusy = true; cloudDirty = false;
-    const r = await api('save', { name: acct.name, token: acct.token, data: S }, keepalive);
+    const r = await api('save', { name: acct.name, token: acct.token, data: S, base: acct.updated || 0, force: !!keep }, keepalive);
     cloudBusy = false;
+    if (r.conflict) { conflict = { data: r.data, updated: r.updated }; cloudMsg = 'Auf einem anderen Gerät wurde weitergespielt.'; if (active) showConflict(); return r; }
     if (r.error) { cloudDirty = true; cloudMsg = r.error; if (/anmelden/.test(r.error)) setAcct(null); }
     else { acct.updated = r.updated; setAcct(acct); cloudMsg = `Gespeichert um ${timeStr(r.updated)}`; }
-    if (tab === 'stand' && !typing()) panel();
+    if (tab === 'stand' && !typing() && active) panel();
+    return r;
   }
+  function showConflict() {
+    if (!conflict) return;
+    const d = conflict.data || {}, num = v => Math.max(0, Math.floor(Number(v) || 0));
+    const desc = x => `${num(x.asc) ? `${num(x.asc)}× Aufstieg, ` : ''}${num(x.rebirths)}× Wiedergeburt, Rekord Stufe ${Math.max(num(x.best), 0)}, ${num(x.runs)} Läufe`;
+    modal(`<span class="rl-mic">⇅</span><h2>Neuerer Spielstand gefunden</h2>
+      <p class="note">Mit „${esc(acct ? acct.name : '')}“ wurde um <b>${timeStr(conflict.updated)}</b> auf einem anderen Gerät weitergespielt.</p>
+      <ul class="rl-list"><li><b>Anderes Gerät:</b> ${desc(d)}</li><li><b>Dieses Gerät:</b> ${desc(S)}</li></ul>
+      <div class="row" style="justify-content:center;flex-wrap:wrap"><button class="btn" data-m="ok" data-sync="load">Stand vom anderen Gerät laden</button>
+      <button class="btn ghost" data-m="ok" data-sync="keep">Diesen Stand behalten</button></div>
+      <p class="note" style="text-align:center">Im Zweifel: laden. Der Stand, mit dem zuletzt gespielt wurde, ist meistens der richtige.</p>`);
+  }
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('[data-sync]'); if (!b || !conflict) return;
+    const c = conflict; conflict = null;
+    if (b.dataset.sync === 'load') { adopt(c.data || {}); acct.updated = c.updated; setAcct(acct); cloudDirty = false; cloudMsg = `Geladen – zuletzt gespeichert um ${timeStr(c.updated)}`; toast('Spielstand vom anderen Gerät geladen.'); }
+    else { cloudSave(true, false, true).then(() => toast('Dieser Stand wurde gespeichert.')); }
+  }, true);
   setInterval(() => cloudSave(false), 30000);
   setInterval(() => { if (active) save(); }, 5000);
   document.addEventListener('visibilitychange', () => { if (document.hidden) { save(); cloudSave(true, true); } });
@@ -1403,6 +1423,7 @@
       $('#rlPanel').addEventListener('submit', onSubmit);
     }
     sizeCanvas(); refresh();
+    if (conflict) setTimeout(showConflict, 300); else if (acct) setTimeout(() => cloudSave(true), 800);
     if (!S.seenIntro) showIntro(); else if (S.news && !cine) showNews(); else if (S.keyNews != null) showKeyInfo(); else if (S.infNews) showInfInfo(); else if (!S.seenField && HEROES.filter(h => hired(S, h.tree)).length > fieldSlots(S)) showFieldInfo();
     else if (expOpen(S) && !S.seenExp) showExpInfo();
     last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
@@ -1704,7 +1725,7 @@
     else if (a === 'dismantle') { const r = S.runes.find(x => x.id === runeSel); if (r) { const d = dismantle(S, r); runeSel = null; toast(`+${d} Staub`); afterChange(); } }
     else if (a === 'buyrune') { const r = buyRune(S); if (r) { runeSel = r.id; toast(`Neue Rune: ${RUNE[r.t].name} I`); afterChange(); } }
     else if (a === 'cloudsave') { cloudMsg = 'Wird gespeichert …'; panel(); cloudSave(true); }
-    else if (a === 'logout') { cloudSave(true).then(() => { setAcct(null); cloudMsg = ''; panel(); toast('Abgemeldet. Dein Spielstand bleibt auf dem Server.'); }); }
+    else if (a === 'logout') { cloudSave(true).then(() => { conflict = null; setAcct(null); cloudMsg = ''; panel(); toast('Abgemeldet. Dein Spielstand bleibt auf dem Server.'); }); }
     else if (a === 'copy') {
       const code = $('#rlCode').textContent;
       (navigator.clipboard ? navigator.clipboard.writeText(code) : Promise.reject()).then(() => toast('Code kopiert'), () => {
@@ -1949,6 +1970,10 @@
   }
   // Neuigkeiten: neueste Einträge oben. Neue Updates OBEN mit höherer id anhängen.
   const UPDATES = [
+    { id: 10, date: '13.10.2026', title: 'Spielstand auf mehreren Geräten', items: [
+      ['Fix', 'Ein Gerät mit altem Stand konnte den neueren Spielstand eines anderen Geräts auf dem Server überschreiben. Jetzt merkt das Spiel, wenn woanders weitergespielt wurde, und fragt, welchen Stand du behalten willst.'],
+      ['Fix', 'Abmelden überschreibt keinen neueren Stand mehr.'],
+    ] },
     { id: 9, date: '13.10.2026', title: 'Endlos-Stufen zurückerstattet', items: [
       ['Umstellung', 'Wegen der neuen Endlos-Paare wurden alle bisher gekauften Endlos-Stufen (außer beim Ritter) in Gold und Seelen zurückgegeben. Du kannst sie jetzt neu verteilen.'],
     ] },

@@ -106,6 +106,10 @@ async function handle(action, body, ip) {
     if (!acc || !acc.tokens.includes(sha256(String(body.token || '')))) return [401, { error: 'Bitte melde dich neu an.' }];
     const data = cleanData(body.data);
     if (!data) return [400, { error: 'Der Spielstand ist ungültig.' }];
+    // Wurde inzwischen auf einem anderen Gerät gespeichert? Dann nicht einfach überschreiben.
+    const base = Number(body.base) || 0;
+    if (base && acc.updated > base && !body.force) return [409, { conflict: true, data: acc.data, updated: acc.updated, error: 'Auf einem anderen Gerät wurde weitergespielt.' }];
+    if (body.force && base && acc.updated > base) acc.prev = { data: acc.data, updated: acc.updated }; // Sicherung des überschriebenen Stands
     acc.data = data; acc.updated = Date.now(); markDirty();
     return [200, { updated: acc.updated, durable }];
   }
