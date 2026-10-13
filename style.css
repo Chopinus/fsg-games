@@ -583,3 +583,37 @@ input{font:inherit;font-size:18px;color:var(--fg);background:var(--bg);border:1p
 .rl-cur.soul{color:#86f0d8}
 @media (max-width:430px){#solo .topbar .title{display:none}#solo .topbar{justify-content:space-between}.rl-newsbtn{padding-inline:8px}}
 .rl-test{margin-top:14px;padding:10px 14px;border:1px dashed #ffcf4a;border-radius:14px;background:rgba(255,207,74,.06)}
+
+/* Ritterlauf: Läden als Reiter, Runen-Unterreiter, Runenschmied mit Kobold */
+.rl-shopnav button.on,.rl-subtabs button.on,.rl-fbar button.on{background:var(--accent,#ffcf4a);color:#1b1726;border-color:transparent}
+.rl-subtabs{display:flex;gap:8px;margin:2px 0 12px}
+.rl-subtabs button{border:1px solid var(--line);background:var(--surface2);border-radius:12px;padding:9px 16px;font-weight:800;font-size:15px}
+.rl-forge2{display:grid;grid-template-columns:1fr 210px;gap:14px;align-items:start}
+@media (max-width:700px){.rl-forge2{grid-template-columns:1fr}.rl-kobold{order:-1;max-width:190px;margin:0 auto}}
+.rl-fmain{min-width:0}
+.rl-fbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
+.rl-fbar button{border:1px solid var(--line);background:var(--surface2);border-radius:999px;padding:5px 12px;font-weight:700;font-size:13px}
+.rl-fbar.chips button:not(.on){border-color:color-mix(in srgb,var(--rc,#888) 55%,var(--line))}
+.rl-fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:8px;margin-top:10px}
+.rl-ftile{position:relative;aspect-ratio:1;border-radius:14px;border:2px solid var(--rc);background:radial-gradient(circle at 50% 35%,color-mix(in srgb,var(--rc) 40%,transparent),color-mix(in srgb,var(--rc) 12%,var(--surface)) 70%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:var(--fg);box-shadow:inset 0 2px 0 rgba(255,255,255,.12)}
+.rl-ftile b{font-family:var(--display);font-weight:400;font-size:20px;line-height:1}
+.rl-ftile small{font-size:10px;font-weight:700;opacity:.85}
+.rl-ftile .cnt{position:absolute;right:4px;bottom:3px;font-size:12px;font-weight:900;background:rgba(0,0,0,.55);border-radius:8px;padding:0 5px}
+.rl-ftile .lock{position:absolute;left:4px;top:3px;font-size:10px;font-weight:800;background:rgba(0,0,0,.45);border-radius:7px;padding:0 4px}
+.rl-ftile.on{outline:3px solid #fff;outline-offset:2px;transform:scale(1.04)}
+.rl-fsel{margin-top:12px;padding:10px 14px;border-radius:14px;border:1px solid color-mix(in srgb,var(--rc) 55%,var(--line));background:linear-gradient(120deg,color-mix(in srgb,var(--rc) 16%,var(--surface)),var(--surface));display:flex;flex-direction:column;gap:8px}
+.rl-fsel>div:first-child{display:flex;flex-direction:column}
+.rl-kobold{background:radial-gradient(circle at 50% 80%,rgba(255,140,60,.18),rgba(0,0,0,0) 70%),var(--surface);border:1px solid var(--line);border-radius:16px;padding:8px;position:sticky;top:10px}
+.rl-kobold svg{width:100%;height:auto;display:block;overflow:visible}
+.rl-kobold .karm{transform-origin:150px 126px;animation:kham 1.6s ease-in-out infinite}
+.rl-kobold .ksparks{opacity:0;animation:kspark 1.6s ease-out infinite;transform-origin:80px 145px}
+.rl-kobold .khot{animation:khot 1.6s ease-in-out infinite}
+.rl-kobold .khead{transform-origin:129px 110px;animation:khead 1.6s ease-in-out infinite}
+.rl-kobold.hit .karm{animation:kham .45s ease-in 2}
+.rl-kobold.hit .ksparks{animation:kspark .45s ease-out 2}
+@keyframes kham{0%,100%{transform:rotate(0)}50%{transform:rotate(8deg)}68%{transform:rotate(-135deg)}74%{transform:rotate(-127deg)}86%{transform:rotate(-55deg)}}
+@keyframes kspark{0%,66%{opacity:0;transform:scale(.4) translateY(0)}72%{opacity:1;transform:scale(1.2) translateY(-4px)}100%{opacity:0;transform:scale(1.6) translateY(-16px)}}
+@keyframes khot{0%,100%{opacity:.85}70%{opacity:1}}
+@keyframes khead{0%,100%{transform:rotate(0)}70%{transform:rotate(3deg)}}
+
+.rl-news-x{}
