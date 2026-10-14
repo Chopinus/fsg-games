@@ -1133,9 +1133,9 @@
   function rebirth(S, force) {
     const st = starsFor(S) || (force ? starsFor(S, reqOf(S)) : 0); if (!st && !force) return 0;
     S.stars += st; S.rebirths++; S.kslots = kSlots(S) + 1; S.rbHist = [...(S.rbHist || []), st].slice(-40); S.bestEver = Math.max(S.bestEver, S.best);
-    const keep = keepHires(S);
-    S.nodes = { start: 1 }; keep.forEach(id => (S.nodes[id] = 1));
-    S.gold = 500 * perk(S, 'p_zins') + 5000 * cperk(S, 'k_start'); S.souls = 3 * perk(S, 'p_seelenst') + 10 * cperk(S, 'k_start'); S.best = 0; S.equip = []; S.area = 0;
+    const keep = keepHires(S), keepTree = !!S.tKeepTree;
+    if (!keepTree) { S.nodes = { start: 1 }; keep.forEach(id => (S.nodes[id] = 1)); }
+    S.gold = 500 * perk(S, 'p_zins') + 5000 * cperk(S, 'k_start'); S.souls = 3 * perk(S, 'p_seelenst') + 10 * cperk(S, 'k_start'); S.best = 0; if (!keepTree) S.equip = []; S.area = 0;
     S.news = { kind: 'rebirth', n: S.rebirths, stars: st };
     return st;
   }
@@ -2456,14 +2456,15 @@
     const lockedNote = !classOpen(S, tree) ? `<p class="warn">${h.puzzle ? `Diese Klasse bekommst du mit 6 Puzzleteilen aus den Expeditionen (${pieceCount(S, h.id)}/6).` : `Diese Klasse wird mit der ${h.rebirth}. Wiedergeburt freigeschaltet.`} Du kannst dir den Baum schon ansehen.</p>` : '';
     return `${lockedNote}<div class="rl-hhead" style="--hc:${h.color}"><span class="pt">${PORTRAIT[h.id]}</span><div><h3>${h.name}</h3><p class="note">${h.desc}</p>
       ${ok ? `<p class="note">Aktive Fähigkeiten ${eq.length}/${slotsOf(S, tree)}: ${eq.length ? esc(eq.map(ACT_NAME).join(', ')) : 'noch keine'}${sg ? ` · <span class="rl-sigslot">✦ Siegel-Platz: ${eqS.length ? esc(eqS.map(ACT_NAME).join(', ')) : 'frei'}</span>` : ''}</p>${sockRow(tree)}` : ''}</div></div>
-      ${acct && acct.tester ? `<div class="rl-test"><b>🧪 Test</b> <button class="btn small ${confirm === 'tbuild' ? 'danger' : ''}" data-rl="tbuild" ${inCamp() && classOpen(S, tree) ? '' : 'disabled'}>${confirm === 'tbuild' ? 'Wirklich den ganzen Baum setzen?' : 'Baum komplett ausbauen'}</button><span class="note">Alles auf voll, Schaden und Leben auf 20, linke Endlos-Fertigkeit auf 16, rechte auf 8. Kostet nichts. Schlüssel bleiben, wie sie sind.</span></div>` : ''}
+      ${acct && acct.tester ? `<div class="rl-test"><b>🧪 Test</b> <button class="btn small ${confirm === 'tbuild' ? 'danger' : ''}" data-rl="tbuild" ${inCamp() && classOpen(S, tree) ? '' : 'disabled'}>${confirm === 'tbuild' ? 'Wirklich den ganzen Baum setzen?' : 'Baum komplett ausbauen'}</button><span class="note">Alles auf voll, beide Endlos-Fertigkeiten auf 42. Kostet nichts. Schlüssel bleiben, wie sie sind.</span>
+        <button class="btn small ${S.tKeepTree ? '' : 'ghost'}" data-rl="tkeep">${S.tKeepTree ? '✓ Bäume bleiben bei Wiedergeburt' : 'Bäume bleiben bei Wiedergeburt: aus'}</button><span class="note">Wenn an, behalten alle Helden bei einer Wiedergeburt ihre Fertigkeitenbäume und ausgerüsteten Fähigkeiten. Gilt für alle Helden.</span></div>` : ''}
       <div class="rl-treewrap"><div class="rl-treebox">${treeSVG(tree)}${!sg && ahnOpen(S) && classOpen(S, tree) ? `<p class="note rl-signote">✦ Mit einem Ahnensiegel wächst dieser Baum nach unten: 5 passive Fähigkeiten, 3 Siegel-Fähigkeiten mit eigenem Platz und 4 Siegel-Schlüssel mit eigenem Sockel. ${S.ahn.sig > 0 ? 'Du hast ein freies Siegel, setze es im Reiter Ahnenprüfung.' : 'Siegel bekommst du in der Ahnenprüfung.'}</p>` : ''}</div>${detailHTML(tree)}</div>`;
   }
   function testBuild(tree) {
     const inf = NODES.filter(n => n.tree === tree && n.kind === 'inf');
     for (const n of NODES) {
       if (n.tree !== tree || n.kind === 'key' || (n.sig && !sigOn(S, tree))) continue;
-      S.nodes[n.id] = n.kind === 'inf' ? (inf.indexOf(n) === 0 ? 16 : 8) : n.max === 30 ? 20 : n.max;
+      S.nodes[n.id] = n.kind === 'inf' ? 42 : n.max;
     }
     const acts = NODES.filter(n => n.tree === tree && n.active).map(n => n.id);
     for (const id of acts) if (!S.equip.includes(id) && eqOf(S, tree, NODE[id].sig).length < slotLim(S, tree, NODE[id].sig)) S.equip.push(id);
@@ -2847,6 +2848,7 @@
         forgeSel = null; SND.play('forge'); kHit(); toast(`${n} Runen zerstört: +${d} Runensplitter`, true); afterChange(); }
       else { confirm = confirm === 'fall' ? 'fall2' : 'fall'; panel(); const c0 = confirm; setTimeout(() => { if (confirm === c0) { confirm = ''; panel(); } }, 5000); } }
     else if (a === 'tunrb') { if (acct && acct.tester && inCamp() && ask('unrb', panel)) { const r = unrebirth(S); if (r) { run = null; SND.play('tick'); toast(`Zurück auf Wiedergeburt ${S.rebirths}: −${r.lost} Sterne, Sternen-Laden zurückgesetzt (+${r.back})`, true); afterChange(); } } }
+    else if (a === 'tkeep') { if (acct && acct.tester) { S.tKeepTree = !S.tKeepTree; save(); toast(S.tKeepTree ? 'Bäume bleiben bei Wiedergeburt' : 'Bäume werden bei Wiedergeburt wieder zurückgesetzt', true); panel(); } }
     else if (a === 'tbuild') { if (acct && acct.tester && inCamp() && HERO[tab] && classOpen(S, tab) && ask('tbuild', panel)) { testBuild(tab); achCheck(); afterChange(); SND.play('forge'); toast(`${HERO[tab].name}: Baum ausgebaut`, true); } }
     else if (a === 'trebirth') { if (acct && acct.tester && inCamp()) { const team = HEROES.filter(h => st[h.id]).map(h => h.id); const g = rebirth(S, true); run = null; achCheck(); afterChange(); SND.play('rebirth'); toast(`Test-Wiedergeburt: +${g} Sterne`, true); playCine('rebirth', team); } }
     else if (a === 'lager') { if (inCamp() && buyLager(S)) { SND.play('forge'); toast(`Runen-Lager erweitert: jetzt ${runeCap(S)} Plätze`); afterChange(); } }
