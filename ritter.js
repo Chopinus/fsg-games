@@ -1463,15 +1463,15 @@
   }
   // Expeditionen (ab dem 1. Aufstieg): Missionen geben Heldensplitter und mit etwas Glück Puzzleteile
   const MISSIONS = [
-    { id: 'streif', name: 'Streifzug', desc: 'Überstehe 15 Wellen.', waves: 15, spl: 4, start: 0.9, icon: '⚑' },
-    { id: 'bosse', name: 'Bosshatz', desc: 'Besiege 4 Bosse. Jede dritte Welle bringt einen.', bosses: 4, spl: 3, start: 0.87, icon: '♛' },
-    { id: 'festung', name: 'Belagerung', desc: 'Überstehe 25 Wellen, ohne dass ein Held fällt.', waves: 25, spl: 7, start: 0.81, noLoss: true, icon: '⛉' },
-    { id: 'h_a', hero: 'a', area: 'schatten', name: 'Schattenviertel', desc: 'Schleiche 18 Wellen durch die Gassen der Diebesgilde. Jede 6. Welle stellt sich dir die Gildenmeisterin. Nur hier findest du Teile der Assassine.', waves: 18, bossEvery: 6, spl: 3, start: 0.85, icon: '☾' },
-    { id: 'h_n', hero: 'n', area: 'friedhof', name: 'Vergessener Friedhof', desc: 'Überstehe 18 Wellen zwischen den Gräbern. Jede 6. Welle gräbt sich der Totengräber aus der Erde. Nur hier findest du Teile des Nekromanten.', waves: 18, bossEvery: 6, spl: 3, start: 0.85, icon: '☠' },
-    { id: 'h_b', hero: 'b', area: 'theater', name: 'Geistertheater', desc: 'Spiele 18 Wellen lang auf der verfluchten Bühne. Jede 6. Welle zieht der Puppenspieler die Fäden. Nur hier findest du Teile des Barden.', waves: 18, bossEvery: 6, spl: 3, start: 0.85, icon: '♪' },
-    { id: 'h_d', hero: 'd', area: 'hain', name: 'Verdorbener Hain', desc: 'Kämpfe dich 18 Wellen durch den kranken Wald. Jede 6. Welle bricht der Moderhirsch durchs Unterholz. Nur hier findest du Teile der Druidin.', waves: 18, bossEvery: 6, spl: 3, start: 0.85, icon: '❀' },
-    { id: 'h_e', hero: 'e', area: 'werk', name: 'Uhrwerkfabrik', desc: 'Überstehe 18 Wellen in der verlassenen Fabrik. Jede 6. Welle stampft der Dampfkoloss heran. Nur hier findest du Teile der Tüftlerin.', waves: 18, bossEvery: 6, spl: 3, start: 0.85, icon: '⚙' },
-    { id: 'mine', hero: 'o', area: 'mine', name: 'Runenmine', desc: 'Dringe 18 Wellen tief in die alte Runenmine vor. Jede 6. Welle erwacht der Runenwächter. Nur hier findest du Teile des Runengolems, und jeder Sieg bringt eine Rune.', waves: 18, bossEvery: 6, spl: 3, start: 0.85, icon: '⬢', rune: true },
+    { id: 'streif', name: 'Streifzug', desc: 'Überstehe 15 Wellen.', waves: 15, spl: [4, 6], start: 0.9, icon: '⚑' },
+    { id: 'bosse', name: 'Bosshatz', desc: 'Besiege 4 Bosse. Jede dritte Welle bringt einen.', bosses: 4, spl: [4, 6], start: 0.87, icon: '♛' },
+    { id: 'festung', name: 'Belagerung', desc: 'Überstehe 25 Wellen, ohne dass ein Held fällt.', waves: 25, spl: [4, 6], start: 0.81, noLoss: true, icon: '⛉' },
+    { id: 'h_a', hero: 'a', area: 'schatten', name: 'Schattenviertel', desc: 'Schleiche 18 Wellen durch die Gassen der Diebesgilde. Jede 6. Welle stellt sich dir die Gildenmeisterin. Nur hier findest du Teile der Assassine.', waves: 18, bossEvery: 6, spl: [2, 3], start: 0.85, icon: '☾' },
+    { id: 'h_n', hero: 'n', area: 'friedhof', name: 'Vergessener Friedhof', desc: 'Überstehe 18 Wellen zwischen den Gräbern. Jede 6. Welle gräbt sich der Totengräber aus der Erde. Nur hier findest du Teile des Nekromanten.', waves: 18, bossEvery: 6, spl: [2, 3], start: 0.85, icon: '☠' },
+    { id: 'h_b', hero: 'b', area: 'theater', name: 'Geistertheater', desc: 'Spiele 18 Wellen lang auf der verfluchten Bühne. Jede 6. Welle zieht der Puppenspieler die Fäden. Nur hier findest du Teile des Barden.', waves: 18, bossEvery: 6, spl: [2, 3], start: 0.85, icon: '♪' },
+    { id: 'h_d', hero: 'd', area: 'hain', name: 'Verdorbener Hain', desc: 'Kämpfe dich 18 Wellen durch den kranken Wald. Jede 6. Welle bricht der Moderhirsch durchs Unterholz. Nur hier findest du Teile der Druidin.', waves: 18, bossEvery: 6, spl: [2, 3], start: 0.85, icon: '❀' },
+    { id: 'h_e', hero: 'e', area: 'werk', name: 'Uhrwerkfabrik', desc: 'Überstehe 18 Wellen in der verlassenen Fabrik. Jede 6. Welle stampft der Dampfkoloss heran. Nur hier findest du Teile der Tüftlerin.', waves: 18, bossEvery: 6, spl: [2, 3], start: 0.85, icon: '⚙' },
+    { id: 'mine', hero: 'o', area: 'mine', name: 'Runenmine', desc: 'Dringe 18 Wellen tief in die alte Runenmine vor. Jede 6. Welle erwacht der Runenwächter. Nur hier findest du Teile des Runengolems, und jeder Sieg bringt eine Rune.', waves: 18, bossEvery: 6, spl: [2, 3], start: 0.85, icon: '⬢', rune: true },
   ];
   const MISSION = Object.fromEntries(MISSIONS.map(m => [m.id, m]));
   // Themengebiete der Puzzle-Helden: eigene Umgebung, eigene Gegner und ein eigener Boss
@@ -1491,7 +1491,8 @@
   const expStage = (S, m) => Math.max(1, Math.round(Math.max(S.ascBest || 0, S.best || 0) * m.start));
   function claimExp(S, run) {
     const m = MISSION[run.mission]; if (!m || !run.victory) return null;
-    S.exp.spl += m.spl; S.exp.done++;
+    const spl = m.spl[0] + Math.floor(Math.random() * (m.spl[1] - m.spl[0] + 1));
+    S.exp.spl += spl; S.exp.done++;
     const id = m.hero || null, have = id ? pieceMask(S, id) : 63, missing = [0, 1, 2, 3, 4, 5].filter(i => !(have & (1 << i)));
     let piece = null, rune = null, runeDust = 0;
     if (m.rune && feature(S, 'runen')) { const d0 = S.dust; rune = addRune(S, RUNES[Math.floor(Math.random() * RUNES.length)].id, bossRuneTier(run.stage)); runeDust = S.dust - d0; }
@@ -1500,7 +1501,7 @@
     if (id && Math.random() < PIECE_CHANCE) { const k = Math.floor(Math.random() * 6); if (have & (1 << k)) { dup = k; S.exp.spl += PIECE_DUP; } else { piece = k; S.exp.pieces[id] = have | (1 << piece); } }
     const complete = piece != null && id && assembled(S, id);
     if (complete) puzzleHire(S, id);
-    return { spl: m.spl, piece, dup, dupSpl: dup != null ? PIECE_DUP : 0, hero: id, complete, rune, runeDust };
+    return { spl, piece, dup, dupSpl: dup != null ? PIECE_DUP : 0, hero: id, complete, rune, runeDust };
   }
   // Fertiges Puzzle: der Held schließt sich sofort kostenlos an
   function puzzleHire(S, id) { const h = HERO_BY_ID[id]; if (h && h.hire && assembled(S, id) && !rank(S, h.hire)) S.nodes[h.hire] = 1; }
@@ -3055,6 +3056,7 @@
     if (b.dataset.frm) { fSlots.splice(Number(b.dataset.frm), 1); fRes = null; panel(); return; }
     if (b.dataset.fsel) { forgeSel = forgeSel === b.dataset.fsel ? null : b.dataset.fsel; confirm = ''; SND.play('tick'); panel(); return; }
     if (b.dataset.shopjump) { const el = document.getElementById('shop-' + b.dataset.shopjump); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    if (b.dataset.xinfo) { const id = b.dataset.xinfo; if (expInfo.has(id)) expInfo.delete(id); else expInfo.add(id); panel(); return; }
     if (b.dataset.target) { S.exp.target = b.dataset.target; save(); panel(); return; }
     if (b.dataset.piece) { const [hid, i] = b.dataset.piece.split(':'); testerSplinters(); if (buyPiece(S, hid, Number(i))) { const h = HERO_BY_ID[hid]; if (assembled(S, hid)) heroDone(hid); else toast(`Puzzleteil ${pieceCount(S, hid)}/6 für ${h.name}`); afterChange(); } return; }
     if (b.dataset.tempo) { if (buyTempo(S)) { toast(`Tempo ×${String(maxSpeed(S)).replace('.', ',')} freigeschaltet!`, true); afterChange(); } return; }
@@ -3236,12 +3238,17 @@
         : shop ? `<button class="pc buy" style="--x:${x};--y:${y}" data-piece="${id}:${i}" ${S.exp.spl >= PIECE_COST ? '' : 'disabled'} title="Teil ${i + 1} kaufen"><b>${PIECE_COST}</b></button>` : `<span class="pc" style="--x:${x};--y:${y}"></span>`;
     }).join('')}</div>`;
   }
+  const expInfo = new Set();
   function expTab() {
     const camp = inCamp();
-    const mRow = m => { const h = m.hero && HERO_BY_ID[m.hero], A = m.area && AREAS[m.area], done = h && assembled(S, m.hero);
-      return `<div class="rl-mission ${h ? 'hero' : ''}" ${h ? `style="--hc:${h.color}"` : ''}><span class="ic">${h ? PORTRAIT[m.hero] : m.icon}</span><div><b>${m.name}</b><small>${m.desc}</small>
-        <small>Alle Wellen auf Stufe ${expStage(S, m)} · Belohnung: <b>${m.spl} Splitter${m.rune ? ' + 1 Rune' : ''}</b>${h ? ` · ${done ? `${h.name} ist fertig` : `Teile ${h.name}: ${pieceCount(S, m.hero)}/6`}` : ''}${A ? ` · Boss: ${A.boss}` : ''}</small></div>
-        <button class="btn small" data-rl="mission" data-m2="${m.id}" ${camp ? '' : 'disabled'}>Starten</button></div>`; };
+    const pc = v => `${Math.round(v * 1000) / 10} %`.replace('.', ',');
+    const mRow = m => { const h = m.hero && HERO_BY_ID[m.hero], open = expInfo.has(m.id), sp = `${m.spl[0]}–${m.spl[1]} Heldensplitter`;
+      const rewards = [[sp, 1], ...(m.rune ? [['1 Rune', 1]] : []), ...(h ? [[`1 Puzzleteil (${h.name})`, PIECE_CHANCE]] : [])];
+      return `<div class="rl-mission ${h ? 'hero' : ''} ${open ? 'open' : ''}" ${h ? `style="--hc:${h.color}"` : ''}><div class="rl-mtop"><span class="ic">${h ? PORTRAIT[m.hero] : m.icon}</span><b>${m.name}</b>
+        <button class="rl-minfo ${open ? 'on' : ''}" data-xinfo="${m.id}" aria-label="Infos zu ${esc(m.name)}">i</button>
+        <button class="btn small" data-rl="mission" data-m2="${m.id}" ${camp ? '' : 'disabled'}>Starten</button></div>
+        ${open ? `<div class="rl-mbody"><p>${m.desc}</p><div class="rl-mrew"><span>Belohnungen</span>${rewards.map(([n, v]) => `<div><b>${n}</b><i>${pc(v)}</i></div>`).join('')}</div>
+          ${h ? `<small>Doppeltes Teil: ${PIECE_DUP} Splitter${assembled(S, m.hero) ? ` · ${h.name} ist fertig` : ` · Teile ${pieceCount(S, m.hero)}/6`}</small>` : ''}<small>Alle Wellen auf Stufe ${expStage(S, m)}</small></div>` : ''}</div>`; };
     const heroes = PUZZLE.map(id => {
       const h = HERO_BY_ID[id], done = assembled(S, id), n = pieceCount(S, id), hm = heroMission(id);
       return `<div class="rl-xhero ${done ? 'done' : ''}" style="--hc:${h.color}">
@@ -3249,7 +3256,7 @@
         <p class="note">${esc(h.desc)}</p>${puzzleHTML(id, !done)}
         ${done ? `<button class="btn small ghost rl-gotree" data-tab="${h.tree}">Zum Baum</button>` : hm ? `<span class="rl-minetag" style="--hc:${h.color}">${hm.icon} Teile nur in: ${esc(hm.name)}</span>` : ''}</div>`;
     }).join('');
-    return `<div class="rl-exp"><div class="rl-xhead"><div><h3 class="rl-h3">Expeditionen</h3><p class="note">Jeder Puzzle-Held hat sein eigenes Gebiet mit eigenen Gegnern und einem eigenen Boss. Nur dort findest du seine Puzzleteile: Jeder Sieg hat 6 % Chance auf eines der 6 Teile. Ein Teil, das du schon hast, wird zu ${PIECE_DUP} Heldensplittern. Die allgemeinen Missionen geben mehr Heldensplitter. Mit Splittern kaufst du jedes Teil gezielt (${PIECE_COST} Splitter). Gold, Seelen und Rekorde gibt es in Expeditionen nicht.</p></div>
+    return `<div class="rl-exp"><div class="rl-xhead"><div><h3 class="rl-h3">Expeditionen</h3><p class="note">Jeder Puzzle-Held hat sein eigenes Gebiet mit eigenen Gegnern und einem eigenen Boss. Nur dort findest du seine Puzzleteile: Jeder Sieg hat 6 % Chance auf eines der 6 Teile. Ein Teil, das du schon hast, wird zu ${PIECE_DUP} Heldensplittern. Die allgemeinen Missionen geben mehr Heldensplitter. Mit Splittern kaufst du jedes Teil gezielt (${PIECE_COST} Splitter). Tippe auf ⓘ für Details und Belohnungen. Gold, Seelen und Rekorde gibt es in Expeditionen nicht.</p></div>
       <div class="rl-spl"><span>◈</span><b>${S.exp.spl}</b><small>Heldensplitter</small></div></div>
       ${camp ? '' : '<p class="note">Missionen startest du im Lager.</p>'}
       <h3 class="rl-h3">Heldengebiete</h3><div class="rl-missions">${MISSIONS.filter(m => m.hero).map(mRow).join('')}</div>
@@ -3609,6 +3616,10 @@
   }
   // Neuigkeiten: neueste Einträge oben. Neue Updates OBEN mit höherer id anhängen.
   const UPDATES = [
+    { id: 48, date: '14.10.2026', title: 'Kompaktere Expeditionen', items: [
+      ['Änderung', 'Die Missionskarten sind kompakter. Beschreibung, Belohnungen mit Wahrscheinlichkeiten und Gegnerstufe zeigt der runde Info-Knopf.'],
+      ['Änderung', 'Allgemeine Missionen geben jetzt 4–6 Heldensplitter, Heldengebiete 2–3.'],
+    ] },
     { id: 47, date: '14.10.2026', title: 'Neues Tempo bis zum Aufstieg', items: [
       ['Änderung', 'Der Weg bis zum Aufstieg ist gleichmäßiger: Die 1. Wiedergeburt gibt doppelte Sterne und die Gegner sind nach der 1. und 2. Wiedergeburt etwas schwächer. Dafür werden sie jetzt bis zur 7. Wiedergeburt stärker, und hohe Rekorde geben etwas weniger Sterne. Jede Wiedergeburt nach der ersten dauert so bei ×5 etwa 1 h 40 min, statt am Anfang ewig und am Ende im Flug.'],
       ['Änderung', 'Seelen-Endlos-Fertigkeiten kosten nur noch halb so viele Seelen.'],

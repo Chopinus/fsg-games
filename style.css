@@ -932,3 +932,17 @@ input{font:inherit;font-size:18px;color:var(--fg);background:var(--bg);border:1p
 .rl-mission.hero{border-color:color-mix(in srgb,var(--hc) 55%,var(--line));background:linear-gradient(135deg,color-mix(in srgb,var(--hc) 14%,transparent),transparent 70%)}
 .rl-mission.hero .ic{color:var(--hc);text-shadow:0 0 8px color-mix(in srgb,var(--hc) 70%,transparent)}
 .rl-minetag{color:var(--hc,#46d4ee);background:color-mix(in srgb,var(--hc,#46d4ee) 10%,transparent);border-color:color-mix(in srgb,var(--hc,#46d4ee) 50%,transparent)}
+
+/* ---------- Kompakte Missionskarten mit Info-Knopf ---------- */
+.rl-mission{flex-direction:column;align-items:stretch;gap:8px;padding:10px 12px}
+.rl-mission>.rl-mtop{display:flex;flex-direction:row;align-items:center;gap:10px;flex:none}
+.rl-mtop b{flex:1;min-width:0;font-size:15px;line-height:1.2}
+.rl-mtop .ic{width:36px;height:36px;font-size:18px}
+.rl-minfo{flex:none;width:26px;height:26px;border-radius:50%;border:1.5px solid color-mix(in srgb,var(--hc,#9bd14a) 60%,var(--line));background:transparent;color:var(--hc,#c8f08a);font:italic 700 14px/1 Georgia,serif;cursor:pointer;display:grid;place-items:center;padding:0}
+.rl-minfo.on,.rl-minfo:hover{background:color-mix(in srgb,var(--hc,#9bd14a) 22%,transparent)}
+.rl-mission>.rl-mbody{display:flex;flex-direction:column;gap:6px;padding-top:6px;border-top:1px solid var(--line)}
+.rl-mbody p{margin:0;font-size:13px;color:var(--muted)}
+.rl-mrew{display:flex;flex-direction:column;gap:3px}
+.rl-mrew>span{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.rl-mrew>div{display:flex;justify-content:space-between;gap:10px;font-size:14px}
+.rl-mrew i{font-style:normal;font-weight:800;color:var(--hc,#c8f08a)}
