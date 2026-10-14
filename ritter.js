@@ -2300,6 +2300,7 @@
         if (cine) { if (cine.t > 0.4) cine.t = Math.max(cine.t, cine.dur - 0.25); return; }
         if (!inCamp()) return;
         const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W, y = (e.clientY - r.top) / r.height * H;
+        if (x < 84 && y > GROUND - 112 && y < GROUND + 4) { showBoard(); return; }
         if (x > 90 && x < 400 && y > 80) openSquad();
       });
       window.addEventListener('resize', () => { sizeCanvas(); if (squad && !squad.el.hidden) sizeSquad(); });
@@ -2367,8 +2368,7 @@
   /* ---------- Leisten ---------- */
   const crown = '<i class="rl-crown" aria-hidden="true"></i>', coin = '<i class="rl-coin" aria-hidden="true"></i>', soul = '<i class="rl-soulic" aria-hidden="true"></i>', star = '<i class="rl-star" aria-hidden="true"></i>', dust = '<i class="rl-dust" aria-hidden="true"></i>';
   function hud() {
-    $('#rlStat').innerHTML = `<span class="rl-cur gold">${coin}${fmt(S.gold)}</span><span class="rl-cur soul">${soul}${S.souls}</span>${S.stars || S.rebirths ? `<span class="rl-cur star">${star}${S.stars}</span>` : ''}${feature(S, 'runen') ? `<span class="rl-cur dust">${dust}${S.dust}</span>` : ''}${S.asc || S.crowns ? `<span class="rl-cur crown">${crown}${S.crowns}</span>` : ''}
-      <span class="note">Rekord ${S.best} von ${capOf(S) === Infinity ? '∞' : capOf(S)} · ${S.asc ? `Aufstieg ${S.asc} · ` : ''}${S.rebirths ? `${S.rebirths}× wiedergeboren · ` : ''}${S.runs} Läufe</span>`;
+    $('#rlStat').innerHTML = `<span class="note">Rekord ${S.best} von ${capOf(S) === Infinity ? '∞' : capOf(S)} · ${S.asc ? `Aufstieg ${S.asc} · ` : ''}${S.rebirths ? `${S.rebirths}× wiedergeboren · ` : ''}${S.runs} Läufe</span>`;
     { const d = $('#soloNews .dot'); if (d) d.hidden = newsSeen() >= UPDATES[0].id; }
     $('#soloSpeed').textContent = `Tempo ×${String(S.speed).replace('.', ',')}`;
   }
@@ -2395,8 +2395,8 @@
   }
   function action() {
     const a = $('#rlAction');
-    if (inCamp()) a.innerHTML = `<button class="btn ghost" data-rl="weekly">Woche</button>${feature(S, 'turm') ? `<button class="btn ghost" data-rl="tower">Turm${S.towerBest ? ` (Rekord ${S.towerBest})` : ''}</button>` : ''}${areaMax(S) >= 1 ? `<button class="btn ghost rl-area" data-rl="area"><small>Startgebiet</small><b>${esc(zoneName(st.startStage))} ▾</b></button>` : ''}<button class="btn rl-go" data-rl="start">${run ? 'Neuer Lauf' : 'Lauf starten'}${st.startStage > 1 ? ` ab Stufe ${st.startStage}` : ''}</button>`;
-    else a.innerHTML = `<button class="btn ${confirm === 'giveup' ? 'danger' : 'ghost'} small" data-rl="giveup">${confirm === 'giveup' ? 'Wirklich aufgeben?' : run.mode === 'tower' ? 'Turm verlassen' : run.mode === 'weekly' ? 'Herausforderung beenden'   : run.mode === 'exp' || run.mode === 'ahnen' ? 'Mission abbrechen' : 'Lauf aufgeben'}</button>`;
+    if (inCamp()) a.innerHTML = `<button class="btn ghost rl-boardbtn" data-rl="board">📋 Anschlagbrett</button><button class="btn rl-go" data-rl="start">Feldzug starten${st.startStage > 1 ? ` ab Stufe ${st.startStage}` : ''}</button>`;
+    else a.innerHTML = `<button class="btn ${confirm === 'giveup' ? 'danger' : 'ghost'} small" data-rl="giveup">${confirm === 'giveup' ? 'Wirklich aufgeben?' : run.mode === 'tower' ? 'Turm verlassen' : run.mode === 'weekly' ? 'Herausforderung beenden'   : run.mode === 'exp' || run.mode === 'ahnen' ? 'Mission abbrechen' : 'Feldzug aufgeben'}</button>`;
   }
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const costHTML = c => [c.g ? `<span class="rl-cur gold">${coin}${fmt(c.g)}</span>` : '', c.s ? `<span class="rl-cur soul">${soul}${c.s}</span>` : ''].join(' ');
@@ -2458,6 +2458,7 @@
       ${ok ? `<p class="note">Aktive Fähigkeiten ${eq.length}/${slotsOf(S, tree)}: ${eq.length ? esc(eq.map(ACT_NAME).join(', ')) : 'noch keine'}${sg ? ` · <span class="rl-sigslot">✦ Siegel-Platz: ${eqS.length ? esc(eqS.map(ACT_NAME).join(', ')) : 'frei'}</span>` : ''}</p>${sockRow(tree)}` : ''}</div></div>
       ${acct && acct.tester ? `<div class="rl-test"><b>🧪 Test</b> <button class="btn small ${confirm === 'tbuild' ? 'danger' : ''}" data-rl="tbuild" ${inCamp() && classOpen(S, tree) ? '' : 'disabled'}>${confirm === 'tbuild' ? 'Wirklich den ganzen Baum setzen?' : 'Baum komplett ausbauen'}</button><span class="note">Alles auf voll, beide Endlos-Fertigkeiten auf 42. Kostet nichts. Schlüssel bleiben, wie sie sind.</span>
         <button class="btn small ${S.tKeepTree ? '' : 'ghost'}" data-rl="tkeep">${S.tKeepTree ? '✓ Bäume bleiben bei Wiedergeburt' : 'Bäume bleiben bei Wiedergeburt: aus'}</button><span class="note">Wenn an, behalten alle Helden bei einer Wiedergeburt ihre Fertigkeitenbäume und ausgerüsteten Fähigkeiten. Gilt für alle Helden.</span></div>` : ''}
+      ${wallet(['gold', 'souls'], 'rl-treewallet')}
       <div class="rl-treewrap"><div class="rl-treebox">${treeSVG(tree)}${!sg && ahnOpen(S) && classOpen(S, tree) ? `<p class="note rl-signote">✦ Mit einem Ahnensiegel wächst dieser Baum nach unten: 5 passive Fähigkeiten, 3 Siegel-Fähigkeiten mit eigenem Platz und 4 Siegel-Schlüssel mit eigenem Sockel. ${S.ahn.sig > 0 ? 'Du hast ein freies Siegel, setze es im Reiter Ahnenprüfung.' : 'Siegel bekommst du in der Ahnenprüfung.'}</p>` : ''}</div>${detailHTML(tree)}</div>`;
   }
   function testBuild(tree) {
@@ -2622,7 +2623,7 @@
 </svg>`;
   function runenWrap() {
     if (!feature(S, 'runen')) return runenTab();
-    return `<div class="rl-subtabs"><button data-runeview="ausr" class="${runeView === 'ausr' ? 'on' : ''}">🛡️ Ausrüstung</button><button data-runeview="schmied" class="${runeView === 'schmied' ? 'on' : ''}">⚒️ Schmied</button><button data-runeview="wandler" class="${runeView === 'wandler' ? 'on' : ''}">🎲 Wandler</button></div>`
+    return `${wallet(['dust'])}<div class="rl-subtabs"><button data-runeview="ausr" class="${runeView === 'ausr' ? 'on' : ''}">🛡️ Ausrüstung</button><button data-runeview="schmied" class="${runeView === 'schmied' ? 'on' : ''}">⚒️ Schmied</button><button data-runeview="wandler" class="${runeView === 'wandler' ? 'on' : ''}">🎲 Wandler</button></div>`
       + (runeView === 'schmied' ? forgeView() : runeView === 'wandler' ? wandlerView() : runenTab());
   }
   // Runenschmied: Stapel als Kacheln, sortierbar nach Art oder Stufe, mit Kobold am Amboss
@@ -2828,6 +2829,7 @@
     else if (a === 'ascend') { if (ask('ascend', panel)) { const team = HEROES.filter(h => st[h.id]).map(h => h.id); ascend(S); run = null; achCheck(); afterChange(); SND.play('rebirth'); playCine('asc', team); } }
     else if (a === 'tower') startRun('tower');
     else if (a === 'area') showAreas();
+    else if (a === 'board') { if (inCamp()) showBoard(); }
     else if (a === 'giveup') { if (ask('giveup', action)) { run.dead = true; S.runs++; save(); cloudSave(true); refresh(); } }
     else if (a === 'tgold' || a === 'tsouls') { if (acct && acct.tester) { const el = $(a === 'tgold' ? '#rlTGold' : '#rlTSouls'); let t = String(el.value).replace(/\s/g, '');
         if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.'); else if (/^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, '');
@@ -2924,7 +2926,7 @@
   }
   /* ---------- Begleiter ---------- */
   function compTab() {
-    let html = `<p class="note">Begleiter kämpfen an deiner Seite und bleiben für immer – auch bei Wiedergeburt und Aufstieg. Verbessern kostest Seelen. Aktive Begleiter: ${S.compActive.length}/${compSlots(S)}.</p><div class="rl-comps">`;
+    let html = `${wallet(['souls'])}<p class="note">Begleiter kämpfen an deiner Seite und bleiben für immer – auch bei Wiedergeburt und Aufstieg. Verbessern kostest Seelen. Aktive Begleiter: ${S.compActive.length}/${compSlots(S)}.</p><div class="rl-comps">`;
     html += COMPS.map(c => {
       const l = S.comps[c.id] || 0, on = S.compActive.includes(c.id), cost = compCost(l), max = compMax(S);
       if (!l) return `<div class="rl-comp locked" style="--cc:${c.color}"><span class="cic">?</span><div><b>${c.name}</b><p class="note">Kommt mit dem ${c.asc}. Aufstieg.</p></div></div>`;
@@ -3029,7 +3031,7 @@
       ['krone', 'Kronen-Laden', 'mit dem 1. Aufstieg', crown], ['puzzle', 'Puzzle-Laden', 'mit dem 1. Aufstieg (Expeditionen)', '◈'],
     ];
     let cur = shopSel; if (!LIST.some(([id]) => id === cur && open[id])) cur = (LIST.find(([id]) => open[id]) || ['stern'])[0];
-    let html = `<div class="rl-wallet"><span class="rl-cur gold">${coin}${fmt(S.gold)}</span><span class="rl-cur soul">${soul}${S.souls}</span><span class="rl-cur star">${star}${S.stars}</span>${open.schmiede ? `<span class="rl-cur dust">${dust}${S.dust}</span>` : ''}${open.krone ? `<span class="rl-cur crown">${crown}${S.crowns}</span>` : ''}${open.puzzle ? `<span class="rl-cur spl">◈ ${S.exp.spl}</span>` : ''}</div>
+    let html = `${wallet({ stern: ['stars'], zeit: ['souls'], altar: ['gold'], krone: ['crowns'], puzzle: ['spl'] }[cur] || [])}
       <div class="rl-shopnav">${LIST.map(([id, name, when, ic]) => open[id] ? `<button data-shoptab="${id}" class="${id === cur ? 'on' : ''}">${ic} ${name}</button>` : `<span class="lock" title="Kommt ${when}">🔒 ${name}</span>`).join('')}</div>`;
     if (open.stern && cur === 'stern') html += `<section id="shop-stern" class="rl-shop"><h3 class="rl-h3">Sternen-Laden</h3><p class="note">Du hast <span class="rl-cur star">${star}${S.stars}</span> Sterne. Sterne bekommst du bei jeder Wiedergeburt und aus der Wochen-Herausforderung. Beim Aufstieg werden die Sternen-Boni zurückgesetzt.</p><div class="rl-perks">${perkCards()}</div><div class="row" style="margin-top:10px"><button class="btn ${confirm === 'pres' ? 'danger' : 'ghost'} small" data-rl="pres" ${inCamp() && Object.keys(S.perks).length ? '' : 'disabled'}>${confirm === 'pres' ? 'Wirklich alles zurücksetzen?' : '↺ Sternen-Laden zurücksetzen (alle Sterne zurück)'}</button></div></section>`;
     if (open.zeit && cur === 'zeit') html += `<section id="shop-zeit" class="rl-shop">${zeitTab()}</section>`;
@@ -3153,32 +3155,87 @@
     }
   }
 
+  // Geldbörse: zeigt nur die Währungen, die an dieser Stelle gebraucht werden
+  const wallet = (list, cls = '') => `<div class="rl-wallet rl-wsmall ${cls}">${list.map(k => ({ gold: `<span class="rl-cur gold" title="Gold">${coin}${fmt(S.gold)}</span>`, souls: `<span class="rl-cur soul" title="Seelen">${soul}${S.souls}</span>`, stars: `<span class="rl-cur star" title="Sterne">${star}${S.stars}</span>`, dust: `<span class="rl-cur dust" title="Runensplitter">${dust}${S.dust}</span>`, crowns: `<span class="rl-cur crown" title="Kronen">${crown}${S.crowns}</span>`, spl: `<span class="rl-cur spl" title="Heldensplitter">◈ ${S.exp.spl}</span>` })[k]).join('')}</div>`;
+  /* ---------- Anschlagbrett: alle Spielarten als Plakate ---------- */
+  function poster(o) {
+    const lock = o.lock ? `<span class="rl-pstamp">${esc(o.lock)}</span>` : '';
+    return `<article class="rl-poster ${o.lock ? 'locked' : ''}" style="--pc:${o.col};--rot:${o.rot}deg">
+      <span class="rl-ppin" aria-hidden="true"></span>
+      <div class="rl-pband"><span class="rl-pico" aria-hidden="true">${o.icon}</span><h3>${esc(o.title)}</h3></div>
+      <p class="rl-pdesc">${esc(o.desc)}</p>
+      ${o.info && o.info.length ? `<ul class="rl-pinfo">${o.info.map(x => `<li>${x}</li>`).join('')}</ul>` : ''}
+      ${lock}
+      <div class="rl-pact">${o.lock ? '' : o.acts || ''}</div>
+    </article>`;
+  }
+  function showBoard() {
+    if (!inCamp()) return;
+    const cap = capOf(S), stg = st.startStage, wk = S.weekly && S.weekly.week === weekId() ? S.weekly.best : 0;
+    const rules = weekRules(weekId()).map(id => RULE[id]).filter(Boolean), nextTier = WEEK_TIERS.find(x => x.st > wk);
+    const tOpen = feature(S, 'turm'), aOpen = ahnOpen(S), eOpen = expOpen(S);
+    const list = [
+      { title: 'Feldzug', icon: '⚔️', col: '#ffb547', rot: -2, desc: 'Der klassische Lauf: Kämpf dich Stufe um Stufe durch die Gebiete. Bringt Gold, Seelen und Runen.',
+        info: [`Rekord: <b>Stufe ${S.best}</b> von ${cap === Infinity ? '∞' : cap}`, `Start: <b>${esc(zoneName(stg))}</b> (Stufe ${stg})`],
+        acts: `<button class="btn" data-m="go" data-go="normal">Aufbrechen</button>${areaMax(S) >= 1 ? '<button class="btn ghost small" data-m="go" data-go="area">Startgebiet ändern</button>' : ''}` },
+      { title: 'Wochen-Herausforderung', icon: '📜', col: '#4fc3ff', rot: 1.5, desc: 'Jede Woche neue Regeln. Alle starten bei Stufe 1. Je weiter du kommst, desto mehr Sterne gibt es.',
+        info: [...(rules.length ? [`Regeln: ${rules.map(r => `<b title="${esc(r.desc)}">${esc(r.name)}</b>`).join(', ')}`] : []), `Diese Woche: <b>${wk ? `Stufe ${wk}` : 'noch nicht gespielt'}</b>`, nextTier ? `Nächste Belohnung ab Stufe ${nextTier.st}: <b>${nextTier.stars} Sterne${nextTier.crown ? ' + 1 Krone' : ''}</b>` : '<b>Alle Belohnungen geholt</b>'],
+        acts: '<button class="btn" data-m="go" data-go="weekly">Herausforderung annehmen</button>' },
+      { title: 'Turm', icon: '🏰', col: '#c9a6ff', rot: -1, desc: 'Etage für Etage nach oben, nur Elite-Gegner. Jede Rekord-Etage gibt allen Helden für immer +3 % Schaden und Leben.',
+        info: tOpen ? [`Rekord: <b>Etage ${S.towerBest}</b>`, `Dauerhafter Bonus: <b>+${S.towerBest * 3} %</b>`, `Nächste Rune bei Etage ${5 * Math.floor(S.towerBest / 5) + 5}`] : [],
+        lock: tOpen ? '' : 'Ab der 8. Wiedergeburt', acts: '<button class="btn" data-m="go" data-go="tower">Turm betreten</button>' },
+      { title: 'Ahnenprüfung', icon: '✦', col: '#ffd27a', rot: 2, desc: '10 Missionen voller Bosse mit je 3 Phasen. Am Ende wartet der Urahn mit einem Ahnensiegel.',
+        info: aOpen ? [`Nächste Mission: <b>${S.ahn.m + 1}/10 · ${esc(AHN_MISSIONS[S.ahn.m].name)}</b>`, `Freie Siegel: <b>${S.ahn.sig}</b> · erhalten: ${S.ahn.got}`] : [],
+        lock: aOpen ? '' : 'Ab der 6. Wiedergeburt', acts: `<button class="btn" data-m="go" data-go="ahn">Mission ${S.ahn.m + 1} starten</button><button class="btn ghost small" data-m="go" data-go="ahnmap">Zur Karte</button>` },
+      { title: 'Expedition', icon: '🧭', col: '#9bd14a', rot: -1.5, desc: 'Kurze Aufträge für Heldensplitter. Mit etwas Glück findest du Puzzleteile für neue Helden.',
+        info: eOpen ? [`Heldensplitter: <b>${S.exp.spl}</b>`, `Puzzle ${esc(HERO_BY_ID[S.exp.target].name)}: <b>${pieceCount(S, S.exp.target)}/6</b>`] : [],
+        lock: eOpen ? '' : 'Ab dem 1. Aufstieg', acts: '<button class="btn" data-m="go" data-go="exp">Aufträge ansehen</button>' },
+    ];
+    modal(`<div class="rl-boardhead"><h2>Anschlagbrett</h2><p>Wähle dein nächstes Abenteuer</p></div>
+      <div class="rl-posters">${list.map(poster).join('')}</div>
+      <div class="row" style="justify-content:center"><button class="btn ghost rl-boardclose" data-m="ok">Schließen</button></div>`, 'rl-board');
+  }
+  function boardGo(go) {
+    if (!inCamp()) return;
+    const toTab = id => { tab = id; confirm = ''; renderTabs(); panel(); $('.rl-tabs').scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+    if (go === 'normal') startRun();
+    else if (go === 'weekly') startRun('weekly');
+    else if (go === 'tower' && feature(S, 'turm')) startRun('tower');
+    else if (go === 'area') showAreas(true);
+    else if (go === 'ahn' && ahnOpen(S)) { startRun('ahnen'); save(); }
+    else if (go === 'ahnmap') toTab('ahnen');
+    else if (go === 'exp') toTab('exp');
+    if (['normal', 'weekly', 'tower', 'ahn'].includes(go)) $('#soloCanvas').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
   /* ---------- Fenster: Willkommen und Neuigkeiten ---------- */
-  function modal(html) {
+  function modal(html, cls = '') {
     const p = $('#picker');
-    p.innerHTML = `<div class="sheet rl-modal" role="dialog">${html}</div>`;
+    p.innerHTML = `<div class="sheet rl-modal ${cls}" role="dialog">${html}</div>`;
     p.hidden = false;
     p.onclick = e => {
       const b = e.target.closest('[data-m]');
       if (!b) return;
       p.hidden = true; p.onclick = null;
-      if (b.dataset.m === 'area') { S.area = Math.max(0, Number(b.dataset.z) || 0); save(); refresh(); }
+      if (b.dataset.m === 'area') { S.area = Math.max(0, Number(b.dataset.z) || 0); save(); refresh(); if (b.dataset.back === 'board') showBoard(); }
+      if (b.dataset.m === 'areaback') showBoard();
+      if (b.dataset.m === 'go') boardGo(b.dataset.go);
       if (b.dataset.m === 'save') { tab = 'stand'; renderTabs(); panel(); $('.rl-tabs').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     };
   }
-  function showAreas() {
+  function showAreas(fromBoard) {
     const max = areaMax(S), cur = Math.min(S.area || 0, max), cap = capOf(S);
     let rows = '';
     for (let z = 0; z <= max + 1; z++) {
       const s0 = 10 * z + 1; if (s0 > cap) break;
       const bm = biomeOf(s0), lock = z > max;
-      rows += `<button class="rl-areab ${z === cur ? 'on' : ''} ${lock ? 'locked' : ''}" ${lock ? 'disabled' : `data-m="area" data-z="${z}"`} style="--a1:${bm.sky[0]};--a2:${bm.hill[0]};--a3:${bm.ground[0]}">
+      rows += `<button class="rl-areab ${z === cur ? 'on' : ''} ${lock ? 'locked' : ''}" ${lock ? 'disabled' : `data-m="area" data-z="${z}"${fromBoard ? ' data-back="board"' : ''}`} style="--a1:${bm.sky[0]};--a2:${bm.hill[0]};--a3:${bm.ground[0]}">
         <span class="sw"></span><span class="tx"><b>${esc(zoneName(s0))}${z === cur ? ' · gewählt' : ''}</b><small>Stufe ${s0}–${s0 + 9} · Boss: ${esc(bossOf(s0))}${z ? ` · Fernkämpfer: ${esc(rangedName(s0))}` : ' · keine Fernkämpfer'}</small>
         ${lock ? `<small class="lk">Gesperrt – besiege zuerst: ${esc(bossOf(s0 - 1))} auf Stufe ${s0 - 1}</small>` : ''}</span></button>`;
     }
     modal(`<h2>Startgebiet wählen</h2>
       <p class="note">Ein Gebiet wird frei, sobald du den Boss davor besiegt hast. Bis zur nächsten Wiedergeburt bleibt es frei. Für übersprungene Bosse bekommst du beim Start ein Drittel ihrer Seelen. Ein früherer Start lohnt sich also, wenn dir Seelen fehlen.</p>
-      <div class="rl-areas">${rows}</div><div class="row" style="justify-content:center"><button class="btn ghost" data-m="ok">Schließen</button></div>`);
+      <div class="rl-areas">${rows}</div><div class="row" style="justify-content:center"><button class="btn ghost" data-m="${fromBoard ? 'areaback' : 'ok'}">${fromBoard ? '‹ Zurück zum Brett' : 'Schließen'}</button></div>`);
     const on = $('#picker .rl-areab.on'); if (on) on.scrollIntoView({ block: 'center' });
   }
   function showExpInfo() {
@@ -3192,6 +3249,11 @@
   }
   // Neuigkeiten: neueste Einträge oben. Neue Updates OBEN mit höherer id anhängen.
   const UPDATES = [
+    { id: 35, date: '14.10.2026', title: 'Das Anschlagbrett', items: [
+      ['Neu', 'Links im Lager steht jetzt ein Anschlagbrett. Tippst du es an, öffnet sich ein Holzbrett mit Plakaten für alle Spielarten: Feldzug, Wochen-Herausforderung, Turm, Ahnenprüfung und Expedition. Jedes Plakat zeigt deinen Stand und startet direkt.'],
+      ['Umbenannt', 'Der normale Lauf heißt jetzt Feldzug. Der Knopf „Feldzug starten“ unter dem Lager bleibt für den schnellen Start.'],
+      ['Umbau', 'Woche, Turm und Startgebiet sind aus der Leiste unter dem Lager aufs Brett gezogen. Das Startgebiet änderst du auf dem Feldzug-Plakat.'],
+    ] },
     { id: 34, date: '14.10.2026', title: 'Effekt-Symbole und Siegel-Feinschliff', items: [
       ['Neu', 'Über jedem Helden und Gegner zeigen kleine Symbole, welche Effekte gerade wirken: Stärkungen, Schwächungen, Gift, Brand, Blutung, Betäubung und alles, was Fähigkeiten und Bosse auslösen. Rote Ränder sind schlechte Effekte, dunkelgrüne gute.'],
       ['Neu', 'Effekte für die ganze Gruppe (zum Beispiel Kriegsschrei, Kriegslied, Fluch oder Verlangsamung) stehen gemeinsam oben links unter der Stufe.'],
@@ -6312,16 +6374,40 @@
       if (camp.includes('t')) wolf(spots.t + 32, t, false);
       if (camp.includes('e')) turret(spots.e - 22, t, 0);
       drawComps(t, null);
+      noticeBoard(t);
       env.front(t, 0);
       ctx.textAlign = 'center'; ctx.font = '20px "Bungee","Arial Black",sans-serif'; ctx.fillStyle = '#ffb547';
       const done = run && run.dead;
       ctx.fillText(done ? (run.mode === 'tower' ? `Turm: Etage ${run.stage}` : run.victory ? `Stufengrenze ${st.cap} erreicht!` : `Gefallen auf Stufe ${run.stage}`) : 'Lager', W / 2, 42);
       ctx.font = '12px "Figtree",sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.85)';
-      ctx.fillText(done ? `${run.kills} Gegner${run.gold ? ` · +${fmt(run.gold)} Gold` : ''}${run.souls ? ` · +${run.souls} Seelen` : ''}${run.runes.length ? ` · ${run.runes.length} Runen` : ''}` : 'Tippe aufs Lagerfeuer, um deine Truppe anzupassen', W / 2, 64);
+      ctx.fillText(done ? `${run.kills} Gegner${run.gold ? ` · +${fmt(run.gold)} Gold` : ''}${run.souls ? ` · +${run.souls} Seelen` : ''}${run.runes.length ? ` · ${run.runes.length} Runen` : ''}` : 'Lagerfeuer: Truppe anpassen · Brett links: Abenteuer wählen', W / 2, 64);
     }
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
     const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.45, W / 2, H / 2, W * 0.75); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.35)');
     ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+  }
+  // Anschlagbrett links im Lager: Holzbrett mit bunten Plakaten
+  function noticeBoard(t) {
+    const x = 10, y = GROUND - 100, w = 70, h = 56;
+    shadow(x + w / 2, 34);
+    ctx.fillStyle = '#4a3220'; ctx.fillRect(x + 8, y + 10, 6, GROUND - y - 10); ctx.fillRect(x + w - 14, y + 10, 6, GROUND - y - 10);
+    const pulse = 0.35 + 0.25 * Math.sin(t * 3);
+    lightPool(x + w / 2, y + h / 2, 60, '255,200,120', 0.12 + pulse * 0.08);
+    ctx.fillStyle = '#6b4a2e'; rr(x - 2, y - 2, w + 4, h + 4, 4); ctx.fill();
+    for (let i = 0; i < 4; i++) { ctx.fillStyle = i % 2 ? '#8a6240' : '#7d5737'; ctx.fillRect(x, y + i * (h / 4), w, h / 4 - 1); }
+    ctx.fillStyle = '#4a3220'; ctx.fillRect(x - 4, y - 7, w + 8, 7);
+    ctx.fillStyle = '#ffe2a8'; ctx.font = '7px "Bungee","Arial Black",sans-serif'; ctx.textAlign = 'center'; ctx.fillText('AUFTRÄGE', x + w / 2, y - 1);
+    const cols = ['#ffb547', '#4fc3ff', feature(S, 'turm') ? '#c9a6ff' : '#8f8676', ahnOpen(S) ? '#ffd27a' : '#8f8676', expOpen(S) ? '#9bd14a' : '#8f8676'];
+    const ps = [[4, 5, -0.12], [26, 3, 0.08], [48, 6, -0.05], [12, 30, 0.1], [36, 29, -0.08]];
+    ps.forEach(([px, py, rot], i) => {
+      ctx.save(); ctx.translate(x + px + 9, y + py + 11); ctx.rotate(rot + Math.sin(t * 1.3 + i) * 0.02);
+      ctx.fillStyle = '#efe1bf'; ctx.fillRect(-9, -11, 18, 22);
+      ctx.fillStyle = cols[i]; ctx.fillRect(-9, -11, 18, 6);
+      ctx.fillStyle = 'rgba(60,40,20,.55)'; ctx.fillRect(-6, -2, 12, 1.5); ctx.fillRect(-6, 2, 9, 1.5); ctx.fillRect(-6, 6, 11, 1.5);
+      ctx.fillStyle = '#c8302e'; ctx.beginPath(); ctx.arc(0, -11, 1.8, 0, 7); ctx.fill();
+      ctx.restore();
+    });
+    if (!(run && run.dead)) { ctx.strokeStyle = `rgba(255,210,140,${pulse})`; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]); rr(x - 5, y - 10, w + 10, h + 15, 6); ctx.stroke(); ctx.setLineDash([]); }
   }
   function campFire(fx, t, pool) {
     if (!pool) { lightPool(fx, GROUND - 14, 120 + Math.sin(t * 5) * 6, '255,150,60', 0.3); lightPool(fx, GROUND - 8, 50, '255,200,120', 0.25); }
