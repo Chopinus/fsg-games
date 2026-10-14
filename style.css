@@ -760,3 +760,18 @@ input{font:inherit;font-size:18px;color:var(--fg);background:var(--bg);border:1p
 .rl-tabs .rl-sub button.on{color:var(--fg);border-color:var(--tc);background:color-mix(in srgb,var(--tc) 16%,var(--surface));box-shadow:0 0 12px color-mix(in srgb,var(--tc) 35%,transparent)}
 .rl-tabs .rl-sub button.locked{opacity:.5}
 .rl-tabs .rl-sub .sig{font-style:normal;color:#ffd27a;font-size:12px;text-shadow:0 0 6px rgba(255,210,122,.8)}
+/* Ahnensiegel: Erweiterung der Bäume */
+.rl-tree2 .sigband{fill:rgba(255,210,122,.05);stroke:rgba(255,210,122,.3);stroke-width:2;stroke-dasharray:10 8}
+.rl-tree2 .sigtxt{fill:#ffd27a;font:800 17px "Figtree",sans-serif;text-anchor:middle;letter-spacing:.12em;opacity:.8}
+.rl-tree2 .nd.sig circle:not(.glow),.rl-tree2 .nd.sig rect,.rl-tree2 .nd.sig polygon{fill:#2c2616}
+.rl-tree2 .nd.sig.av circle:not(.glow),.rl-tree2 .nd.sig.av rect,.rl-tree2 .nd.sig.av polygon{stroke:#c9a86a}
+.rl-tree2 .nd.sig.own circle:not(.glow),.rl-tree2 .nd.sig.own rect,.rl-tree2 .nd.sig.own polygon{fill:#4a3b17;stroke:#ffd27a}
+.rl-tree2 .nd.sig.act.own rect{fill:#4a3b17;stroke:#ffd27a}
+.rl-tree2 .nd.sig.eq rect{fill:#8a6a1e}
+.rl-tree2 .nd.sig.key.own polygon{fill:#5a4214;stroke:#fff2b0}
+.rl-tree2 .nd.sig.buy circle:not(.glow),.rl-tree2 .nd.sig.buy rect,.rl-tree2 .nd.sig.buy polygon{stroke:#4fd18b}
+.rl-tree2 .nd.sig.sel circle:not(.glow),.rl-tree2 .nd.sig.sel rect,.rl-tree2 .nd.sig.sel polygon{stroke:#fff}
+.rl-sock.sig{border:1.5px solid #ffd27a;color:#ffd27a;margin-left:4px}
+.rl-sock.sig.on{background:linear-gradient(#fff2b0,#ffd27a);color:#3a2410}
+.rl-sigslot{color:#ffd27a;font-weight:700}
+.rl-signote{margin:10px 6px 2px;color:#ffd27a;text-align:center}

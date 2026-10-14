@@ -86,11 +86,11 @@
     { id: 'doppel', name: 'Doppelschlag', icon: '»', x: 0, y: 2, p: ['wirbel'], max: 3, cost: ACTC2, fx: [ad('r', 'dbl', 0.08)], desc: '+8 % Chance je Stufe, zweimal zuzuschlagen' },
     { id: 'kritd', name: 'Vernichtung', icon: '!', x: 2, y: 2, p: ['wirbel'], max: 8, cost: G(150, 1.9), fx: [ad('r', 'critD', 0.15)], desc: '+15 % kritischer Schaden je Stufe' },
     { id: 'dorn', name: 'Dornenpanzer', icon: '✱', x: 3, y: 2, p: ['heil'], max: 3, cost: ACTC2, fx: [ad('r', 'thorns', 0.2)], desc: 'Wirft 20 % je Stufe des erlittenen Schadens zurück' },
-    { id: 'schild', name: 'Schildstoß', icon: '◘', x: 4, y: 2, p: ['heil'], max: 3, cost: ACTC, active: true, desc: 'Aktiv: 150 % Schaden und betäubt den vordersten Gegner 1,5 s (+0,5 s je Stufe). Abklingzeit 9 s.' },
+    { id: 'schild', name: 'Doppelhieb', icon: '⚔', x: 4, y: 2, p: ['heil'], max: 3, cost: ACTC, active: true, desc: 'Aktiv: zwei schnelle Hiebe am vordersten Gegner mit je 250 % Schaden (+50 % je Stufe). Wirbelwind lädt dabei 3 s weiter. Abklingzeit 9 s.' },
     { id: 'habgier', name: 'Habgier', icon: '¤', x: 5, y: 2, p: ['blitz'], max: 3, cost: ACTC2, fx: [mu('g', 'gold', 0.15)], desc: '+15 % Gold je Stufe' },
     { id: 'schrei', name: 'Kriegsschrei', icon: '▲', x: 6, y: 2, p: ['blitz'], max: 3, cost: ACTC, active: true, desc: 'Aktiv: alle Helden machen 6 s lang +40 % Schaden (+15 % je Stufe). Abklingzeit 20 s.' },
     { id: 'berserk', name: 'Berserker', icon: 'B', x: 1, y: 1, p: ['doppel', 'kritd'], max: 1, cost: () => ({ g: 3000, s: 10 }), kind: 'key', fx: [xx('r', 'atk', 1.4), xx('r', 'hp', 0.8)], desc: 'Schlüssel: Ritter +40 % Schaden, aber −20 % Leben' },
-    { id: 'phoenix', name: 'Zweites Leben', icon: 'Φ', x: 3, y: 1, p: ['dorn', 'schild'], max: 1, cost: () => ({ g: 3000, s: 10 }), kind: 'key', fx: [ad('r', 'revive', 1)], desc: 'Schlüssel: Einmal pro Lauf steht der Ritter mit halbem Leben wieder auf' },
+    { id: 'phoenix', name: 'Vorbild', icon: '♕', x: 3, y: 1, p: ['dorn', 'schild'], max: 1, cost: () => ({ g: 3000, s: 10 }), kind: 'key', fx: [ad('r', 'vorbild', 0.02)], desc: 'Schlüssel: Besiegt der Ritter einen Gegner, heilen alle Helden 2 % ihres Lebens' },
     { id: 'ernte', name: 'Seelenernte', icon: '☽', x: 5, y: 1, p: ['habgier', 'schrei'], max: 1, cost: () => ({ g: 3000, s: 10 }), kind: 'key', fx: [xx('g', 'soulMul', 3), ad('g', 'eliteSoul', 0.25), mu('g', 'gold', 0.5)], desc: 'Schlüssel: Bosse geben dreimal so viele Seelen, Elite-Gegner haben +25 % Chance, eine Seele fallen zu lassen (zusätzlich zu Seelenfänger und Co.) und du bekommst +50 % Gold' },
     { id: 'schmiede', name: 'Schmiedekunst', icon: '∞', x: 2, y: 0, p: ['berserk', 'phoenix'], max: 9999, cost: G(2500, 1.35), kind: 'inf', fx: [pw('all', 'atk', 1.05)], desc: '+5 % Schaden aller Helden je Stufe, ohne Obergrenze' },
     { id: 'ahnen', name: 'Ahnenkraft', icon: '∞', x: 4, y: 0, p: ['phoenix', 'ernte'], max: 9999, cost: r => ({ g: 0, s: 6 + 2 * r }), kind: 'inf', fx: [pw('all', 'hp', 1.05)], desc: '+5 % Leben aller Helden je Stufe, ohne Obergrenze' },
@@ -396,6 +396,186 @@
     const slotId = Object.fromEntries(Object.entries(def.nodes).map(([slot, n]) => [slot, n.id]));
     for (const [slot, n] of Object.entries(def.nodes)) { const [x, y, ps] = TPL[slot]; NODES.push({ ...n, tree, x, y, p: ps.map(s => slotId[s]) }); }
   }
+  /* ================= Ahnensiegel: Erweiterung der Bäume (ab Version 33) ================= */
+  // Ein Siegel auf einem Helden lässt seinen Baum nach unten wachsen: 5 Passive, 3 Aktive mit eigenem Platz, 4 Schlüssel mit eigenem Sockel. Keine Endlos-Fertigkeiten.
+  // Unter dem Start (Reihe 6) liegen die Reihen 7 bis 10.
+  const SIG_TPL = {
+    P1: [1, 7, ['S0']], P2: [3, 7, ['S0']], P3: [5, 7, ['S0']],
+    A1: [1, 8, ['P1']], A2: [3, 8, ['P2']], A3: [5, 8, ['P3']],
+    P4: [2, 9, ['A1', 'A2']], P5: [4, 9, ['A2', 'A3']],
+    K1: [0, 10, ['P4']], K2: [2, 10, ['P4']], K3: [4, 10, ['P5']], K4: [6, 10, ['P5']],
+  };
+  const SIGC = { p: G(6000, 1.85), blood: G(5000, 1.6), q: SL([4, 6, 9, 12, 16]), a: SL([6, 10, 15]), k: KEYC(30000, 40) };
+  const sP = (id, name, icon, desc, fx, cost = SIGC.p, max = 5) => ({ id, name, icon, max, cost, fx, desc });
+  const sQ = (id, name, icon, desc, fx) => sP(id, name, icon, desc, fx, SIGC.q, 5);
+  const sA = (id, name, icon, desc) => ({ id, name, icon, max: 3, cost: SIGC.a, active: true, desc: 'Aktiv: ' + desc });
+  const sK = (id, name, icon, desc, fx) => ({ id, name, icon, max: 1, cost: SIGC.k, kind: 'key', fx, desc: 'Schlüssel: ' + desc });
+  const sBlood = (h, who, heal) => sP(`sg_${h}_urblut`, 'Ahnenblut', '✦', `+5 % ${heal ? 'Heilung' : 'Schaden'} und Leben ${who} je Stufe (wächst aufeinander auf)`, [pw(h, heal ? 'heal' : 'atk', 1.05), pw(h, 'hp', 1.05)], SIGC.blood, 10);
+  const SIG = {
+    ritter: { h: 'r', nodes: {
+      P1: sP('sg_r_ehre', 'Ritterehre', '✺', '+6 % Schaden der aktiven Fähigkeiten des Ritters je Stufe', [mu('r', 'actMul', 0.06)]),
+      P2: sBlood('r', 'des Ritters'),
+      P3: sP('sg_r_fahne', 'Fahnenträger', '⚑', '+2 % Schaden aller Helden je Stufe', [mu('g', 'partyAtk', 0.02)]),
+      A1: sA('sg_r_schlag', 'Ritterschlag', '♔', 'der stärkste andere Held bekommt 8 s lang +50 % Schaden (+15 % je Stufe). Abklingzeit 20 s.'),
+      A2: sA('sg_r_banner', 'Banner der Ehre', '⚐', 'fällt ein Held unter 35 %, kann 8 s lang (+1 s je Stufe) kein Held unter 1 Leben fallen. Abklingzeit 35 s.'),
+      A3: sA('sg_r_duell', 'Ehrenduell', '⚔', 'fordert den stärksten Gegner heraus: 8 s lang macht die Gruppe +100 % Schaden (+25 % je Stufe) gegen ihn, und er macht 30 % weniger Schaden. Abklingzeit 18 s.'),
+      P4: sQ('sg_r_kunst', 'Schwertkunst', 'T', '+5 % Angriffstempo des Ritters je Stufe', [mu('r', 'aps', 0.05)]),
+      P5: sQ('sg_r_orden', 'Ordensrüstung', 'R', '−3 % erlittener Schaden des Ritters je Stufe', [ad('r', 'dr', 0.03)]),
+      K1: sK('sg_r_meister', 'Waffenmeister', '✣', 'jeder 5. Angriff des Ritters trifft alle nahen Gegner', [ad('r', 'wmaster', 1)]),
+      K2: sK('sg_r_schwur', 'Ritterschwur', '▲', 'Kriegsschrei hält doppelt so lange', [ad('r', 'schwur', 1)]),
+      K3: sK('sg_r_blut', 'Blutklinge', '♥', 'Treffer des Ritters heilen ihn um 6 % des Schadens', [ad('r', 'lifesteal', 0.06)]),
+      K4: sK('sg_r_bruder', 'Schwertbruder', '⚔', 'fällt ein anderer Held, macht der Ritter bis zum Ende der Welle +60 % Schaden', [ad('r', 'brother', 0.6)]),
+    } },
+    waechter: { h: 'w', nodes: {
+      P1: sP('sg_w_granit', 'Granitleib', 'Ш', '+6 % Leben des Wächters je Stufe', [mu('w', 'hp', 0.06)]),
+      P2: sBlood('w', 'des Wächters'),
+      P3: sP('sg_w_schild', 'Schildmeister', '⟋', '+3 % Chance je Stufe, einen Treffer abzuwehren', [ad('w', 'block', 0.03)]),
+      A1: sA('sg_w_spott', 'Spott', '☄', '5 s lang (+1 s je Stufe) greifen alle Gegner, auch Fernkämpfer, nur den Wächter an, und er nimmt 30 % weniger Schaden. Abklingzeit 18 s.'),
+      A2: sA('sg_w_beben', 'Erdbeben', '≋', '250 % Schaden (+60 % je Stufe) an allen Gegnern, sie laufen 4 s lang 40 % langsamer. Abklingzeit 16 s.'),
+      A3: sA('sg_w_prall', 'Prallschild', '◖', '6 s lang fängt der Wächter alle Geschosse der Gegner ab. Sie prallen zurück und treffen den Schützen mit 200 % des Wächter-Schadens (+60 % je Stufe). Abklingzeit 15 s.'),
+      P4: sQ('sg_w_wucht', 'Wucht', '!', '+15 % kritischer Schaden des Wächters je Stufe', [ad('w', 'critD', 0.15)]),
+      P5: sQ('sg_w_wehr', 'Wehrturm', '◎', 'Alle Helden nehmen 2 % weniger Schaden je Stufe', [ad('g', 'partyDr', 0.02)]),
+      K1: sK('sg_w_schlag', 'Schildschlag', '◘', 'jeder abgewehrte Treffer betäubt den Angreifer 0,5 s (Bosse 0,25 s)', [ad('w', 'blockStun', 1)]),
+      K2: sK('sg_w_koloss', 'Koloss', '▣', 'Angriffe des Wächters machen zusätzlich 4 % seines maximalen Lebens als Schaden', [ad('w', 'koloss', 0.04)]),
+      K3: sK('sg_w_wille', 'Eiserner Wille', '◈', 'Eiserne Haut löst schon bei 90 % Leben aus und hält 3 s länger', [ad('w', 'wille', 1)]),
+      K4: sK('sg_w_schutz', 'Beschützer', '⛨', 'fällt ein anderer Held unter 25 %, schirmt der Wächter ihn 3 s komplett ab (einmal je Held und Welle)', [ad('w', 'protector', 1)]),
+    } },
+    schuetze: { h: 's', nodes: {
+      P1: sP('sg_s_feder', 'Federkiel', 'T', '+5 % Angriffstempo der Schützin je Stufe', [mu('s', 'aps', 0.05)]),
+      P2: sBlood('s', 'der Schützin'),
+      P3: sP('sg_s_weit', 'Weitblick', 'K', '+3 % Chance auf kritische Treffer je Stufe', [ad('s', 'crit', 0.03)]),
+      A1: sA('sg_s_ziel', 'Zielschuss', '⌖', 'zielt 1,5 s und trifft den Gegner mit dem meisten Leben mit 1200 % Schaden (+400 % je Stufe). Abklingzeit 16 s.'),
+      A2: sA('sg_s_sperr', 'Sperrfeuer', '⋙', '4 s lang (+1 s je Stufe) schießt die Schützin dreimal so schnell. Abklingzeit 18 s.'),
+      A3: sA('sg_s_sprung', 'Rückzugssprung', '↶', 'springt zurück, trifft die 2 vordersten Gegner mit 200 % (+60 % je Stufe) und ist 2 s unverwundbar. Abklingzeit 14 s.'),
+      P4: sQ('sg_s_stahl', 'Stahlspitzen', '!', '+20 % kritischer Schaden der Schützin je Stufe', [ad('s', 'critD', 0.2)]),
+      P5: sQ('sg_s_jagd', 'Großwildjagd', '◎', '+10 % Schaden gegen Bosse und Elite-Gegner je Stufe', [ad('s', 'bossDmg', 0.1)]),
+      K1: sK('sg_s_scharf', 'Scharfschützin', '⊕', '+100 % Schaden gegen Gegner mit mehr als 80 % Leben', [ad('s', 'sharp', 1)]),
+      K2: sK('sg_s_fieber', 'Jagdfieber', '≫', 'jeder besiegte Gegner gibt der Schützin 3 s lang +30 % Angriffstempo', [ad('s', 'hunt', 0.3)]),
+      K3: sK('sg_s_falke', 'Falkenfreundin', 'V', 'der Falke greift zusätzlich alle 4 s von selbst den stärksten Gegner an (150 % Schaden)', [ad('s', 'falcon', 1.5)]),
+      K4: sK('sg_s_toxik', 'Toxikologin', '☣', 'Giftpfeil kann bis zu 3-mal auf demselben Gegner stapeln', [ad('s', 'toxik', 1)]),
+    } },
+    magier: { h: 'm', nodes: {
+      P1: sP('sg_m_wissen', 'Arkanes Wissen', '✺', '+6 % Schaden der aktiven Fähigkeiten des Magiers je Stufe', [mu('m', 'actMul', 0.06)]),
+      P2: sBlood('m', 'des Magiers'),
+      P3: sP('sg_m_fluss', 'Zauberfluss', '⌛', 'Fähigkeiten des Magiers laden 3 % schneller je Stufe', [ad('m', 'cdr', 0.03)]),
+      A1: sA('sg_m_loch', 'Schwarzes Loch', '◉', 'zieht alle Gegner 3 s lang zusammen und hält sie fest, 150 % Schaden pro Sekunde (+50 % je Stufe). Abklingzeit 18 s.'),
+      A2: sA('sg_m_strahl', 'Arkaner Strahl', '⟿', '3 s langer Strahl auf den stärksten Gegner. Der Schaden steigt alle 0,5 s, insgesamt etwa 1500 % (+25 % je Stufe). Abklingzeit 16 s.'),
+      A3: sA('sg_m_mana', 'Manabrand', '♨', 'der stärkste Gegner verliert 4 s lang (+1 s je Stufe) 8 % seines aktuellen Lebens pro Sekunde. Bosse nehmen stattdessen 150 % Schaden des Magiers pro Sekunde. Abklingzeit 16 s.'),
+      P4: sQ('sg_m_kern', 'Feuerkern', '!', '+20 % kritischer Schaden des Magiers je Stufe', [ad('m', 'critD', 0.2)]),
+      P5: sQ('sg_m_schild', 'Arkane Haut', 'R', '−3 % erlittener Schaden des Magiers je Stufe', [ad('m', 'dr', 0.03)]),
+      K1: sK('sg_m_schauer', 'Meteorschauer', '☄', 'Meteor fällt dreimal hintereinander mit je 50 % seines Schadens', [ad('m', 'schauer', 1)]),
+      K2: sK('sg_m_frost', 'Permafrost', '❄', 'eingefrorene Gegner nehmen 50 % mehr Schaden von allen Helden', [ad('g', 'permafrost', 0.5)]),
+      K3: sK('sg_m_ueber', 'Überladung', 'ϟ', 'jeder 4. Feuerball springt als Blitz auf 3 weitere Gegner (je 100 % Schaden)', [ad('m', 'overload', 1)]),
+      K4: sK('sg_m_konz', 'Konzentration', '◎', '+100 % Schaden, wenn nur ein Gegner auf dem Feld ist', [ad('m', 'focus', 1)]),
+    } },
+    priester: { h: 'p', nodes: {
+      P1: sP('sg_p_quell', 'Lichtquell', '+', '+8 % Heilung der Priesterin je Stufe', [mu('p', 'heal', 0.08)]),
+      P2: sBlood('p', 'der Priesterin', true),
+      P3: sP('sg_p_schnur', 'Gebetsschnur', '⌛', 'Fähigkeiten der Priesterin laden 3 % schneller je Stufe', [ad('p', 'cdr', 0.03)]),
+      A1: sA('sg_p_boden', 'Heiliger Boden', '✚', 'fällt ein Held unter 80 %, heilen 8 s lang alle Helden 3 % ihres Lebens pro Sekunde (+1 % je Stufe). Abklingzeit 22 s.'),
+      A2: sA('sg_p_eile', 'Segen der Schnelligkeit', '≫', 'die zwei Helden mit dem meisten Schaden greifen 6 s lang 50 % schneller an (+10 % je Stufe). Abklingzeit 18 s.'),
+      A3: sA('sg_p_gebet', 'Gebet der Eile', '⧗', 'die aktiven Fähigkeiten aller anderen Helden laden sofort 4 s weiter (+1 s je Stufe). Abklingzeit 20 s.'),
+      P4: sQ('sg_p_schein', 'Heiligenschein', '♥', '+2 % Leben aller Helden je Stufe', [mu('g', 'partyHp', 0.02)]),
+      P5: sQ('sg_p_haende', 'Sanfte Hände', '❦', 'Alle Helden heilen 0,1 % ihres Lebens pro Sekunde je Stufe', [ad('g', 'partyRegen', 0.001)]),
+      K1: sK('sg_p_fluegel', 'Engelsflügel', '⚚', 'wiederbelebte Helden sind 5 s unverwundbar', [ad('p', 'angel', 1)]),
+      K2: sK('sg_p_feuer', 'Heiliges Feuer', '♨', 'die Hälfte jeder Heilung der Priesterin trifft den vordersten Gegner als Schaden', [ad('p', 'holyFire', 0.5)]),
+      K3: sK('sg_p_hohe', 'Hohepriesterin', '♛', 'Schutzschild ist doppelt so stark', [ad('p', 'hohe', 1)]),
+      K4: sK('sg_p_wut', 'Heilige Wut', '☀', 'jede Wiederbelebung gibt allen Helden 6 s lang +40 % Schaden', [ad('p', 'wrath', 0.4)]),
+    } },
+    baendiger: { h: 't', nodes: {
+      P1: sP('sg_t_blut', 'Wolfsblut', 'W', '+8 % Schaden der Wölfe je Stufe', [mu('t', 'wolfAtk', 0.08)]),
+      P2: sBlood('t', 'des Tierbändigers'),
+      P3: sP('sg_t_faehrte', 'Fährtenleser', 'T', '+5 % Angriffstempo des Tierbändigers je Stufe', [mu('t', 'aps', 0.05)]),
+      A1: sA('sg_t_eber', 'Eberansturm', '➽', 'ein Eber rennt durch alle Gegner, 250 % Schaden (+80 % je Stufe), und wirft sie 1 s um (Bosse 0,5 s). Abklingzeit 14 s.'),
+      A2: sA('sg_t_geheul', 'Wolfsgeheul', '☾', '6 s lang (+1 s je Stufe) machen alle Wölfe +80 % Schaden und beißen 50 % schneller. Abklingzeit 18 s.'),
+      A3: sA('sg_t_instinkt', 'Urinstinkt', '✚', 'fällt der Tierbändiger unter 50 %, heilt er sich um 35 % seines Lebens (+10 % je Stufe). Abklingzeit 20 s.'),
+      P4: sQ('sg_t_faenge', 'Scharfe Fänge', 'K', '+3 % Chance auf kritische Bisse der Wölfe je Stufe', [ad('t', 'wolfCrit', 0.03)]),
+      P5: sQ('sg_t_fell', 'Zottelpelz', 'R', '−3 % erlittener Schaden des Tierbändigers je Stufe', [ad('t', 'dr', 0.03)]),
+      K1: sK('sg_t_fuehrer', 'Rudelführer', '♚', 'jeder Wolf auf dem Feld gibt dem Tierbändiger +15 % Schaden', [ad('t', 'packLead', 0.15)]),
+      K2: sK('sg_t_spur', 'Blutspur', '♦', 'Wolfsbisse lassen bluten: +40 % ihres Schadens über 3 s', [ad('t', 'bleed', 0.4)]),
+      K3: sK('sg_t_treu', 'Treuer Begleiter', '♡', 'fällt der Tierbändiger, kämpft sein Wolf mit doppeltem Schaden weiter', [ad('t', 'loyal', 1)]),
+      K4: sK('sg_t_leit', 'Leittier', '⤴', 'Raubtiersprung springt 2 weitere Gegner an', [ad('t', 'leit', 1)]),
+    } },
+    assassine: { h: 'a', nodes: {
+      P1: sP('sg_a_nebel', 'Nebelschritt', '~', '+3 % Chance je Stufe, Treffern auszuweichen', [ad('a', 'dodge', 0.03)]),
+      P2: sBlood('a', 'der Assassine'),
+      P3: sP('sg_a_fokus', 'Schattenfokus', '⌛', 'Fähigkeiten der Assassine laden 3 % schneller je Stufe', [ad('a', 'cdr', 0.03)]),
+      A1: sA('sg_a_kehle', 'Kehlschnitt', '⟋', 'besiegt sofort einen normalen Gegner unter 25 % Leben. Bosse nehmen stattdessen 500 % Schaden (+150 % je Stufe). Abklingzeit 10 s.'),
+      A2: sA('sg_a_klon', 'Schattenklon', '☾', 'ein Klon kämpft 8 s mit und macht 50 % ihres Schadens (+15 % je Stufe). Abklingzeit 20 s.'),
+      A3: sA('sg_a_mal', 'Schattenmal', '✕', 'markiert 3 Gegner für 8 s. Wird einer besiegt, springt sie sofort zum nächsten markierten und trifft ihn mit 400 % (+120 % je Stufe). Abklingzeit 16 s.'),
+      P4: sQ('sg_a_praez', 'Tödliche Präzision', 'K', '+3 % Chance auf kritische Treffer je Stufe', [ad('a', 'crit', 0.03)]),
+      P5: sQ('sg_a_rausch', 'Blutrausch', '♥', 'Heilt um 1 % je Stufe des verursachten Schadens', [ad('a', 'lifesteal', 0.01)]),
+      K1: sK('sg_a_tanz', 'Schattentänzerin', '◌', 'nach jedem Ausweichen ist der nächste Treffer garantiert kritisch', [ad('a', 'dancer', 1)]),
+      K2: sK('sg_a_seele', 'Seelenklinge', '◆', 'jeder besiegte Gegner lädt ihre Fähigkeiten 1 s weiter', [ad('a', 'soulBlade', 1)]),
+      K3: sK('sg_a_kalt', 'Kaltblütig', '❄', '+50 % kritischer Schaden gegen Bosse', [ad('a', 'coldBlood', 0.5)]),
+      K4: sK('sg_a_fluss', 'Klingenfluss', '≫', 'jeder Treffer gibt +2 % Angriffstempo, bis zu 20-mal. Wird sie getroffen, fängt es von vorne an.', [ad('a', 'flow', 0.02)]),
+    } },
+    nekromant: { h: 'n', nodes: {
+      P1: sP('sg_n_mark', 'Knochenmark', 'B', '+10 % Schaden der Skelette je Stufe', [mu('n', 'minionMul', 0.1)]),
+      P2: sBlood('n', 'des Nekromanten'),
+      P3: sP('sg_n_feuer', 'Seelenfeuer', '✺', '+6 % Schaden der aktiven Fähigkeiten des Nekromanten je Stufe', [mu('n', 'actMul', 0.06)]),
+      A1: sA('sg_n_wand', 'Knochenwand', '▥', 'eine Wand aus Knochen hält alle Nahkampf-Angriffe der Gegner 4 s lang auf (+1 s je Stufe). Abklingzeit 22 s.'),
+      A2: sA('sg_n_riese', 'Knochenriese', '☗', 'ein Riese aus Knochen steht 12 s ganz vorne und fängt alle Nahkampf-Treffer ab. Er hält 300 % des Lebens des Nekromanten aus (+100 % je Stufe). Abklingzeit 25 s.'),
+      A3: sA('sg_n_fessel', 'Seelenfessel', '∞', 'verbindet die 3 stärksten Gegner für 6 s (+1 s je Stufe). Schaden an einem trifft die anderen zu 50 %. Abklingzeit 16 s.'),
+      P4: sQ('sg_n_kaelte', 'Grabkälte', 'K', '+3 % Chance auf kritische Treffer je Stufe', [ad('n', 'crit', 0.03)]),
+      P5: sQ('sg_n_wacht', 'Totenwacht', 'R', '−3 % erlittener Schaden des Nekromanten je Stufe', [ad('n', 'dr', 0.03)]),
+      K1: sK('sg_n_ewig', 'Unvergänglich', '∞', 'Skelette bleiben doppelt so lange', [ad('n', 'minionLong', 1)]),
+      K2: sK('sg_n_ruest', 'Knochenrüstung', '▤', 'jedes Skelett gibt dem Nekromanten 5 % weniger erlittenen Schaden (höchstens 40 %)', [ad('n', 'boneArmor', 0.05)]),
+      K3: sK('sg_n_samm', 'Seelensammler', '◇', 'jeder besiegte Gegner gibt dem Nekromanten +1 % Schaden für den Lauf, höchstens +50 %', [ad('n', 'collect', 0.01)]),
+      K4: sK('sg_n_beschw', 'Totenbeschwörer', '♛', 'aus jedem Elite-Gegner steht ein starkes Skelett mit dreifachem Schaden auf', [ad('n', 'necro', 1)]),
+    } },
+    barde: { h: 'b', nodes: {
+      P1: sP('sg_b_solo', 'Solist', '♫', 'Das Lied gibt allen Helden +1 % Schaden je Stufe', [ad('b', 'songAtk', 0.01)]),
+      P2: sBlood('b', 'des Barden'),
+      P3: sP('sg_b_rhythm', 'Rhythmus', '≫', 'Das Lied gibt allen Helden +1 % Angriffstempo je Stufe', [ad('b', 'songAps', 0.01)]),
+      A1: sA('sg_b_diss', 'Dissonanz', '♭', 'alle Gegner greifen 5 s lang (+1 s je Stufe) halb so schnell an. Abklingzeit 16 s.'),
+      A2: sA('sg_b_echo', 'Echo', '◍', 'wiederholt die zuletzt genutzte Fähigkeit eines anderen Helden. Abklingzeit 20 s (−2 s je Stufe).'),
+      A3: sA('sg_b_ahnen', 'Ballade der Ahnen', '♔', '8 s lang +25 % Krit-Chance für alle Helden (+5 % je Stufe). Abklingzeit 20 s.'),
+      P4: sQ('sg_b_kehle', 'Goldkehlchen', '⌛', 'Fähigkeiten des Barden laden 3 % schneller je Stufe', [ad('b', 'cdr', 0.03)]),
+      P5: sQ('sg_b_applaus', 'Applaus', '$', '+8 % Gold je Stufe', [mu('g', 'gold', 0.08)]),
+      K1: sK('sg_b_ensemble', 'Ensemble', '♬', 'das Lied und das Kriegslied lassen auch Wölfe, Skelette und Geschütztürme schneller angreifen', [ad('b', 'ensemble', 1)]),
+      K2: sK('sg_b_steig', 'Steigerung', '↗', 'alle 5 s machen alle Helden +10 % mehr Schaden, bis +50 %. Wird der Barde getroffen, fängt es von vorne an.', [ad('b', 'cresc', 0.1)]),
+      K3: sK('sg_b_takt', 'Taktmeister', '♩', 'Kriegslied lädt 40 % schneller', [ad('b', 'takt', 1)]),
+      K4: sK('sg_b_muse', 'Muse', '✧', 'der Barde gibt 20 % seiner Krit-Chance an alle anderen Helden weiter', [ad('b', 'muse', 0.2)]),
+    } },
+    druidin: { h: 'd', nodes: {
+      P1: sP('sg_d_wurzel', 'Wurzelwerk', 'Ш', '+6 % Leben der Druidin je Stufe', [mu('d', 'hp', 0.06)]),
+      P2: sBlood('d', 'der Druidin'),
+      P3: sP('sg_d_wild', 'Wildheit', 'T', '+5 % Angriffstempo der Druidin je Stufe', [mu('d', 'aps', 0.05)]),
+      A1: sA('sg_d_gestalt', 'Wildgestalt', 'Ʊ', 'verwandelt sich 8 s lang (+1 s je Stufe) in eine Bärin: doppelter Schaden, und sie nimmt nur halb so viel Schaden. Abklingzeit 22 s.'),
+      A2: sA('sg_d_wachs', 'Wachstum', '❦', 'alle Helden bekommen 10 s lang 20 % zusätzliches Leben (+5 % je Stufe), das zuerst verloren geht. Abklingzeit 24 s.'),
+      A3: sA('sg_d_gewalt', 'Naturgewalt', '❀', '5 s lang (+1 s je Stufe) heilt sich die Druidin um ihren gesamten verursachten Schaden. Abklingzeit 20 s.'),
+      P4: sQ('sg_d_sichel', 'Mondsichel', '!', '+15 % kritischer Schaden der Druidin je Stufe', [ad('d', 'critD', 0.15)]),
+      P5: sQ('sg_d_erde', 'Erdkraft', '+', 'Die Druidin heilt 0,2 % ihres Lebens pro Sekunde je Stufe', [ad('d', 'regen', 0.002)]),
+      K1: sK('sg_d_bluete', 'Blütezeit', '✿', 'jede Heilung auf die Druidin gibt ihr 4 s lang +20 % Schaden', [ad('d', 'bloom', 0.2)]),
+      K2: sK('sg_d_auge', 'Adlerauge', 'V', 'Adlerschwarm trifft 2 zusätzliche Ziele', [ad('d', 'eagle', 2)]),
+      K3: sK('sg_d_rinde', 'Uralte Rinde', '◙', 'Bärengebrüll hält doppelt so lange', [ad('d', 'rinde', 1)]),
+      K4: sK('sg_d_hueter', 'Waldhüterin', '♣', '+40 % Schaden, solange alle Helden über 50 % Leben haben', [ad('d', 'warden', 0.4)]),
+    } },
+    tueftler: { h: 'e', nodes: {
+      P1: sP('sg_e_lager', 'Kugellager', '≫', '+5 % Feuertempo der Geschütztürme je Stufe', [mu('e', 'turretAps', 0.05)]),
+      P2: sBlood('e', 'der Tüftlerin'),
+      P3: sP('sg_e_zuend', 'Zündkapsel', '✺', '+6 % Schaden der aktiven Fähigkeiten der Tüftlerin je Stufe', [mu('e', 'actMul', 0.06)]),
+      A1: sA('sg_e_flamme', 'Flammenwerfer', '♨', '3 s langer Feuerstrahl nach vorne: alle 0,5 s 200 % Schaden (+50 % je Stufe) an den 3 vordersten Gegnern. Abklingzeit 14 s.'),
+      A2: sA('sg_e_rakete', 'Raketensalve', '➶', '3 Raketen auf den stärksten Gegner, je 400 % Schaden (+120 % je Stufe). Abklingzeit 15 s.'),
+      A3: sA('sg_e_druck', 'Überdruck', '⇶', 'Geschütztürme feuern 6 s lang (+1 s je Stufe) doppelt so schnell. Abklingzeit 18 s.'),
+      P4: sQ('sg_e_mantel', 'Stahlmantel', '●', '+10 % Schaden der Geschütztürme je Stufe', [mu('e', 'turretMul', 0.1)]),
+      P5: sQ('sg_e_helm', 'Schutzhelm', 'R', '−3 % erlittener Schaden der Tüftlerin je Stufe', [ad('e', 'dr', 0.03)]),
+      K1: sK('sg_e_geist', 'Tüftlergeist', '⚙', 'jede Fähigkeit baut für 4 s ein kleines Zusatzgeschütz mit halbem Schaden', [ad('e', 'tinker', 1)]),
+      K2: sK('sg_e_splitter', 'Splittergranaten', '✸', 'Streubombe wirft 10 statt 6 Bomben', [ad('e', 'splitter', 1)]),
+      K3: sK('sg_e_panzer', 'Panzerung', '▣', 'solange ein Geschützturm steht, nimmt die Tüftlerin 25 % weniger Schaden', [ad('e', 'plating', 0.25)]),
+      K4: sK('sg_e_fein', 'Feinmechanik', '⚲', 'Geschütztürme haben die doppelte Krit-Chance der Tüftlerin und +50 % kritischen Schaden', [ad('e', 'precise', 1)]),
+    } },
+  };
+  for (const [tree, def] of Object.entries(SIG)) {
+    const slotId = Object.fromEntries(Object.entries(def.nodes).map(([slot, n]) => [slot, n.id]));
+    slotId.S0 = tree === 'ritter' ? 'start' : HERO[tree].hire;
+    for (const [slot, n] of Object.entries(def.nodes)) { const [x, y, ps] = SIG_TPL[slot]; NODES.push({ ...n, tree, x, y, p: ps.map(s => slotId[s]), sig: true }); }
+  }
+  // Schalter, die Siegel-Schlüssel setzen (Startwert 0)
+  const SIG_FLAGS = ['wmaster', 'schwur', 'brother', 'vorbild', 'blockStun', 'koloss', 'wille', 'protector', 'sharp', 'hunt', 'falcon', 'toxik', 'schauer', 'overload', 'focus',
+    'angel', 'holyFire', 'hohe', 'wrath', 'packLead', 'bleed', 'loyal', 'leit', 'dancer', 'soulBlade', 'coldBlood', 'flow', 'minionLong', 'boneArmor', 'collect', 'necro',
+    'ensemble', 'cresc', 'takt', 'muse', 'bloom', 'eagle', 'rinde', 'warden', 'tinker', 'splitter', 'plating', 'precise'];
   const NODE = Object.fromEntries(NODES.map(n => [n.id, n]));
   for (const h of HEROES) if (h.hire) { if (h.puzzle) NODE[h.hire].reqPuzzle = h.id; else NODE[h.hire].reqRebirth = h.rebirth; }
 
@@ -832,7 +1012,7 @@
     out.speed = Math.round((Number(d.speed) || 1) * 2) / 2; if (!(out.speed >= 1 && out.speed <= maxSpeed(out))) out.speed = Math.min(3, maxSpeed(out));
     out.equip = [];
     for (const id of Array.isArray(d.equip) ? d.equip : []) if (NODE[id] && NODE[id].active && out.nodes[id] > 0 && !out.equip.includes(id)) out.equip.push(id);
-    for (const h of HEROES) { const mine = out.equip.filter(id => NODE[id].tree === h.tree), lim = slotsOf(out, h.tree); if (mine.length > lim) out.equip = out.equip.filter(id => !mine.slice(lim).includes(id)); }
+    for (const h of HEROES) for (const sg of [false, true]) { const mine = eqOf(out, h.tree, sg), lim = slotLim(out, h.tree, sg); if (mine.length > lim) out.equip = out.equip.filter(id => !mine.slice(lim).includes(id)); }
     out.kplace = {};
     for (const h of HEROES) { const n = Math.floor(Number(d.kplace && d.kplace[h.id]) || 0); if (n > 0) out.kplace[h.id] = n; }
     out.kslots = Math.max(0, Math.floor(Number(d.kslots) || 0));
@@ -863,7 +1043,7 @@
     if (!d.ahnV) out.ahn.lvl = 0; // Stärke neu: nach dem höchsten Rekord überhaupt
     out.ahnV = 1;
     for (const h of [...HEROES].reverse()) while (kPlaced(out) > out.kslots && out.kplace[h.id]) { if (--out.kplace[h.id] <= 0) delete out.kplace[h.id]; }
-    for (const h of HEROES) { const keys = NODES.filter(n => n.tree === h.tree && n.kind === 'key' && out.nodes[n.id]); for (const n of keys.slice(keyCap(out, h.tree))) { const c = n.cost(0); out.gold += c.g; out.souls += c.s; delete out.nodes[n.id]; } }
+    for (const h of HEROES) { const keys = NODES.filter(n => n.tree === h.tree && n.kind === 'key' && out.nodes[n.id]).reverse(); for (const n of keys) { if (keyNeed(out, h.tree) <= keyCap(out, h.tree) && (!n.sig || sigOn(out, h.tree))) continue; const c = n.cost(0); out.gold += c.g; out.souls += c.s; delete out.nodes[n.id]; } }
     delete out.reset;
     return out;
   }
@@ -877,11 +1057,20 @@
   const cperk = (S, id) => (S.cperks && S.cperks[id]) || 0;
   const hired = (S, tree) => tree === 'ritter' || (rank(S, HERO[tree].hire) > 0 && (!HERO[tree].puzzle || assembled(S, HERO[tree].id)));
   const classOpen = (S, tree) => (HERO[tree].puzzle ? assembled(S, HERO[tree].id) : S.rebirths >= HERO[tree].rebirth) || hired(S, tree);
-  const keysUsed = (S, tree) => NODES.filter(n => n.tree === tree && n.kind === 'key' && rank(S, n.id) > 0).length;
+  const keysUsed = (S, tree) => NODES.filter(n => n.tree === tree && n.kind === 'key' && !n.sig && rank(S, n.id) > 0).length;
+  // Ahnensiegel: eigener Platz für eine Siegel-Fähigkeit und eigener Sockel für einen Siegel-Schlüssel
+  const sigOn = (S, tree) => !!(S.ahn && S.ahn.place && HERO[tree] && S.ahn.place[HERO[tree].id]);
+  const sigKeysUsed = (S, tree) => NODES.filter(n => n.tree === tree && n.kind === 'key' && n.sig && rank(S, n.id) > 0).length;
+  const sigCap = (S, tree) => (sigOn(S, tree) ? 1 : 0);
+  // Belegte normale Sockel: normale Schlüssel plus Siegel-Schlüssel, die nicht mehr in den Siegelsockel passen
+  const keyNeed = (S, tree, addSig = 0, addBase = 0) => keysUsed(S, tree) + addBase + Math.max(0, sigKeysUsed(S, tree) + addSig - sigCap(S, tree));
+  const eqOf = (S, tree, sg) => S.equip.filter(id => NODE[id] && NODE[id].tree === tree && !!NODE[id].sig === !!sg);
+  const slotLim = (S, tree, sg) => (sg ? sigCap(S, tree) : slotsOf(S, tree));
   function blockReason(S, n) {
     if (n.reqPuzzle && !assembled(S, n.reqPuzzle)) return `Setze zuerst alle 6 Puzzleteile in den Expeditionen zusammen (${pieceCount(S, n.reqPuzzle)}/6).`;
     if (n.reqRebirth && S.rebirths < n.reqRebirth && !rank(S, n.id)) return `Wird mit der ${n.reqRebirth}. Wiedergeburt freigeschaltet.`;
-    if (n.kind === 'key' && !rank(S, n.id) && keysUsed(S, n.tree) >= keyCap(S, n.tree)) return `Alle ${keyCap(S, n.tree)} Schlüsselsockel dieser Klasse sind belegt. Setze oben einen freien Sockel auf diese Klasse (du bekommst einen pro Wiedergeburt).`;
+    if (n.sig && !sigOn(S, n.tree)) return 'Setze zuerst im Reiter Ahnenprüfung ein Ahnensiegel auf diesen Helden.';
+    if (n.kind === 'key' && !rank(S, n.id) && keyNeed(S, n.tree, n.sig ? 1 : 0, n.sig ? 0 : 1) > keyCap(S, n.tree)) return n.sig ? `Der Siegelsockel und alle ${keyCap(S, n.tree)} Schlüsselsockel dieser Klasse sind belegt. Nimm einen Schlüssel ab oder setze oben einen freien Sockel auf diese Klasse.` : `Alle ${keyCap(S, n.tree)} Schlüsselsockel dieser Klasse sind belegt. Setze oben einen freien Sockel auf diese Klasse (du bekommst einen pro Wiedergeburt).`;
     if (n.kind !== 'start' && !(n.p || []).some(p => rank(S, p) > 0)) return `Schalte zuerst ${(n.p || []).map(id => NODE[id].name).join(' oder ')} frei.`;
     return '';
   }
@@ -896,7 +1085,7 @@
     if (!canBuy(S, n)) return false;
     const c = nodeCost(S, n);
     S.gold -= c.g; S.souls -= c.s; S.nodes[n.id] = rank(S, n.id) + 1;
-    if (n.active && S.nodes[n.id] === 1 && S.equip.filter(id => NODE[id].tree === n.tree).length < slotsOf(S, n.tree)) S.equip.push(n.id);
+    if (n.active && S.nodes[n.id] === 1 && eqOf(S, n.tree, n.sig).length < slotLim(S, n.tree, n.sig)) S.equip.push(n.id);
     return true;
   }
   // Seelenaltar: Gold opfern für einen dauerhaften Seelen-Multiplikator (bleibt bei Wiedergeburt und Aufstieg)
@@ -915,7 +1104,7 @@
   function addSock(S, tree) { if (!HERO[tree] || kFree(S) <= 0) return false; S.kplace = S.kplace || {}; S.kplace[HERO[tree].id] = kExtra(S, tree) + 1; return true; }
   function removeSock(S, tree) {
     const n = kExtra(S, tree); if (!n) return 'none';
-    if (keysUsed(S, tree) > keyCap(S, tree) - 1) return 'used';
+    if (keyNeed(S, tree) > keyCap(S, tree) - 1) return 'used';
     if (n > 1) S.kplace[HERO[tree].id] = n - 1; else delete S.kplace[HERO[tree].id];
     return 'ok';
   }
@@ -930,8 +1119,9 @@
     const n = NODE[id]; if (!n || !n.active || !rank(S, id)) return;
     const i = S.equip.indexOf(id);
     if (i >= 0) { S.equip.splice(i, 1); return; }
-    const mine = S.equip.filter(x => NODE[x].tree === n.tree);
-    if (mine.length >= slotsOf(S, n.tree)) S.equip.splice(S.equip.indexOf(mine[0]), 1);
+    const mine = eqOf(S, n.tree, n.sig), lim = slotLim(S, n.tree, n.sig);
+    if (lim <= 0) return;
+    if (mine.length >= lim) S.equip.splice(S.equip.indexOf(mine[0]), 1);
     S.equip.push(id);
   }
   const perkCost = (S, p) => p.cost(perk(S, p.id));
@@ -1100,7 +1290,7 @@
   };
   const ZERO = { dr: 0, regen: 0, dbl: 0, thorns: 0, block: 0, dodge: 0, lifesteal: 0, cdr: 0, actMul: 1, burn: 0, pierce: 0, shots: 1, splash: 0, stunChance: 0,
     bossDmg: 0, vuln: 0, extraShot: 0, revive: 0, heal: 0, overShield: 0, reviveFast: 0, miracle: 0, wolfAtk: 0, wolfAps: 0, wolves: 0, wolfCrit: 0, wolfHeal: 0, packBonus: 0,
-    rangedDmg: 0, raise: 0, minionMax: 0, minionMul: 1, minionDur: 0, songAtk: 0, songAps: 0, turrets: 0, turretMul: 0, turretAps: 0 };
+    ...Object.fromEntries(SIG_FLAGS.map(f => [f, 0])), rangedDmg: 0, raise: 0, minionMax: 0, minionMul: 1, minionDur: 0, songAtk: 0, songAps: 0, turrets: 0, turretMul: 0, turretAps: 0 };
   // Aufstellung: 4 Plätze auf dem Feld, +1 aus dem Sternen-Laden, +1 aus dem Kronen-Laden
   const fieldSlots = S => Math.min(6, 4 + perk(S, 'p_feld') + cperk(S, 'k_feld'));
   function fieldOf(S) {
@@ -1119,10 +1309,10 @@
   function stats(S) {
     const hs = {};
     for (const h of HEROES) if (hired(S, h.tree)) hs[h.id] = { ...ZERO, ...BASE[h.id] };
-    const g = { gold: 1, chest: 0, eliteSoul: 0, soulMul: 1, partyAtk: 1, partyHp: 1, partyDr: 0, partyRegen: 0, eliteGold: 1, walk: 1 };
+    const g = { gold: 1, chest: 0, eliteSoul: 0, soulMul: 1, partyAtk: 1, partyHp: 1, partyDr: 0, partyRegen: 0, eliteGold: 1, walk: 1, permafrost: 0 };
     const each = (h, fn) => (h === 'all' ? Object.values(hs).forEach(fn) : h === 'g' ? fn(g) : hs[h] && fn(hs[h]));
     for (const n of NODES) {
-      const r0 = rank(S, n.id); if (!r0 || !n.fx) continue;
+      const r0 = rank(S, n.id); if (!r0 || !n.fx || (n.sig && !sigOn(S, n.tree))) continue;
       const r = n.cap ? Math.min(r0, n.cap) : r0;
       if (n.over && r0 > n.cap) for (const e of n.over) each(e.h, T => { const ro = r0 - n.cap; if (e.pow) T[e.s] *= Math.pow(e.pow, ro); else if (e.add) T[e.s] += e.add * ro; });
       for (const e of n.fx) each(e.h, T => {
@@ -1145,9 +1335,11 @@
     if (comp.phoenix) g.partyRegen += 0.0015 * comp.phoenix;
     const bardOn = hs.b && fieldOf(S).includes('b');
     if (bardOn) g.partyAtk *= 1 + hs.b.songAtk;
+    if (bardOn && hs.b.muse) { const mc = hs.b.crit * hs.b.muse; for (const [hid, T] of Object.entries(hs)) if (hid !== 'b') T.crit += mc; }
     for (const [hid, T] of Object.entries(hs)) {
       const rb = runeBonus(S, hid);
       if (bardOn) T.aps *= 1 + hs.b.songAps;
+      if (bardOn && hs.b.ensemble) { if (T.wolfAps) T.wolfAps *= 1 + hs.b.songAps; if (T.turretAps) T.turretAps *= 1 + hs.b.songAps; }
       T.atk *= perm * g.partyAtk * (1 + (rb.kraft || 0)); T.hp *= perm * g.partyHp * (1 + (rb.leben || 0)); if (T.heal) T.heal *= perm * (1 + (rb.kraft || 0));
       if (T.wolfAtk) T.wolfAtk *= perm * g.partyAtk * (1 + (rb.kraft || 0));
       T.aps *= 1 + (rb.eile || 0); T.critD *= 1 + (rb.zorn || 0);
@@ -1214,43 +1406,172 @@
     wirbel: { cd: (r, S) => 19 - r - (rank(S, 'r_tanz') ? 3 : 0), ready: run => near(run).length >= 3 || near(run).some(e => e.boss), cast: (c, r) => near(c.run).forEach(e => c.hit('r', e, (2 + 0.5 * (r - 1)) * c.st.r.actMul)) },
     heil: { cd: () => 22, ready: (run, st) => anyBelow(run, st, 0.55), cast: (c, r) => c.healSplit('r', 0.4 + 0.08 * (r - 1), 0.1 + 0.03 * (r - 1)) },
     blitz: { cd: () => 14, ready: run => !!strongest(run, 320), cast: (c, r) => { const t = strongest(c.run, 320); c.hit('r', t, (4 + 1.5 * (r - 1)) * c.st.r.actMul, '#cfe6ff'); c.run.fx.blitzX = t.x; c.run.shake = 0.25; } },
-    schild: { cd: () => 9, ready: engaged, cast: (c, r) => { const e = c.run.enemies[0]; c.hit('r', e, 1.5 * c.st.r.actMul); e.stun = Math.max(e.stun, 1.5 + 0.5 * (r - 1)); } },
-    schrei: { cd: () => 20, ready: engaged, cast: (c, r) => { c.run.buffT = 6; c.run.buffMul = 0.4 + 0.15 * (r - 1); c.float('r', 'Kriegsschrei!', '#ffb547'); } },
+    schild: { cd: () => 9, ready: engaged, cast: (c, r) => { const m = (2.5 + 0.5 * (r - 1)) * c.st.r.actMul; for (let i = 0; i < 2; i++) { const e = c.run.enemies.find(x => x.hp > 0); if (e) c.hit('r', e, m, '#ffe0a8'); } if (c.run.cds.wirbel > 0) c.run.cds.wirbel = Math.max(0, c.run.cds.wirbel - 3); } },
+    schrei: { cd: () => 20, ready: engaged, cast: (c, r) => { c.run.buffT = c.st.r.schwur ? 12 : 6; c.run.buffMul = 0.4 + 0.15 * (r - 1); c.float('r', 'Kriegsschrei!', '#ffb547'); } },
     w_wall: { cd: () => 12, ready: run => near(run).length >= 2 || near(run).some(e => e.boss), cast: (c, r) => { near(c.run).forEach(e => { c.hit('w', e, (1.5 + 0.5 * (r - 1)) * c.st.w.actMul, '#cfe0ff'); e.stun = Math.max(e.stun, 1); }); c.run.shake = 0.2; } },
-    w_haut: { cd: () => 16, ready: (run, st) => run.h.w.hp < st.w.hp * 0.7, cast: (c, r) => { c.run.hautT = 5 + r; c.float('w', 'Eiserne Haut', '#7fb2ff'); } },
+    w_haut: { cd: () => 16, ready: (run, st) => run.h.w.hp < st.w.hp * (st.w.wille ? 0.9 : 0.7), cast: (c, r) => { c.run.hautT = 5 + r + (c.st.w.wille ? 3 : 0); c.float('w', 'Eiserne Haut', '#7fb2ff'); } },
     w_rache: { cd: () => 15, ready: engaged, cast: (c, r) => { c.run.racheT = 6 + r; c.float('w', 'Vergeltung', '#7fb2ff'); } },
     s_hagel: { cd: () => 14, ready: run => run.enemies.some(e => e.x < 380), cast: (c, r) => { const vis = c.run.enemies.filter(e => e.x < 380); for (let i = 0; i < 6; i++) { const e = vis[Math.floor(Math.random() * vis.length)]; c.arrow('s', e, 0.3 + i * 0.06, 'hag'); c.hit('s', e, (1.2 + 0.4 * (r - 1)) * c.st.s.actMul, '#c8f5cf'); } } },
     s_falke: { cd: () => 12, ready: run => !!strongest(run, 380), cast: (c, r) => { const t = strongest(c.run, 380); c.hit('s', t, (3.5 + 1.2 * (r - 1)) * c.st.s.actMul, '#c8f5cf'); t.mark = Math.max(t.mark || 0, 0.25); t.markT = 5; c.run.fx.falkeX = t.x; } },
-    s_gift: { cd: () => 10, ready: run => !!strongest(run, 380), cast: (c, r) => { const t = strongest(c.run, 380); t.poison = c.st.s.atk * (3 + (r - 1)) * c.st.s.actMul / 5; t.poisonT = 5; c.arrow('s', t, 0.35, 'gift'); } },
-    m_meteor: { cd: () => 18, ready: run => run.enemies.some(e => e.x < 380), cast: (c, r) => { c.run.enemies.filter(e => e.x < 520).forEach(e => c.hit('m', e, (5 + 1.5 * (r - 1)) * c.st.m.actMul, '#ffb070')); c.run.shake = 0.3; } },
+    s_gift: { cd: () => 10, ready: run => !!strongest(run, 380), cast: (c, r) => { const t = strongest(c.run, 380); const stack = c.st.s.toxik ? Math.min(3, (t.poisonT > 0 ? t.poisonN || 1 : 0) + 1) : 1; t.poisonN = stack; t.poison = c.st.s.atk * (3 + (r - 1)) * c.st.s.actMul / 5 * stack; t.poisonT = 5; c.arrow('s', t, 0.35, 'gift'); } },
+    m_meteor: { cd: () => 18, ready: run => run.enemies.some(e => e.x < 380), cast: (c, r) => { const n = c.st.m.schauer ? 3 : 1; for (let i = 0; i < n; i++) c.run.enemies.filter(e => e.x < 520 && e.hp > 0).forEach(e => c.hit('m', e, (5 + 1.5 * (r - 1)) * c.st.m.actMul * (n > 1 ? 0.5 : 1), '#ffb070')); c.run.shake = 0.3; } },
     m_eis: { cd: () => 14, ready: run => near(run).length >= 1, cast: (c, r) => near(c.run).forEach(e => { c.hit('m', e, (1.5 + 0.5 * (r - 1)) * c.st.m.actMul, '#bfe6ff'); e.stun = Math.max(e.stun, 1.5); e.frozen = 1.5; }) },
     m_kette: { cd: () => 10, ready: run => run.enemies.some(e => e.x < 380), cast: (c, r) => { const ts = c.run.enemies.filter(e => e.x < 450).slice(0, 3 + r); c.run.fx.chain = ts.map(e => e.x); ts.forEach(e => c.hit('m', e, 2.5 * c.st.m.actMul, '#e2c9ff')); } },
-    p_segen: { cd: () => 18, ready: (run, st) => anyBelow(run, st, 0.6), cast: (c, r) => c.healAll(0.3 + 0.08 * (r - 1)) },
-    p_schild: { cd: () => 16, ready: engaged, cast: (c, r) => c.run.order.forEach(k => { const h = c.run.h[k]; if (h.alive) h.shield = Math.max(h.shield, c.st[k].hp * (0.2 + 0.05 * (r - 1))); }) },
-    p_wieder: { cd: (r, S) => (rank(S, 'p_k2') ? 20 : 40), ready: run => run.order.some(k => !run.h[k].alive), cast: (c, r) => { const k = c.run.order.find(k => !c.run.h[k].alive); const h = c.run.h[k]; h.alive = true; h.hp = c.st[k].hp * (0.4 + 0.15 * (r - 1)); c.float(k, 'Wiederbelebt!', '#ffe48a'); } },
+    p_segen: { cd: () => 18, ready: (run, st) => anyBelow(run, st, 0.6), cast: (c, r) => c.healAll(0.3 + 0.08 * (r - 1), 'p') },
+    p_schild: { cd: () => 16, ready: engaged, cast: (c, r) => c.run.order.forEach(k => { const h = c.run.h[k]; if (h.alive) h.shield = Math.max(h.shield, c.st[k].hp * (0.2 + 0.05 * (r - 1)) * (c.st.p.hohe ? 2 : 1)); }) },
+    p_wieder: { cd: (r, S) => (rank(S, 'p_k2') ? 20 : 40), ready: run => run.order.some(k => !run.h[k].alive), cast: (c, r) => { const k = c.run.order.find(k => !c.run.h[k].alive); const h = c.run.h[k]; h.alive = true; h.hp = c.st[k].hp * (0.4 + 0.15 * (r - 1)); c.float(k, 'Wiederbelebt!', '#ffe48a'); sigRevive(c, k); } },
     t_rudel: { cd: () => 20, ready: engaged, cast: (c, r) => { c.run.packT = 8 + 2 * (r - 1); c.float('t', 'Rudelruf!', '#d9935a'); } },
     t_wurzel: { cd: () => 15, ready: run => near(run).length >= 1, cast: (c, r) => c.run.enemies.filter(e => e.x < 460).forEach(e => { c.hit('t', e, 1.2 * c.st.t.actMul, '#b5e08a'); e.stun = Math.max(e.stun, 2 + 0.5 * (r - 1)); e.rooted = 2; }) },
-    t_sprung: { cd: () => 12, ready: run => !!strongest(run, 360), cast: (c, r) => { const t = strongest(c.run, 360); c.hit('t', t, (6 + 2 * (r - 1)) * c.st.t.actMul, '#ffd2a8', true); c.run.fx.sprungX = t.x; } },
+    t_sprung: { cd: () => 12, ready: run => !!strongest(run, 360), cast: (c, r) => { const t = strongest(c.run, 360); c.hit('t', t, (6 + 2 * (r - 1)) * c.st.t.actMul, '#ffd2a8', true); c.run.fx.sprungX = t.x;
+      if (c.st.t.leit) c.run.enemies.filter(e => e !== t && e.x < 420).sort((a, b) => b.hp - a.hp).slice(0, 2).forEach(e => c.hit('t', e, (6 + 2 * (r - 1)) * c.st.t.actMul, '#ffd2a8', true)); } },
     a_schatten: { cd: () => 14, ready: run => run.enemies.some(e => e.x < 480), cast: (c, r) => {
       const vis = c.run.enemies.filter(e => e.x < 480), rng = vis.filter(e => e.ranged), ts = (rng.length ? rng : [...vis].sort((a, b) => b.x - a.x)).slice(0, 2);
       ts.forEach(e => c.hit('a', e, (6 + 2 * (r - 1)) * c.st.a.actMul * (e.ranged ? 1 + c.st.a.rangedDmg : 1), '#ff6b7a')); c.run.fx.shadowXs = ts.map(e => e.x); } },
     a_sturm: { cd: () => 12, ready: run => run.enemies.some(e => e.x < 400), cast: (c, r) => { const vis = c.run.enemies.filter(e => e.x < 400); for (let i = 0; i < 8; i++) { const e = vis[Math.floor(Math.random() * vis.length)]; c.arrow('a', e, 0.2 + i * 0.05, 'kunai'); c.hit('a', e, (1.2 + 0.4 * (r - 1)) * c.st.a.actMul, '#ffc2c8'); } } },
     a_mal: { cd: () => 15, ready: run => !!strongest(run, 400), cast: (c, r) => { const t = strongest(c.run, 400); c.hit('a', t, (3 + (r - 1)) * c.st.a.actMul, '#ff6b7a'); t.mark = Math.max(t.mark || 0, 0.4); t.markT = 6; c.efloat(t, 'Todesmal', '#ff6b7a', 13); } },
-    n_heer: { cd: () => 20, ready: engaged, cast: (c, r) => { for (let i = 0; i < 2 + r; i++) c.run.minions.push({ t: 12, atkT: 0.3 + i * 0.15, swing: 0 }); c.float('n', 'Totenheer!', '#6be0b8'); } },
+    n_heer: { cd: () => 20, ready: engaged, cast: (c, r) => { for (let i = 0; i < 2 + r; i++) c.run.minions.push({ t: c.st.n.minionLong ? 24 : 12, atkT: 0.3 + i * 0.15, swing: 0 }); c.float('n', 'Totenheer!', '#6be0b8'); } },
     n_raub: { cd: () => 12, ready: run => !!strongest(run, 400), cast: (c, r) => { const t = strongest(c.run, 400); const d = c.hit('n', t, (3 + (r - 1)) * c.st.n.actMul, '#6be0b8'); c.healAllAbs(d * 0.15); c.run.fx.raubX = t.x; } },
     n_fluch: { cd: () => 16, ready: run => run.enemies.some(e => e.x < 420), cast: (c, r) => { c.run.enemies.forEach(e => { e.mark = Math.max(e.mark || 0, 0.25 + 0.1 * (r - 1)); e.markT = 6; e.cursed = 6; }); c.float('n', 'Fluch!', '#6be0b8'); } },
-    b_krieg: { cd: () => 18, ready: engaged, cast: (c, r) => { c.run.songT = 6; c.run.songMul = 0.3 + 0.1 * (r - 1); c.float('b', 'Kriegslied!', '#ff8ac8'); } },
+    b_krieg: { cd: (r, S) => (rank(S, 'sg_b_takt') && sigOn(S, 'barde') ? 18 * 0.6 : 18), ready: engaged, cast: (c, r) => { c.run.songT = 6; c.run.songMul = 0.3 + 0.1 * (r - 1); c.float('b', 'Kriegslied!', '#ff8ac8'); } },
     b_wiegen: { cd: () => 16, ready: run => near(run).length >= 2 || near(run).some(e => e.boss), cast: (c, r) => near(c.run).forEach(e => { e.stun = Math.max(e.stun, 2 + 0.5 * (r - 1)); e.sleep = 2 + 0.5 * (r - 1); }) },
     b_schall: { cd: () => 12, ready: run => near(run).length >= 1, cast: (c, r) => { near(c.run).forEach(e => { c.hit('b', e, (2 + 0.6 * (r - 1)) * c.st.b.actMul, '#ffd0ea'); e.x += e.boss ? 15 : 40; }); c.run.fx.schallX = c.run.pos.b || 80; } },
     d_ranken: { cd: () => 14, ready: run => near(run).length >= 1, cast: (c, r) => c.run.enemies.filter(e => e.x < 460).forEach(e => { c.hit('d', e, 1.5 * c.st.d.actMul, '#c8f08a'); e.stun = Math.max(e.stun, 2 + 0.5 * (r - 1)); e.rooted = 2 + 0.5 * (r - 1); }) },
-    d_bruell: { cd: () => 18, ready: engaged, cast: (c, r) => { c.run.roarT = 6 + (r - 1); c.float('d', 'Bärengebrüll!', '#9bd14a'); c.run.shake = 0.2; } },
+    d_bruell: { cd: () => 18, ready: engaged, cast: (c, r) => { c.run.roarT = (6 + (r - 1)) * (c.st.d.rinde ? 2 : 1); c.float('d', 'Bärengebrüll!', '#9bd14a'); c.run.shake = 0.2; } },
     d_adler: { cd: () => 12, ready: run => run.enemies.some(e => e.x < 480), cast: (c, r) => {
-      const vis = c.run.enemies.filter(e => e.x < 480), rng = vis.filter(e => e.ranged), ts = (rng.length ? rng : [...vis].sort((a, b) => b.x - a.x)).slice(0, 3);
+      const vis = c.run.enemies.filter(e => e.x < 480), rng = vis.filter(e => e.ranged), base = (rng.length ? rng : [...vis].sort((a, b) => b.x - a.x)).slice(0, 3), ts = [...base, ...[...vis].filter(e => !base.includes(e)).sort((a, b) => b.x - a.x)].slice(0, 3 + (c.st.d.eagle || 0));
       ts.forEach(e => c.hit('d', e, (3 + (r - 1)) * c.st.d.actMul, '#e8f5c8')); c.run.fx.adlerXs = ts.map(e => e.x); } },
     e_turm2: { cd: () => 20, ready: engaged, cast: (c, r) => { c.run.extraTurretT = 10 + 2 * (r - 1); c.float('e', 'Geschütz gebaut!', '#f28c28'); } },
-    e_streu: { cd: () => 14, ready: run => run.enemies.some(e => e.x < 400), cast: (c, r) => { const vis = c.run.enemies.filter(e => e.x < 400); for (let i = 0; i < 6; i++) { const e = vis[Math.floor(Math.random() * vis.length)]; c.arrow('e', e, 0.3 + i * 0.07, 'bomb'); c.hit('e', e, (1.5 + 0.5 * (r - 1)) * c.st.e.actMul, '#ffc58a'); c.burst(e.x, 196, '#ff9a3d', 6); } } },
+    e_streu: { cd: () => 14, ready: run => run.enemies.some(e => e.x < 400), cast: (c, r) => { const vis = c.run.enemies.filter(e => e.x < 400); for (let i = 0, n = c.st.e.splitter ? 10 : 6; i < n; i++) { const e = vis[Math.floor(Math.random() * vis.length)]; c.arrow('e', e, 0.3 + i * 0.07, 'bomb'); c.hit('e', e, (1.5 + 0.5 * (r - 1)) * c.st.e.actMul, '#ffc58a'); c.burst(e.x, 196, '#ff9a3d', 6); } } },
     e_mine: { cd: () => 15, ready: run => near(run).length >= 2 || near(run).some(e => e.boss), cast: (c, r) => { near(c.run).forEach(e => { c.hit('e', e, (2.5 + 0.8 * (r - 1)) * c.st.e.actMul, '#ffc58a'); e.stun = Math.max(e.stun, 1); c.burst(e.x, 214, '#ffd23f', 10); }); c.run.shake = 0.25; } },
   };
+
+  // Aktive Fähigkeiten der Ahnensiegel
+  const aliveIn = run => run.order.filter(k => run.h[k].alive);
+  Object.assign(ACT, {
+    sg_r_schlag: { cd: () => 20, ready: run => engaged(run) && aliveIn(run).some(k => k !== 'r'), cast: (c, r) => {
+      const k = aliveIn(c.run).filter(x => x !== 'r').sort((a, b) => c.st[b].atk - c.st[a].atk)[0]; if (!k) return;
+      c.run.atkB[k] = { t: 8, v: 0.5 + 0.15 * (r - 1) }; c.float(k, 'Ritterschlag!', '#ffb547', 15); } },
+    sg_r_banner: { cd: () => 35, ready: (run, st) => anyBelow(run, st, 0.35), cast: (c, r) => { c.run.honorT = 8 + (r - 1); c.float('r', 'Banner der Ehre!', '#ffd27a', 15); } },
+    sg_r_duell: { cd: () => 18, ready: run => !!strongest(run, 400), cast: (c, r) => { const t = strongest(c.run, 400); t.duelT = 8; t.duelV = 1 + 0.25 * (r - 1); c.efloat(t, 'Duell!', '#ffb547', 15); } },
+    sg_w_spott: { cd: () => 18, ready: run => engaged(run), cast: (c, r) => { c.run.tauntT = 5 + (r - 1); c.float('w', 'Spott!', '#7fb2ff', 15); } },
+    sg_w_beben: { cd: () => 16, ready: run => near(run).length >= 2 || near(run).some(e => e.boss), cast: (c, r) => {
+      c.run.enemies.filter(e => e.x < 520).forEach(e => { c.hit('w', e, (2.5 + 0.6 * (r - 1)) * c.st.w.actMul, '#cfe0ff'); e.quakeT = 4; }); c.run.shake = 0.35; } },
+    sg_w_prall: { cd: () => 15, ready: run => run.enemies.some(e => (e.ranged || e.ahn) && e.x < 470), cast: (c, r) => { c.run.prallT = 6; c.run.prallV = (2 + 0.6 * (r - 1)) * c.st.w.actMul; c.float('w', 'Prallschild', '#7fb2ff'); } },
+    sg_s_ziel: { cd: () => 16, ready: run => !!strongest(run, 420) && !(run.aimT > 0), cast: (c, r) => { c.run.aimT = 1.5; c.run.aimV = (12 + 4 * (r - 1)) * c.st.s.actMul; c.float('s', 'Zielt …', '#c8f5cf'); } },
+    sg_s_sperr: { cd: () => 18, ready: run => run.enemies.some(e => e.x < 380), cast: (c, r) => { c.run.apsB.s = { t: 4 + (r - 1), v: 2 }; c.float('s', 'Sperrfeuer!', '#7ee08a'); } },
+    sg_s_sprung: { cd: () => 14, ready: run => near(run).length >= 1, cast: (c, r) => {
+      c.run.enemies.slice(0, 2).forEach(e => c.hit('s', e, (2 + 0.6 * (r - 1)) * c.st.s.actMul, '#c8f5cf')); const h = c.run.h.s; if (h) h.invT = 2; c.float('s', 'Rückzug!', '#7ee08a'); } },
+    sg_m_loch: { cd: () => 18, ready: run => near(run).length >= 2 || near(run).some(e => e.boss), cast: (c, r) => {
+      c.run.holeT = 3; c.run.holeTick = 0; c.run.holeV = (1.5 + 0.5 * (r - 1)) * c.st.m.actMul; c.run.holeX = Math.min(430, (c.run.enemies[0] ? c.run.enemies[0].x : 300) + 50); } },
+    sg_m_strahl: { cd: () => 16, ready: run => !!strongest(run, 420), cast: (c, r) => { c.run.beam = { t: 3, tick: 0, i: 0, v: (1 + 0.25 * (r - 1)) * c.st.m.actMul }; } },
+    sg_m_mana: { cd: () => 16, ready: run => !!strongest(run, 420), cast: (c, r) => { const t = strongest(c.run, 420); t.manaT = 4 + (r - 1); c.efloat(t, 'Manabrand', '#c08cff', 14); } },
+    sg_p_boden: { cd: () => 22, ready: (run, st) => anyBelow(run, st, 0.8), cast: (c, r) => { c.run.groundT = 8; c.run.groundV = 0.03 + 0.01 * (r - 1); c.float('p', 'Heiliger Boden', '#ffe48a'); } },
+    sg_p_eile: { cd: () => 18, ready: run => engaged(run) || run.enemies.some(e => e.x < 380), cast: (c, r) => {
+      aliveIn(c.run).sort((a, b) => c.st[b].atk - c.st[a].atk).slice(0, 2).forEach(k => { c.run.apsB[k] = { t: 6, v: 0.5 + 0.1 * (r - 1) }; c.float(k, 'Eile!', '#ffe48a', 13); }); } },
+    sg_p_gebet: { cd: () => 20, ready: (run, st, S) => S.equip.some(id => NODE[id].tree !== 'priester' && run.cds[id] > 3), cast: (c, r) => {
+      for (const id of c.S.equip) if (NODE[id].tree !== 'priester' && c.run.cds[id] > 0) c.run.cds[id] = Math.max(0, c.run.cds[id] - (4 + (r - 1))); c.float('p', 'Gebet der Eile', '#ffe48a'); } },
+    sg_t_eber: { cd: () => 14, ready: run => near(run).length >= 2 || near(run).some(e => e.boss), cast: (c, r) => {
+      c.run.enemies.filter(e => e.x < 520).forEach(e => { c.hit('t', e, (2.5 + 0.8 * (r - 1)) * c.st.t.actMul, '#ffd2a8'); e.stun = Math.max(e.stun, e.boss ? 0.5 : 1); }); c.run.fx.eberX = 0; c.run.shake = 0.2; } },
+    sg_t_geheul: { cd: () => 18, ready: run => engaged(run), cast: (c, r) => { c.run.howlT = 6 + (r - 1); c.float('t', 'Wolfsgeheul!', '#d9935a'); } },
+    sg_t_instinkt: { cd: () => 20, ready: (run, st) => run.h.t && run.h.t.hp < st.t.hp * 0.5, cast: (c, r) => c.healOne('t', c.st.t.hp * (0.35 + 0.1 * (r - 1))) },
+    sg_a_kehle: { cd: () => 10, ready: run => run.enemies.some(e => e.x < 480 && (e.boss || e.hp < e.max * 0.25)), cast: (c, r) => {
+      const vis = c.run.enemies.filter(e => e.x < 480), low = vis.filter(e => !e.boss && e.hp < e.max * 0.25).sort((a, b) => a.hp / a.max - b.hp / b.max)[0];
+      if (low) { low.hp = 0; low.lastBy = 'a'; c.efloat(low, 'Kehlschnitt!', '#ff6b7a', 15); c.burst(low.x, 190, '#ff6b7a', 10); }
+      else { const b = vis.find(e => e.boss); if (b) c.hit('a', b, (5 + 1.5 * (r - 1)) * c.st.a.actMul, '#ff6b7a'); } } },
+    sg_a_klon: { cd: () => 20, ready: run => run.enemies.some(e => e.x < 420), cast: (c, r) => { c.run.cloneT = 8; c.run.cloneV = 0.5 + 0.15 * (r - 1); c.run.cloneAtk = 0.2; c.float('a', 'Schattenklon', '#ff6b7a'); } },
+    sg_a_mal: { cd: () => 16, ready: run => run.enemies.filter(e => e.x < 480).length >= 2, cast: (c, r) => {
+      c.run.enemies.filter(e => e.x < 480).slice(0, 3).forEach(e => { e.smarkT = 8; c.efloat(e, '✕', '#ff6b7a', 16); }); c.run.smarkV = (4 + 1.2 * (r - 1)) * c.st.a.actMul; } },
+    sg_n_wand: { cd: () => 22, ready: run => engaged(run), cast: (c, r) => { c.run.wallT = 4 + (r - 1); c.float('n', 'Knochenwand!', '#6be0b8', 15); } },
+    sg_n_riese: { cd: () => 25, ready: run => engaged(run) && !run.giant, cast: (c, r) => { const hp = c.st.n.hp * (3 + (r - 1)); c.run.giant = { t: 12, hp, max: hp }; c.float('n', 'Knochenriese!', '#6be0b8', 15); } },
+    sg_n_fessel: { cd: () => 16, ready: run => run.enemies.filter(e => e.x < 480).length >= 2, cast: (c, r) => {
+      [...c.run.enemies].filter(e => e.x < 480).sort((a, b) => b.hp - a.hp).slice(0, 3).forEach(e => { e.linkT = 6 + (r - 1); c.efloat(e, '∞', '#6be0b8', 16); }); } },
+    sg_b_diss: { cd: () => 16, ready: run => engaged(run), cast: (c, r) => { c.run.enemies.forEach(e => (e.dissT = 5 + (r - 1))); c.float('b', 'Dissonanz!', '#ff8ac8'); } },
+    sg_b_echo: { cd: r => 20 - 2 * (r - 1), ready: (run, st, S) => { const id = run.lastAct; return !!(id && ACT[id] && rank(S, id) && ACT[id].ready(run, st, S)); }, cast: (c, r) => {
+      const id = c.run.lastAct; if (!id) return; try { ACT[id].cast(c, rank(c.S, id)); c.run.fx[id] = 0.5; } catch (err) {} c.float('b', `Echo: ${NODE[id].name}`, '#ff8ac8', 13); } },
+    sg_b_ahnen: { cd: () => 20, ready: run => engaged(run) || run.enemies.some(e => e.x < 380), cast: (c, r) => { c.run.critBT = 8; c.run.critBV = 0.25 + 0.05 * (r - 1); c.float('b', 'Ballade der Ahnen', '#ffd27a'); } },
+    sg_d_gestalt: { cd: () => 22, ready: run => engaged(run), cast: (c, r) => { c.run.bearT = 8 + (r - 1); c.float('d', 'Wildgestalt!', '#9bd14a', 15); } },
+    sg_d_wachs: { cd: () => 24, ready: run => engaged(run), cast: (c, r) => {
+      const f = 0.2 + 0.05 * (r - 1); c.run.growT = 10;
+      aliveIn(c.run).forEach(k => { const h = c.run.h[k], add = c.st[k].hp * f; h.shield = (h.shield || 0) + add; h.growS = (h.growS || 0) + add; }); c.float('d', 'Wachstum', '#9bd14a'); } },
+    sg_d_gewalt: { cd: () => 20, ready: run => engaged(run), cast: (c, r) => { c.run.natureT = 5 + (r - 1); c.float('d', 'Naturgewalt', '#9bd14a'); } },
+    sg_e_flamme: { cd: () => 14, ready: run => near(run).length >= 1, cast: (c, r) => { c.run.flameT = 3; c.run.flameTick = 0; c.run.flameV = (2 + 0.5 * (r - 1)) * c.st.e.actMul; } },
+    sg_e_rakete: { cd: () => 15, ready: run => !!strongest(run, 420), cast: (c, r) => {
+      const t = strongest(c.run, 420); for (let i = 0; i < 3; i++) { c.arrow('e', t, 0.3 + i * 0.12, 'bomb'); c.hit('e', t, (4 + 1.2 * (r - 1)) * c.st.e.actMul, '#ffc58a'); } c.burst(t.x, 180, '#ff9a3d', 14); c.run.shake = 0.2; } },
+    sg_e_druck: { cd: () => 18, ready: run => engaged(run) || run.enemies.some(e => e.x < 420), cast: (c, r) => { c.run.overT = 6 + (r - 1); c.float('e', 'Überdruck!', '#f28c28'); } },
+  });
+  // Wird jeden Schritt aufgerufen: laufende Siegel-Effekte
+  function sigStep(S, st, run, c, dt) {
+    for (const k in run.atkB) if (run.atkB[k]) { run.atkB[k].t -= dt; if (run.atkB[k].t <= 0) run.atkB[k] = null; }
+    for (const k in run.apsB) if (run.apsB[k]) { run.apsB[k].t -= dt; if (run.apsB[k].t <= 0) run.apsB[k] = null; }
+    for (const key of ['honorT', 'huntT', 'tauntT', 'prallT', 'howlT', 'cloneT', 'wallT', 'critBT', 'bearT', 'natureT', 'overT', 'tinkT', 'wrathT', 'bloomT', 'groundT', 'growT', 'falkT']) if (run[key] > 0) run[key] -= dt;
+    // Zielschuss
+    if (run.aimT > 0) { run.aimT -= dt; if (run.aimT <= 0) { const t = [...run.enemies].filter(e => e.x < 480).sort((a, b) => b.hp - a.hp)[0]; if (t && run.h.s && run.h.s.alive) { c.arrow('s', t, 0.18, 'hag'); c.hit('s', t, run.aimV, '#c8f5cf'); c.efloat(t, 'Zielschuss!', '#7ee08a', 16); run.shake = 0.15; } } }
+    // Schwarzes Loch
+    if (run.holeT > 0) { run.holeT -= dt; run.holeTick -= dt; for (const e of run.enemies) if (e.x < 520) { e.x += (run.holeX - e.x) * Math.min(1, dt * 3); e.stun = Math.max(e.stun, 0.15); }
+      if (run.holeTick <= 0) { run.holeTick += 0.5; run.enemies.filter(e => e.x < 520).forEach(e => c.hit('m', e, run.holeV * 0.5, '#e2c9ff')); } }
+    // Arkaner Strahl
+    if (run.beam) { const B = run.beam; B.t -= dt; B.tick -= dt;
+      if (B.tick <= 0 && B.i < 6) { B.tick += 0.5; B.i++; B.tgt = B.tgt && B.tgt.hp > 0 ? B.tgt : strongest(run, 480); if (B.tgt && run.h.m && run.h.m.alive) c.hit('m', B.tgt, 0.714 * B.i * B.v, '#e2c9ff'); }
+      if (B.t <= 0 || B.i >= 6) run.beam = null; }
+    // Heiliger Boden
+    if (run.groundT > 0 && !run.noheal && run.h.p && run.h.p.alive) for (const k of run.order) { const h = run.h[k]; if (h.alive) h.hp = Math.min(st[k].hp, h.hp + st[k].hp * run.groundV * dt * (run.curseT > 0 ? 0.4 : 1)); }
+    // Wachstum läuft aus
+    if (run.growT !== undefined && run.growT <= 0 && run.growT > -1) { run.growT = -9; for (const k of run.order) { const h = run.h[k]; if (h.growS) { h.shield = Math.max(0, (h.shield || 0) - h.growS); h.growS = 0; } } }
+    // Flammenwerfer
+    if (run.flameT > 0) { run.flameT -= dt; run.flameTick -= dt; if (run.flameTick <= 0 && run.h.e && run.h.e.alive) { run.flameTick += 0.5; run.enemies.slice(0, 3).filter(e => e.x < 420).forEach(e => c.hit('e', e, run.flameV, '#ffb070')); } }
+    // Schattenklon
+    if (run.cloneT > 0 && st.a && run.h.a && run.h.a.alive && run.enemies.length && run.enemies[0].x < 420) { run.cloneAtk -= dt; if (run.cloneAtk <= 0) { run.cloneAtk += 1 / st.a.aps; const tg = run.enemies[0]; c.arrow('a', tg, 0.22, 'kunai'); c.hit('a', tg, run.cloneV, '#d9a0ff'); } }
+    // Falkenfreundin
+    if (st.s && st.s.falcon && run.h.s && run.h.s.alive && run.enemies.some(e => e.x < 400)) { if (!(run.falkT > 0)) { run.falkT = 4; const t = strongest(run, 400); if (t) { c.hit('s', t, st.s.falcon, '#c8f5cf'); run.fx.s_falke = 0.5; run.fx.falkeX = t.x; } } }
+    // Knochenriese
+    if (run.giant) { run.giant.t -= dt; if (run.giant.t <= 0 || run.giant.hp <= 0) { if (run.giant.hp <= 0) c.float('n', 'Riese zerfällt', '#6be0b8', 12); run.giant = null; } }
+    // Steigerung
+    if (st.b && st.b.cresc && run.h.b && run.h.b.alive) { run.crescT = (run.crescT || 0) + dt; if (run.crescT >= 5) { run.crescT = 0; if ((run.crescN || 0) < 5) { run.crescN = (run.crescN || 0) + 1; c.float('b', `Steigerung +${run.crescN * 10} %`, '#ff8ac8', 12); } } }
+    else run.crescN = 0;
+    // Gegner-Effekte
+    for (const e of run.enemies) {
+      if (e.duelT > 0) e.duelT -= dt; if (e.quakeT > 0) e.quakeT -= dt; if (e.dissT > 0) e.dissT -= dt; if (e.linkT > 0) e.linkT -= dt; if (e.smarkT > 0) e.smarkT -= dt;
+      if (e.manaT > 0) { e.manaT -= dt; if (e.boss) { if (st.m) { e.hp -= st.m.atk * 1.5 * st.m.actMul * dt; e.lastBy = 'm'; } } else e.hp -= e.hp * 0.08 * dt; }
+      if (e.bleedT > 0) { e.bleedT -= dt; e.hp -= e.bleed * dt; }
+    }
+  }
+  // Zusätzlicher Schaden durch Siegel-Effekte
+  function sigMul(run, st, k, e, wolf) {
+    const T = st[k]; let m = 1;
+    const ab = run.atkB[k]; if (ab) m *= 1 + ab.v;
+    if (e.duelT > 0) m *= 1 + (e.duelV || 1);
+    if (k === 'r' && run.brother && T.brother) m *= 1 + T.brother;
+    if (T.sharp && e.hp > e.max * 0.8) m *= 1 + T.sharp;
+    if (st.g.permafrost && e.frozen > 0) m *= 1 + st.g.permafrost;
+    if (T.focus && run.enemies.length === 1) m *= 1 + T.focus;
+    if (run.wrathT > 0) m *= 1 + (st.p ? st.p.wrath : 0.4);
+    if (k === 't' && !wolf && T.packLead) m *= 1 + T.packLead * (T.wolves + (run.packT > 0 ? 2 + T.packBonus : 0));
+    if (wolf && run.howlT > 0) m *= 1.8;
+    if (k === 'n' && T.collect) m *= 1 + Math.min(0.5, T.collect * (run.collectN || 0));
+    if (k === 'd') { if (run.bearT > 0) m *= 2; if (run.bloomT > 0 && T.bloom) m *= 1 + T.bloom; if (T.warden && run.order.every(x => run.h[x].alive && run.h[x].hp >= st[x].hp * 0.5)) m *= 1 + T.warden; }
+    if (run.crescN > 0) m *= 1 + 0.1 * run.crescN;
+    return m;
+  }
+  // Wiederbelebung: Engelsflügel und Heilige Wut
+  function sigAps(run, st, k) {
+    let m = 1; const b = run.apsB[k]; if (b) m *= 1 + b.v;
+    if (k === 'a' && st.a.flow) m *= 1 + st.a.flow * (run.flowN || 0);
+    if (k === 's' && run.huntT > 0) m *= 1 + st.s.hunt;
+    return m;
+  }
+  function sigKill(S, st, run, c, e) {
+    if (e.lastBy === 'r' && st.r && st.r.vorbild && run.h.r && run.h.r.alive && !run.noheal) run.order.forEach(k => { const h = run.h[k]; if (h.alive) h.hp = Math.min(st[k].hp, h.hp + st[k].hp * st.r.vorbild * (run.curseT > 0 ? 0.4 : 1)); });
+    if (st.s && st.s.hunt && run.h.s && run.h.s.alive) run.huntT = 3;
+    if (st.a && st.a.soulBlade && run.h.a && run.h.a.alive) for (const id of S.equip) if (NODE[id].tree === 'assassine' && run.cds[id] > 0) run.cds[id] = Math.max(0, run.cds[id] - 1);
+    if (st.n && st.n.collect && run.h.n && run.h.n.alive) run.collectN = (run.collectN || 0) + 1;
+    if (e.elite && st.n && st.n.necro && run.h.n && run.h.n.alive) { run.minions.push({ t: st.n.minionDur * (st.n.minionLong ? 2 : 1), atkT: 0.5, swing: 0, mul: 3 }); c.efloat(e, 'Totenbeschwörer!', '#6be0b8', 12); }
+    if (e.smarkT > 0 && run.h.a && run.h.a.alive) { const nx = run.enemies.find(o => o !== e && o.hp > 0 && o.smarkT > 0); if (nx) { c.hit('a', nx, run.smarkV || 4, '#ff6b7a'); c.efloat(nx, 'Schattenmal!', '#ff6b7a', 14); run.fx.shadowXs = [nx.x]; run.fx.a_schatten = 0.4; } }
+  }
+  function sigRevive(c, k) {
+    const { st, run } = c; if (!st.p || !run.h.p) return;
+    if (st.p.angel && run.h[k]) { run.h[k].invT = 5; c.float(k, 'Engelsflügel', '#fff2b0', 12); }
+    if (st.p.wrath) { run.wrathT = 6; c.float('p', 'Heilige Wut!', '#ffe48a', 14); }
+  }
 
   /* ================= Kampf ================= */
   const ZONES = ['Grüne Wiesen', 'Finsterwald', 'Knochengruft', 'Glutberge', 'Frostgipfel', 'Nebelmoor', 'Dornendickicht', 'Schattenkrypta', 'Aschewüste', 'Eisgrotten',
@@ -1314,7 +1635,7 @@
       mission: exp ? (MISSION[S.exp.mission] ? S.exp.mission : 'streif') : null, waves: 0, bossKills: 0, minions: [], turretT: 1, extraTurretT: 0, songT: 0, songMul: 0, roarT: 0,
       hard: hardMul(S, exp), diff: ascDiff(S), speed: rules.includes('speed') ? 1.5 : 1, hpMul: rules.includes('giant') ? 2 : 1, eliteChance: rules.includes('elite') ? 0.4 : 0.12, noheal: rules.includes('noheal'),
       dragonT: 2, compRevive: false, bannerT: 0, kills: 0, gold: 0, souls: 0, runes: [], phoenixUsed: false, miracleUsed: false,
-      fx: {}, cds: {}, buffT: 0, buffMul: 0, hautT: 0, racheT: 0, packT: 0, order, pos, frontX: pos[order[0]], h,
+      fx: {}, cds: {}, atkB: {}, apsB: {}, buffT: 0, buffMul: 0, hautT: 0, racheT: 0, packT: 0, order, pos, frontX: pos[order[0]], h,
       enemies: [], floats: [], arrows: [], eshots: [], parts: [], scroll: 0, dead: false, victory: false, deadT: 0, time: 0, shake: 0 };
     // Abkürzung: übersprungene Bosse geben einen Teil ihrer Seelen
     if (run.mode === 'normal' && run.stage > 10) {
@@ -1336,6 +1657,7 @@
   let SKIP_SOULS = Number((typeof process !== 'undefined' && process.env && process.env.SKIP) || 0.35);
   const towerStage = floor => 15 + floor * 2;
   function spawnWave(run) {
+    run.brother = false; for (const k of run.order || []) if (run.h[k]) run.h[k].protUsed = false;
     if (run.mode === 'ahnen') return ahnSpawn(run);
     run.enemies = [];
     if (run.mode === 'tower') {
@@ -1355,14 +1677,20 @@
     c.efloat = (e, text, color, size = 13) => run.floats.push({ x: e.x + (e.reach ? 52 : 0) + (Math.random() * 16 - 8), y: e.reach ? 168 + Math.random() * 14 : 150 - (e.boss ? 40 : 0), text, color, size, t: 1 });
     c.burst = (x, y, color, n = 8) => { for (let i = 0; i < n; i++) run.parts.push({ x, y, vx: (Math.random() - 0.5) * 160, vy: -Math.random() * 140 - 20, t: 0.6, c: color }); };
     c.arrow = (k, e, d, kind) => run.arrows.push({ x: (run.pos[k] || 60) + 8, y: 168, tx: e.x, ty: 188 - (e.boss ? 30 : 0), t: 0, d, kind: kind || k });
-    c.hit = (k, e, mult, color, wolf) => {
+    c.hit = (k, e, mult, color, wolf, opt) => {
       const T = st[k]; if (!T || !e) return 0;
       if (run.blindT > 0 && Math.random() < 0.33) { c.efloat(e, 'Verfehlt', '#9aa3ad', 11); return 0; }
-      let dmg = (wolf ? T.wolfAtk : T.atk) * mult * (run.buffT > 0 ? 1 + run.buffMul : 1) * (1 + (e.markT > 0 ? e.mark : 0));
+      let dmg = (wolf ? T.wolfAtk : T.atk) * mult * (run.buffT > 0 ? 1 + run.buffMul : 1) * (1 + (e.markT > 0 ? e.mark : 0)) * sigMul(run, st, k, e, wolf);
       if ((e.boss || e.elite) && T.bossDmg) dmg *= 1 + T.bossDmg;
-      const crit = Math.random() < (wolf ? T.crit + T.wolfCrit : T.crit);
-      if (crit) dmg *= T.critD;
-      e.hp -= dmg; e.hitT = 0.15;
+      const hh = run.h[k], tur = !!(opt && opt.turret && T.precise), forced = !!(k === 'a' && hh && hh.nextCrit);
+      if (forced) hh.nextCrit = false;
+      const crit = forced || Math.random() < (wolf ? T.crit + T.wolfCrit : T.crit) * (tur ? 2 : 1) + (run.critBT > 0 ? run.critBV : 0);
+      if (crit) dmg *= T.critD + (tur ? 0.5 : 0) + (e.boss && T.coldBlood ? T.coldBlood : 0);
+      e.hp -= dmg; e.hitT = 0.15; e.lastBy = k;
+      if (wolf && T.bleed) { e.bleed = dmg * T.bleed / 3; e.bleedT = 3; }
+      if (k === 'd' && run.natureT > 0 && hh && hh.alive && !run.noheal) hh.hp = Math.min(T.hp, hh.hp + dmg);
+      if (k === 'a' && T.flow) run.flowN = Math.min(20, (run.flowN || 0) + 1);
+      if (e.linkT > 0) for (const o of run.enemies) if (o !== e && o.linkT > 0 && o.hp > 0) { o.hp -= dmg * 0.5; o.hitT = 0.15; o.lastBy = k; }
       if (T.burn && !wolf) { e.burn = dmg * T.burn / 2; e.burnT = 2; }
       if (T.vuln && k === 's') { e.mark = Math.max(e.mark || 0, T.vuln); e.markT = 4; }
       if (T.lifesteal) { const h = run.h[k]; if (h && h.alive) h.hp = Math.min(T.hp, h.hp + dmg * T.lifesteal); }
@@ -1372,14 +1700,16 @@
       sfx(crit ? 'crit' : 'hit');
       return dmg;
     };
-    c.healOne = (k, amt) => {
+    c.healOne = (k, amt, src) => {
       const h = run.h[k], T = st[k]; if (!h || !h.alive || run.noheal) return;
       if (run.curseT > 0) amt *= 0.4;
+      if (k === 'd' && T.bloom) run.bloomT = 4;
+      if (src === 'p' && st.p && st.p.holyFire && st.p.atk > 0 && run.enemies[0]) c.hit('p', run.enemies[0], amt * st.p.holyFire / st.p.atk, '#fff2b0');
       const over = h.hp + amt - T.hp; h.hp = Math.min(T.hp, h.hp + amt);
       if (over > 0 && st.p && st.p.overShield) h.shield = Math.min(T.hp * 0.5, h.shield + over * st.p.overShield);
       c.float(k, '+' + fmt(amt), '#7ee08a', 12);
     };
-    c.healAll = f => { run.order.forEach(k => run.h[k].alive && c.healOne(k, st[k].hp * f)); run.fx.heal = 0.5; };
+    c.healAll = (f, src) => { run.order.forEach(k => run.h[k].alive && c.healOne(k, st[k].hp * f, src)); run.fx.heal = 0.5; };
     c.healSplit = (me, fMe, fOther) => { run.order.forEach(k => run.h[k].alive && c.healOne(k, st[k].hp * (k === me ? fMe : fOther))); run.fx.heal = 0.5; };
     c.healAllAbs = a => !run.noheal && (a *= run.curseT > 0 ? 0.4 : 1) && run.order.forEach(k => { const h = run.h[k]; if (h.alive) h.hp = Math.min(st[k].hp, h.hp + a); });
     return c;
@@ -1388,21 +1718,30 @@
   function hurtHero(c, k, raw, attacker) {
     const { st, run } = c, h = run.h[k], T = st[k];
     if (!h || !h.alive) return;
+    if (h.invT > 0 || h.protT > 0) return;
     const boss = attacker && attacker.boss;
     if (boss && attacker.enrage) raw *= attacker.enrage;
+    if (attacker && attacker.duelT > 0) raw *= 0.7;
     if (h.markT > 0) raw *= 2;
-    if (T.block && Math.random() < T.block * (boss ? 0.5 : 1)) { c.float(k, 'Abgewehrt', '#9fd0ff', 12); return; }
-    if (T.dodge && Math.random() < T.dodge) { c.float(k, 'Ausgewichen', '#c8f5cf', 12); return; }
+    if (T.block && Math.random() < T.block * (boss ? 0.5 : 1)) { c.float(k, 'Abgewehrt', '#9fd0ff', 12); if (attacker && T.blockStun) attacker.stun = Math.max(attacker.stun, boss ? 0.25 : 0.5); return; }
+    if (T.dodge && Math.random() < T.dodge) { c.float(k, 'Ausgewichen', '#c8f5cf', 12); if (T.dancer) h.nextCrit = true; return; }
     let d = raw * (1 - T.dr * (boss ? 0.6 : 1));
     if (run.roarT > 0) d *= 0.6;
     if (k === 'w' && run.hautT > 0) d *= 0.4;
-    if (h.shield > 0) { const a = Math.min(h.shield, d); h.shield -= a; d -= a; }
+    if (k === 'w' && run.tauntT > 0) d *= 0.7;
+    if (k === 'd' && run.bearT > 0) d *= 0.5;
+    if (k === 'e' && T.plating) d *= 1 - T.plating;
+    if (k === 'n' && T.boneArmor) d *= 1 - Math.min(0.4, T.boneArmor * run.minions.length);
+    if (h.shield > 0) { const a = Math.min(h.shield, d); h.shield -= a; d -= a; if (h.growS) h.growS = Math.min(h.growS, h.shield); }
     h.hp -= d; h.hurtT = 0.2; sfx('hurt');
+    if (d > 0) { if (k === 'a') run.flowN = 0; if (k === 'b') { run.crescN = 0; run.crescT = 0; } }
     if (attacker) { let refl = T.thorns; if (k === 'w' && run.racheT > 0) refl += 0.6; if (refl) attacker.hp -= raw * refl * (boss ? 0.4 : 1); }
+    if (h.hp > 0 && k !== 'w' && st.w && st.w.protector && run.h.w && run.h.w.alive && h.hp < T.hp * 0.25 && !h.protUsed) { h.protUsed = true; h.protT = 3; c.float(k, 'Beschützt!', '#7fb2ff', 13); }
+    if (h.hp <= 0 && run.honorT > 0) { h.hp = 1; c.float(k, 'Ehre!', '#ffd27a', 12); }
     if (h.hp <= 0) {
       if (st.p && st.p.miracle && !run.miracleUsed && run.h.p && run.h.p.alive) { run.miracleUsed = true; run.order.forEach(x => run.h[x].alive && (run.h[x].hp = st[x].hp)); h.hp = T.hp * 0.5; c.float(k, 'Wunder!', '#ffe48a', 18); run.fx.heal = 0.5; }
-      else if (T.revive && !h.revived) { h.revived = true; h.hp = T.hp * (k === 'w' ? 1 : 0.5); c.float(k, k === 'w' ? 'Letzte Bastion!' : 'Zweites Leben!', '#ffb547', 16); }
-      else { h.hp = 0; h.alive = false; h.shield = 0; h.deadAt = run.time; h.deadScroll = run.scroll; run.losses++; sfx('fall'); c.float(k, `${HERO_BY_ID[k].name} gefallen`, '#ff8a8a', 13); }
+      else if (T.revive && !h.revived) { h.revived = true; h.hp = T.hp * (k === 'w' ? 1 : 0.5); c.float(k, k === 'w' ? 'Letzte Bastion!' : 'Zweites Leben!', '#ffb547', 16); sigRevive(c, k); }
+      else { h.hp = 0; h.alive = false; h.shield = 0; h.deadAt = run.time; h.deadScroll = run.scroll; run.losses++; sfx('fall'); c.float(k, `${HERO_BY_ID[k].name} gefallen`, '#ff8a8a', 13); if (k !== 'r' && st.r && st.r.brother && run.h.r && run.h.r.alive && !run.brother) { run.brother = true; c.float('r', 'Schwertbruder!', '#ffb547', 15); } }
     }
   }
   function step(S, st, run, dt) {
@@ -1413,6 +1752,7 @@
       const h = run.h[k]; if (!h.alive) continue;
       if (st[k].regen) h.hp = Math.min(st[k].hp, h.hp + st[k].hp * st[k].regen * dt * (run.curseT > 0 ? 0.4 : 1));
       h.swing = Math.max(0, h.swing - dt * 4); h.hurtT -= dt;
+      if (h.invT > 0) h.invT -= dt; if (h.protT > 0) h.protT -= dt;
     }
     for (const k in run.cds) run.cds[k] = Math.max(0, run.cds[k] - dt);
     for (const k in run.fx) if (typeof run.fx[k] === 'number' && !/X$/.test(k)) run.fx[k] -= dt;
@@ -1425,7 +1765,7 @@
     run.enemies.forEach((e, i) => {
       const target = run.frontX + 50 + i * 34 + (e.boss ? 10 : 0) + (e.reach || 0);
       if (e.stun > 0) e.stun -= dt;
-      else if (e.x > target) e.x = Math.max(target, e.x - 75 * run.speed * (st.g.walk || 1) * dt);
+      else if (e.x > target) e.x = Math.max(target, e.x - 75 * run.speed * (st.g.walk || 1) * (e.quakeT > 0 ? 0.6 : 1) * dt);
       else if (e.x < target) e.x = Math.min(target, e.x + 75 * dt);
       if (i === 0 && e.x <= target + 1) walking = false;
       e.hitT -= dt; e.markT -= dt; e.frozen -= dt; e.rooted -= dt; e.sleep -= dt; e.cursed -= dt;
@@ -1442,23 +1782,30 @@
     for (const id of S.equip) {
       const n = NODE[id], hk = HERO[n.tree].id, h = run.h[hk];
       if (!h || !h.alive || h.stunT > 0 || !rank(S, id) || run.cds[id] > 0 || !run.enemies.length) continue;
+      if (n.sig && !sigOn(S, n.tree)) continue;
       if (!ACT[id].ready(run, st, S)) continue;
       ACT[id].cast(c, rank(S, id));
       run.cds[id] = ACT[id].cd(rank(S, id), S) * (1 - st[hk].cdr); run.fx[id] = 0.5; sfx('skill');
+      if (hk !== 'b') run.lastAct = id;
+      if (hk === 'e' && st.e.tinker) run.tinkT = 4;
     }
+    sigStep(S, st, run, c, dt);
+    const ensF = st.b && st.b.ensemble && run.h.b && run.songT > 0 ? 1 + run.songMul : 1;
     const f = run.enemies[0], eng = f && f.x <= run.frontX + 52 + (f.boss ? 10 : 0) + (f.reach || 0);
     for (const k of run.order) {
-      const h = run.h[k], T = st[k]; if (!h.alive || !run.enemies.length || h.stunT > 0) continue;
+      const h = run.h[k], T = st[k];
+      if (k === 't' && !h.alive && T.loyal && eng && run.enemies.length) { h.wolfT -= dt * (run.howlT > 0 ? 1.5 : 1) * ensF; if (h.wolfT <= 0) { h.wolfT += 1 / T.wolfAps; for (let i = 0; i < T.wolves; i++) c.hit('t', run.enemies[0], 2, '#ffd2a8', true); } }
+      if (!h.alive || !run.enemies.length || h.stunT > 0) continue;
       const melee = FRONT.includes(k);
       if (melee && !eng) { h.atkT = Math.min(h.atkT, 0.3); continue; }
       if (!melee && run.enemies[0].x > 420) continue;
-      h.atkT -= dt * (run.songT > 0 ? 1 + run.songMul : 1) * (run.slowT > 0 ? 0.5 : 1);
+      h.atkT -= dt * (run.songT > 0 ? 1 + run.songMul : 1) * (run.slowT > 0 ? 0.5 : 1) * sigAps(run, st, k);
       if (h.atkT <= 0) {
         h.atkT += 1 / T.aps; h.swing = 1;
         const tgt = run.enemies[0];
         if (k === 'p') {
           const low = run.order.filter(x => run.h[x].alive && run.h[x].hp < st[x].hp * 0.95).sort((a, b) => run.h[a].hp / st[a].hp - run.h[b].hp / st[b].hp)[0];
-          if (low) c.healOne(low, T.heal * (Math.random() < T.crit ? 2 : 1));
+          if (low) c.healOne(low, T.heal * (Math.random() < T.crit ? 2 : 1), 'p');
           else { c.arrow('p', tgt, 0.25, 'licht'); c.hit('p', tgt, 1, '#fff2b0'); if (T.splash) run.enemies.slice(1).filter(e => e.x - tgt.x < 70).forEach(e => c.hit('p', e, T.splash, '#fff2b0')); }
         } else if (k === 's') {
           const n = T.shots + (Math.random() < T.extraShot ? 1 : 0);
@@ -1474,43 +1821,47 @@
           c.arrow('e', tgt, 0.4, 'bomb'); c.hit('e', tgt, 1, '#ffc58a'); run.enemies.slice(1).filter(e => e.x - tgt.x < 60).forEach(e => c.hit('e', e, T.splash, '#ffc58a'));
         } else if (k === 'm') {
           for (let i = 0; i < T.shots; i++) { c.arrow('m', tgt, 0.35 + i * 0.1, 'feuer'); c.hit('m', tgt, 1, '#ffd0a0'); run.enemies.slice(1).filter(e => e.x - tgt.x < 70).forEach(e => c.hit('m', e, T.splash, '#ffd0a0')); }
+          if (T.overload && (h.cnt = (h.cnt || 0) + 1) % 4 === 0) { const ts = run.enemies.filter(e => e !== tgt && e.hp > 0).slice(0, 3); ts.forEach(e => c.hit('m', e, 1, '#e2c9ff')); if (ts.length) { run.fx.m_kette = 0.35; run.fx.chain = ts.map(e => e.x); } }
         } else {
-          c.hit(k, tgt, 1, k === 'w' ? '#cfe0ff' : null);
+          c.hit(k, tgt, 1 + (T.koloss ? T.koloss * T.hp / Math.max(1e-9, T.atk) : 0), k === 'w' ? '#cfe0ff' : null);
           if (T.dbl && Math.random() < T.dbl && tgt.hp > 0) c.hit(k, tgt, 1);
+          if (T.wmaster && (h.cnt = (h.cnt || 0) + 1) % 5 === 0) { near(run).filter(e => e !== tgt).forEach(e => c.hit(k, e, 1, '#ffe0a8')); run.fx.wirbel = 0.25; }
           if (T.stunChance && Math.random() < T.stunChance) tgt.stun = Math.max(tgt.stun, 0.5);
         }
       }
       if (k === 'e' && run.enemies[0] && run.enemies[0].x < 440) {
-        run.turretT -= dt;
+        run.turretT -= dt * (run.overT > 0 ? 2 : 1) * ensF;
         if (run.turretT <= 0) {
           run.turretT += 1 / Math.max(0.2, T.turretAps);
-          const n = T.turrets + (run.extraTurretT > 0 ? 1 : 0), tg = run.enemies[0];
-          for (let i = 0; i < n; i++) { run.arrows.push({ x: (run.pos.e || 60) + 26 + i * 14, y: 196 - i * 4, tx: tg.x, ty: 196, t: 0, d: 0.16, kind: 'shot' }); c.hit('e', tg, T.turretMul, '#ffe0b0'); }
+          const n = T.turrets + (run.extraTurretT > 0 ? 1 : 0), nn = n + (run.tinkT > 0 ? 1 : 0), tg = run.enemies[0];
+          for (let i = 0; i < nn; i++) { run.arrows.push({ x: (run.pos.e || 60) + 26 + i * 14, y: 196 - i * 4, tx: tg.x, ty: 196, t: 0, d: 0.16, kind: 'shot' }); c.hit('e', tg, T.turretMul * (i >= n ? 0.5 : 1), '#ffe0b0', false, TURRET); }
         }
       }
       if (k === 't' && eng) {
-        h.wolfT -= dt;
+        h.wolfT -= dt * (run.howlT > 0 ? 1.5 : 1) * ensF;
         if (h.wolfT <= 0) { const n = T.wolves + (run.packT > 0 ? 2 + T.packBonus : 0); h.wolfT += 1 / T.wolfAps; for (let i = 0; i < n; i++) c.hit('t', run.enemies[0] || tgtSafe(run), 1, '#ffd2a8', true); }
       }
     }
     // Fernkämpfer schießen von hinten auf zufällige Helden
     for (const e of run.enemies) {
       if (!e.ranged || e.stun > 0 || e.x > 450 || e.hp <= 0) continue;
-      e.shotT -= dt;
+      e.shotT -= dt * (e.dissT > 0 ? 0.5 : 1);
       if (e.shotT > 0) continue;
       e.shotT += RANGED.rate / run.speed;
       const alive = run.order.filter(k => run.h[k].alive); if (!alive.length) break;
-      const k = alive[Math.floor(Math.random() * alive.length)];
-      run.eshots.push({ x: e.x - 12, y: 188, tx: run.pos[k], ty: 180, t: 0, d: 0.55, k, dmg: e.dmg * RANGED.dmg, kind: e.type });
+      const k = run.tauntT > 0 && run.h.w && run.h.w.alive ? 'w' : alive[Math.floor(Math.random() * alive.length)];
+      run.eshots.push({ x: e.x - 12, y: 188, tx: run.pos[k], ty: 180, t: 0, d: 0.55, k, dmg: e.dmg * RANGED.dmg, kind: e.type, src: e });
     }
-    for (const s of run.eshots) { s.t += dt; if (s.t >= s.d && !s.done) { s.done = true; hurtHero(c, s.k, s.dmg, null); } }
+    for (const s of run.eshots) { s.t += dt; if (s.t >= s.d && !s.done) { s.done = true;
+      if (run.prallT > 0 && s.dmg > 0 && run.h.w && run.h.w.alive) { const tg = s.src && s.src.hp > 0 ? s.src : run.enemies.find(x => x.boss) || run.enemies[0]; if (tg) c.hit('w', tg, run.prallV, '#cfe0ff'); c.float('w', 'Abgeprallt', '#9fd0ff', 11); }
+      else hurtHero(c, run.tauntT > 0 && run.h.w && run.h.w.alive ? 'w' : s.k, s.dmg, null); } }
     run.eshots = run.eshots.filter(s => !s.done);
     // Skelett-Diener
     if (run.minions.length) {
       const N = st.n, alive = run.h.n && run.h.n.alive;
       for (const m of run.minions) {
         m.t -= dt; if (!alive || !N || !run.enemies.length) continue;
-        m.atkT -= dt; if (m.atkT <= 0 && run.enemies[0].x < run.frontX + 90) { m.atkT += 1; m.swing = 1; c.hit('n', run.enemies[0], 0.8 * N.minionMul, '#d8fff0'); }
+        m.atkT -= dt * (st.b && st.b.ensemble && run.h.b ? (1 + st.b.songAps) * ensF : 1); if (m.atkT <= 0 && run.enemies[0].x < run.frontX + 90) { m.atkT += 1; m.swing = 1; c.hit('n', run.enemies[0], 0.8 * N.minionMul * (m.mul || 1), '#d8fff0'); }
         m.swing = Math.max(0, (m.swing || 0) - dt * 4);
       }
       run.minions = run.minions.filter(m => m.t > 0 && alive);
@@ -1519,12 +1870,17 @@
     if (f && f.boss && eng && !f.ahn) { f.age = (f.age || 0) + dt; const en = f.age > 25 ? 1 + 0.2 * Math.floor((f.age - 25) / 5 + 1) : 1; if (en > (f.enrage || 1)) { f.enrage = en; c.efloat(f, en < 1.25 ? 'Wut!' : `Wut ×${en.toFixed(1).replace('.', ',')}`, '#ff5a5a', 15); } }
     // Gegner greifen an
     if (f && eng && f.stun <= 0 && !f.ranged) {
-      f.atkT -= dt * (f.atkMul || 1);
+      f.atkT -= dt * (f.atkMul || 1) * (f.dissT > 0 ? 0.5 : 1);
       if (f.atkT <= 0 && f.hp > 0) {
         f.atkT += f.rate;
         f.atkAt = run.time;
-        hurtHero(c, fk, f.dmg, f);
-        if (f.boss) { run.shake = 0.15; for (const k of run.order) if (k !== fk) hurtHero(c, k, f.dmg * 0.35, null); }
+        if (run.wallT > 0) c.efloat(f, 'Knochenwand', '#6be0b8', 11);
+        else if (run.giant) { run.giant.hp -= f.dmg * (f.enrage || 1); c.efloat(f, 'Knochenriese', '#6be0b8', 11); }
+        else {
+          const tk = run.tauntT > 0 && run.h.w && run.h.w.alive ? 'w' : fk;
+          hurtHero(c, tk, f.dmg, f);
+          if (f.boss && !(run.tauntT > 0)) { run.shake = 0.15; for (const k of run.order) if (k !== tk) hurtHero(c, k, f.dmg * 0.35, null); }
+        }
       }
     }
     if (run.mode === 'ahnen') ahnStep(S, st, run, c, dt);
@@ -1534,8 +1890,9 @@
       if (e.hp > 0) continue;
       run.kills++; S.tot.kills++;
       if (e.boss) run.bossKills++;
+      sigKill(S, st, run, c, e);
       sfx(e.boss ? 'boss' : 'kill');
-      if (st.n && run.h.n && run.h.n.alive && run.minions.length < st.n.minionMax && Math.random() < st.n.raise) { run.minions.push({ t: st.n.minionDur, atkT: 0.6, swing: 0 }); c.efloat(e, 'Erhebe dich!', '#6be0b8', 12); }
+      if (st.n && run.h.n && run.h.n.alive && run.minions.length < st.n.minionMax && Math.random() < st.n.raise) { run.minions.push({ t: st.n.minionDur * (st.n.minionLong ? 2 : 1), atkT: 0.6, swing: 0 }); c.efloat(e, 'Erhebe dich!', '#6be0b8', 12); }
       c.burst(e.x, 200, e.boss ? '#c9a6ff' : '#ffffff', e.boss ? 24 : 8);
       if (run.mode === 'normal') {
         let gold = e.gold * g.gold * (e.boss || e.elite ? g.eliteGold : 1);
@@ -1588,11 +1945,12 @@
     const alive = run.order.filter(k => run.h[k].alive).length;
     if (st.comp.phoenix >= 10 && !run.compRevive && (alive === 0 || (alive === 1 && run.order.length >= 3))) {
       run.compRevive = true; run.fx.phoenix = 1;
-      run.order.forEach(k => { const h = run.h[k]; if (!h.alive) { h.alive = true; h.hp = st[k].hp * 0.5; c.float(k, 'Phönix!', '#ff9a3d', 15); } });
+      run.order.forEach(k => { const h = run.h[k]; if (!h.alive) { h.alive = true; h.hp = st[k].hp * 0.5; c.float(k, 'Phönix!', '#ff9a3d', 15); sigRevive(c, k); } });
     }
     if (!run.order.some(k => run.h[k].alive)) { run.dead = true; S.runs++; return 'dead'; }
   }
   const tgtSafe = run => run.enemies[0];
+  const TURRET = { turret: true };
 
   /* ---------- Notfall-Code ---------- */
   const ALPH = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -1625,7 +1983,8 @@
       S.asc, S.crowns, CPERKS.length, ...CPERKS.map(p => cperk(S, p.id)), ACH.length, ...ACH.map(a => (S.ach[a.id] ? 1 : 0)),
       S.tot.kills, S.tot.souls, COMPS.length, ...COMPS.map(c => S.comps[c.id] || 0), ...[0, 1].map(i => (S.compActive[i] ? COMPS.findIndex(c => c.id === S.compActive[i]) + 1 : 0)), S.tempo || 0,
       S.exp.spl, S.exp.done, Math.max(0, PUZZLE.indexOf(S.exp.target)), PUZZLE.length, ...PUZZLE.map(id => pieceMask(S, id)),
-      1, kSlots(S), HEROES.length, ...HEROES.map(h => (S.kplace || {})[h.id] || 0), S.altar || 0, 1, 1, 1, S.rlager || 0, 1]);
+      1, kSlots(S), HEROES.length, ...HEROES.map(h => (S.kplace || {})[h.id] || 0), S.altar || 0, 1, 1, 1, S.rlager || 0, 1,
+      1, S.ahn.sig, S.ahn.got, S.ahn.m, S.ahn.lvl, HEROES.length, ...HEROES.map(h => (S.ahn.place[h.id] ? 1 : 0))]);
   }
   function decode(code) {
     const nums = unpackNums(code); if (!nums) return null;
@@ -1666,6 +2025,7 @@
           if (i < nums.length) d.shardV = next();
           if (i < nums.length) d.rlager = next();
           if (i < nums.length) d.starV = next();
+          if (i < nums.length) { next(); d.ahnV = 1; d.ahn = { sig: next(), got: next(), m: next(), lvl: next(), place: {} }; const hc3 = next(); for (let k = 0; k < hc3; k++) { const on = next(); if (on && HEROES[k]) d.ahn.place[HEROES[k].id] = 1; } }
         }
       } else return null;
       return migrate(d);
@@ -1680,6 +2040,7 @@
   }
 
   const core = { AHN_MISSIONS, AHN_ABIL, AHN_TRAIT, AHNE, AHN_TUNE, AHN_COUNT, ahnOpen, ahnBossesOf, ahnLevelFor, placeSigil, ahnClaim, unrebirth, transmute, bossRuneTier, resetPerks, buyLager, lagerCost, LAGER_MAX, runeCap, shardOf, mergeCost, ALTAR_MAX, altarCost, altarMul, buyAltar, kSlots, kFree, keyCap, addSock, removeSock, removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, buyPiece, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
+    sigOn, sigKeysUsed, keyNeed, eqOf, slotLim, SIG, SIG_FLAGS, newRun, step, stats, buy, available, blockReason, NODE, migrate, fresh,
     rebirth, ascend, crownsFor, buyCperk, cperkCost, cperk, CPERKS, levelComp, toggleComp, compCost, compMax, compSlots, COMPS, checkAch, ACH, claimWeekly, weekId, weekRules, RULE, WEEK_TIERS, statsFor, starsFor, toggleEquip, slotsOf, hired, classOpen, keysUsed, keyLimit, capOf, reqOf, feature, encode, decode, fmt, socket, unsocket, merge, canMerge, dismantle, buyRune, runeVal, addRune };
   if (typeof module !== 'undefined') { module.exports = core; return; }
 
@@ -1843,7 +2204,7 @@
     const r = store[id] || 0, amtEl = document.getElementById('rlTAmt'), amt = Math.max(1, Math.min(100000, Math.floor(Number(amtEl && amtEl.value) || 1)));
     let done = 0;
     if (mode === 'buy') { for (; done < amt; done++) { const ok = kind === 'n' ? buy(S, NODE[id]) : kind === 'p' ? buyPerk(S, PERKS.find(x => x.id === id)) : buyCperk(S, CPERKS.find(x => x.id === id)); if (!ok) break; } }
-    else if (mode === 'free') { done = Math.min(amt, max - r); if (done <= 0) return; store[id] = r + done; if (kind === 'n' && NODE[id].active && r === 0 && S.equip.filter(x => NODE[x].tree === NODE[id].tree).length < slotsOf(S, NODE[id].tree)) S.equip.push(id); }
+    else if (mode === 'free') { done = Math.min(amt, max - r); if (done <= 0) return; store[id] = r + done; if (kind === 'n' && NODE[id].active && r === 0 && eqOf(S, NODE[id].tree, NODE[id].sig).length < slotLim(S, NODE[id].tree, NODE[id].sig)) S.equip.push(id); }
     else { done = Math.min(amt, r); if (done <= 0) return; if (r - done > 0) store[id] = r - done; else { delete store[id]; if (kind === 'n') S.equip = S.equip.filter(x => x !== id); } if (kind === 'n') S.nodes.start = 1; }
     if (!done) { toast('Nicht genug Gold, Seelen, Sterne oder Kronen.'); return; }
     SND.play(mode === 'sell' ? 'tick' : 'buy'); toast(`${done} Stufe${done > 1 ? 'n' : ''} ${mode === 'sell' ? 'verkauft' : 'gekauft'}: jetzt Stufe ${store[id] || 0}`); setTimeout(afterChange, 0);
@@ -2038,7 +2399,7 @@
 
   /* ---------- Bäume ---------- */
   function treeSVG(tree) {
-    const list = NODES.filter(n => n.tree === tree);
+    const sg = sigOn(S, tree), list = NODES.filter(n => n.tree === tree && (!n.sig || sg));
     const P = n => [n.x * 100 + 50, n.y * 100 + 50];
     let lines = '', nodes = '';
     for (const n of list) for (const pid of n.p || []) {
@@ -2048,17 +2409,18 @@
     }
     for (const n of list) {
       const [x, y] = P(n), r = rank(S, n.id), av = available(S, n), afford = inCamp() && canBuy(S, n);
-      const cls = ['nd', n.active ? 'act' : '', n.kind || '', r ? 'own' : av ? 'av' : 'lock', afford ? 'buy' : '', sel[tree] === n.id ? 'sel' : '', S.equip.includes(n.id) ? 'eq' : ''].join(' ');
+      const cls = ['nd', n.sig ? 'sig' : '', n.active ? 'act' : '', n.kind || '', r ? 'own' : av ? 'av' : 'lock', afford ? 'buy' : '', sel[tree] === n.id ? 'sel' : '', S.equip.includes(n.id) ? 'eq' : ''].join(' ');
       const R = n.kind === 'key' ? 36 : n.kind === 'start' ? 34 : 30;
       const shape = n.active ? `<rect x="${x - 30}" y="${y - 30}" width="60" height="60" rx="16"/>` : n.kind === 'key' ? `<polygon points="${x},${y - R} ${x + R},${y} ${x},${y + R} ${x - R},${y}"/>` : `<circle cx="${x}" cy="${y}" r="${R}"/>`;
       const lbl = n.max > 1 ? (n.max > 99 ? r : `${r}/${n.max}`) : '';
       nodes += `<g class="${cls}" data-node="${n.id}" role="button" aria-label="${esc(n.name)}">${afford ? `<circle cx="${x}" cy="${y}" r="${R + 10}" class="glow"/>` : ''}${shape}<text x="${x}" y="${y + 2}" class="ic">${n.icon}</text>${lbl ? `<text x="${x}" y="${y + 52}" class="rk">${lbl}</text>` : ''}</g>`;
     }
-    return `<svg class="rl-tree2" viewBox="0 0 700 710">${lines}${nodes}</svg>`;
+    const band = sg ? `<rect class="sigband" x="6" y="702" width="688" height="404" rx="28"/><text class="sigtxt" x="350" y="1096">✦ Ahnensiegel ✦</text>` : '';
+    return `<svg class="rl-tree2" viewBox="0 0 700 ${sg ? 1110 : 710}">${band}${lines}${nodes}</svg>`;
   }
   function detailHTML(tree) {
     const n = NODE[sel[tree]], r = rank(S, n.id), maxed = r >= n.max, h = HERO[tree], why = blockReason(S, n);
-    const type = n.kind === 'start' ? (n.cost ? 'Anheuern' : 'Start') : n.active ? 'Aktive Fähigkeit' : n.kind === 'key' ? 'Schlüssel' : n.kind === 'inf' ? 'Endlos' : 'Passiv';
+    const type = n.kind === 'start' ? (n.cost ? 'Anheuern' : 'Start') : n.active ? (n.sig ? 'Siegel-Fähigkeit' : 'Aktive Fähigkeit') : n.kind === 'key' ? (n.sig ? 'Siegel-Schlüssel' : 'Schlüssel') : n.kind === 'inf' ? 'Endlos' : n.sig ? 'Siegel · Passiv' : 'Passiv';
     let act = '';
     if (n.cost) {
       if (maxed && n.kind === 'key') { const c = nodeCost(S, { ...n, id: '_' }); act = `<button class="btn ${confirm === 'unkey' ? 'danger' : 'ghost'} small" data-rl="unkey" ${inCamp() ? '' : 'disabled'}>${confirm === 'unkey' ? 'Wirklich abnehmen?' : 'Schlüssel abnehmen'}</button><span class="note">Du bekommst ${costHTML(c)} zurück und kannst einen anderen Schlüssel wählen.</span>`; }
@@ -2068,36 +2430,37 @@
       if (acct && acct.tester) act += `<button class="btn ghost small" data-tmenu="n:${n.id}" title="Test-Werkzeug">🧪</button>`;
     }
     if (n.active && r) {
-      const on = S.equip.includes(n.id), used = S.equip.filter(id => NODE[id].tree === tree).length, lim = slotsOf(S, tree);
-      act += `<button class="btn ghost small" data-rl="equip" ${inCamp() ? '' : 'disabled'}>${on ? 'Ablegen' : used >= lim ? 'Ausrüsten (tauscht)' : 'Ausrüsten'}</button>`;
+      const on = S.equip.includes(n.id), used = eqOf(S, tree, n.sig).length, lim = slotLim(S, tree, n.sig);
+      act += `<button class="btn ghost small" data-rl="equip" ${inCamp() && lim > 0 ? '' : 'disabled'}>${on ? 'Ablegen' : used >= lim ? 'Ausrüsten (tauscht)' : 'Ausrüsten'}</button>${n.sig ? '<span class="note">Kommt in den Siegel-Platz.</span>' : ''}`;
     }
     return `<div class="rl-detail" style="--hc:${h.color}"><div class="rl-dhead"><span class="rl-dic">${n.icon}</span><div><b>${esc(n.name)}</b><span class="pill">${type}</span></div></div>
       ${n.max > 1 ? `<span class="note">${n.max > 99 ? `Stufe ${r}` : `Stufe ${r} von ${n.max}`}</span>` : ''}<p>${esc(n.desc)}</p>${n.cap ? `<p class="note">${r >= n.cap ? `Grenze erreicht${r > n.cap ? ` · ${r - n.cap} Bonus-Stufen aktiv` : ''}` : `Noch ${n.cap - r} Stufen bis zur Grenze`}</p>` : ''}<div class="row">${act}</div></div>`;
   }
   function sockRow(tree) {
-    const cap = keyCap(S, tree), used = keysUsed(S, tree), extra = cap - 1, free = kFree(S);
-    const dots = Array.from({ length: cap }, (_, i) => `<span class="rl-sock ${i < used ? 'on' : ''} ${i === 0 ? 'fix' : ''}" title="${i === 0 ? 'Fester Sockel' : 'Verteilbarer Sockel'}">⚿</span>`).join('');
+    const cap = keyCap(S, tree), used = keyNeed(S, tree), extra = cap - 1, free = kFree(S);
+    const dots = Array.from({ length: cap }, (_, i) => `<span class="rl-sock ${i < used ? 'on' : ''} ${i === 0 ? 'fix' : ''}" title="${i === 0 ? 'Fester Sockel' : 'Verteilbarer Sockel'}">⚿</span>`).join('')
+      + (sigOn(S, tree) ? `<span class="rl-sock sig ${sigKeysUsed(S, tree) ? 'on' : ''}" title="Siegelsockel: nur für einen Siegel-Schlüssel">✦</span>` : '');
     return `<div class="rl-keyrow"><span class="note">Schlüsselsockel ${used}/${cap}</span><span class="rl-socks">${dots}</span>
       <button class="btn ghost small" data-rl="sockadd" ${free > 0 && inCamp() ? '' : 'disabled'}>+ Sockel setzen</button>
       <button class="btn ghost small" data-rl="sockdel" ${extra > 0 && inCamp() ? '' : 'disabled'}>− Sockel abnehmen</button>
       <span class="note">frei: <b>${free}</b> von ${kSlots(S)}</span></div>`;
   }
   function heroTab(tree) {
-    const h = HERO[tree], eq = S.equip.filter(id => NODE[id].tree === tree), ok = hired(S, tree);
+    const h = HERO[tree], eq = eqOf(S, tree, false), eqS = eqOf(S, tree, true), ok = hired(S, tree), sg = sigOn(S, tree);
     const lockedNote = !classOpen(S, tree) ? `<p class="warn">${h.puzzle ? `Diese Klasse bekommst du mit 6 Puzzleteilen aus den Expeditionen (${pieceCount(S, h.id)}/6).` : `Diese Klasse wird mit der ${h.rebirth}. Wiedergeburt freigeschaltet.`} Du kannst dir den Baum schon ansehen.</p>` : '';
     return `${lockedNote}<div class="rl-hhead" style="--hc:${h.color}"><span class="pt">${PORTRAIT[h.id]}</span><div><h3>${h.name}</h3><p class="note">${h.desc}</p>
-      ${ok ? `<p class="note">Aktive Fähigkeiten ${eq.length}/${slotsOf(S, tree)}: ${eq.length ? esc(eq.map(ACT_NAME).join(', ')) : 'noch keine'} </p>${sockRow(tree)}` : ''}</div></div>
+      ${ok ? `<p class="note">Aktive Fähigkeiten ${eq.length}/${slotsOf(S, tree)}: ${eq.length ? esc(eq.map(ACT_NAME).join(', ')) : 'noch keine'}${sg ? ` · <span class="rl-sigslot">✦ Siegel-Platz: ${eqS.length ? esc(eqS.map(ACT_NAME).join(', ')) : 'frei'}</span>` : ''}</p>${sockRow(tree)}` : ''}</div></div>
       ${acct && acct.tester ? `<div class="rl-test"><b>🧪 Test</b> <button class="btn small ${confirm === 'tbuild' ? 'danger' : ''}" data-rl="tbuild" ${inCamp() && classOpen(S, tree) ? '' : 'disabled'}>${confirm === 'tbuild' ? 'Wirklich den ganzen Baum setzen?' : 'Baum komplett ausbauen'}</button><span class="note">Alles auf voll, Schaden und Leben auf 20, linke Endlos-Fertigkeit auf 16, rechte auf 8. Kostet nichts. Schlüssel bleiben, wie sie sind.</span></div>` : ''}
-      <div class="rl-treewrap"><div class="rl-treebox">${treeSVG(tree)}</div>${detailHTML(tree)}</div>`;
+      <div class="rl-treewrap"><div class="rl-treebox">${treeSVG(tree)}${!sg && ahnOpen(S) && classOpen(S, tree) ? `<p class="note rl-signote">✦ Mit einem Ahnensiegel wächst dieser Baum nach unten: 5 passive Fähigkeiten, 3 Siegel-Fähigkeiten mit eigenem Platz und 4 Siegel-Schlüssel mit eigenem Sockel. ${S.ahn.sig > 0 ? 'Du hast ein freies Siegel, setze es im Reiter Ahnenprüfung.' : 'Siegel bekommst du in der Ahnenprüfung.'}</p>` : ''}</div>${detailHTML(tree)}</div>`;
   }
   function testBuild(tree) {
     const inf = NODES.filter(n => n.tree === tree && n.kind === 'inf');
     for (const n of NODES) {
-      if (n.tree !== tree || n.kind === 'key') continue;
+      if (n.tree !== tree || n.kind === 'key' || (n.sig && !sigOn(S, tree))) continue;
       S.nodes[n.id] = n.kind === 'inf' ? (inf.indexOf(n) === 0 ? 16 : 8) : n.max === 30 ? 20 : n.max;
     }
     const acts = NODES.filter(n => n.tree === tree && n.active).map(n => n.id);
-    for (const id of acts) if (!S.equip.includes(id) && S.equip.filter(x => NODE[x].tree === tree).length < slotsOf(S, tree)) S.equip.push(id);
+    for (const id of acts) if (!S.equip.includes(id) && eqOf(S, tree, NODE[id].sig).length < slotLim(S, tree, NODE[id].sig)) S.equip.push(id);
   }
   function campInfo() {
     if (run && run.dead) {
@@ -2821,6 +3184,13 @@
   }
   // Neuigkeiten: neueste Einträge oben. Neue Updates OBEN mit höherer id anhängen.
   const UPDATES = [
+    { id: 33, date: '14.10.2026', title: 'Ahnensiegel: die Bäume wachsen', items: [
+      ['Neu', 'Setzt du ein Ahnensiegel auf einen Helden, wächst sein Fertigkeitenbaum nach unten: 5 passive Fähigkeiten, 3 Siegel-Fähigkeiten und 4 Siegel-Schlüssel. Jeder der 11 Helden hat seine eigene Erweiterung, so wie du sie in der Umfrage gewählt hast.'],
+      ['Neu', 'Siegel-Fähigkeiten haben einen eigenen Platz. Damit kämpft jeder Held mit Siegel mit einer zusätzlichen aktiven Fähigkeit.'],
+      ['Neu', 'Siegel-Schlüssel haben einen eigenen Siegelsockel (✦). Weitere Siegel-Schlüssel kannst du in freie normale Sockel stecken.'],
+      ['Umbau', 'Ritter: Schildstoß wird zu Doppelhieb (zwei Hiebe mit je 250 %, lädt Wirbelwind 3 s weiter). Zweites Leben wird zu Vorbild (besiegt der Ritter einen Gegner, heilen alle Helden 2 %). Wer die Fertigkeiten schon hatte, behält sie mit der neuen Wirkung.'],
+      ['Neu', 'Der Notfall-Code speichert jetzt auch deine Ahnensiegel und den Fortschritt der Ahnenprüfung.'],
+    ] },
     { id: 32, date: '14.10.2026', title: 'Ahnenprüfung: Stärke nach Allzeit-Rekord', items: [
       ['Umstellung', 'Die Gegnerstärke der Ahnenprüfung richtet sich jetzt nach deinem höchsten Rekord überhaupt (80 %), nicht mehr nach dem Rekord seit der letzten Wiedergeburt. Eine schon begonnene Prüfung bekommt beim nächsten Missionsstart die neue Stärke, dein Fortschritt auf der Karte bleibt.'],
     ] },
@@ -3170,8 +3540,9 @@
       <div class="row">${state === 'cur' ? `<button class="btn gold" data-rl="ahnstart" ${inCamp() ? '' : 'disabled'}>Mission ${sel + 1} starten</button>` : ''}${ahnSel != null && ahnSel !== cur ? '<button class="btn ghost small" data-rl="ahncur">Zur nächsten Mission</button>' : ''}</div></div>`;
     // Siegel setzen
     const hiredH = HEROES.filter(h => hired(S, h.tree));
-    html += `<div class="ahn-sigils"><h3 class="rl-h3">Ahnensiegel</h3><p class="note">Ein Siegel setzt du auf einen Helden. Sein Fertigkeitenbaum wächst dann nach unten: neue passive Fähigkeiten, 3 neue aktive Fähigkeiten mit einem eigenen Platz und 4 neue Schlüssel. Die Erweiterungen kommen mit dem nächsten Update, deine Siegel bleiben bis dahin sicher.</p>
+    html += `<div class="ahn-sigils"><h3 class="rl-h3">Ahnensiegel</h3><p class="note">Ein Siegel setzt du auf einen Helden. Sein Fertigkeitenbaum wächst dann nach unten: 5 passive Fähigkeiten, 3 Siegel-Fähigkeiten mit einem eigenen Platz und 4 Siegel-Schlüssel mit einem eigenen Sockel. Die neuen Knoten kaufst du wie alle anderen mit Gold und Seelen. Das Siegel bleibt bei Wiedergeburt und Aufstieg auf dem Helden.</p>
       <div class="ahn-sgrid">${hiredH.map(h => { const on = S.ahn.place[h.id]; return `<button class="ahn-sh ${on ? 'on' : ''}" style="--hc:${h.color}" data-sig="${h.id}" ${on || S.ahn.sig <= 0 ? 'disabled' : ''}><span class="pt">${PORTRAIT[h.id]}</span><b>${h.name}</b><small>${on ? '✦ Siegel gesetzt' : S.ahn.sig > 0 ? 'Siegel setzen' : 'kein Siegel frei'}</small></button>`; }).join('')}</div></div>`;
+    if (acct && acct.tester && hiredH.some(h => S.ahn.place[h.id])) html += `<div class="rl-test"><b>🧪 Test</b> <button class="btn ghost small" data-rl="tahnsigclear">Alle Siegel von den Helden nehmen (Siegel kommen zurück)</button></div>`;
     if (acct && acct.tester) html += `<div class="rl-test"><b>🧪 Test</b> <button class="btn small" data-rl="tahnwin">Aktuelle Mission als geschafft werten</button> <button class="btn small" data-rl="tahnsig">+1 Siegel</button> <span class="note">Boss direkt starten:</span> ${ahnBossesOf(S.ahn.m).map((d, i) => `<button class="btn ghost small" data-rl="tahnboss" data-bi="${i}" title="${esc(d.name)}">${d.ahne ? '♛' : i + 1}</button>`).join('')} <button class="btn ghost small" data-rl="tahnreset">Prüfung zurücksetzen</button></div>`;
     return html;
   }
@@ -3186,6 +3557,7 @@
     if (a === 'ahncur') { ahnSel = null; panel(); return true; }
     if (!(acct && acct.tester) || !/^tahn/.test(a)) return false;
     if (a === 'tahnwin') { const r = ahnClaim(S, { victory: true, ahn: { mi: S.ahn.m } }); ahnSel = null; if (r && r.sigil) sigilGot(); else toast(`Mission ${r.mission + 1} als geschafft gewertet`); afterChange(); }
+    if (a === 'tahnsigclear') { for (const id of Object.keys(S.ahn.place)) { const h = HERO_BY_ID[id]; delete S.ahn.place[id]; S.ahn.sig++; S.equip = S.equip.filter(x => !(NODE[x].sig && NODE[x].tree === h.tree)); for (const n of NODES) if (n.sig && n.tree === h.tree) delete S.nodes[n.id]; } toast('Siegel zurückgenommen'); afterChange(); }
     if (a === 'tahnsig') { S.ahn.sig++; S.ahn.got++; toast('+1 Ahnensiegel'); afterChange(); }
     if (a === 'tahnreset') { S.ahn = ahnFix(); ahnSel = null; toast('Ahnenprüfung zurückgesetzt'); afterChange(); }
     return true;
@@ -5878,6 +6250,7 @@
       if (fx.p_segen > 0 || fx.p_schild > 0) { const v = Math.max(fx.p_segen || 0, fx.p_schild || 0); ctx.fillStyle = `rgba(255,228,138,${v * 0.35})`; ctx.fillRect(0, 0, W, H); }
       if (fx.p_wieder > 0) { ctx.fillStyle = `rgba(255,240,180,${fx.p_wieder})`; ctx.fillRect(0, 0, W, 6); }
       if (R.buffT > 0) { ctx.strokeStyle = 'rgba(255,181,71,.45)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(R.frontX - 50, GROUND + 2, 90 + Math.sin(t * 10) * 3, 8, 0, 0, 7); ctx.stroke(); }
+      sigFx(R, t);
       if (R.fx.phoenix > 0) { ctx.fillStyle = `rgba(255,154,61,${Math.min(1, R.fx.phoenix) * 0.4})`; ctx.fillRect(0, 0, W, H); }
       env.front(t, scroll);
       if (R.mode === 'ahnen') ahnScreen(R, t);
@@ -6167,6 +6540,43 @@
     hint(T, c.dur);
     const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.45, W / 2, H / 2, W * 0.75); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.4)');
     ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+  }
+  // Zeichnet die laufenden Effekte der Siegel-Fähigkeiten
+  function sigFx(R, t) {
+    const hy = GROUND - 34, P = k => R.pos[k];
+    const ring = (x, y, r, col, w = 3) => { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.stroke(); };
+    const sym = (x, y, s, col, size = 13) => { ctx.fillStyle = col; ctx.font = `bold ${size}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText(s, x, y); };
+    if (R.groundT > 0) { ctx.fillStyle = `rgba(255,228,138,${Math.min(1, R.groundT) * 0.22})`; ctx.fillRect(0, GROUND - 6, R.frontX + 30, 14); }
+    if (R.tauntT > 0 && P('w')) ring(P('w'), hy, 26 + Math.sin(t * 9) * 3, 'rgba(255,90,90,.75)');
+    if (R.prallT > 0 && P('w')) { ctx.strokeStyle = 'rgba(127,178,255,.85)'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(P('w') + 6, hy, 34, -1.1, 1.1); ctx.stroke(); }
+    if (R.honorT > 0 && P('r')) { const x = P('r') - 8, y = hy - 52; ctx.fillStyle = '#c9a24a'; ctx.fillRect(x, y, 2, 30); ctx.fillStyle = '#ffd27a'; ctx.beginPath(); ctx.moveTo(x + 2, y); ctx.lineTo(x + 20 + Math.sin(t * 6) * 2, y + 6); ctx.lineTo(x + 2, y + 13); ctx.fill(); }
+    if (R.wallT > 0) { const x = R.frontX + 32; for (let i = 0; i < 5; i++) { ctx.fillStyle = i % 2 ? '#d8d2bf' : '#bfb8a2'; ctx.fillRect(x, GROUND - 14 - i * 12, 12, 11); } }
+    if (R.giant) { const x = R.frontX + 26, a = Math.max(0.35, R.giant.hp / R.giant.max); ctx.globalAlpha = 0.9; ctx.fillStyle = '#cfd8c8'; ctx.beginPath(); ctx.ellipse(x, GROUND - 40, 16, 34, 0, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(x, GROUND - 84, 11, 0, 7); ctx.fill(); ctx.fillStyle = '#2a3a33'; ctx.fillRect(x - 5, GROUND - 87, 3, 3); ctx.fillRect(x + 2, GROUND - 87, 3, 3); ctx.globalAlpha = 1;
+      ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(x - 16, GROUND - 104, 32, 4); ctx.fillStyle = '#6be0b8'; ctx.fillRect(x - 16, GROUND - 104, 32 * a, 4); }
+    if (R.cloneT > 0 && P('a')) { ctx.globalAlpha = 0.45 + Math.sin(t * 8) * 0.1; ctx.fillStyle = '#7a3a8a'; ctx.beginPath(); ctx.ellipse(P('a') + 14, hy + 6, 7, 16, 0, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(P('a') + 14, hy - 14, 6, 0, 7); ctx.fill(); ctx.globalAlpha = 1; }
+    if (R.bearT > 0 && P('d')) ring(P('d'), hy + 6, 24, 'rgba(155,209,74,.8)', 4);
+    if (R.howlT > 0 && P('t')) sym(P('t'), hy - 46, '☾', 'rgba(230,220,255,.9)', 16);
+    if (R.critBT > 0) R.order.forEach(k => R.h[k].alive && sym(P(k), hy - 44 - Math.sin(t * 5 + P(k)) * 3, '✦', 'rgba(255,210,122,.85)', 11));
+    R.order.forEach(k => { const h = R.h[k]; if (h.alive && (h.invT > 0 || h.protT > 0)) ring(P(k), hy, 22, h.protT > 0 ? 'rgba(127,178,255,.7)' : 'rgba(255,242,176,.8)', 2.5); });
+    if (R.holeT > 0) { const x = R.holeX, y = GROUND - 40; ctx.fillStyle = 'rgba(20,6,40,.85)'; ctx.beginPath(); ctx.arc(x, y, 18, 0, 7); ctx.fill(); for (let i = 0; i < 3; i++) ring(x, y, 22 + ((t * 30 + i * 9) % 26), `rgba(192,140,255,${0.6 - i * 0.15})`, 2); }
+    if (R.beam && R.beam.tgt && P('m')) { const w = 2 + R.beam.i * 1.2; ctx.strokeStyle = 'rgba(226,201,255,.9)'; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(P('m') + 10, hy - 6); ctx.lineTo(R.beam.tgt.x, GROUND - (R.beam.tgt.boss ? 60 : 30)); ctx.stroke(); glowDot(R.beam.tgt.x, GROUND - (R.beam.tgt.boss ? 60 : 30), 14 + w * 2, '200,150,255', 0.8); }
+    if (R.flameT > 0 && P('e')) { const x = R.frontX + 20; for (let i = 0; i < 10; i++) { const f = (t * 3 + i / 10) % 1; glowDot(x + f * 120, GROUND - 26 + Math.sin(i * 7 + t * 20) * 6 * f, 6 + f * 12, f < 0.5 ? '255,200,90' : '255,110,40', 0.9 - f * 0.6); } }
+    if (R.aimT > 0 && P('s')) sym(P('s') + 18, hy - 20, '⌖', 'rgba(126,224,138,.95)', 16);
+    if (R.fx.sg_t_eber > 0) { const x = R.frontX + (0.5 - R.fx.sg_t_eber) * 600; ctx.fillStyle = '#7a4e2c'; ctx.beginPath(); ctx.ellipse(x, GROUND - 14, 18, 11, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#f2e6cc'; ctx.fillRect(x + 14, GROUND - 14, 6, 2); }
+    if (R.fx.sg_w_beben > 0) { ctx.fillStyle = `rgba(120,90,60,${R.fx.sg_w_beben})`; ctx.fillRect(R.frontX + 20, GROUND - 2, W, 6); }
+    if (R.fx.sg_e_rakete > 0) glowDot(R.frontX + 120, GROUND - 60, 30 * R.fx.sg_e_rakete * 2, '255,150,60', 0.7);
+    if (R.overT > 0 && P('e')) sym(P('e') + 26, GROUND - 30, '⇶', 'rgba(242,140,40,.9)', 12);
+    for (const e of R.enemies) {
+      const ey = GROUND - (e.boss ? 150 : 62);
+      if (e.duelT > 0) sym(e.x, ey - 4, '⚔', '#ffb547', 13);
+      if (e.smarkT > 0) sym(e.x + 10, ey - 4, '✕', '#ff6b7a', 13);
+      if (e.manaT > 0) glowDot(e.x, GROUND - (e.boss ? 70 : 30), 16, '192,140,255', 0.5 + Math.sin(t * 12) * 0.2);
+      if (e.dissT > 0) sym(e.x - 10, ey - 4, '♭', '#ff8ac8', 13);
+      if (e.quakeT > 0) { ctx.fillStyle = 'rgba(120,90,60,.5)'; ctx.fillRect(e.x - 12, GROUND - 3, 24, 4); }
+      if (e.bleedT > 0) glowDot(e.x, GROUND - 22, 6, '200,30,40', 0.6);
+    }
+    const linked = R.enemies.filter(e => e.linkT > 0);
+    if (linked.length > 1) { ctx.strokeStyle = 'rgba(107,224,184,.6)'; ctx.lineWidth = 2; ctx.setLineDash([4, 4]); ctx.beginPath(); linked.forEach((e, i) => (i ? ctx.lineTo(e.x, GROUND - 40) : ctx.moveTo(e.x, GROUND - 40))); ctx.stroke(); ctx.setLineDash([]); }
   }
   function bolt(x0, a, rgb) {
     ctx.strokeStyle = `rgba(${rgb},${a * 2})`; ctx.lineWidth = 4; ctx.beginPath(); let x = x0 || 220, y = 0; ctx.moveTo(x, y);
