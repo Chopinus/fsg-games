@@ -318,7 +318,8 @@ input{font:inherit;font-size:18px;color:var(--fg);background:var(--bg);border:1p
 .rl-comp{display:flex;gap:12px;padding:14px;border-radius:14px;background:linear-gradient(120deg,color-mix(in srgb,var(--cc) 16%,var(--surface)),var(--surface));border:1px solid color-mix(in srgb,var(--cc) 35%,var(--line))}
 .rl-comp.on{border-color:var(--cc);box-shadow:0 0 0 2px color-mix(in srgb,var(--cc) 30%,transparent)}
 .rl-comp.locked{opacity:.55;border-style:dashed}
-.rl-comp .cic{flex:none;width:48px;height:48px;border-radius:14px;display:grid;place-items:center;font-size:24px;background:color-mix(in srgb,var(--cc) 25%,var(--bg));border:2px solid var(--cc)}
+.rl-comp .cic{flex:none;width:64px;height:64px;overflow:hidden;border-radius:14px;display:grid;place-items:center;font-size:24px;background:color-mix(in srgb,var(--cc) 25%,var(--bg));border:2px solid var(--cc)}
+.rl-comp .cic img{width:100%;height:100%;display:block}
 .rl-comp > div{display:flex;flex-direction:column;gap:6px;min-width:0}
 .rl-comp p{margin:0}
 .rl-week{display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap;padding:18px;border-radius:16px;background:linear-gradient(130deg,#4a3a10,#262035 65%);border:1px solid #8a6a1a}
@@ -946,3 +947,33 @@ input{font:inherit;font-size:18px;color:var(--fg);background:var(--bg);border:1p
 .rl-mrew>span{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .rl-mrew>div{display:flex;justify-content:space-between;gap:10px;font-size:14px}
 .rl-mrew i{font-style:normal;font-weight:800;color:var(--hc,#c8f08a)}
+
+/* ---------- Startbildschirm ---------- */
+.rl-title{position:fixed;left:0;top:0;width:100%;height:100%;z-index:3000;background:#0b0a14;overflow:hidden;transition:left .9s cubic-bezier(.65,0,.35,1),top .9s cubic-bezier(.65,0,.35,1),width .9s cubic-bezier(.65,0,.35,1),height .9s cubic-bezier(.65,0,.35,1),border-radius .9s,opacity .4s}
+.rl-title canvas{display:block;width:100%;height:100%;object-fit:cover}
+.rl-ttext{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;padding:clamp(28px,9vh,90px) 16px clamp(14px,3.5vh,34px);text-align:center;gap:6px;transition:opacity .35s;pointer-events:none}
+.rl-ttext h1{margin:0;font-family:"Bungee","Arial Black",sans-serif;font-size:clamp(42px,9vw,96px);line-height:1;color:#ffd27a;letter-spacing:.02em;text-shadow:0 3px 0 #7a3a10,0 0 28px rgba(255,170,70,.55),0 6px 24px rgba(0,0,0,.6)}
+.rl-ttext p{margin:2px 0 0;color:#ffe2b0;font-size:clamp(12px,1.9vw,18px);letter-spacing:.22em;text-transform:uppercase;font-weight:600;text-shadow:0 2px 8px rgba(0,0,0,.8)}
+.rl-ttext .rl-tplay{margin-top:auto;pointer-events:auto;font-size:clamp(18px,2.6vw,24px);padding:14px 44px;border-radius:999px;box-shadow:0 0 0 3px rgba(255,210,122,.35),0 10px 30px rgba(0,0,0,.5);animation:rlTPulse 2.4s ease-in-out infinite}
+.rl-ttext small{color:rgba(255,233,200,.55);font-size:12px;margin-top:6px}
+@keyframes rlTPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+.rl-title.go{border-radius:14px}
+.rl-title.go .rl-ttext{opacity:0}
+.rl-title.fade{opacity:0}
+@media (prefers-reduced-motion:reduce){.rl-ttext .rl-tplay{animation:none}}
+
+/* ---------- Willkommen ---------- */
+.rl-howto{list-style:none;margin:10px 0 14px;padding:0;display:flex;flex-direction:column;gap:10px;text-align:left}
+.rl-howto li{display:flex;gap:12px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.rl-howto li>span{flex:none;font-size:22px;line-height:1.2}
+.rl-howto li div{display:flex;flex-direction:column;gap:2px}
+.rl-howto small{color:var(--muted);font-size:13.5px;line-height:1.4}
+
+/* ---------- Rote Punkte an neuen Reitern und Plakaten ---------- */
+.rl-tdot{width:9px;height:9px;margin-left:5px;vertical-align:top}
+.rl-poster{position:relative}
+.rl-pdot{position:absolute;top:6px;right:8px;margin:0;width:14px;height:14px;z-index:2}
+.rl-modal{max-height:calc(100dvh - 32px);overflow:auto}
+.rl-howto{gap:7px;margin:6px 0 10px}
+.rl-howto li{padding:8px 11px}
+.rl-howto small{font-size:13px;line-height:1.35}

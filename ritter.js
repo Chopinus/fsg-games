@@ -9,6 +9,8 @@
   const SAVE_VERSION = 5;
 
   /* ================= Klassen ================= */
+  // Saison: mit Version 1.0 wurden alle Spielstände (außer Tester) zurückgesetzt. Erhöhen = neuer Reset.
+  const SEASON = 1;
   const HEROES = [
     { id: 'r', tree: 'ritter', name: 'Ritter', color: '#ffb547', slots: 2, rebirth: 0, line: 'front', desc: 'Kämpft vorne mit dem Schwert. Ausgewogen zwischen Angriff und Verteidigung.' },
     { id: 'w', tree: 'waechter', name: 'Wächter', color: '#7fb2ff', slots: 1, rebirth: 1, hire: 'w_hire', line: 'front', desc: 'Steht ganz vorne und fängt die Treffer ab. Viel Leben, wenig Schaden.' },
@@ -730,7 +732,7 @@
     { id: 'tower10', name: 'Turmstürmer', desc: 'Erreiche Etage 10 im Turm', ok: S => S.towerBest >= 10 },
     { id: 'tower30', name: 'Turmherr', desc: 'Erreiche Etage 30 im Turm', ok: S => S.towerBest >= 30 },
     { id: 'clean50', name: 'Ohne Verluste', desc: 'Erreiche Stufe 50 in einem Lauf, ohne dass ein Held fällt', ok: (S, run) => run && run.mode === 'normal' && run.stage > 50 && !run.losses },
-    { id: 'week30', name: 'Herausforderer', desc: 'Erreiche Stufe 30 in einer Wochen-Herausforderung', ok: S => S.weekly.best >= 30 },
+    { id: 'week30', name: 'Herausforderer', desc: 'Erreiche Stufe 30 in einer Tages-Herausforderung', ok: S => S.weekly.best >= 30 },
     { id: 'comp10', name: 'Treuer Freund', desc: 'Bringe einen Begleiter auf Stufe 10', ok: S => Object.values(S.comps).some(l => l >= 10) },
     { id: 'comp4', name: 'Menagerie', desc: 'Besitze alle 4 Begleiter', ok: S => COMPS.every(c => (S.comps[c.id] || 0) > 0) },
   ];
@@ -747,7 +749,10 @@
     { id: 'trio', name: 'Kleine Gruppe', desc: 'Nur die drei vordersten Klassen kämpfen mit' },
   ];
   const RULE = Object.fromEntries(RULES.map(r => [r.id, r]));
-  const WEEK_TIERS = [{ st: 15, stars: 2 }, { st: 30, stars: 4 }, { st: 50, stars: 7 }, { st: 80, stars: 12 }, { st: 120, stars: 20, crown: 1 }];
+  // Tages-Herausforderung (früher wöchentlich): neue Regeln und Belohnungen jeden Tag um Mitternacht
+  const WEEK_TIERS = [{ st: 15, stars: 1 }, { st: 30, stars: 2 }, { st: 50, stars: 3 }, { st: 80, stars: 5 }, { st: 120, stars: 8, crown: 1 }];
+  const dayId = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const dayLeft = (d = new Date()) => { const m = new Date(d); m.setHours(24, 0, 0, 0); const mins = Math.max(1, Math.round((m - d) / 60000)); return mins >= 60 ? `${Math.floor(mins / 60)} h ${mins % 60} min` : `${mins} min`; };
   function weekId(d = new Date()) {
     const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
     const day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - day);
@@ -1051,7 +1056,7 @@
   function fresh() {
     return { v: SAVE_VERSION, gold: 0, souls: 0, best: 0, bestEver: 0, runs: 0, nodes: { start: 1 }, equip: [], speed: 1, stars: 0, rebirths: 0, perks: {},
       runes: [], sockets: Object.fromEntries(HEROES.map(h => [h.id, [null, null, null, null, null, null]])), dust: 0, runeSeq: 1, towerBest: 0,
-      asc: 0, ascBest: 0, rankGot: 0, mast: {}, skin: {}, wf: 0, crowns: 0, cperks: {}, ach: {}, tot: { kills: 0, souls: 0 }, weekly: { week: '', best: 0, claimed: 0 }, comps: {}, compActive: [], seenIntro: false, area: 0, tempo: 0, bench: [], altar: 0, seenField: false, exp: { spl: 0, done: 0, target: 'a', pieces: {} }, ahn: ahnFix() };
+      season: SEASON, asc: 0, ascBest: 0, rankGot: 0, mast: {}, skin: {}, wf: 0, crowns: 0, cperks: {}, ach: {}, tot: { kills: 0, souls: 0 }, weekly: { week: '', best: 0, claimed: 0 }, comps: {}, compActive: [], seenIntro: false, area: 0, tempo: 0, bench: [], altar: 0, seenField: false, exp: { spl: 0, done: 0, target: 'a', pieces: {} }, ahn: ahnFix() };
   }
   function migrate(d) {
     if (!d || typeof d !== 'object') return fresh();
@@ -1075,6 +1080,10 @@
     for (const k of ['asc', 'crowns']) out[k] = Math.max(0, Math.floor(Number(d[k]) || 0));
     out.ach = {}; for (const a of ACH) if (d.ach && d.ach[a.id]) out.ach[a.id] = 1;
     out.tot = { kills: Math.max(0, Math.floor(Number(d.tot?.kills) || 0)), souls: Math.max(0, Math.floor(Number(d.tot?.souls) || 0)) };
+    if (Array.isArray(d.knownTabs)) out.knownTabs = d.knownTabs.filter(x => typeof x === 'string').slice(0, 60);
+    if (Array.isArray(d.knownBoard)) out.knownBoard = d.knownBoard.filter(x => typeof x === 'string').slice(0, 10);
+    out.season = Math.max(0, Math.floor(Number(d.season) || 0));
+    out.daily = { day: String(d.daily?.day || ''), best: Math.max(0, Math.floor(Number(d.daily?.best) || 0)), claimed: Math.max(0, Math.floor(Number(d.daily?.claimed) || 0)) };
     out.weekly = { week: String(d.weekly?.week || ''), best: Math.max(0, Math.floor(Number(d.weekly?.best) || 0)), claimed: Math.max(0, Math.floor(Number(d.weekly?.claimed) || 0)) };
     out.comps = {}; for (const c of COMPS) { const l = Math.floor(Number(d.comps?.[c.id]) || 0); if (l > 0) out.comps[c.id] = Math.min(100, l); }
     out.compActive = (Array.isArray(d.compActive) ? d.compActive : []).filter(id => out.comps[id]).slice(0, 2);
@@ -1259,12 +1268,14 @@
     return got;
   }
   function claimWeekly(S, run) {
-    const id = weekId();
+    const id = weekId(), day = dayId();
+    // Wochenbestwert bleibt für die Bestenliste „Diese Woche“, Belohnungen gibt es pro Tag
     if (S.weekly.week !== id) S.weekly = { week: id, best: 0, claimed: 0 };
+    if (!S.daily || S.daily.day !== day) S.daily = { day, best: 0, claimed: 0 };
     const score = run.stage;
-    S.weekly.best = Math.max(S.weekly.best, score);
+    S.weekly.best = Math.max(S.weekly.best, score); S.daily.best = Math.max(S.daily.best, score);
     let stars = 0, crowns = 0;
-    WEEK_TIERS.forEach((t, i) => { if (S.weekly.best >= t.st && !(S.weekly.claimed & (1 << i))) { S.weekly.claimed |= 1 << i; stars += t.stars; crowns += t.crown || 0; } });
+    WEEK_TIERS.forEach((t, i) => { if (S.daily.best >= t.st && !(S.daily.claimed & (1 << i))) { S.daily.claimed |= 1 << i; stars += t.stars; crowns += t.crown || 0; } });
     S.stars += stars; S.crowns += crowns;
     return { stars, crowns };
   }
@@ -1511,13 +1522,13 @@
     puzzleHire(S, id);
     return true;
   }
-  // Werte mit den Regeln der Wochen-Herausforderung
+  // Werte mit den Regeln der Tages-Herausforderung
   function statsFor(S, mode) {
     const st = stats(S);
     if (mode === 'exp') { const m = MISSION[S.exp.mission] || MISSIONS[0]; st.cap = Infinity; st.startStage = expStage(S, m); st.rules = m.rules || []; return st; }
     if (mode === 'ahnen') { st.cap = Infinity; return st; }
     if (mode !== 'weekly') return st;
-    const rules = weekRules(weekId());
+    const rules = weekRules(dayId());
     for (const h of HEROES) { const T = st[h.id]; if (!T) continue;
       if (rules.includes('glass')) { T.hp *= 0.5; T.atk *= 2; T.wolfAtk *= 2; }
       if (rules.includes('giant')) { T.aps *= 1.5; T.wolfAps *= 1.5; }
@@ -2100,7 +2111,7 @@
       if (run.mode === 'tower') {
         if (run.stage > S.towerBest) {
           S.towerBest = run.stage;
-          if (run.stage % 5 === 0) { const r = addRune(S, RUNES[Math.floor(Math.random() * RUNES.length)].id, 1 + Math.floor(run.stage / 15)); if (r) run.runes.push(r); }
+          if (run.stage % 5 === 0) { const r = addRune(S, RUNES[Math.floor(Math.random() * RUNES.length)].id, Math.min(10, 1 + Math.floor(run.stage / 15))); if (r) run.runes.push(r); }
         }
       } else if (run.mode === 'ahnen') { return ahnNext(S, st, run, c);
       } else if (run.mode === 'exp') {
@@ -2167,7 +2178,7 @@
       S.tot.kills, S.tot.souls, COMPS.length, ...COMPS.map(c => S.comps[c.id] || 0), ...[0, 1].map(i => (S.compActive[i] ? COMPS.findIndex(c => c.id === S.compActive[i]) + 1 : 0)), S.tempo || 0,
       S.exp.spl, S.exp.done, Math.max(0, PUZZLE.indexOf(S.exp.target)), PUZZLE.length, ...PUZZLE.map(id => pieceMask(S, id)),
       1, kSlots(S), HEROES.length, ...HEROES.map(h => (S.kplace || {})[h.id] || 0), S.altar || 0, 1, 1, 1, S.rlager || 0, 1,
-      1, S.ahn.sig, S.ahn.got, S.ahn.m, S.ahn.lvl, HEROES.length, ...HEROES.map(h => (S.ahn.place[h.id] ? 1 : 0)), S.ascBest || 0, 1, S.rankGot || 0, S.wf || 0, HEROES.length, ...HEROES.map(h => (S.mast || {})[h.id] || 0), ...HEROES.map(h => Math.max(0, SKINS.findIndex(k => k.id === (S.skin || {})[h.id]))), 1, HEROES.length, ...HEROES.flatMap(h => [3, 4, 5].map(i => rIdx((S.sockets[h.id] || [])[i])))]);
+      1, S.ahn.sig, S.ahn.got, S.ahn.m, S.ahn.lvl, HEROES.length, ...HEROES.map(h => (S.ahn.place[h.id] ? 1 : 0)), S.ascBest || 0, 1, S.rankGot || 0, S.wf || 0, HEROES.length, ...HEROES.map(h => (S.mast || {})[h.id] || 0), ...HEROES.map(h => Math.max(0, SKINS.findIndex(k => k.id === (S.skin || {})[h.id]))), 1, HEROES.length, ...HEROES.flatMap(h => [3, 4, 5].map(i => rIdx((S.sockets[h.id] || [])[i]))), 1, S.season || 0]);
   }
   function decode(code) {
     const nums = unpackNums(code); if (!nums) return null;
@@ -2212,6 +2223,7 @@
           if (i < nums.length) d.ascBest = next();
           if (i < nums.length) { next(); d.rankGot = next(); d.wf = next(); const hc4 = next(); d.mast = {}; d.skin = {}; for (let k = 0; k < hc4; k++) { const x = next(); if (HEROES[k] && x) d.mast[HEROES[k].id] = x; } for (let k = 0; k < hc4; k++) { const x = next(); if (HEROES[k] && SKINS[x]) d.skin[HEROES[k].id] = SKINS[x].id; } }
           if (i < nums.length) { next(); const hc5 = next(); for (let k = 0; k < hc5; k++) { const a = [next(), next(), next()]; if (HEROES[k] && d.sockets[HEROES[k].id]) d.sockets[HEROES[k].id].push(...a.map(x => (x > 0 ? x : null))); } }
+          if (i < nums.length) { next(); d.season = next(); }
         }
       } else return null;
       return migrate(d);
@@ -2226,10 +2238,36 @@
   }
 
   const core = { AHN_MISSIONS, AHN_ABIL, AHN_TRAIT, AHNE, AHN_TUNE, AHN_COUNT, ahnOpen, ahnBossesOf, ahnLevelFor, placeSigil, ahnClaim, unrebirth, transmute, bossRuneTier, resetPerks, buyLager, lagerCost, LAGER_MAX, runeCap, shardOf, mergeCost, ALTAR_MAX, altarCost, altarMul, buyAltar, kSlots, kFree, keyCap, addSock, removeSock, removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, buyPiece, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
-    rankOf, RANKS, rankBonus, AREAS, areaOf, MISSIONS, extraSocks, XSOCK, sockOk, runeAmp, mastInfo, mastLevel, SKINS, WF_STAGE, WF, wfSpawn,
+    SEASON, rankOf, RANKS, rankBonus, AREAS, areaOf, MISSIONS, extraSocks, XSOCK, sockOk, runeAmp, mastInfo, mastLevel, SKINS, WF_STAGE, WF, wfSpawn,
     sigOn, sigKeysUsed, keyNeed, eqOf, slotLim, SIG, SIG_FLAGS, newRun, step, stats, buy, available, blockReason, NODE, migrate, fresh,
-    rebirth, ascend, crownsFor, buyCperk, cperkCost, cperk, CPERKS, levelComp, toggleComp, compCost, compMax, compSlots, COMPS, checkAch, ACH, claimWeekly, weekId, weekRules, RULE, WEEK_TIERS, statsFor, starsFor, toggleEquip, slotsOf, hired, classOpen, keysUsed, keyLimit, capOf, reqOf, feature, encode, decode, fmt, socket, unsocket, merge, canMerge, dismantle, buyRune, runeVal, addRune };
+    rebirth, ascend, crownsFor, buyCperk, cperkCost, cperk, CPERKS, levelComp, toggleComp, compCost, compMax, compSlots, COMPS, checkAch, ACH, claimWeekly, weekId, dayId, weekRules, RULE, WEEK_TIERS, statsFor, starsFor, toggleEquip, slotsOf, hired, classOpen, keysUsed, keyLimit, capOf, reqOf, feature, encode, decode, fmt, socket, unsocket, merge, canMerge, dismantle, buyRune, runeVal, addRune };
   if (typeof module !== 'undefined') { module.exports = core; return; }
+  // ---------- Automatische Updates ----------
+  // Prüft alle 2 Minuten (und beim Zurückkehren in den Tab), ob auf dem Server eine neue ritter.js liegt.
+  // Ist eine da, wird im Lager gespeichert und neu geladen; während eines Laufs erst danach.
+  const UPD = { src: (document.currentScript && document.currentScript.src) || '', tag: null, pending: false, busy: false, noted: false };
+  const updUrl = () => UPD.src || [...document.scripts].map(x => x.src).find(x => /ritter\.js/.test(x)) || '';
+  async function updCheck() {
+    const url = updUrl(); if (!url || UPD.pending || (typeof navigator !== 'undefined' && navigator.onLine === false)) return;
+    try {
+      const r = await fetch(url, { method: 'HEAD', cache: 'no-store' }); if (!r.ok) return;
+      const tag = r.headers.get('etag') || r.headers.get('last-modified') || r.headers.get('content-length'); if (!tag) return;
+      if (UPD.tag == null) { UPD.tag = tag; return; }
+      if (tag !== UPD.tag) { UPD.pending = true; updApply(); }
+    } catch {}
+  }
+  function updApply(force) {
+    if (!UPD.pending || UPD.busy) return;
+    if (!force && (!active || (run && !run.dead))) { if (active && run && !UPD.noted) { UPD.noted = true; toast('Ein Update ist bereit. Es wird nach diesem Lauf geladen.'); } return; }
+    UPD.busy = true; try { save(); if (typeof cloudSave === 'function') cloudSave(true); } catch {}
+    toast('Update wird geladen …', true);
+    // Neue Dateien am Zwischenspeicher vorbei holen, damit nach dem Neuladen wirklich die neue Version läuft
+    const css = [...document.querySelectorAll('link[rel="stylesheet"]')].map(l => l.href).filter(h => /style\.css/.test(h));
+    Promise.all([updUrl(), ...css].filter(Boolean).map(u => fetch(u, { cache: 'reload' }).catch(() => null)))
+      .then(() => new Promise(r => setTimeout(r, 900))).finally(() => location.reload());
+  }
+  setTimeout(updCheck, 4000); setInterval(updCheck, 120000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) updCheck(); });
 
   /* ================= Oberfläche ================= */
   const $ = s => document.querySelector(s);
@@ -2308,6 +2346,24 @@
   const AKEY = 'fsg.ritter.konto';
   let acct = null, cloudDirty = false, cloudMsg = '', cloudBusy = false, durableInfo = null;
   try { acct = JSON.parse(localStorage.getItem(AKEY) || 'null'); } catch {}
+  // Neue Saison: Gäste und bekannte Nicht-Tester werden lokal zurückgesetzt, Tester behalten ihren Stand.
+  // Bei unbekanntem Tester-Status entscheidet der Server beim nächsten Speichern.
+  let seasonNote = false;
+  function seasonCheck() {
+    if ((S.season || 0) >= SEASON) return;
+    if (acct && acct.tester === true) { S.season = SEASON; save(); return; }
+    if (!acct || acct.tester === false) seasonReset();
+  }
+  function seasonReset() {
+    S = migrate({ season: SEASON }); S.season = SEASON; run = null; seasonNote = true;
+    try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {}
+    if (active) { refresh(); seasonInfo(); }
+  }
+  function seasonInfo() {
+    if (!seasonNote) return; seasonNote = false;
+    modal(`<span class="rl-mic">⚔</span><h2>Ritterlauf ${GAME_VERSION}</h2><p>Mit dem Start von Version ${GAME_VERSION} beginnen <b>alle neu</b>. Die Testphase ist vorbei, und dein Spielstand wurde zurückgesetzt. Dein Name und Passwort bleiben erhalten.</p><p class="note">Danke fürs Testen und viel Spaß beim neuen Abenteuer!</p>
+      <div class="row" style="justify-content:center"><button class="btn" data-m="ok">Los geht’s</button></div>`);
+  }
   const setAcct = a => { acct = a; try { a ? localStorage.setItem(AKEY, JSON.stringify(a)) : localStorage.removeItem(AKEY); } catch {} };
   async function api(action, body, keepalive) {
     try {
@@ -2325,9 +2381,10 @@
     cloudBusy = true; cloudDirty = false;
     const r = await api('save', { name: acct.name, token: acct.token, data: S, base: acct.updated || 0, force: !!keep }, keepalive);
     cloudBusy = false;
+    if (r.reset) { acct.updated = r.updated; acct.tester = false; setAcct(acct); seasonReset(); cloudDirty = true; setTimeout(() => cloudSave(true, false, true), 300); return r; }
     if (r.conflict) { resolveConflict({ data: r.data, updated: r.updated }); return r; }
     if (r.error) { cloudDirty = true; cloudMsg = r.error; if (/anmelden/.test(r.error)) setAcct(null); }
-    else { acct.updated = r.updated; acct.tester = !!r.tester; setAcct(acct); cloudMsg = `Gespeichert um ${timeStr(r.updated)}`; }
+    else { acct.updated = r.updated; acct.tester = !!r.tester; setAcct(acct); cloudMsg = `Gespeichert um ${timeStr(r.updated)}`; if (acct.tester && (S.season || 0) < SEASON) { S.season = SEASON; save(); } }
     if (tab === 'stand' && !typing() && active) panel();
     return r;
   }
@@ -2456,16 +2513,23 @@
       top.push(members.length > 1 || gr === 'helden' ? { id: target, label: TAB_GROUPS[gr].label, color: g === gr ? (list.find(x => x.id === tab) || {}).color || TAB_GROUPS[gr].color : TAB_GROUPS[gr].color, group: gr } : members[0]);
     }
     const isOn = t => (t.group ? t.group === g : t.id === tab);
-    let html = `<div class="rl-trow">${top.map(t => `<button data-tab="${t.id}" class="${isOn(t) ? 'on' : ''} ${t.locked ? 'locked' : ''}" style="--tc:${t.color}">${t.label}</button>`).join('')}</div>`;
+    // Neu erschienene Reiter bekommen einen roten Punkt, bis man sie einmal öffnet
+    if (!Array.isArray(S.knownTabs)) S.knownTabs = list.map(t => t.id);
+    if (!S.knownTabs.includes(tab)) S.knownTabs.push(tab);
+    const isNew = id => !S.knownTabs.includes(id), groupNew = gr => list.some(x => groupOf(x.id) === gr && isNew(x.id));
+    const dot = on => (on ? '<i class="rl-reddot rl-tdot" aria-label="neu"></i>' : '');
+    let html = `<div class="rl-trow">${top.map(t => `<button data-tab="${t.id}" class="${isOn(t) ? 'on' : ''} ${t.locked ? 'locked' : ''}" style="--tc:${t.color}">${t.label}${dot(t.group ? groupNew(t.group) : isNew(t.id))}</button>`).join('')}</div>`;
     if (g) {
       const members = list.filter(x => groupOf(x.id) === g);
       if (members.length > 1) html += `<div class="rl-sub">${members.map(t => { const h = HERO[t.id];
-        return `<button data-tab="${t.id}" class="${t.id === tab ? 'on' : ''} ${t.locked ? 'locked' : ''}" style="--tc:${t.color}">${h ? `<span class="pt">${PORTRAIT[h.id]}</span>` : ''}${t.label}${h && S.ahn && S.ahn.place[h.id] ? '<i class="sig" title="Ahnensiegel">✦</i>' : ''}</button>`; }).join('')}</div>`;
+        return `<button data-tab="${t.id}" class="${t.id === tab ? 'on' : ''} ${t.locked ? 'locked' : ''}" style="--tc:${t.color}">${h ? `<span class="pt">${PORTRAIT[h.id]}</span>` : ''}${t.label}${h && S.ahn && S.ahn.place[h.id] ? '<i class="sig" title="Ahnensiegel">✦</i>' : ''}${dot(isNew(t.id))}</button>`; }).join('')}</div>`;
     }
     $('.rl-tabs').innerHTML = html;
     const on = document.querySelector('.rl-sub .on'); if (on && on.offsetLeft + on.offsetWidth > on.parentNode.clientWidth) on.parentNode.scrollLeft = on.offsetLeft - 24;
   }
   function open() {
+    if (UPD.pending) { active = true; updApply(true); return; }
+    seasonCheck();
     active = true;
     $('#hub').hidden = true; $('#room').hidden = true; $('#solo').hidden = false;
     st = stats(S);
@@ -2500,7 +2564,7 @@
     if (S.starNews) { const n = S.starNews; delete S.starNews; save(); setTimeout(() => toast(`Sternen-Laden zurückgesetzt: ${n} Sterne zurück. Verteile sie neu!`, true), 1200); }
     if (S.startNews) { const n = S.startNews; delete S.startNews; save(); setTimeout(() => toast(`Sprungstart wurde zu Beutezug umgebaut: ${n} Sterne zurück.`, true), 600); }
     if (conflict) setTimeout(() => resolveConflict(conflict), 300); else if (acct) setTimeout(() => cloudSave(true), 800);
-    if (!betaShown) { betaShown = true; showBeta(); } else openChain();
+    if (!titleDone) showTitle(); else openChain();
 
     last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
   }
@@ -2525,6 +2589,7 @@
     areaBefore = areaMax(S); st = statsFor(S, mode); run = newRun(S, mode); confirm = ''; notice = ''; heroes(); action(); panel(); }
   function loop(now) {
     if (!active) return;
+    if (UPD.pending && !UPD.busy && (!run || run.dead)) updApply();
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
     // Automatisch weniger Effekte, wenn das Gerät nicht hinterherkommt
     if (!document.hidden && dt > 0) { fxClock += dt; fxAvg = fxAvg * 0.95 + dt * 0.05; if (fxClock > 3 && !lowFx && fxAvg > 0.03) lowFx = true; }
@@ -2556,7 +2621,7 @@
     let title = '', sub = '', special = '', again = '', againLabel = 'Nochmal';
     if (R.mode === 'normal') { title = win ? `Stufengrenze ${capOf(S)} erreicht!` : R.wf ? 'Verschlungen' : 'Gefallen'; sub = win ? 'Weitere Stufen gibt es mit der nächsten Wiedergeburt.' : `auf Stufe ${R.stage} · ${esc(zoneName(R.stage))}`; again = 'normal'; againLabel = 'Neuer Feldzug'; }
     if (R.mode === 'tower') { title = 'Der Turm ist vorbei'; sub = `Etage ${R.stage} erreicht`; again = 'tower'; }
-    if (R.mode === 'weekly') { title = 'Herausforderung vorbei'; sub = `Stufe ${R.stage} · Bestes Ergebnis diese Woche: Stufe ${S.weekly.best}`; again = 'weekly'; }
+    if (R.mode === 'weekly') { title = 'Herausforderung vorbei'; sub = `Stufe ${R.stage} · Bestes Ergebnis heute: Stufe ${(S.daily || {}).best || R.stage}`; again = 'weekly'; }
     if (R.mode === 'exp') { const m = MISSION[R.mission]; title = win ? `Expedition geschafft: ${m.name}` : `Expedition gescheitert: ${m.name}`; sub = win ? `${R.waves} Wellen überstanden` : esc(R.failNote || `Gefallen auf Stufe ${R.stage}`); again = 'exp'; againLabel = 'Nochmal'; }
     if (R.mode === 'ahnen') { const A = R.ahn, M = AHN_MISSIONS[A.mi], d = ahnBossesOf(A.mi)[A.bi];
       title = win ? `Mission ${A.mi + 1} geschafft` : `Mission ${A.mi + 1} gescheitert`;
@@ -2599,7 +2664,7 @@
   const crown = '<i class="rl-crown" aria-hidden="true"></i>', coin = '<i class="rl-coin" aria-hidden="true"></i>', soul = '<i class="rl-soulic" aria-hidden="true"></i>', star = '<i class="rl-star" aria-hidden="true"></i>', dust = '<i class="rl-dust" aria-hidden="true"></i>';
   function hud() {
     { const el = $('#rlStat'); el.innerHTML = ''; el.hidden = true; }
-    { const d = $('#soloNews .dot'); if (d) d.hidden = newsSeen() >= UPDATES[0].id; }
+    { const d = $('#soloNews .dot'); if (d) d.hidden = !UPDATES.length || newsSeen() >= UPDATES[0].id; }
     $('#soloSpeed').textContent = `Tempo ×${String(S.speed).replace('.', ',')}`;
   }
   function heroes() {
@@ -2630,7 +2695,7 @@
   function action() {
     const a = $('#rlAction');
     const troopBtn = `<button class="btn ghost rl-troopbtn ${S.uiTroop ? 'on' : ''}" data-rl="troop" aria-expanded="${!!S.uiTroop}">Truppe ${S.uiTroop ? '▴' : '▾'}</button>`;
-    if (inCamp()) a.innerHTML = `${troopBtn}<button class="btn ghost rl-boardbtn" data-rl="board">📋 Anschlagbrett</button><button class="btn rl-go" data-rl="start">Feldzug starten${st.startStage > 1 ? ` ab Stufe ${st.startStage}` : ''}</button>`;
+    if (inCamp()) a.innerHTML = `${troopBtn}<button class="btn ghost rl-boardbtn" data-rl="board">📋 Anschlagbrett${boardNew().length ? '<i class="rl-reddot" aria-label="neu"></i>' : ''}</button>${areaMax(S) >= 1 ? `<button class="btn ghost rl-area" data-rl="area"><small>Startgebiet</small><b>${esc(zoneName(st.startStage))} ▾</b></button>` : ''}<button class="btn rl-go" data-rl="start">Feldzug starten</button>`;
     else a.innerHTML = `${troopBtn}<button class="btn ${confirm === 'giveup' ? 'danger' : 'ghost'} small" data-rl="giveup">${confirm === 'giveup' ? 'Wirklich aufgeben?' : run.mode === 'tower' ? 'Turm verlassen' : run.mode === 'weekly' ? 'Herausforderung beenden'   : run.mode === 'exp' || run.mode === 'ahnen' ? 'Mission abbrechen' : 'Feldzug aufgeben'}</button>`;
   }
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -2708,7 +2773,7 @@
   function campInfo() {
     if (run && run.dead) {
       const extra = `${run.kills} Gegner besiegt${run.gold ? ` · ${coin}+${fmt(run.gold)}` : ''}${run.souls ? ` · ${soul}+${run.souls}` : ''}${run.runes.length ? ` · ${run.runes.length} Rune${run.runes.length > 1 ? 'n' : ''}` : ''}`;
-      if (run.mode === 'weekly') { const r = run.weeklyReward || {}; return `<div class="rl-dead week"><b>Wochen-Herausforderung: Stufe ${run.stage}</b><span>Bestes Ergebnis diese Woche: Stufe ${S.weekly.best}${r.stars ? ` · ${star}+${r.stars}` : ''}${r.crowns ? ` · ${crown}+${r.crowns}` : ''}</span><span class="note">Belohnungen und Bestenliste findest du in der Ruhmeshalle.</span></div>`; }
+      if (run.mode === 'weekly') { const r = run.weeklyReward || {}; return `<div class="rl-dead week"><b>Tages-Herausforderung: Stufe ${run.stage}</b><span>Bestes Ergebnis heute: Stufe ${(S.daily || {}).best || 0}${r.stars ? ` · ${star}+${r.stars}` : ''}${r.crowns ? ` · ${crown}+${r.crowns}` : ''}</span><span class="note">Belohnungen und Bestenliste findest du in der Ruhmeshalle.</span></div>`; }
       if (run.mode === 'ahnen') return ahnEndInfo();
       if (run.mode === 'exp') {
         const m = MISSION[run.mission], r = run.expReward;
@@ -3119,6 +3184,7 @@
     } else if (a === 'load') {
       const s = decode($('#rlIn').value);
       if (!s) { toast('Dieser Code stimmt nicht. Prüfe jedes Zeichen.'); return; }
+      if ((s.season || 0) < SEASON && !(acct && acct.tester)) { toast(`Dieser Code ist von vor Version ${GAME_VERSION} und gilt nicht mehr.`); return; }
       s.speed = Math.min(S.speed, maxSpeed(s)); adopt(s); save(); toast('Spielstand geladen');
     } else if (a === 'reset') { if (ask('reset', panel)) { adopt(fresh()); save(); toast('Neuer Spielstand'); } }
   }
@@ -3138,10 +3204,10 @@
         const r = await api('login', { name: val('#rlLName'), pass: $('#rlLPw').value });
         if (r.error) { toast(r.error); return; }
         setAcct({ name: r.name, token: r.token, updated: r.updated, tester: !!r.tester });
-        const old = !r.data || !r.data.v || r.data.v < 2;
+        const fresh1 = !!(r.data && r.data.season && !r.data.v), old = !fresh1 && (!r.data || !r.data.v || r.data.v < 2);
         adopt(r.data || {}); cloudDirty = true;
         cloudMsg = `Geladen – zuletzt gespeichert um ${timeStr(r.updated)}`;
-        toast(old ? 'Angemeldet. Dein Spielstand stammte aus der allerersten Version und wurde zurückgesetzt.' : `Willkommen zurück, ${r.name}!`); panel();
+        toast(fresh1 ? `Angemeldet. Mit Version ${GAME_VERSION} beginnt dein Abenteuer neu.` : old ? 'Angemeldet. Dein Spielstand stammte aus der allerersten Version und wurde zurückgesetzt.' : `Willkommen zurück, ${r.name}!`); panel();
       } else if (f.id === 'rlPwForm') {
         const r = await api('password', { name: acct.name, token: acct.token, pass: $('#rlNewPw').value });
         if (r.error) { toast(r.error); return; }
@@ -3192,7 +3258,7 @@
     html += COMPS.map(c => {
       const l = S.comps[c.id] || 0, on = S.compActive.includes(c.id), cost = compCost(l), max = compMax(S);
       if (!l) return `<div class="rl-comp locked" style="--cc:${c.color}"><span class="cic">?</span><div><b>${c.name}</b><p class="note">Kommt mit dem ${c.asc}. Aufstieg.</p></div></div>`;
-      return `<div class="rl-comp ${on ? 'on' : ''}" style="--cc:${c.color}"><span class="cic">${{ drache: '♆', eule: '◉', golem: '▣', phoenix: '❂' }[c.id]}</span><div><b>${c.name}</b> <span class="note">Stufe ${l} / ${max}</span><p class="note">${c.desc(l)}</p>
+      return `<div class="rl-comp ${on ? 'on' : ''}" style="--cc:${c.color}"><span class="cic">${compPic(c.id) ? `<img src="${compPic(c.id)}" alt="">` : { drache: '♆', eule: '◉', golem: '▣', phoenix: '❂' }[c.id]}</span><div><b>${c.name}</b> <span class="note">Stufe ${l} / ${max}</span><p class="note">${c.desc(l)}</p>
         <div class="row"><button class="btn small" data-complvl="${c.id}" ${l >= max || S.souls < cost ? 'disabled' : ''}>${l >= max ? 'Maximal' : `Verbessern ${soul}${cost}`}</button>
         <button class="btn ghost small" data-compon="${c.id}">${on ? 'Ablegen' : 'Mitnehmen'}</button></div></div></div>`;
     }).join('');
@@ -3302,7 +3368,7 @@
     let cur = shopSel; if (!LIST.some(([id]) => id === cur && open[id])) cur = (LIST.find(([id]) => open[id]) || ['stern'])[0];
     let html = `${wallet({ stern: ['stars'], zeit: ['souls'], altar: ['gold'], krone: ['crowns'], puzzle: ['spl'] }[cur] || [])}
       <div class="rl-shopnav">${LIST.map(([id, name, when, ic]) => open[id] ? `<button data-shoptab="${id}" class="${id === cur ? 'on' : ''}">${ic} ${name}${id === 'krone' && !cperk(S, 'k_veteran') ? '<span class="rl-reddot"></span>' : ''}</button>` : `<span class="lock" title="Kommt ${when}">🔒 ${name}</span>`).join('')}</div>`;
-    if (open.stern && cur === 'stern') html += `<section id="shop-stern" class="rl-shop"><h3 class="rl-h3">Sternen-Laden</h3><p class="note">Du hast <span class="rl-cur star">${star}${S.stars}</span> Sterne. Sterne bekommst du bei jeder Wiedergeburt und aus der Wochen-Herausforderung. Beim Aufstieg werden die Sternen-Boni zurückgesetzt.</p><div class="rl-perks">${perkCards()}</div><div class="row" style="margin-top:10px"><button class="btn ${confirm === 'pres' ? 'danger' : 'ghost'} small" data-rl="pres" ${inCamp() && Object.keys(S.perks).length ? '' : 'disabled'}>${confirm === 'pres' ? 'Wirklich alles zurücksetzen?' : '↺ Sternen-Laden zurücksetzen (alle Sterne zurück)'}</button></div></section>`;
+    if (open.stern && cur === 'stern') html += `<section id="shop-stern" class="rl-shop"><h3 class="rl-h3">Sternen-Laden</h3><p class="note">Du hast <span class="rl-cur star">${star}${S.stars}</span> Sterne. Sterne bekommst du bei jeder Wiedergeburt und aus der Tages-Herausforderung. Beim Aufstieg werden die Sternen-Boni zurückgesetzt.</p><div class="rl-perks">${perkCards()}</div><div class="row" style="margin-top:10px"><button class="btn ${confirm === 'pres' ? 'danger' : 'ghost'} small" data-rl="pres" ${inCamp() && Object.keys(S.perks).length ? '' : 'disabled'}>${confirm === 'pres' ? 'Wirklich alles zurücksetzen?' : '↺ Sternen-Laden zurücksetzen (alle Sterne zurück)'}</button></div></section>`;
     if (open.zeit && cur === 'zeit') html += `<section id="shop-zeit" class="rl-shop">${zeitTab()}</section>`;
     if (open.altar && cur === 'altar') { const L = S.altar || 0, c = altarCost(L), maxed = L >= ALTAR_MAX;
       html += `<section id="shop-altar" class="rl-shop"><h3 class="rl-h3">Seelenaltar</h3><p class="note">Opfere Gold für mehr Seelen. Jede Stufe gibt <b>+15 % Seelen</b> von Bossen, Elite-Gegnern und Abkürzungen. Der Altar bleibt <b>für immer</b>, auch nach Wiedergeburt und Aufstieg. Tipp: Kurz vor einer Wiedergeburt brauchst du dein Gold sowieso nicht mehr.</p>
@@ -3329,11 +3395,11 @@
       <p class="note">Gerade möglich: bis ×${f(maxSpeed(S))} · Du hast ${soul}${S.souls} Seelen.</p></div>`;
   }
   function halleTab() {
-    const wk = weekId(), rules = weekRules(wk), mine = S.weekly.week === wk ? S.weekly : { best: 0, claimed: 0 };
-    let html = pathHTML() + `<div class="rl-week"><div><h3>Wochen-Herausforderung</h3><p class="note">Woche ${wk.split('-W')[1]} · gleiche Regeln für alle bis Sonntag. Du startest bei Stufe 1 mit deinen aktuellen Helden. Es gibt kein Gold, dafür Sterne und Kronen.</p>
+    const dy = dayId(), rules = weekRules(dy), mine = S.daily && S.daily.day === dy ? S.daily : { best: 0, claimed: 0 };
+    let html = pathHTML() + `<div class="rl-week"><div><h3>Tages-Herausforderung</h3><p class="note">Heute · gleiche Regeln für alle, neue Regeln in ${dayLeft()}. Du startest bei Stufe 1 mit deinen aktuellen Helden. Es gibt kein Gold, dafür jeden Tag neu Sterne und eine Krone.</p>
       <div class="rl-rules">${rules.map(r => `<span class="rl-rule"><b>${RULE[r].name}</b>${RULE[r].desc}</span>`).join('')}</div>
       <div class="rl-tiers">${WEEK_TIERS.map((t, i) => `<span class="rl-tier ${mine.claimed & (1 << i) ? 'done' : ''}"><b>Stufe ${t.st}</b>${star}${t.stars}${t.crown ? ` ${crown}${t.crown}` : ''}</span>`).join('')}</div>
-      <p>Dein Bestes diese Woche: <b>Stufe ${mine.best}</b></p></div>
+      <p>Dein Bestes heute: <b>Stufe ${mine.best}</b> · diese Woche: <b>Stufe ${S.weekly.week === weekId() ? S.weekly.best : 0}</b></p></div>
       <button class="btn" data-rl="weekly" ${inCamp() ? '' : 'disabled'}>Herausforderung starten</button></div>`;
     const n = Object.keys(S.ach).length;
     html += `<h3 class="rl-h3">Erfolge (${n}/${ACH.length})</h3><p class="note">Jeder Erfolg gibt allen Helden dauerhaft +3 % Schaden und Leben. Zusammen gerade: +${Math.round((Math.pow(1 + ACH_BONUS, n) - 1) * 100)} %.</p>
@@ -3521,9 +3587,12 @@
     },
   };
   /* ---------- Anschlagbrett: alle Spielarten als Plakate ---------- */
+  const boardOpenIds = () => ['weekly', ...(feature(S, 'turm') ? ['tower'] : []), ...(ahnOpen(S) ? ['ahn'] : []), ...(expOpen(S) ? ['exp'] : [])];
+  const boardNew = () => { if (!Array.isArray(S.knownBoard)) S.knownBoard = boardOpenIds(); return boardOpenIds().filter(id => !S.knownBoard.includes(id)); };
+  const POSTER_ID = { 'Tages-Herausforderung': 'weekly', Turm: 'tower', Ahnenprüfung: 'ahn', Expedition: 'exp' };
   function poster(o) {
-    const lock = o.lock ? `<span class="rl-pstamp">${esc(o.lock)}</span>` : '';
-    return `<article class="rl-poster ${o.lock ? 'locked' : ''}" style="--pc:${o.col};--rot:${o.rot}deg">
+    const lock = o.lock ? `<span class="rl-pstamp">${esc(o.lock)}</span>` : '', fresh = !o.lock && o.isNew;
+    return `<article class="rl-poster ${o.lock ? 'locked' : ''}" style="--pc:${o.col};--rot:${o.rot}deg">${fresh ? '<i class="rl-reddot rl-pdot" aria-label="neu"></i>' : ''}
       <span class="rl-ppin" aria-hidden="true"></span>
       <div class="rl-pband"><span class="rl-pico" aria-hidden="true">${o.icon}</span><h3>${esc(o.title)}</h3></div>
       <p class="rl-pdesc">${esc(o.desc)}</p>
@@ -3535,15 +3604,15 @@
   }
   function showBoard() {
     if (!inCamp()) return;
-    const cap = capOf(S), stg = st.startStage, wk = S.weekly && S.weekly.week === weekId() ? S.weekly.best : 0;
-    const rules = weekRules(weekId()).map(id => RULE[id]).filter(Boolean), nextTier = WEEK_TIERS.find(x => x.st > wk);
+    const cap = capOf(S), stg = st.startStage, wk = S.daily && S.daily.day === dayId() ? S.daily.best : 0;
+    const rules = weekRules(dayId()).map(id => RULE[id]).filter(Boolean), nextTier = WEEK_TIERS.find(x => x.st > wk);
     const tOpen = feature(S, 'turm'), aOpen = ahnOpen(S), eOpen = expOpen(S);
     const list = [
       { title: 'Feldzug', art: ['feld1', 'feld2'], icon: '⚔️', col: '#ffb547', rot: -2, desc: 'Der klassische Lauf: Kämpf dich Stufe um Stufe durch die Gebiete. Bringt Gold, Seelen und Runen.',
         info: [`Rekord: <b>Stufe ${S.best}</b> von ${cap === Infinity ? '∞' : cap}`, `Start: <b>${esc(zoneName(stg))}</b> (Stufe ${stg})`],
         acts: `<button class="btn" data-m="go" data-go="normal">Aufbrechen</button>${areaMax(S) >= 1 ? '<button class="btn ghost small" data-m="go" data-go="area">Startgebiet ändern</button>' : ''}` },
-      { title: 'Wochen-Herausforderung', art: ['woche1', 'woche2'], icon: '📜', col: '#4fc3ff', rot: 1.5, desc: 'Jede Woche neue Regeln. Alle starten bei Stufe 1. Je weiter du kommst, desto mehr Sterne gibt es.',
-        info: [...(rules.length ? [`Regeln: ${rules.map(r => `<b title="${esc(r.desc)}">${esc(r.name)}</b>`).join(', ')}`] : []), `Diese Woche: <b>${wk ? `Stufe ${wk}` : 'noch nicht gespielt'}</b>`, nextTier ? `Nächste Belohnung ab Stufe ${nextTier.st}: <b>${nextTier.stars} Sterne${nextTier.crown ? ' + 1 Krone' : ''}</b>` : '<b>Alle Belohnungen geholt</b>'],
+      { title: 'Tages-Herausforderung', art: ['woche1', 'woche2'], icon: '📜', col: '#4fc3ff', rot: 1.5, desc: 'Jeden Tag neue Regeln. Alle starten bei Stufe 1. Je weiter du kommst, desto mehr Sterne gibt es, ganz oben auch eine Krone.',
+        info: [...(rules.length ? [`Regeln: ${rules.map(r => `<b title="${esc(r.desc)}">${esc(r.name)}</b>`).join(', ')}`] : []), `Heute: <b>${wk ? `Stufe ${wk}` : 'noch nicht gespielt'}</b> · neue Regeln in ${dayLeft()}`, nextTier ? `Nächste Belohnung ab Stufe ${nextTier.st}: <b>${nextTier.stars} Sterne${nextTier.crown ? ' + 1 Krone' : ''}</b>` : '<b>Alle Belohnungen geholt</b>'],
         acts: '<button class="btn" data-m="go" data-go="weekly">Herausforderung annehmen</button>' },
       { title: 'Turm', art: ['turm1', 'turm2'], icon: '🏰', col: '#c9a6ff', rot: -1, desc: 'Etage für Etage nach oben, nur Elite-Gegner. Jede Rekord-Etage gibt allen Helden +3 % Schaden und Leben, bis zum nächsten Aufstieg.',
         info: tOpen ? [`Rekord: <b>Etage ${S.towerBest}</b>`, `Bonus bis zum Aufstieg: <b>+${S.towerBest * 3} %</b>`, `Nächste Rune bei Etage ${5 * Math.floor(S.towerBest / 5) + 5}`] : [],
@@ -3555,6 +3624,8 @@
         info: eOpen ? [`Heldensplitter: <b>${S.exp.spl}</b>`, `Puzzle-Helden fertig: <b>${PUZZLE.filter(id => assembled(S, id)).length}/${PUZZLE.length}</b>`] : [],
         lock: eOpen ? '' : 'Ab dem 1. Aufstieg', acts: '<button class="btn" data-m="go" data-go="exp">Aufträge ansehen</button>' },
     ];
+    const nb = boardNew(); list.forEach(o => (o.isNew = nb.includes(POSTER_ID[o.title])));
+    S.knownBoard = [...new Set([...(S.knownBoard || []), ...nb])]; save(); setTimeout(action, 0);
     modal(`<div class="rl-boardhead"><h2>Anschlagbrett</h2><p>Wähle dein nächstes Abenteuer</p></div>
       <div class="rl-posters">${list.map(poster).join('')}</div>
       <div class="row" style="justify-content:center"><button class="btn ghost rl-boardclose" data-m="ok">Schließen</button></div>`, 'rl-anschlag');
@@ -3615,248 +3686,15 @@
     tab = 'exp'; renderTabs(); panel();
   }
   // Neuigkeiten: neueste Einträge oben. Neue Updates OBEN mit höherer id anhängen.
-  const UPDATES = [
-    { id: 48, date: '14.10.2026', title: 'Kompaktere Expeditionen', items: [
-      ['Änderung', 'Die Missionskarten sind kompakter. Beschreibung, Belohnungen mit Wahrscheinlichkeiten und Gegnerstufe zeigt der runde Info-Knopf.'],
-      ['Änderung', 'Allgemeine Missionen geben jetzt 4–6 Heldensplitter, Heldengebiete 2–3.'],
-    ] },
-    { id: 47, date: '14.10.2026', title: 'Neues Tempo bis zum Aufstieg', items: [
-      ['Änderung', 'Der Weg bis zum Aufstieg ist gleichmäßiger: Die 1. Wiedergeburt gibt doppelte Sterne und die Gegner sind nach der 1. und 2. Wiedergeburt etwas schwächer. Dafür werden sie jetzt bis zur 7. Wiedergeburt stärker, und hohe Rekorde geben etwas weniger Sterne. Jede Wiedergeburt nach der ersten dauert so bei ×5 etwa 1 h 40 min, statt am Anfang ewig und am Ende im Flug.'],
-      ['Änderung', 'Seelen-Endlos-Fertigkeiten kosten nur noch halb so viele Seelen.'],
-      ['Änderung', 'Der 1. Aufstieg gibt 25 Kronen, der 2. Aufstieg 18, danach 10. Dazu wie bisher 1 Krone je 4 Stufen über 150.'],
-    ] },
-    { id: 46, date: '14.10.2026', title: 'Chancen über 100 %', items: [
-      ['Neu', 'Chancen können jetzt über 100 % gehen. Kritische Treffer: 150 % heißt sicher ein Krit und mit 50 % Chance ein doppelter Krit mit doppeltem kritischem Schaden, 250 % sicher ein doppelter und mit 50 % ein dreifacher. Mehrfach-Krits erscheinen orange mit „2×“.'],
-      ['Neu', 'Genauso bei Elite-Seelen (380 % = sicher 3 Seelen, mit 80 % eine 4.), Doppelschlag und Extra-Schüssen.'],
-      ['Änderung', 'Seelen-Rune deutlich verstärkt: +30 % Elite-Seelen-Chance schon auf Stufe I, etwa +3 Seelen pro Elite auf Stufe V und über +40 auf Stufe X. Dank Überlauf gibt es mehrere Seelen pro Elite-Gegner. Zusätzlich geben Bosse mehr Seelen: etwa +5 % mit einer Rune der Stufe I, +17 % mit Stufe V und +68 % mit Stufe X.'],
-      ['Änderung', 'Schutz-Runen über der Grenze von 72 % verfallen nicht mehr: Jeder Prozentpunkt darüber gibt +2 % Leben.'],
-      ['Änderung', 'Die Krit-Endlos-Fertigkeit (Schützin und Assassine) gibt jetzt volle +2 % je Stufe statt immer weniger. So lässt sich die Krit-Chance über 100 % treiben.'],
-    ] },
-    { id: 45, date: '14.10.2026', title: 'Heldengebiete', items: [
-      ['Neu', 'Jeder Puzzle-Held hat jetzt ein eigenes Gebiet mit eigener Umgebung, zwei eigenen Gegnern und einem eigenen Boss: Schattenviertel (Assassine), Vergessener Friedhof (Nekromant), Geistertheater (Barde), Verdorbener Hain (Druidin), Uhrwerkfabrik (Tüftlerin) und Runenmine (Runengolem).'],
-      ['Neu', 'Puzzleteile gibt es nur noch im Gebiet des jeweiligen Helden: 6 % Chance pro Sieg auf eines der 6 Teile. Doppelte Teile werden zu 50 Heldensplittern. Ein Teil kostet im Laden 100 Splitter. Die allgemeinen Missionen geben weiter Heldensplitter.'],
-    ] },
-    { id: 44, date: '14.10.2026', title: 'Abkürzung repariert', items: [
-      ['Fix', 'Abkürzung und Beutezug zahlen nicht mehr alles beim Start aus. Die Belohnung kommt nach und nach in den ersten 2 Minuten des Laufs (alle 20 s ein Sechstel). Starten und sofort Aufgeben bringt so nichts mehr.'],
-    ] },
-    { id: 43, date: '14.10.2026', title: 'Der Runengolem', items: [
-      ['Neu', 'Sechster Puzzle-Held: der Runengolem. Ein Steinkoloss für die vordere Reihe, der enorm viel aushält. Er zieht mit Runenwall die Gegner auf sich, betäubt sie mit Runenbeben und schützt alle mit Schutzglyphen.'],
-      ['Neu', 'Seine Endlos-Fertigkeit Runenresonanz lässt alle eingesetzten Runen aller Helden 4 % stärker wirken, je Stufe ohne Grenze. Runen im Golem selbst kann er noch weiter verstärken.'],
-      ['Neu', 'Seine Seelen-Endlos-Fertigkeit Runenhort gibt +1 % Runenkraft je Stufe und bei Stufe 15, 35 und 60 jedem Helden einen Zusatz-Sockel für Runen bis Stufe IV, VI und VIII. Zusatz-Sockel zählen nicht zum 3er-Set.'],
-      ['Neu', 'Expedition Runenmine: Nur hier findest du die Teile des Runengolems (doppelte Chance), und jeder Sieg bringt eine Rune.'],
-      ['Neu', 'Mit Ahnensiegel bekommt er einen eigenen Baum mit Monolith, Runensturm und Erdspalt.'],
-    ] },
-    { id: 42, date: '14.10.2026', title: 'Leuchtende Ahnen', items: [
-      ['Neu', 'Helden mit Ahnensiegel tragen jetzt ein sanftes Licht in ihrer eigenen Farbe um sich, im Kampf und im Lager.'],
-    ] },
-    { id: 41, date: '14.10.2026', title: 'Ränge und Meisterschaft', items: [
-      ['Neu', 'Aufstiegsränge: Mit jedem Aufstieg steigst du im Rang, vom Ritter über Baron, Herzog und König bis zum Kaiser und darüber hinaus. Jeder neue Rang schenkt dir einmalig Kronen. Dein Rang steht im Lager, an der Zeltfahne, in der Bestenliste und bei Wiedergeburt & Aufstieg.'],
-      ['Neu', 'Helden-Meisterschaft: Jeder Held sammelt mit jedem besiegten Gegner Erfahrung, über alle Aufstiege hinweg. Jede der 10 Stufen gibt ihm +2 % Schaden und Leben. Ab Stufe 3, 6 und 10 schaltest du neue Farben frei: Mitternacht, Glut und Ahnenglanz.'],
-      ['?', 'Manche sagen, tief in den Albtraum-Stufen warte etwas. Etwas sehr Großes.'],
-    ] },
-    { id: 40, date: '14.10.2026', title: 'Schönere Beschwörungen, Turm pro Aufstieg', items: [
-      ['Grafik', 'Skelett-Diener haben jetzt Schädel mit leuchtenden Augen, Rippen, Schwert und Schild. Skelette vom Totenbeschwörer sind größer, gehörnt und grün umglüht.'],
-      ['Grafik', 'Geschütztürme der Tüftlerin sind aus Holz, Kupfer und Messing, mit drehendem Zahnrad, Dampf, Rückstoß und Mündungsfeuer. Das Zusatzgeschütz von Tüftlergeist ist als kleiner Turm zu sehen.'],
-      ['Grafik', 'Neu gezeichnet: der Knochenriese mit Hörnern und Knochenkeule, der Schattenklon als rauchende Kopie der Assassine und der Eber mit Hauern, der durch die Gegner stürmt.'],
-      ['Umbau', 'Der Turm-Rekord und sein Bonus gelten jetzt nur bis zum nächsten Aufstieg. Danach fängt der Turm wieder bei Etage 0 an. Erfolge aus dem Turm bleiben.'],
-    ] },
-    { id: 39, date: '14.10.2026', title: 'Puzzle-Helden schließen sich sofort an', items: [
-      ['Verbessert', 'Ist ein Puzzle fertig, schließt sich der Held sofort kostenlos an und steht in der Aufstellung bereit. Wer schon fertige Puzzles hatte, bekommt die Helden jetzt automatisch.'],
-      ['Verbessert', 'Helden, die freigeschaltet, aber nicht angeheuert sind (zum Beispiel nach einem Aufstieg ohne Veteranen), zeigen in der Aufstellung „Anheuern“ mit Preis. Ein Tipp heuert sie an.'],
-    ] },
-    { id: 38, date: '14.10.2026', title: 'Ergebnis-Bildschirm', items: [
-      ['Neu', 'Nach jedem Lauf erscheint ein Ergebnis-Bildschirm: „Gefallen“, wenn deine Gruppe besiegt wurde, oder „Geschafft“ mit Pokal, wenn du etwas abgeschlossen hast (Stufengrenze, Expedition, Ahnen-Mission). Darin stehen alle Belohnungen: Gold, Seelen, Runen, Sterne, Kronen, Splitter, neue Rekorde, neue Startgebiete und Erfolge.'],
-      ['Neu', 'Ein Ahnensiegel schwebt jetzt mit Strahlen und Leuchten herein. Ein neues Puzzleteil fliegt sichtbar in seinen Platz im Puzzle.'],
-      ['Neu', 'Mit „Nochmal“ startest du direkt den gleichen Modus erneut, bei der Ahnenprüfung die nächste Mission.'],
-    ] },
-    { id: 37, date: '14.10.2026', title: 'Expeditionen und Ahnenprüfung nach Aufstiegs-Rekord', items: [
-      ['Umbau', 'Expeditionen und Ahnenprüfung richten sich jetzt nach deiner höchsten Stufe in diesem Aufstieg. Direkt nach einem Aufstieg werden sie also wieder leichter und wachsen mit dir mit.'],
-      ['Balance', 'Expeditionen sind deutlich schwerer: Streifzug auf 90 %, Bosshatz auf 87 % und Belagerung auf 81 % deiner höchsten Stufe im Aufstieg, und die Gegner sind so hart wie im Feldzug. Vorher waren es nur 60 bis 70 % deines Rekords seit der letzten Wiedergeburt, ohne Härte-Zuschlag.'],
-      ['Umbau', 'Die Stärke der Ahnenprüfung wird bei jedem Missionsstart neu berechnet (80 % deiner höchsten Stufe im Aufstieg).'],
-    ] },
-    { id: 36, date: '14.10.2026', title: 'Zeitbaum ab dem Aufstieg', items: [
-      ['Umbau', 'Den Zeitbaum für schnellere Spieltempos gibt es jetzt erst ab dem 1. Aufstieg. Wer vorher schon Tempo-Stufen gekauft hat, behält sie.'],
-    ] },
-    { id: 35, date: '14.10.2026', title: 'Das Anschlagbrett', items: [
-      ['Neu', 'Links im Lager steht jetzt ein Anschlagbrett. Tippst du es an, öffnet sich ein Holzbrett mit Plakaten für alle Spielarten: Feldzug, Wochen-Herausforderung, Turm, Ahnenprüfung und Expedition. Jedes Plakat zeigt deinen Stand und startet direkt.'],
-      ['Umbenannt', 'Der normale Lauf heißt jetzt Feldzug. Der Knopf „Feldzug starten“ unter dem Lager bleibt für den schnellen Start.'],
-      ['Umbau', 'Woche, Turm und Startgebiet sind aus der Leiste unter dem Lager aufs Brett gezogen. Das Startgebiet änderst du auf dem Feldzug-Plakat.'],
-    ] },
-    { id: 34, date: '14.10.2026', title: 'Effekt-Symbole und Siegel-Feinschliff', items: [
-      ['Neu', 'Über jedem Helden und Gegner zeigen kleine Symbole, welche Effekte gerade wirken: Stärkungen, Schwächungen, Gift, Brand, Blutung, Betäubung und alles, was Fähigkeiten und Bosse auslösen. Rote Ränder sind schlechte Effekte, dunkelgrüne gute.'],
-      ['Neu', 'Effekte für die ganze Gruppe (zum Beispiel Kriegsschrei, Kriegslied, Fluch oder Verlangsamung) stehen gemeinsam oben links unter der Stufe.'],
-      ['Balance', 'Koloss (Wächter) gibt höchstens so viel Zusatzschaden wie der normale Schaden des Wächters. Vorher wurde aus viel Leben riesiger Schaden.'],
-      ['Balance', 'Siegel-Fähigkeiten mit Dauer, zum Beispiel Banner der Ehre, Knochenwand oder Wildgestalt, können höchstens die halbe Zeit laufen, auch mit sehr schnellem Laden. Echo wiederholt solche Fähigkeiten nicht.'],
-      ['Balance', 'Heiliges Feuer macht pro Heilung höchstens so viel Schaden wie eine normale Heilung der Priesterin. Wachstum stapelt sich nicht mehr.'],
-    ] },
-    { id: 33, date: '14.10.2026', title: 'Ahnensiegel: die Bäume wachsen', items: [
-      ['Neu', 'Setzt du ein Ahnensiegel auf einen Helden, wächst sein Fertigkeitenbaum nach unten: 5 passive Fähigkeiten, 3 Siegel-Fähigkeiten und 4 Siegel-Schlüssel. Jeder der 11 Helden hat seine eigene Erweiterung, so wie du sie in der Umfrage gewählt hast.'],
-      ['Neu', 'Siegel-Fähigkeiten haben einen eigenen Platz. Damit kämpft jeder Held mit Siegel mit einer zusätzlichen aktiven Fähigkeit.'],
-      ['Neu', 'Siegel-Schlüssel haben einen eigenen Siegelsockel (✦). Weitere Siegel-Schlüssel kannst du in freie normale Sockel stecken.'],
-      ['Umbau', 'Ritter: Schildstoß wird zu Doppelhieb (zwei Hiebe mit je 250 %, lädt Wirbelwind 3 s weiter). Zweites Leben wird zu Vorbild (besiegt der Ritter einen Gegner, heilen alle Helden 2 %). Wer die Fertigkeiten schon hatte, behält sie mit der neuen Wirkung.'],
-      ['Neu', 'Der Notfall-Code speichert jetzt auch deine Ahnensiegel und den Fortschritt der Ahnenprüfung.'],
-    ] },
-    { id: 32, date: '14.10.2026', title: 'Ahnenprüfung: Stärke nach Allzeit-Rekord', items: [
-      ['Umstellung', 'Die Gegnerstärke der Ahnenprüfung richtet sich jetzt nach deinem höchsten Rekord überhaupt (80 %), nicht mehr nach dem Rekord seit der letzten Wiedergeburt. Eine schon begonnene Prüfung bekommt beim nächsten Missionsstart die neue Stärke, dein Fortschritt auf der Karte bleibt.'],
-    ] },
-    { id: 31, date: '14.10.2026', title: 'Aufgeräumte Reiter', items: [
-      ['Neu', 'Alle Helden sind jetzt unter einem Reiter „Helden“ zusammengefasst. Darunter wählst du den Helden über eine Zeile mit Porträts.'],
-      ['Neu', 'Ahnenprüfung und Expedition stehen gemeinsam unter „Abenteuer“, sobald beide offen sind.'],
-    ] },
-    { id: 30, date: '14.10.2026', title: 'Sternenkarte und echte Drachen', items: [
-      ['Neu', 'Die Karte der Ahnenprüfung ist jetzt ein Sternenhimmel: Jede Mission ist eine schwebende Insel im Licht ihres Themas, verbunden durch Sternenbrücken. Mission 10 ist das goldene Schloss der Ahnen.'],
-      ['Neu', 'Knochendrache, Weißer Wyrm, Sumpfhydra und Dornendrache haben jetzt eigene Köpfe, Körper, Atemangriffe und Animationen. Die Hydra hat drei Köpfe.'],
-      ['Neu', 'Bosse zeigen beim Einsatz einer Fähigkeit einen Lichtring. Schadenszahlen verdecken die Köpfe der Bosse nicht mehr.'],
-      ['Neu', 'Tester: Jeden Boss der aktuellen Mission direkt starten.'],
-    ] },
-    { id: 29, date: '14.10.2026', title: 'Die Ahnenprüfung', items: [
-      ['Neu', 'Ab der 6. Wiedergeburt: die Ahnenprüfung. Eine Weltkarte mit 10 Missionen, jede mit 5 eigenen Bossen in 3 Phasen. Am Ende wartet der Urahn.'],
-      ['Neu', '51 neue Bosse mit über 20 Boss-Fähigkeiten: Schilde, Spiegelhaut, Zeitbomben, Flüche, Beben, Abspaltungen und mehr.'],
-      ['Neu', 'Wer den Urahn besiegt, bekommt ein Ahnensiegel. Die Prüfung ist danach wiederholbar. Die Baum-Erweiterungen für die Siegel kommen im nächsten Update.'],
-      ['Umstellung', 'Neue Reihenfolge der Wiedergeburten, immer abwechselnd Held und Feature: 1 Wächter, 2 Runen, 3 Schützin, 4 Runenschmied, 5 Magier, 6 Ahnenprüfung, 7 Priesterin, 8 Turm, 9 Tierbändiger und Aufstieg. Was du schon hast, behältst du.'],
-    ] },
-    { id: 28, date: '13.10.2026', title: 'Runen-Update: Schutz, Eile, Fokus', items: [
-      ['Neu', 'Schutz-Runen zählen jetzt immer voll und werden ab 50 % nicht mehr halbiert. Höchstens 72 % weniger Schaden.'],
-      ['Neu', 'Eile-Runen sind stärker: 7 % statt 4 % Angriffstempo pro Stufe I, außerdem laden die Fähigkeiten etwas schneller.'],
-      ['Neu', 'Fokus-Runen sind stärker: 4 % statt 3 % pro Stufe I.'],
-      ['Neu', 'Abklingzeit sinkt höchstens um 60 %. Alles darüber geht nicht mehr verloren: Jeder Prozentpunkt zu viel wird zu +2 % Schaden der aktiven Fähigkeiten.'],
-      ['Info', 'Die rechte Endlos-Fertigkeit des Magiers (und der Tüftlerin) gibt jetzt immer −2 % Abklingzeit je Stufe. Über 60 % wird sie automatisch zu mehr Fähigkeiten-Schaden.'],
-      ['Fix', 'Wirbelwind, Blitzschlag, Schildstoß, Schildwall, Wurzeln und Raubtiersprung bekommen jetzt auch Boni auf Fähigkeiten-Schaden, zum Beispiel aus der Endlos-Fertigkeit des Magiers.'],
-    ] },
-    { id: 27, date: '13.10.2026', title: 'Zorn-Runen verstärkt', items: [
-      ['Neu', 'Zorn wirkt jetzt als finaler Krit-Schaden: Kritische Treffer machen den Wert der Rune mehr Schaden (Stufe III: +58 %). Vorher wurde der Wert nur zum Krit-Schaden addiert und brachte kaum etwas.'],
-      ['Info', 'Mit wenig Krit-Chance ist Kraft besser, mit ausgebauten Krit-Knoten (ab etwa 45 % Krit-Chance) ist Zorn etwas stärker. Deine vorhandenen Zorn-Runen wirken automatisch nach der neuen Regel.'],
-    ] },
-    { id: 26, date: '13.10.2026', title: 'Endlos-Fertigkeiten sind jetzt wirklich endlos', items: [
-      ['Neu', 'Drei Endlos-Fertigkeiten hatten eine Grenze. Ab der Grenze gibt jetzt jede weitere Stufe einen Ersatz-Bonus mit halber Stärke der Partner-Fertigkeit.'],
-      ['Info', 'Magier rechts (Abklingzeit): ab Stufe 25 +3 % Schaden aller aktiven Fähigkeiten je Stufe.'],
-      ['Info', 'Wächter links (weniger Schaden): ab Stufe 25 +3 % Dornen je Stufe. Priesterin links (Laufgeschwindigkeit): ab Stufe 37 +1,5 % Angriffstempo je Stufe. Das gilt auch für Druidin, Tüftlerin und Barde.'],
-      ['Neu', 'Tester: Knopf „Baum komplett ausbauen“ in jedem Fertigkeitenbaum.'],
-    ] },
-    { id: 25, date: '13.10.2026', title: 'Neuer Look für die Schützin', items: [
-      ['Neu', 'Die Schützin hat ein neues Aussehen: Gesicht mit grünen Augen und Kriegsbemalung, Kapuze mit roter Feder, Elfenohr, geflochtener Zopf, Lederweste mit Schnürung, Armschiene und ein Langbogen mit leuchtender Rune.'],
-    ] },
-    { id: 24, date: '13.10.2026', title: 'Neues Truppen-Menü', items: [
-      ['Neu', 'Tippe im Lager aufs Lagerfeuer: Dort stellst du jetzt deine Truppe zusammen. Oben die Porträts, unten steht deine Truppe am Feuer.'],
-      ['Neu', 'Farbige Kreise zeigen die Rolle: Lila Tank, Rot Nahkampf, Gelb Nahkampf-Helfer, Blau Fernkampf, Grün Unterstützung.'],
-      ['Info', 'Die Helden stellen sich immer von vorne nach hinten in dieser Reihenfolge auf.'],
-    ] },
-    { id: 23, date: '13.10.2026', title: 'Schmied mit Amboss-Slots', items: [
-      ['Neu', 'Der Runenschmied hat jetzt dieselbe Slot-Ansicht wie der Wandler: 3 Runen auf den Amboss legen, schmieden oder zerstören.'],
-      ['Neu', 'Tester: Test-Wiedergeburt gibt immer Sterne, „Eine Wiedergeburt zurück“ ist neu.'],
-      ['Fix', 'Ergebnisse im Schmied und Wandler verschwinden, wenn du den Reiter wechselst.'],
-    ] },
-    { id: 22, date: '13.10.2026', title: 'Runenwandler, Aufstellung & Geräte-Abgleich', items: [
-      ['Neu', 'Runenwandler (Runen → 🎲 Wandler): 2 Runen derselben Stufe rein, 1 zufällige Rune derselben Stufe raus, nie eine der beiden hineingelegten Arten. Ein Glücksspiel-Kobold würfelt für dich.'],
-      ['Neu', 'Aufstellung für alle: Ab 2 Helden kannst du im Lager jederzeit wählen, wer kämpft, zum Beispiel um einen Helden allein zu testen.'],
-      ['Neu', 'Kein Geräte-Fenster mehr: Wurde auf einem anderen Gerät gespielt, nimmt das Spiel automatisch den Stand mit mehr (oder gleich vielen) Läufen.'],
-    ] },
-    { id: 21, date: '13.10.2026', title: 'Läden-Reiter & neuer Runenschmied', items: [
-      ['Neu', 'Läden: Oben tippst du einen Laden an und siehst nur diesen, statt alle untereinander.'],
-      ['Neu', 'Runen haben jetzt zwei Unterreiter: Ausrüstung und Schmied. Der Runenschmied ist aus den Läden in den Runen-Reiter umgezogen.'],
-      ['Neu', 'Im Schmied hämmert ein Kobold am Amboss. Deine Runen liegen als Stapel-Kacheln da, sortierbar nach Art oder Stufe und filterbar. Rune antippen, dann upgraden oder zerstören.'],
-      ['Neu', 'Alle gefilterten freien Runen auf einmal zerstören, mit doppelter Sicherheitsabfrage. Eingesetzte Runen werden nie zerstört.'],
-    ] },
-    { id: 20, date: '13.10.2026', title: 'Kein unsterblicher Wächter mehr', items: [
-      ['Balance', 'Weniger Schaden nehmen stapelt sich jetzt abgeschwächt: Bis 50 % zählt alles voll, darüber nur noch die Hälfte, höchstens 72 % (vorher 85 %).'],
-      ['Balance', 'Treffer abwehren geht höchstens mit 35 % Chance (vorher bis 50 %).'],
-      ['Balance', 'Bosse durchschlagen Rüstung: Gegen Bosse wirkt Schadensreduktion nur zu 60 %, Abwehren nur halb so oft und Zurückwerfen nur zu 40 %.'],
-      ['Neu', 'Boss-Wut: Nach 25 Sekunden Kampf wird ein Boss alle 5 Sekunden um 20 % stärker und leuchtet rot. Ein einzelner Held kann ihn so nicht mehr ewig aufhalten.'],
-      ['Balance', 'Gegner ab der 1. Wiedergeburt etwas leichter (ca. 10–15 % weniger Leben und Schaden).'],
-      ['Balance', 'Zum Ausgleich macht der Wächter 50 % mehr Grundschaden (6 statt 4).'],
-    ] },
-    { id: 19, date: '13.10.2026', title: 'Großes Grafik-Update', items: [
-      ['Neu', 'Alle 15 Gebiete haben jetzt eine eigene, handgezeichnete Umgebung mit mehreren Ebenen, die sich beim Laufen unterschiedlich schnell bewegen.'],
-      ['Neu', 'Wetter und Stimmung: Schmetterlinge, Glühwürmchen, Lichtstrahlen, Nebel, Regen, Schnee, Glut, Sandsturm, Polarlicht, Sternschnuppen, Seelenlichter und mehr.'],
-      ['Neu', 'Neue Requisiten: Bäume, Grabsteine, Kerzen, Vulkane, Kristalle, Laternen, Kathedralen, Goldberge, Schatztruhen, Gebetsfahnen …'],
-      ['Neu', 'Jedes Gebiet hat eine eigene Licht-Stimmung, die auch Helden und Gegner einfärbt. Weiche Schatten unter allen Figuren.'],
-      ['Neu', 'Bosse stehen auf einem leuchtenden Zauberkreis, Elite-Gegner haben einen Ring am Boden.'],
-      ['Neu', 'Lager bei Nacht und der Turm als Innenraum mit Fenstern und Fackeln wurden neu gestaltet. Die Albtraum-Stufen sind düster rot.'],
-      ['Info', 'Auf langsamen Geräten schaltet das Spiel automatisch ein paar Effekte ab, damit es flüssig bleibt.'],
-    ] },
-    { id: 18, date: '13.10.2026', title: 'Bessere Runen von späteren Bossen', items: [
-      ['Balance', 'Bosse lassen bessere Runen fallen, je weiter du bist, immer in einem Bereich: bis Stufe 24 nur I, ab 25 I–II, ab 50 II–III, ab 75 II–IV, ab 100 III–V, ab 150 V–VII (die niedrigste kommt am häufigsten).'],
-      ['Info', 'Höhere Runen geben beim Zerstören jeweils dreimal so viele Splitter wie die Stufe darunter (I: 1, II: 3, III: 9, IV: 27 …).'],
-    ] },
-    { id: 17, date: '13.10.2026', title: 'Endlos-Fertigkeiten ausgeglichen', items: [
-      ['Balance', 'Schützin und Assassine: +2 % Krit-Chance (statt 1 %) und +12 % Krit-Schaden (statt 6 %) je Stufe.'],
-      ['Balance', 'Priesterin und Barde: +3 % Angriffstempo je Stufe (statt 1,5 %).'],
-      ['Balance', 'Magier und Tüftlerin: +6 % Fähigkeiten-Schaden je Stufe (statt 5 %).'],
-      ['Balance', 'Tierbändiger und Nekromant: +4 % Gold (statt 3 %) und 0,1 % Heilung pro Sekunde (statt 0,04 %) je Stufe.'],
-      ['Balance', 'Gold-Endlos-Fertigkeiten kosten am Anfang weniger: 2.500 bis 4.000 Gold statt bis zu 10.000.'],
-      ['Info', 'Wächter und Druidin bleiben gleich, weil sich ihre Stufen gegenseitig verstärken.'],
-    ] },
-    { id: 16, date: '13.10.2026', title: 'Sterne zurück & Zurücksetzen-Knopf', items: [
-      ['Umstellung', 'Wegen der Heldenblut-Änderungen wurde der Sternen-Laden bei allen einmal zurückgesetzt. Alle ausgegebenen Sterne gab es zurück.'],
-      ['Neu', 'Im Sternen-Laden gibt es einen Knopf „Sternen-Laden zurücksetzen“: Du bekommst alle Sterne zurück und kannst sie jederzeit im Lager neu verteilen.'],
-    ] },
-    { id: 15, date: '13.10.2026', title: 'Heldenblut, Runen-Lager & neue Reihenfolge', items: [
-      ['Balance', 'Heldenblut gibt +10 % statt +15 % Schaden und Leben je Stufe. Die Gegner bleiben so stark wie bisher.'],
-      ['Neu', 'Runen-Lager erweitern: Im Runenschmied kaufst du mit Runensplittern +5 Plätze (10, 20, 40 … Splitter, bis 100 Plätze).'],
-      ['Umstellung', '3. Wiedergeburt: Runen, Runen zerstören und Lager erweitern. 4. Wiedergeburt: Verschmelzen und zufällige Runen im Runenschmied. 5. Wiedergeburt: Magier.'],
-      ['Info', 'Wer den Magier schon angeheuert hat, behält ihn.'],
-    ] },
-    { id: 14, date: '13.10.2026', title: 'Heldenblut teurer', items: [
-      ['Balance', 'Heldenblut wird jetzt abwechselnd um 1 und 2 Sterne teurer: 1, 2, 4, 5, 7, 8, 10 … Sterne statt 1, 2, 3, 4, 5 … Bereits gekaufte Stufen bleiben.'],
-    ] },
-    { id: 13, date: '13.10.2026', title: 'Soundeffekte', items: [
-      ['Neu', 'Leise, weiche Soundeffekte: Treffer, kritische Treffer, Münzen, Seelen, Runen, Bosse, Fähigkeiten, Kauf, Verschmelzen, Wiedergeburt, Sieg und Niederlage.'],
-      ['Neu', 'Mit dem Lautsprecher-Knopf oben rechts schaltest du den Ton an und aus. Die Einstellung bleibt gespeichert.'],
-      ['Info', 'Auf dem iPhone und iPad muss der Lautlos-Schalter aus sein, damit man etwas hört.'],
-    ] },
-    { id: 12, date: '13.10.2026', title: 'Runenschmied & neues Seelen-Symbol', items: [
-      ['Neu', 'Runenschmied im Reiter Läden: Runen zerstören gibt Runensplitter. 3 gleiche Runen verschmelzen kostet Splitter und gibt eine Rune der nächsten Stufe.'],
-      ['Neu', 'Kurs: Ein Verschmelzen kostet genau so viel, wie 3 zerstörte Runen derselben Stufe geben (Stufe I: 1 Splitter je Rune, 3 fürs Verschmelzen).'],
-      ['Neu', 'Der Runenschmied kommt jetzt schon mit der 3. Wiedergeburt (zusammen mit den Runen). Die 5. Wiedergeburt gibt dafür ein größeres Lager mit 60 Plätzen.'],
-      ['Neu', 'Neues Symbol für Seelen: eine leuchtende Seelenflamme.'],
-      ['Umstellung', 'Runenstaub heißt jetzt Runensplitter. Wegen des neuen Kurses wurde dein Vorrat halbiert, er ist aber genau so viel wert wie vorher.'],
-      ['Fix', 'Die Runen-Übersicht bei den Helden sah durch die Schlüsselsockel verschoben aus.'],
-    ] },
-    { id: 11, date: '13.10.2026', title: 'Beutezug statt Sprungstart', items: [
-      ['Umstellung', 'Sprungstart im Sternen-Laden war durch die Gebietswahl überflüssig und ist jetzt „Beutezug“. Alle Sterne für Sprungstart gab es zurück.'],
-      ['Neu', 'Beutezug: Startest du in einem späteren Gebiet, bekommst du je Stufe 10 % des Golds der übersprungenen Stufen und 10 % mehr Abkürzungs-Seelen (bis Stufe 10).'],
-    ] },
-    { id: 10, date: '13.10.2026', title: 'Spielstand auf mehreren Geräten', items: [
-      ['Fix', 'Ein Gerät mit altem Stand konnte den neueren Spielstand eines anderen Geräts auf dem Server überschreiben. Jetzt merkt das Spiel, wenn woanders weitergespielt wurde, und fragt, welchen Stand du behalten willst.'],
-      ['Fix', 'Abmelden überschreibt keinen neueren Stand mehr.'],
-    ] },
-    { id: 9, date: '13.10.2026', title: 'Endlos-Stufen zurückerstattet', items: [
-      ['Umstellung', 'Wegen der neuen Endlos-Paare wurden alle bisher gekauften Endlos-Stufen (außer beim Ritter) in Gold und Seelen zurückgegeben. Du kannst sie jetzt neu verteilen.'],
-    ] },
-    { id: 8, date: '13.10.2026', title: 'Seelenaltar & Neuigkeiten', items: [
-      ['Neu', 'Seelenaltar im Reiter Läden: Opfere Gold für dauerhaft +15 % Seelen je Stufe (bis Stufe 25). Bleibt auch nach Wiedergeburt und Aufstieg.'],
-      ['Neu', 'Dieser Neuigkeiten-Knopf: Hier stehen ab jetzt alle Updates. Ein roter Punkt zeigt, dass es etwas Neues gibt.'],
-      ['Info', 'Endlos-Fertigkeiten: In jedem Paar kostet die eine Gold und die andere Seelen.'],
-    ] },
-    { id: 7, date: '13.10.2026', title: 'Schlüsselsockel & Endlos-Fertigkeiten', items: [
-      ['Neu', 'Schlüsselsockel: Jeder Held hat 1 festen Sockel. Pro Wiedergeburt bekommst du 1 freien Sockel, den du auf einen beliebigen Helden setzt. Freie Sockel bleiben auch beim Aufstieg.'],
-      ['Neu', 'Endlos-Fertigkeiten wirken jetzt auf die ganze Gruppe und jede Klasse hat ein eigenes Paar: Ritter Schaden/Leben, Wächter Schutz/Zurückwerfen, Schützin Krit-Chance/Krit-Schaden, Priesterin Laufen/Angriffstempo, Magier Fähigkeiten/Abklingzeit, Tierbändiger Gold/Regeneration.'],
-      ['Neu', 'Expeditions-Helden teilen sich die Paare: Assassine wie Schützin, Druidin wie Wächter, Barde wie Priesterin, Tüftlerin wie Magier, Nekromant wie Tierbändiger.'],
-      ['Balance', 'Ab der 1. Wiedergeburt sind Gegner und besonders Bosse deutlich stärker. Spiel dauert ab dort etwa doppelt so lang.'],
-      ['Balance', 'Heldenblut: +15 % statt +20 % je Stufe. Goldader: +15 % statt +25 % je Stufe.'],
-      ['Fix', 'Sprungstart springt nur noch bis 10 Stufen unter deinen Rekord seit der letzten Wiedergeburt. Vorher konnte man nach einer Wiedergeburt immer wieder sofort sterben.'],
-      ['Umstellung', 'Alle alten Schlüssel wurden abgenommen, Gold und Seelen gab es komplett zurück.'],
-    ] },
-    { id: 6, date: '13.10.2026', title: 'Neue Gegner', items: [
-      ['Neu', 'Jedes der 15 Gebiete hat eigene Gegner mit eigener Fernkampf-Version und eigenen Geschossen.'],
-      ['Neu', 'Treffer: Helden leuchten rot auf statt eines roten Kastens.'],
-      ['Balance', 'Heilgebet heilt den Ritter um 40 % (+8 % je Stufe), alle anderen nur um 10 % (+3 % je Stufe).'],
-      ['Balance', 'Puzzleteile kosten 95 statt 55 Heldensplitter.'],
-      ['Fix', 'Seelenernte: Text korrigiert, gemeint war schon immer +25 % Chance zusätzlich.'],
-    ] },
-    { id: 5, date: '12.10.2026', title: 'Läden & Todesanimation', items: [
-      ['Neu', 'Reiter Läden: Alle Läden an einem Ort, sie kommen nach und nach dazu.'],
-      ['Neu', 'Gefallene Helden kippen um, bleiben liegen und ein kleiner Geist steigt auf.'],
-      ['Neu', 'Schlüssel-Fertigkeiten lassen sich im Lager wieder abnehmen, mit voller Rückerstattung.'],
-      ['Balance', 'Seelenernte: dreimal so viele Boss-Seelen, +25 % Elite-Seelen und +50 % Gold.'],
-    ] },
-  ];
+  // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
+  const UPDATES = [];
+  const GAME_VERSION = '1.0';
   const newsSeen = () => { try { return Number(localStorage.getItem('fsg.ritter.news')) || 0; } catch { return 0; } };
   const TAGC = { Neu: '#7ee08a', Balance: '#ffcf4a', Fix: '#7fb2ff', Info: '#c9a6ff', Umstellung: '#ff9a8a' };
   function showUpdates() {
-    try { localStorage.setItem('fsg.ritter.news', String(UPDATES[0].id)); } catch {}
+    try { if (UPDATES.length) localStorage.setItem('fsg.ritter.news', String(UPDATES[0].id)); } catch {}
     hud();
-    modal(`<span class="rl-mic">📰</span><h2>Neuigkeiten</h2><p class="note">Spielversion ${UPDATES[0].id}</p><div class="rl-upd">${UPDATES.map((u, i) => `<details ${i === 0 ? 'open' : ''}><summary><b>${esc(u.title)}</b><small>${u.date}</small></summary>
+    modal(`<span class="rl-mic">📰</span><h2>Neuigkeiten</h2><p class="note">Ritterlauf ${GAME_VERSION}</p>${UPDATES.length ? '' : '<p>Hier erscheinen ab jetzt alle Neuerungen und Änderungen am Spiel.</p>'}<div class="rl-upd">${UPDATES.map((u, i) => `<details ${i === 0 ? 'open' : ''}><summary><b>${esc(u.title)}</b><small>${u.date}</small></summary>
       <ul>${u.items.map(([tag, txt]) => `<li><span class="tag" style="--tc:${TAGC[tag] || '#aaa'}">${tag}</span>${esc(txt)}</li>`).join('')}</ul></details>`).join('')}</div>
       <div class="row" style="justify-content:center"><button class="btn" data-m="ok">Schließen</button></div>`);
   }
@@ -3869,9 +3707,47 @@
       <div class="row" style="justify-content:center"><button class="btn" data-m="ok">Verstanden</button></div>`);
   }
   // Hinweis bei jedem Start: Testphase
-  function openChain() { if (!S.seenIntro) showIntro(); else if (S.news && !cine) showNews(); else if (S.keyNews != null) showKeyInfo(); else if (S.infNews) showInfInfo(); else if (!S.seenField && HEROES.filter(h => hired(S, h.tree)).length > fieldSlots(S)) showFieldInfo(); else if (expOpen(S) && !S.seenExp) showExpInfo(); }
+  function openChain() { if (seasonNote) seasonInfo(); else if (!S.seenIntro) showIntro(); else if (S.news && !cine) showNews(); else if (S.keyNews != null) showKeyInfo(); else if (S.infNews) showInfInfo(); else if (!S.seenField && HEROES.filter(h => hired(S, h.tree)).length > fieldSlots(S)) showFieldInfo(); else if (expOpen(S) && !S.seenExp) showExpInfo(); }
   document.addEventListener('click', e => { if (e.target.closest && e.target.closest('[data-beta]')) setTimeout(() => { if (active) openChain(); }, 80); }, true);
-  let betaShown = false;
+  let betaShown = false, titleDone = false;
+  // Sitzender Ritter auf einem Baumstamm, für den Startbildschirm
+  function knightSit(x, t) {
+    ctx.save(); ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(x + 4, GROUND + 1, 30, 4, 0, 0, 7); ctx.fill(); ctx.restore();
+    ctx.save(); ctx.beginPath(); ctx.rect(x - 70, 0, 140, GROUND - 17); ctx.clip(); ctx.translate(0, 5); DRAW.r(x, null, t * 0.5, false); ctx.restore();
+    rr(x - 22, GROUND - 17, 44, 17, 7); fillO(LG(GROUND - 17, GROUND, '#7a5434', '#4a3220'));
+    ctx.strokeStyle = 'rgba(40,25,15,.55)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(x + 20, GROUND - 8.5, 3, 7, 0, 0, 7); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - 16, GROUND - 11); ctx.lineTo(x + 8, GROUND - 11); ctx.stroke();
+    for (const [dx, k] of [[-4, 0], [3, 1]]) { rr(x + dx - 2, GROUND - 22, 18, 7, 3); fillO(k ? '#e9edf3' : '#c6ccd6'); rr(x + dx + 11, GROUND - 19, 7, 17, 3); fillO(k ? '#e9edf3' : '#c6ccd6'); rr(x + dx + 10, GROUND - 5, 11, 5, 2); fillO('#4a4e5a'); }
+  }
+  function titleScene(t) {
+    const env = ENV_CAMP, fx = 262; env.back(t, 0); env.props(t, 0);
+    lightPool(fx, GROUND - 14, 170 + Math.sin(t * 5) * 7, '255,150,60', 0.36); lightPool(fx, GROUND - 8, 70, '255,200,120', 0.28);
+    const tx = 350; ctx.beginPath(); ctx.moveTo(tx - 52, GROUND); ctx.lineTo(tx, GROUND - 74); ctx.lineTo(tx + 52, GROUND); fillO('#7a6046');
+    ctx.fillStyle = '#2a1f17'; ctx.beginPath(); ctx.moveTo(tx - 11, GROUND); ctx.lineTo(tx, GROUND - 34); ctx.lineTo(tx + 11, GROUND); ctx.fill();
+    ctx.fillStyle = '#e5484d'; ctx.beginPath(); ctx.moveTo(tx, GROUND - 74); ctx.lineTo(tx, GROUND - 92); ctx.lineTo(tx + 17 + Math.sin(t * 3) * 1.5, GROUND - 86); ctx.lineTo(tx, GROUND - 80); ctx.fill();
+    knightSit(206, t);
+    ctx.save(); ctx.translate(fx, GROUND); ctx.scale(1.35, 1.35); ctx.translate(-fx, -GROUND); campFire(fx, t, true); ctx.restore();
+    for (let i = 0; i < 6; i++) { const ph = (t * 0.35 + i / 6) % 1; glowDot(fx + Math.sin(i * 2.3 + t) * 10, GROUND - 24 - ph * 90, 2.2, '255,180,90', 0.8 * (1 - ph)); }
+    env.front(t, 0);
+  }
+  function showTitle() {
+    const ov = document.createElement('div'); ov.className = 'rl-title';
+    ov.innerHTML = `<canvas width="960" height="540"></canvas><div class="rl-ttext"><h1>Ritterlauf</h1><p>Legenden am Lagerfeuer</p><button class="btn rl-tplay">Spielen</button><small>Version ${GAME_VERSION}</small></div>`;
+    document.body.appendChild(ov);
+    const c = ov.querySelector('canvas'), g = c.getContext('2d'); let alive = true, raf2 = 0;
+    const frame = now => { if (!alive) return; const main = ctx; ctx = g; try { g.setTransform(2, 0, 0, 2, 0, 0); titleScene(now / 1000); } catch (e) {} finally { ctx = main; } raf2 = requestAnimationFrame(frame); };
+    raf2 = requestAnimationFrame(frame);
+    const go = () => {
+      if (ov.classList.contains('go')) return; titleDone = true; SND.play && SND.play('tick');
+      const target = document.querySelector('#soloCanvas canvas') || document.querySelector('#soloCanvas'), r = target ? target.getBoundingClientRect() : null;
+      ov.classList.add('go');
+      if (r && r.width > 0) { ov.style.left = r.left + 'px'; ov.style.top = r.top + 'px'; ov.style.width = r.width + 'px'; ov.style.height = r.height + 'px'; }
+      setTimeout(() => { ov.classList.add('fade'); }, 950);
+      setTimeout(() => { alive = false; cancelAnimationFrame(raf2); ov.remove(); if (active) openChain(); }, 1350);
+    };
+    ov.querySelector('.rl-tplay').onclick = go;
+    ov.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') go(); });
+    setTimeout(() => { const b = ov.querySelector('.rl-tplay'); if (b) b.focus(); }, 50);
+  }
   function showBeta() {
     modal(`<span class="rl-mic">🧪</span><h2>Testphase</h2>
       <p>Ritterlauf wird gerade auf <b>Balancing und Design</b> getestet. Deshalb werden <b>alle Spielstände demnächst zurückgesetzt</b>.</p>
@@ -3900,11 +3776,15 @@
   function showIntro() {
     S.seenIntro = true; save();
     modal(`<span class="rl-mic">⚔</span><h2>Willkommen im Ritterlauf</h2>
-      <ul class="rl-list"><li>Deine Helden kämpfen sich <b>von allein</b> durch Gegnerwellen.</li>
-      <li>Nach jedem Lauf verbesserst du sie im <b>Lager</b> mit Gold und Seelen.</li>
-      <li>Später kommen <b>Wiedergeburten</b>, neue Klassen, Runen und vieles mehr dazu.</li></ul>
-      ${acct ? '' : `<div class="rl-savebox"><b>Wichtig: Sichere deinen Fortschritt!</b><span>Lege im Reiter „Spielstand“ einen Namen und ein Passwort fest. Dann geht nichts verloren und du kannst auf jedem Gerät weiterspielen.</span></div>`}
-      <div class="row" style="justify-content:center">${acct ? '' : '<button class="btn" data-m="save">Jetzt Spielstand anlegen</button>'}<button class="btn ghost" data-m="ok">${acct ? 'Los geht’s' : 'Später'}</button></div>`);
+      <p class="note">Dein Ritter sitzt am Lagerfeuer und wartet auf sein erstes Abenteuer. So geht es los:</p>
+      <ol class="rl-howto">
+        <li><span>⚔️</span><div><b>Feldzug starten</b><small>Tippe unten auf „Feldzug starten“. Dein Ritter läuft los und kämpft ganz von allein, Stufe um Stufe, bis er fällt.</small></div></li>
+        <li><span>🪙</span><div><b>Beute sammeln</b><small>Jeder Gegner gibt Gold. Alle 10 Stufen wartet ein Boss, der Seelen fallen lässt.</small></div></li>
+        <li><span>🌳</span><div><b>Stärker werden</b><small>Zurück im Lager kaufst du im Reiter „Ritter“ mit Gold und Seelen neue Fertigkeiten. Dann kommst du beim nächsten Lauf weiter.</small></div></li>
+        <li><span>🔁</span><div><b>Immer wieder</b><small>Laufen, verbessern, weiter kommen. Alles Weitere schaltet sich nach und nach frei und wird dann erklärt.</small></div></li>
+      </ol>
+      ${acct ? '' : `<div class="rl-savebox"><b>Tipp: Sichere deinen Fortschritt</b><span>Lege im Reiter „Spielstand“ einen Namen und ein Passwort fest. Dann geht nichts verloren und du kannst auf jedem Gerät weiterspielen.</span></div>`}
+      <div class="row" style="justify-content:center"><button class="btn" data-m="ok">Los geht’s</button>${acct ? '' : '<button class="btn ghost" data-m="save">Spielstand anlegen</button>'}</div>`);
   }
   function newsList(n) {
     const items = [];
@@ -6703,57 +6583,216 @@
     ctx.beginPath(); ctx.moveTo(13, -21); ctx.lineTo(15, -27); ctx.lineTo(17, -21); fillO('#6a4426');
     ctx.restore();
   }
+  // ---------- Begleiter (Version 1.0: neu gezeichnet) ----------
+  // Drache: kleiner roter Drache mit Hörnern, Flughäuten, Bauchschuppen und Schwanzspitze; speit Feuer aus dem Maul
   function dragonC(x, y, t, a) {
-    const f = Math.sin(t * 8) * 10;
-    ctx.save(); ctx.translate(x, y + Math.sin(t * 2) * 6);
-    ctx.fillStyle = '#b8323a';
-    ctx.beginPath(); ctx.moveTo(-6, -2); ctx.lineTo(-22, -16 - f); ctx.lineTo(-2, -6); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(4, -2); ctx.lineTo(16, -18 - f); ctx.lineTo(10, -4); ctx.fill();
-    rr(-16, -6, 30, 12, 6); fillO('#e5484d');
-    ctx.beginPath(); ctx.moveTo(-16, 0); ctx.quadraticCurveTo(-30, 4, -34, -4); ctx.lineWidth = 4; ctx.strokeStyle = '#e5484d'; ctx.stroke();
-    ctx.beginPath(); ctx.arc(18, -6, 7, 0, 7); fillO('#e5484d');
-    ctx.fillStyle = '#ffd23f'; ctx.fillRect(20, -8, 2, 2);
-    ctx.fillStyle = '#7a1f22'; ctx.beginPath(); ctx.moveTo(14, -12); ctx.lineTo(12, -18); ctx.lineTo(17, -12); ctx.fill();
-    if (a > 0) { const g = ctx.createLinearGradient(24, 0, 260, 0); g.addColorStop(0, `rgba(255,200,90,${Math.min(1, a)})`); g.addColorStop(1, 'rgba(255,90,40,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(24, -6); ctx.lineTo(260, 60); ctx.lineTo(260, 120); ctx.closePath(); ctx.fill(); }
+    const f = Math.sin(t * 7) * 11, tw = Math.sin(t * 3) * 4, fire = a > 0;
+    ctx.save(); ctx.translate(x, y + Math.sin(t * 2) * 5);
+    const wing = (sx, sy, s, c1, c2, bone) => {
+      ctx.save(); ctx.translate(sx, sy); ctx.scale(s, s);
+      const ex = -3, ey = -15 - f * 0.55, tx = -16, ty = -31 - f, f1x = -27, f1y = -17 - f * 0.6, f2x = -24, f2y = -5 - f * 0.25;
+      ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(ex, ey); ctx.lineTo(tx, ty);
+      ctx.quadraticCurveTo(-18, (ty + f1y) / 2 + 3, f1x, f1y); ctx.quadraticCurveTo(-20, (f1y + f2y) / 2 + 2, f2x, f2y); ctx.quadraticCurveTo(-12, -1, -8, 4); ctx.closePath();
+      fillO(LG(ty, 4, c1, c2));
+      ctx.strokeStyle = bone; ctx.lineWidth = 2; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(ex, ey); ctx.lineTo(tx, ty); ctx.moveTo(ex, ey); ctx.lineTo(f1x, f1y); ctx.moveTo(ex, ey); ctx.lineTo(f2x, f2y); ctx.stroke();
+      ctx.fillStyle = '#ffd59a'; ctx.beginPath(); ctx.arc(tx, ty, 1.4, 0, 7); ctx.fill();
+      ctx.restore();
+    };
+    // ferner Flügel
+    wing(2, -6, 0.82, '#b8323a', '#5a1018', '#4a0e14');
+    // Schwanz mit Spitze
+    ctx.beginPath(); ctx.moveTo(-8, -6); ctx.quadraticCurveTo(-24, -5 + tw, -38, 3 + tw * 1.4); ctx.quadraticCurveTo(-24, 5 + tw, -8, 5); ctx.closePath(); fillO(LG(-6, 6, '#e5484d', '#8e1f28'));
+    ctx.save(); ctx.translate(-38, 3 + tw * 1.4); ctx.rotate(0.35 + tw * 0.04);
+    ctx.beginPath(); ctx.moveTo(2, 0); ctx.lineTo(-5, -5); ctx.lineTo(-10, 0.5); ctx.lineTo(-5, 5); ctx.closePath(); fillO(LG(-5, 5, '#ffd27a', '#e08a2a')); ctx.restore();
+    // Hinterbein
+    ctx.save(); ctx.translate(-3, 5); ctx.rotate(0.3 + Math.sin(t * 2) * 0.1); rr(-2.5, 0, 5, 8, 2); fillO('#a82a34');
+    ctx.strokeStyle = '#ffe9c8'; ctx.lineWidth = 1.2; ctx.beginPath(); for (const k of [-2, 0, 2]) { ctx.moveTo(k, 8); ctx.lineTo(k + 1.5, 10.5); } ctx.stroke(); ctx.restore();
+    // Rumpf
+    ctx.save(); ctx.rotate(-0.12); ctx.beginPath(); ctx.ellipse(0, 0, 14, 8, 0, 0, 7); fillO(LG(-8, 8, '#f0626a', '#9c2430'));
+    ctx.beginPath(); ctx.ellipse(1, 3.5, 10.5, 4, 0, 0, Math.PI); ctx.fillStyle = '#ffd59a'; ctx.fill();
+    ctx.strokeStyle = 'rgba(180,90,40,.6)'; ctx.lineWidth = 0.9; ctx.beginPath(); for (let k = -7; k <= 8; k += 3) { ctx.moveTo(k, 3.6); ctx.lineTo(k, 6.8 - Math.abs(k) * 0.12); } ctx.stroke();
+    ctx.restore();
+    // Rückenstacheln
+    ctx.fillStyle = '#ffb547'; for (let k = 0; k < 5; k++) { const sx = -11 + k * 5, sy = -7.5 + k * -0.6; ctx.beginPath(); ctx.moveTo(sx - 2, sy + 1.5); ctx.lineTo(sx + 0.5, sy - 3.5); ctx.lineTo(sx + 2.5, sy + 1); ctx.closePath(); ctx.fill(); }
+    // Vorderbein
+    ctx.save(); ctx.translate(9, 4); ctx.rotate(-0.2); rr(-2, 0, 4.5, 6, 2); fillO('#c23642'); ctx.restore();
+    // Hals und Kopf
+    ctx.beginPath(); ctx.moveTo(6, -6); ctx.quadraticCurveTo(14, -10, 17, -18); ctx.lineTo(23, -15); ctx.quadraticCurveTo(18, -6, 11, 2); ctx.closePath(); fillO(LG(-18, 2, '#f0626a', '#b02a36'));
+    ctx.save(); ctx.translate(21, -17);
+    // Hörner
+    ctx.fillStyle = '#ffe9c8'; ctx.strokeStyle = OUT; ctx.lineWidth = 1;
+    for (const [hx, hy, l] of [[-3, -4, 9], [1, -5, 7]]) { ctx.beginPath(); ctx.moveTo(hx - 2, hy + 1); ctx.quadraticCurveTo(hx - l * 0.6, hy - l * 0.3, hx - l, hy - l * 0.15 - 2); ctx.quadraticCurveTo(hx - l * 0.4, hy - 1, hx + 2, hy + 1); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    // Unterkiefer (klappt beim Feuerspeien auf)
+    ctx.save(); ctx.translate(2, 2); ctx.rotate(fire ? 0.45 : 0.04); rr(-1, -1, 12, 4, 2); fillO('#b02a36'); ctx.restore();
+    // Schädel und Schnauze
+    ctx.beginPath(); ctx.moveTo(-6, 2); ctx.quadraticCurveTo(-6, -7, 2, -7); ctx.quadraticCurveTo(9, -6, 13, -2); ctx.quadraticCurveTo(14, 1, 11, 2.5); ctx.lineTo(-2, 3.5); ctx.closePath(); fillO(LG(-7, 3, '#f47a80', '#c23642'));
+    ctx.fillStyle = '#5a1018'; ctx.beginPath(); ctx.arc(11, -2.5, 0.9, 0, 7); ctx.fill();
+    const blink = (t % 4.3) < 0.13 ? 0.15 : 1;
+    ctx.save(); ctx.translate(2.5, -3); ctx.scale(1, blink); ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.ellipse(0, 0, 2.6, 2, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#1b1726'; ctx.fillRect(-0.5, -1.8, 1.1, 3.6); ctx.restore();
+    ctx.strokeStyle = '#7a1a24'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-0.5, -5.8); ctx.lineTo(5, -5); ctx.stroke();
+    if (fire) glowDot(13, 2, 12, '255,170,60', Math.min(1, a));
+    else for (let i = 0; i < 2; i++) { const p = (t * 0.7 + i * 0.5) % 1; ctx.fillStyle = `rgba(190,190,200,${0.35 * (1 - p)})`; ctx.beginPath(); ctx.arc(13 + p * 5, -3 - p * 10, 1.2 + p * 2.2, 0, 7); ctx.fill(); }
+    ctx.restore();
+    // naher Flügel
+    wing(-1, -7, 1, '#ff8a6a', '#b02a36', '#7a1a24');
+    // Feueratem aus dem Maul
+    if (fire) {
+      const al = Math.min(1, a), mx = 33, my = -13;
+      const g = ctx.createLinearGradient(mx, 0, 260, 0); g.addColorStop(0, `rgba(255,240,170,${al})`); g.addColorStop(0.25, `rgba(255,160,60,${al * 0.9})`); g.addColorStop(1, 'rgba(255,70,30,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(mx, my - 2); ctx.quadraticCurveTo(140, 10, 260, 58); ctx.lineTo(260, 122); ctx.quadraticCurveTo(140, 50, mx, my + 4); ctx.closePath(); ctx.fill();
+      for (let i = 0; i < 10; i++) { const p = (t * 1.6 + i * 0.1) % 1, px = mx + p * 220, py = my + p * (34 + 55 * hash(i)) + Math.sin(t * 9 + i) * 4; glowDot(px, py, 4 + p * 9, i % 2 ? '255,200,80' : '255,110,40', al * (1 - p)); }
+    }
     ctx.restore();
   }
+  // Eule: runder Federball mit Gesichtsschleier, Federohren und großen Bernstein-Augen
   function owlC(x, y, t) {
-    ctx.save(); ctx.translate(x, y + Math.sin(t * 3) * 3);
-    const f = Math.sin(t * 14) * 5;
-    ctx.fillStyle = '#a88a5a'; ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(-16, -6 - f); ctx.lineTo(-4, 4); ctx.fill(); ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(16, -6 - f); ctx.lineTo(4, 4); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(0, 0, 8, 10, 0, 0, 7); fillO('#d9c48a');
-    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-3, -3, 3, 0, 7); ctx.arc(3, -3, 3, 0, 7); ctx.fill();
-    ctx.fillStyle = '#1b1726'; ctx.fillRect(-4, -4, 2, 2); ctx.fillRect(2, -4, 2, 2);
-    ctx.fillStyle = '#e0a020'; ctx.beginPath(); ctx.moveTo(-1, 0); ctx.lineTo(1, 0); ctx.lineTo(0, 3); ctx.fill();
+    const fl = Math.sin(t * 9), bob = Math.sin(t * 3) * 3;
+    ctx.save(); ctx.translate(x, y + bob);
+    // Flügel
+    for (const s of [-1, 1]) {
+      ctx.save(); ctx.scale(s, 1); ctx.translate(7, -1); ctx.rotate(-0.15 - fl * 0.35);
+      ctx.beginPath(); ctx.moveTo(0, -4); ctx.quadraticCurveTo(10, -10, 21, -6);
+      for (let k = 0; k < 4; k++) { const fx = 21 - k * 4.5, fy = -6 + k * 3.2; ctx.quadraticCurveTo(fx + 1, fy + 4, fx - 3.5, fy + 3); }
+      ctx.quadraticCurveTo(4, 8, 0, 6); ctx.closePath(); fillO(LG(-8, 8, '#c9a46a', '#6e5232'));
+      ctx.strokeStyle = 'rgba(255,240,210,.55)'; ctx.lineWidth = 0.9; ctx.beginPath();
+      for (let k = 0; k < 4; k++) { const fx = 21 - k * 4.5, fy = -6 + k * 3.2; ctx.moveTo(4, 0); ctx.quadraticCurveTo(fx - 4, fy - 1, fx - 2, fy + 2); } ctx.stroke();
+      ctx.restore();
+    }
+    // Körper
+    ctx.beginPath(); ctx.ellipse(0, 3, 10, 12, 0, 0, 7); fillO(LG(-9, 15, '#c9a46a', '#7a5a36'));
+    ctx.beginPath(); ctx.ellipse(0, 6, 6.8, 8.2, 0, 0, 7); ctx.fillStyle = '#f2e4c2'; ctx.fill();
+    ctx.strokeStyle = '#8a6a40'; ctx.lineWidth = 1; ctx.beginPath();
+    for (const [vx, vy] of [[-3, 2], [1.5, 2], [-1, 6], [3.5, 6], [-3.5, 9.5], [1, 9.5], [-1, 12.5]]) { ctx.moveTo(vx - 1.2, vy); ctx.lineTo(vx, vy + 1.3); ctx.lineTo(vx + 1.2, vy); } ctx.stroke();
+    // Krallen
+    ctx.strokeStyle = '#e0a020'; ctx.lineWidth = 1.3; ctx.lineCap = 'round'; ctx.beginPath(); for (const s of [-1, 1]) for (const k of [-1, 0, 1]) { ctx.moveTo(s * 3, 14); ctx.lineTo(s * 3 + k * 1.3, 16.5); } ctx.stroke();
+    // Kopf mit Federohren
+    ctx.beginPath(); ctx.moveTo(-10, -7); ctx.lineTo(-11, -18); ctx.lineTo(-5, -14.5); ctx.quadraticCurveTo(0, -16, 5, -14.5); ctx.lineTo(11, -18); ctx.lineTo(10, -7); ctx.quadraticCurveTo(10, 1, 0, 1); ctx.quadraticCurveTo(-10, 1, -10, -7); ctx.closePath();
+    fillO(LG(-18, 1, '#d8b47a', '#9a7446'));
+    // Gesichtsschleier
+    ctx.fillStyle = '#f6ead0'; ctx.beginPath(); ctx.arc(-4.2, -7, 4.8, 0, 7); ctx.arc(4.2, -7, 4.8, 0, 7); ctx.fill();
+    ctx.strokeStyle = 'rgba(122,90,54,.7)'; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.arc(-4.2, -7, 4.8, 0.6, 5.7); ctx.moveTo(4.2 + 4.8 * Math.cos(-2.55), -7 + 4.8 * Math.sin(-2.55)); ctx.arc(4.2, -7, 4.8, -2.55, 2.55, true); ctx.stroke();
+    // Augen (blinzeln ab und zu)
+    const open = (t % 5.1) < 0.14 ? 0.12 : 1;
+    for (const s of [-1, 1]) {
+      ctx.save(); ctx.translate(s * 4.2, -7); ctx.scale(1, open);
+      ctx.beginPath(); ctx.arc(0, 0, 3.3, 0, 7); ctx.fillStyle = RG(0, 0, 3.3, '#ffd24a', '#e07a10'); ctx.fill(); ctx.strokeStyle = '#3a2618'; ctx.lineWidth = 0.8; ctx.stroke();
+      ctx.fillStyle = '#140e1e'; ctx.beginPath(); ctx.arc(0, 0.2, 1.8, 0, 7); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-0.8, -0.9, 0.7, 0, 7); ctx.fill();
+      ctx.restore();
+    }
+    ctx.strokeStyle = '#5a4026'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-8, -11.5); ctx.lineTo(-1, -9.5); ctx.moveTo(8, -11.5); ctx.lineTo(1, -9.5); ctx.stroke();
+    // Schnabel
+    ctx.beginPath(); ctx.moveTo(-1.6, -5.2); ctx.lineTo(1.6, -5.2); ctx.quadraticCurveTo(0.8, -2, 0, -1.2); ctx.quadraticCurveTo(-0.8, -2, -1.6, -5.2); ctx.closePath(); fillO('#e0a020');
+    // goldenes Funkeln (Krit-Glück)
+    const sp = (t * 0.8) % 1; if (sp < 0.35) sparkle(12, -16, 3 * Math.sin(sp / 0.35 * Math.PI), 0.9);
     ctx.restore();
   }
+  // Golem: Felsbrocken mit Moos, Steinfäusten und glühendem Bernsteinkern
   function golemC(x, t) {
-    shadow(x, 18);
-    ctx.save(); ctx.translate(x, GROUND + Math.sin(t * 2) * 0.5);
-    rr(-12, -18, 9, 18, 3); fillO('#7d8590'); rr(3, -18, 9, 18, 3); fillO('#7d8590');
-    rr(-16, -52, 32, 36, 8); fillO('#9aa3ad');
-    rr(-24, -48, 10, 26, 4); fillO('#8a929c'); rr(14, -48, 10, 26, 4); fillO('#8a929c');
-    rr(-9, -66, 18, 15, 4); fillO('#aab3bd');
-    ctx.fillStyle = `rgba(127,220,255,${0.7 + 0.3 * Math.sin(t * 3)})`; ctx.fillRect(-5, -61, 3, 3); ctx.fillRect(2, -61, 3, 3);
-    ctx.fillStyle = 'rgba(127,220,255,.5)'; ctx.fillRect(-2, -42, 4, 12);
+    shadow(x, 20);
+    const br = Math.sin(t * 2), sw = Math.sin(t * 1.6) * 0.06;
+    ctx.save(); ctx.translate(x, GROUND + br * 0.5);
+    const stone = LG(-60, 0, '#b8c0ca', '#68707a'), dark = LG(-50, 0, '#9aa3ad', '#555c66');
+    const arm = (s, front) => {
+      ctx.save(); ctx.translate(s * 16, -47); ctx.rotate(s * (0.08 + sw));
+      ctx.beginPath(); ctx.moveTo(-5, -2); ctx.lineTo(6, -3); ctx.lineTo(7, 14); ctx.lineTo(-4, 15); ctx.closePath(); fillO(front ? stone : dark);
+      ctx.beginPath(); ctx.moveTo(-7, 14); ctx.lineTo(8, 12); ctx.lineTo(10, 24); ctx.lineTo(3, 30); ctx.lineTo(-7, 27); ctx.lineTo(-9, 19); ctx.closePath(); fillO(front ? stone : dark);
+      ctx.strokeStyle = 'rgba(30,24,40,.45)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-6, 21); ctx.lineTo(8, 19); ctx.stroke();
+      ctx.restore();
+    };
+    arm(-1, false);
+    // Beine
+    for (const lx of [-13, 3]) { ctx.beginPath(); ctx.moveTo(lx, -20); ctx.lineTo(lx + 10, -21); ctx.lineTo(lx + 11, -3); ctx.lineTo(lx + 12, 0); ctx.lineTo(lx - 2, 0); ctx.lineTo(lx - 1, -4); ctx.closePath(); fillO(dark); }
+    // Rumpf
+    ctx.beginPath(); ctx.moveTo(-15, -18); ctx.lineTo(-20, -32); ctx.lineTo(-19, -46); ctx.lineTo(-11, -55); ctx.lineTo(3, -57); ctx.lineTo(16, -51); ctx.lineTo(20, -38); ctx.lineTo(17, -24); ctx.lineTo(9, -16); ctx.closePath(); fillO(stone);
+    ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.beginPath(); ctx.moveTo(-17, -45); ctx.lineTo(-10, -53); ctx.lineTo(0, -55); ctx.lineTo(-10, -48); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(30,24,40,.55)'; ctx.lineWidth = 1.1; ctx.beginPath();
+    ctx.moveTo(-14, -27); ctx.lineTo(-9, -30); ctx.lineTo(-10, -36); ctx.moveTo(12, -46); ctx.lineTo(8, -42); ctx.lineTo(10, -37); ctx.moveTo(6, -22); ctx.lineTo(3, -26); ctx.stroke();
+    // Bernsteinkern
+    const pulse = 0.75 + 0.25 * Math.sin(t * 3);
+    glowDot(0, -36, 16, '255,170,60', 0.55 * pulse);
+    ctx.beginPath(); ctx.moveTo(0, -43); ctx.lineTo(5, -36); ctx.lineTo(0, -29); ctx.lineTo(-5, -36); ctx.closePath(); fillO(LG(-43, -29, '#ffe7a0', '#e07a10'));
+    ctx.strokeStyle = `rgba(255,190,90,${0.5 * pulse})`; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(5, -36); ctx.lineTo(10, -33); ctx.moveTo(-5, -36); ctx.lineTo(-10, -40); ctx.moveTo(0, -29); ctx.lineTo(-1, -24); ctx.stroke();
+    // Moos
+    ctx.fillStyle = '#5fa04a'; for (const [mx, my, r] of [[-12, -53, 4], [-6, -56, 3.5], [12, -51, 3.2], [-18, -42, 2.5]]) { ctx.beginPath(); ctx.arc(mx, my, r, Math.PI, 0); ctx.fill(); }
+    ctx.fillStyle = '#8acb5c'; for (const [mx, my] of [[-13, -55], [-6, -58], [12, -53]]) ctx.fillRect(mx - 1, my - 1, 2, 2);
+    // Kopf
+    ctx.beginPath(); ctx.moveTo(-9, -54); ctx.lineTo(-8, -66); ctx.lineTo(3, -69); ctx.lineTo(11, -64); ctx.lineTo(10, -54); ctx.closePath(); fillO(LG(-69, -54, '#c4ccd6', '#7e8692'));
+    ctx.fillStyle = '#2a2433'; ctx.beginPath(); ctx.moveTo(-7, -62); ctx.lineTo(10, -63); ctx.lineTo(9, -58); ctx.lineTo(-6, -57.5); ctx.closePath(); ctx.fill();
+    const eye = 0.7 + 0.3 * Math.sin(t * 3);
+    glowDot(-2, -60, 5, '255,180,70', eye); glowDot(6, -60, 5, '255,180,70', eye);
+    ctx.fillStyle = '#ffd27a'; ctx.fillRect(-3.5, -61, 3, 2); ctx.fillRect(4.5, -61, 3, 2);
+    // Kristalle auf der Schulter
+    for (const [cx, cy, h, r] of [[15, -50, 9, 0.3], [19, -46, 6, 0.7]]) { ctx.save(); ctx.translate(cx, cy); ctx.rotate(r); ctx.beginPath(); ctx.moveTo(-2.2, 0); ctx.lineTo(0, -h); ctx.lineTo(2.2, 0); ctx.closePath(); fillO(LG(-h, 0, '#ffe7a0', '#e0902a')); ctx.restore(); }
+    arm(1, true);
     ctx.restore();
   }
+  // Phönix: Feuervogel mit Flammenkamm, flackernden Flügeln und langen Schweiffedern
   function phoenixC(x, y, t) {
+    const f = Math.sin(t * 8) * 10;
     ctx.save(); ctx.translate(x, y + Math.sin(t * 2.5) * 5);
-    for (let i = 0; i < 6; i++) { ctx.fillStyle = `rgba(255,${120 + i * 20},40,${0.5 - i * 0.07})`; ctx.beginPath(); ctx.arc(-10 - i * 6, Math.sin(t * 6 + i) * 3, Math.max(1, 5 - i * 0.6), 0, 7); ctx.fill(); }
-    const f = Math.sin(t * 10) * 9;
-    ctx.fillStyle = '#ff7a3d'; ctx.beginPath(); ctx.moveTo(-4, -2); ctx.lineTo(-14, -16 - f); ctx.lineTo(4, -4); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(0, 0, 10, 6, 0, 0, 7); fillO('#ff9a3d');
-    ctx.beginPath(); ctx.arc(10, -4, 5, 0, 7); fillO('#ffb547');
-    ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.moveTo(14, -4); ctx.lineTo(19, -3); ctx.lineTo(14, -1); ctx.fill();
+    glowDot(0, -2, 40, '255,140,50', 0.45 + 0.1 * Math.sin(t * 5));
+    // Glut, die nach hinten wegfliegt
+    for (let i = 0; i < 8; i++) { const p = (t * 0.9 + i / 8) % 1; glowDot(-14 - p * 40, 4 + p * 14 + Math.sin(t * 4 + i) * 3, 2.5 * (1 - p) + 1, i % 2 ? '255,210,90' : '255,120,40', 1 - p); }
+    // Schweiffedern
+    for (let k = 0; k < 3; k++) {
+      const sway = Math.sin(t * 3 + k) * 4, ex = -44 - k * 6, ey = 6 + k * 7 + sway;
+      ctx.beginPath(); ctx.moveTo(-8, 1); ctx.bezierCurveTo(-20, 0 + k * 2, -30, ey - 8, ex, ey); ctx.bezierCurveTo(-30, ey + 2, -20, 6 + k * 2, -8, 4); ctx.closePath();
+      const g = ctx.createLinearGradient(-8, 0, ex, 0); g.addColorStop(0, '#ffb547'); g.addColorStop(0.6, '#ff5a2a'); g.addColorStop(1, 'rgba(200,40,40,.2)'); ctx.fillStyle = g; ctx.fill();
+      ctx.save(); ctx.translate(ex + 4, ey - 1); ctx.beginPath(); ctx.ellipse(0, 0, 3.4, 2.2, -0.2, 0, 7); ctx.fillStyle = '#ffe27a'; ctx.fill(); ctx.beginPath(); ctx.arc(0, 0, 1.1, 0, 7); ctx.fillStyle = '#c0282a'; ctx.fill(); ctx.restore();
+    }
+    // Flammenflügel
+    const wing = (s, c1, c2) => {
+      ctx.save(); ctx.translate(-1, -2); ctx.scale(s, s);
+      ctx.beginPath(); ctx.moveTo(6, 0);
+      const pts = [[-2, -16 - f * 0.7], [-8, -26 - f], [-13, -18 - f * 0.8], [-20, -24 - f * 0.9], [-21, -12 - f * 0.5], [-28, -12 - f * 0.6], [-20, -3 - f * 0.2]];
+      for (let i = 0; i < pts.length; i++) { const [px, py] = pts[i], fl = Math.sin(t * 13 + i * 1.7) * 1.5; ctx.lineTo(px + fl, py + (i % 2 ? 0 : fl)); }
+      ctx.quadraticCurveTo(-10, 4, -4, 3); ctx.closePath(); fillO(LG(-26 - f, 4, c1, c2));
+      ctx.restore();
+    };
+    wing(0.85, '#ff8a3d', '#b02a24');
+    // Körper
+    ctx.save(); ctx.rotate(-0.15); ctx.beginPath(); ctx.ellipse(0, 0, 11, 6.5, 0, 0, 7); fillO(LG(-6, 6, '#ffc35a', '#e04a24'));
+    ctx.beginPath(); ctx.ellipse(2, 2.5, 7, 3, 0, 0, Math.PI); ctx.fillStyle = '#ffe9a0'; ctx.fill(); ctx.restore();
+    // Kopf mit Flammenkamm
+    ctx.save(); ctx.translate(11, -8);
+    for (let k = 0; k < 3; k++) { const fl = Math.sin(t * 11 + k * 2) * 1.5; ctx.beginPath(); ctx.moveTo(-1 + k * 2, -3); ctx.quadraticCurveTo(-4 - k * 2, -8 - k + fl, -9 - k * 3, -9 - k * 2 + fl); ctx.quadraticCurveTo(-5 - k * 2, -5, -3 + k * 2, -1); ctx.closePath(); ctx.fillStyle = ['#ffe27a', '#ffb547', '#ff6a2a'][k]; ctx.fill(); }
+    ctx.beginPath(); ctx.moveTo(-6, 6); ctx.quadraticCurveTo(-7, -4, 0, -4.5); ctx.quadraticCurveTo(5, -4.5, 5.5, 0); ctx.quadraticCurveTo(5, 4, 0, 5); ctx.closePath(); fillO(LG(-5, 5, '#ffd27a', '#ff8a3d'));
+    ctx.beginPath(); ctx.moveTo(4.5, -1.8); ctx.quadraticCurveTo(10, -1.5, 10, 1.5); ctx.quadraticCurveTo(7.5, 0.8, 4.5, 1.6); ctx.closePath(); fillO('#ffd23f');
+    ctx.fillStyle = '#2a0e10'; ctx.beginPath(); ctx.arc(1.5, -1, 1.4, 0, 7); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillRect(1.6, -1.9, 0.8, 0.8);
     ctx.restore();
+    wing(1, '#ffe27a', '#ff5a2a');
+    ctx.restore();
+  }
+  // Kleine Bilder der Begleiter für den Begleiter-Reiter
+  const compPicCache = {};
+  function compPic(id) {
+    if (compPicCache[id] !== undefined) return compPicCache[id];
+    let url = '';
+    try {
+      const c = document.createElement('canvas'); c.width = c.height = 120; const g = c.getContext('2d');
+      if (g) {
+        const main = ctx; ctx = g;
+        try {
+          const P = { drache: [1.3, 67, 80], eule: [1.8, 60, 64], golem: [1.4, 60, 107], phoenix: [1.4, 81, 64] }[id] || [1, 60, 60];
+          g.scale(P[0], P[0]); const lx = P[1] / P[0], ly = P[2] / P[0];
+          if (id === 'drache') dragonC(lx, ly, 0.9, 0);
+          else if (id === 'eule') owlC(lx, ly, 0.3);
+          else if (id === 'phoenix') phoenixC(lx, ly, 0.4);
+          else if (id === 'golem') { g.translate(0, ly - GROUND); golemC(lx, 0.4); }
+        } finally { ctx = main; }
+        url = c.toDataURL();
+      }
+    } catch (e) { url = ''; }
+    return (compPicCache[id] = url);
   }
   function drawComps(t, R) {
     const act = (S.compActive || []).filter(id => S.comps[id]);
-    if (act.includes('golem')) golemC(R ? R.frontX + 34 : 330, t);
-    if (act.includes('drache')) dragonC(R ? R.frontX - 40 : 70, R ? 70 : 108, t, R && R.fx.dragon > 0 ? R.fx.dragon : 0);
+    if (act.includes('golem')) golemC(R ? R.frontX + 34 : 356, t);
+    if (act.includes('drache')) dragonC(R ? R.frontX - 40 : 150, R ? 70 : 96, t, R && R.fx.dragon > 0 ? R.fx.dragon : 0);
     if (act.includes('eule')) owlC(R ? (R.pos.p || R.pos.s || R.frontX - 40) : 432, R ? 110 : 118, t);
-    if (act.includes('phoenix')) phoenixC(R ? R.frontX - 10 : 395, R ? 95 : 78, t);
+    if (act.includes('phoenix')) phoenixC(R ? R.frontX - 82 : 238, R ? 112 : 104, t);
   }
   function weather(stage, t) {
     const z = zoneOf(stage) % 15;
@@ -7368,7 +7407,7 @@
       ctx.fillStyle = bossNow ? '#c9a6ff' : 'rgba(255,255,255,.8)';
       ctx.fillText(R.wf || R.wfKilled ? 'Der Weltenfresser' : bossNow ? `Boss: ${bossNameOf(R, stage)}` : tower ? `Rekord ${S.towerBest}` : areaOf(R) ? areaOf(R).name : `${zoneName(R.stage)} · Grenze ${st.cap === Infinity ? '∞' : st.cap}`, tower ? 170 : 106, 21);
       ctx.textAlign = 'right'; ctx.fillStyle = '#ffcf4a'; if (R.mode === 'normal') ctx.fillText(`+${fmt(R.gold)} Gold`, W - 12, 21);
-      if (R.mode === 'weekly') { ctx.fillStyle = '#ffd23f'; ctx.fillText('Wochen-Herausforderung', W - 12, 21); }
+      if (R.mode === 'weekly') { ctx.fillStyle = '#ffd23f'; ctx.fillText('Tages-Herausforderung', W - 12, 21); }
       if (R.mode === 'exp') { const ms = MISSION[R.mission]; ctx.fillStyle = '#c8f08a'; ctx.fillText(`${ms.name}: ${ms.bosses ? `Bosse ${R.bossKills}/${ms.bosses}` : `Welle ${R.waves}/${ms.waves}`}`, W - 12, 21); }
       }
       if (R.bannerT > 0) {

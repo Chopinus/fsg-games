@@ -35,8 +35,11 @@ const server = http.createServer((req, res) => {
   if (!file) { res.writeHead(302, { Location: '/' }); res.end(); return; }
   fs.readFile(path.join(__dirname, file), (err, data) => {
     if (err) { res.writeHead(500); res.end('Fehler'); return; }
-    res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)], 'Cache-Control': 'no-cache' });
-    res.end(data);
+    // ETag: Fingerabdruck der Datei. Damit erkennen offene Spiele ein Update und Browser laden nur Geändertes neu.
+    const etag = '"' + crypto.createHash('sha1').update(data).digest('hex').slice(0, 16) + '"';
+    if (req.headers['if-none-match'] === etag) { res.writeHead(304, { ETag: etag, 'Cache-Control': 'no-cache' }); res.end(); return; }
+    res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)], 'Cache-Control': 'no-cache', ETag: etag });
+    res.end(req.method === 'HEAD' ? undefined : data);
   });
 });
 
@@ -45,7 +48,7 @@ function api(req, res, action) {
   const reply = (code, obj) => { res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(obj)); };
   if (req.method !== 'POST') return reply(405, { error: 'Nur POST' });
   let body = '';
-  req.on('data', ch => { body += ch; if (body.length > 16384) { reply(413, { error: 'Zu groß' }); req.destroy(); } });
+  req.on('data', ch => { body += ch; if (body.length > 65536) { reply(413, { error: 'Zu groß' }); req.destroy(); } });
   req.on('end', async () => {
     if (res.writableEnded) return;
     let data = {};
