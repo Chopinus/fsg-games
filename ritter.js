@@ -817,7 +817,7 @@
   const AHN_COUNT = AHN_MISSIONS.length;
   const ahnOpen = S => feature(S, 'ahnen');
   const ahnBossesOf = mi => (mi === AHN_COUNT - 1 ? [...AHN_MISSIONS[mi].bosses, AHNE] : AHN_MISSIONS[mi].bosses);
-  const ahnLevelFor = S => Math.max(10, Math.round(AHN_TUNE.lvl * Math.max(S.bestEver || 0, S.best || 0, 10)));
+  const ahnLevelFor = S => Math.max(10, Math.round(AHN_TUNE.lvl * Math.max(S.ascBest || 0, S.best || 0, 10)));
   function ahnFix(d) {
     const a = d && typeof d === 'object' ? d : {}, n = x => Math.max(0, Math.floor(Number(x) || 0));
     const out = { m: Math.min(AHN_COUNT - 1, n(a.m)), lvl: n(a.lvl), sig: n(a.sig), got: n(a.got), place: {} };
@@ -829,7 +829,7 @@
     S.ahn.sig--; S.ahn.place[hid] = 1; return true;
   }
   function ahnInit(S, run) {
-    if (!S.ahn.lvl) S.ahn.lvl = ahnLevelFor(S);
+    S.ahn.lvl = ahnLevelFor(S);
     run.stage = run.startStage = S.ahn.lvl;
     run.ahn = { mi: S.ahn.m, bi: 0, wave: 0, boss: null, fx: [], banner: null };
   }
@@ -974,7 +974,7 @@
   function fresh() {
     return { v: SAVE_VERSION, gold: 0, souls: 0, best: 0, bestEver: 0, runs: 0, nodes: { start: 1 }, equip: [], speed: 1, stars: 0, rebirths: 0, perks: {},
       runes: [], sockets: Object.fromEntries(HEROES.map(h => [h.id, [null, null, null]])), dust: 0, runeSeq: 1, towerBest: 0,
-      asc: 0, crowns: 0, cperks: {}, ach: {}, tot: { kills: 0, souls: 0 }, weekly: { week: '', best: 0, claimed: 0 }, comps: {}, compActive: [], seenIntro: false, area: 0, tempo: 0, bench: [], altar: 0, seenField: false, exp: { spl: 0, done: 0, target: 'a', pieces: {} }, ahn: ahnFix() };
+      asc: 0, ascBest: 0, crowns: 0, cperks: {}, ach: {}, tot: { kills: 0, souls: 0 }, weekly: { week: '', best: 0, claimed: 0 }, comps: {}, compActive: [], seenIntro: false, area: 0, tempo: 0, bench: [], altar: 0, seenField: false, exp: { spl: 0, done: 0, target: 'a', pieces: {} }, ahn: ahnFix() };
   }
   function migrate(d) {
     if (!d || typeof d !== 'object') return fresh();
@@ -1040,6 +1040,8 @@
     out.rlager = Math.max(0, Math.min(LAGER_MAX, Math.floor(Number(d.rlager) || 0)));
     out.altar = Math.max(0, Math.min(ALTAR_MAX, Math.floor(Number(d.altar) || 0)));
     out.ahn = ahnFix(d.ahn);
+    out.ascBest = d.ascBest != null ? Math.max(0, Math.floor(Number(d.ascBest) || 0)) : out.asc > 0 ? out.best : Math.max(out.bestEver, out.best); // vor Version 37 unbekannt: beste Schätzung
+    out.ascBest = Math.max(out.ascBest, out.best);
     if (!d.ahnV) out.ahn.lvl = 0; // Stärke neu: nach dem höchsten Rekord überhaupt
     out.ahnV = 1;
     for (const h of [...HEROES].reverse()) while (kPlaced(out) > out.kslots && out.kplace[h.id]) { if (--out.kplace[h.id] <= 0) delete out.kplace[h.id]; }
@@ -1144,7 +1146,7 @@
     S.crowns += k; S.asc++; S.bestEver = Math.max(S.bestEver, S.best);
     const keep = cperk(S, 'k_veteran') ? keepHires(S) : [];
     S.nodes = { start: 1 }; keep.forEach(id => (S.nodes[id] = 1));
-    S.rebirths = 0; S.stars = 0; S.perks = {}; S.best = 0; S.equip = []; S.area = 0;
+    S.rebirths = 0; S.stars = 0; S.perks = {}; S.best = 0; S.ascBest = 0; S.ahn.lvl = 0; S.equip = []; S.area = 0;
     S.gold = 5000 * cperk(S, 'k_start'); S.souls = 10 * cperk(S, 'k_start');
     for (const c of COMPS) if (S.asc >= c.asc && !S.comps[c.id]) S.comps[c.id] = 1;
     if (!S.compActive.length && Object.keys(S.comps).length) S.compActive = [Object.keys(S.comps)[0]];
@@ -1359,14 +1361,14 @@
   }
   // Expeditionen (ab dem 1. Aufstieg): Missionen geben Heldensplitter und mit etwas Glück Puzzleteile
   const MISSIONS = [
-    { id: 'streif', name: 'Streifzug', desc: 'Überstehe 15 Wellen.', waves: 15, spl: 4, start: 0.7, icon: '⚑' },
-    { id: 'bosse', name: 'Bosshatz', desc: 'Besiege 4 Bosse. Jede dritte Welle bringt einen.', bosses: 4, spl: 3, start: 0.65, icon: '♛' },
-    { id: 'festung', name: 'Belagerung', desc: 'Überstehe 25 Wellen, ohne dass ein Held fällt.', waves: 25, spl: 7, start: 0.6, noLoss: true, icon: '⛉' },
+    { id: 'streif', name: 'Streifzug', desc: 'Überstehe 15 Wellen.', waves: 15, spl: 4, start: 0.9, icon: '⚑' },
+    { id: 'bosse', name: 'Bosshatz', desc: 'Besiege 4 Bosse. Jede dritte Welle bringt einen.', bosses: 4, spl: 3, start: 0.87, icon: '♛' },
+    { id: 'festung', name: 'Belagerung', desc: 'Überstehe 25 Wellen, ohne dass ein Held fällt.', waves: 25, spl: 7, start: 0.81, noLoss: true, icon: '⛉' },
   ];
   const MISSION = Object.fromEntries(MISSIONS.map(m => [m.id, m]));
   const PIECE_COST = 95, PIECE_CHANCE = 0.005;
   const expOpen = S => S.asc >= 1 || (S.exp && S.exp.done > 0);
-  const expStage = (S, m) => Math.max(1, Math.round((S.best || 0) * m.start));
+  const expStage = (S, m) => Math.max(1, Math.round(Math.max(S.ascBest || 0, S.best || 0) * m.start));
   function claimExp(S, run) {
     const m = MISSION[run.mission]; if (!m || !run.victory) return null;
     S.exp.spl += m.spl; S.exp.done++;
@@ -1635,9 +1637,9 @@
     const h = {}; for (const k of order) h[k] = { hp: st[k].hp, alive: true, atkT: 0.3 + Math.random() * 0.4, wolfT: 0.5, swing: 0, hurtT: 0, revived: false, shield: 0 };
     const run = { mode: tower ? 'tower' : weekly ? 'weekly' : exp ? 'exp' : mode === 'ahnen' ? 'ahnen' : 'normal', stage: tower || weekly ? 1 : st.startStage, startStage: tower || weekly ? 1 : st.startStage, rules, losses: 0,
       mission: exp ? (MISSION[S.exp.mission] ? S.exp.mission : 'streif') : null, waves: 0, bossKills: 0, minions: [], turretT: 1, extraTurretT: 0, songT: 0, songMul: 0, roarT: 0,
-      hard: hardMul(S, exp), diff: ascDiff(S), speed: rules.includes('speed') ? 1.5 : 1, hpMul: rules.includes('giant') ? 2 : 1, eliteChance: rules.includes('elite') ? 0.4 : 0.12, noheal: rules.includes('noheal'),
+      hard: hardMul(S, false), diff: ascDiff(S), speed: rules.includes('speed') ? 1.5 : 1, hpMul: rules.includes('giant') ? 2 : 1, eliteChance: rules.includes('elite') ? 0.4 : 0.12, noheal: rules.includes('noheal'),
       dragonT: 2, compRevive: false, bannerT: 0, kills: 0, gold: 0, souls: 0, runes: [], phoenixUsed: false, miracleUsed: false,
-      fx: {}, cds: {}, castAt: {}, atkB: {}, apsB: {}, buffT: 0, buffMul: 0, hautT: 0, racheT: 0, packT: 0, order, pos, frontX: pos[order[0]], h,
+      bestBefore: S.best, towerBefore: S.towerBest, fx: {}, cds: {}, castAt: {}, atkB: {}, apsB: {}, buffT: 0, buffMul: 0, hautT: 0, racheT: 0, packT: 0, order, pos, frontX: pos[order[0]], h,
       enemies: [], floats: [], arrows: [], eshots: [], parts: [], scroll: 0, dead: false, victory: false, deadT: 0, time: 0, shake: 0 };
     // Abkürzung: übersprungene Bosse geben einen Teil ihrer Seelen
     if (run.mode === 'normal' && run.stage > 10) {
@@ -1933,6 +1935,7 @@
         spawnWave(run); return;
       } else if (run.mode === 'normal') {
         if (run.stage > S.best) S.best = run.stage;
+        if (run.stage > (S.ascBest || 0)) S.ascBest = run.stage;
         if (run.stage > S.bestEver) S.bestEver = run.stage;
         if (run.stage >= st.cap) { run.victory = true; run.dead = true; S.runs++; return 'dead'; }
       }
@@ -1988,7 +1991,7 @@
       S.tot.kills, S.tot.souls, COMPS.length, ...COMPS.map(c => S.comps[c.id] || 0), ...[0, 1].map(i => (S.compActive[i] ? COMPS.findIndex(c => c.id === S.compActive[i]) + 1 : 0)), S.tempo || 0,
       S.exp.spl, S.exp.done, Math.max(0, PUZZLE.indexOf(S.exp.target)), PUZZLE.length, ...PUZZLE.map(id => pieceMask(S, id)),
       1, kSlots(S), HEROES.length, ...HEROES.map(h => (S.kplace || {})[h.id] || 0), S.altar || 0, 1, 1, 1, S.rlager || 0, 1,
-      1, S.ahn.sig, S.ahn.got, S.ahn.m, S.ahn.lvl, HEROES.length, ...HEROES.map(h => (S.ahn.place[h.id] ? 1 : 0))]);
+      1, S.ahn.sig, S.ahn.got, S.ahn.m, S.ahn.lvl, HEROES.length, ...HEROES.map(h => (S.ahn.place[h.id] ? 1 : 0)), S.ascBest || 0]);
   }
   function decode(code) {
     const nums = unpackNums(code); if (!nums) return null;
@@ -2030,6 +2033,7 @@
           if (i < nums.length) d.rlager = next();
           if (i < nums.length) d.starV = next();
           if (i < nums.length) { next(); d.ahnV = 1; d.ahn = { sig: next(), got: next(), m: next(), lvl: next(), place: {} }; const hc3 = next(); for (let k = 0; k < hc3; k++) { const on = next(); if (on && HEROES[k]) d.ahn.place[HEROES[k].id] = 1; } }
+          if (i < nums.length) d.ascBest = next();
         }
       } else return null;
       return migrate(d);
@@ -2321,8 +2325,10 @@
 
     last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
   }
-  function refresh() { st = run && !run.dead ? statsFor(S, run.mode) : stats(S); renderTabs(); hud(); heroes(); action(); panel(); }
-  function achCheck(run) { const got = checkAch(S, run); if (got.length) { st = run && !run.dead ? statsFor(S, run.mode) : stats(S); got.forEach((a, i) => setTimeout(() => toast(`Erfolg: ${a.name} (+3 % Stärke)`, true), i * 1800)); save(); } return got; }
+  // Test-Cheat: Tester haben unendlich viele Heldensplitter, sobald die Expeditionen offen sind
+  const testerSplinters = () => { if (acct && acct.tester && expOpen(S) && S.exp.spl < 1e6) S.exp.spl = 9999999; };
+  function refresh() { testerSplinters(); st = run && !run.dead ? statsFor(S, run.mode) : stats(S); renderTabs(); hud(); heroes(); action(); panel(); }
+  function achCheck(run, quiet) { const got = checkAch(S, run); if (got.length) { st = run && !run.dead ? statsFor(S, run.mode) : stats(S); if (!quiet) got.forEach((a, i) => setTimeout(() => toast(`Erfolg: ${a.name} (+3 % Stärke)`, true), i * 1800)); save(); } return got; }
   function close() { closeSquad(); active = false; cancelAnimationFrame(raf); save(); cloudSave(true); $('#solo').hidden = true; $('#hub').hidden = false; }
   function sizeCanvas() {
     const host = $('#soloCanvas'); const w = Math.min(host.clientWidth || 360, 960);
@@ -2355,27 +2361,72 @@
   }
 
   function endRun() {
-    if (run.mode === 'weekly') { const r = claimWeekly(S, run); run.weeklyReward = r; if (r.stars || r.crowns) setTimeout(() => toast(`Wochen-Belohnung: +${r.stars} Sterne${r.crowns ? ` +${r.crowns} Krone` : ''}`, true), 300); }
-    if (run.mode === 'exp') {
-      const r = claimExp(S, run); run.expReward = r;
-      if (r) { setTimeout(() => toast(`Mission geschafft: +${r.spl} Heldensplitter`, true), 200); if (r.piece != null) setTimeout(() => (r.complete ? heroDone(r.hero) : pieceFound(r.hero)), 900); }
-    }
-    if (run.mode === 'ahnen') { const r = ahnClaim(S, run); run.ahnReward = r; ahnSel = null; if (r && r.sigil) setTimeout(sigilGot, 700); else if (r) setTimeout(() => toast(`Mission ${r.mission + 1} geschafft! Mission ${r.mission + 2} ist frei.`, true), 300); }
-    if (run.mode === 'normal' && areaMax(S) > areaBefore) { const z = areaMax(S); setTimeout(() => toast(`Neues Startgebiet frei: ${zoneName(10 * z + 1)}`, true), 600); }
-    SND.play(run.victory ? 'victory' : 'defeat');
-    achCheck(run); save(); cloudSave(true); refresh();
+    const R = run, res = { extra: [] };
+    if (R.mode === 'weekly') { const r = claimWeekly(S, R); R.weeklyReward = r; }
+    if (R.mode === 'exp') { const r = claimExp(S, R); R.expReward = r; }
+    if (R.mode === 'ahnen') { const r = ahnClaim(S, R); R.ahnReward = r; ahnSel = null; }
+    if (R.mode === 'normal' && areaMax(S) > areaBefore) res.area = zoneName(10 * areaMax(S) + 1);
+    SND.play(R.victory ? 'victory' : 'defeat');
+    res.ach = achCheck(R, true); save(); cloudSave(true); refresh();
+    setTimeout(() => { if (active && run === R) showResult(R, res); }, R.victory ? 500 : 900);
+  }
+  // ---------- Ergebnis-Bildschirm: Gefallen oder Geschafft, mit allen Belohnungen ----------
+  function showResult(R, res) {
+    const win = !!R.victory, mins = Math.floor(R.time / 60), secs = Math.floor(R.time % 60);
+    const items = [], add = (ic, text, col = '#ffe2a8', cls = '') => items.push(`<li class="${cls}" style="--ic:${col}"><span class="ri">${ic}</span><span>${text}</span></li>`);
+    let title = '', sub = '', special = '', again = '', againLabel = 'Nochmal';
+    if (R.mode === 'normal') { title = win ? `Stufengrenze ${capOf(S)} erreicht!` : 'Gefallen'; sub = win ? 'Weitere Stufen gibt es mit der nächsten Wiedergeburt.' : `auf Stufe ${R.stage} · ${esc(zoneName(R.stage))}`; again = 'normal'; againLabel = 'Neuer Feldzug'; }
+    if (R.mode === 'tower') { title = 'Der Turm ist vorbei'; sub = `Etage ${R.stage} erreicht`; again = 'tower'; }
+    if (R.mode === 'weekly') { title = 'Herausforderung vorbei'; sub = `Stufe ${R.stage} · Bestes Ergebnis diese Woche: Stufe ${S.weekly.best}`; again = 'weekly'; }
+    if (R.mode === 'exp') { const m = MISSION[R.mission]; title = win ? `Expedition geschafft: ${m.name}` : `Expedition gescheitert: ${m.name}`; sub = win ? `${R.waves} Wellen überstanden` : esc(R.failNote || `Gefallen auf Stufe ${R.stage}`); again = 'exp'; againLabel = 'Nochmal'; }
+    if (R.mode === 'ahnen') { const A = R.ahn, M = AHN_MISSIONS[A.mi], d = ahnBossesOf(A.mi)[A.bi];
+      title = win ? `Mission ${A.mi + 1} geschafft` : `Mission ${A.mi + 1} gescheitert`;
+      sub = win ? esc(M.name) : A.wave < AHN_TUNE.waves || !d ? `Bei den Dienern vor Boss ${A.bi + 1}` : `Bei ${esc(d.name)}${A.boss ? `, Phase ${A.boss.phase + 1}` : ''}`;
+      again = 'ahn'; againLabel = win ? (R.ahnReward && R.ahnReward.sigil ? 'Neue Prüfung' : `Mission ${S.ahn.m + 1} starten`) : 'Nochmal versuchen'; }
+    // Belohnungen
+    if (R.gold) add(coin, `<b>+${fmt(R.gold)}</b> Gold`, '#ffcf4a');
+    if (R.souls) add(soul, `<b>+${R.souls}</b> Seele${R.souls > 1 ? 'n' : ''}`, '#c9a6ff');
+    for (const r of R.runes) add('◆', `Rune <b>${RUNE[r.t].name} ${ROMAN[r.tier]}</b>`, RUNE[r.t].color);
+    if (R.weeklyReward && R.weeklyReward.stars) add(star, `<b>+${R.weeklyReward.stars}</b> Sterne`, '#ffd23f');
+    if (R.weeklyReward && R.weeklyReward.crowns) add(crown, `<b>+${R.weeklyReward.crowns}</b> Krone`, '#ffd23f');
+    if (R.expReward) add('◈', `<b>+${R.expReward.spl}</b> Heldensplitter`, '#9bd14a');
+    if (R.mode === 'tower' && R.stage > (R.towerBefore || 0)) add('🏰', `Neuer Turm-Rekord: <b>Etage ${R.stage}</b> · dauerhaft +${R.stage * 3} % Schaden und Leben`, '#c9a6ff', 'hot');
+    if (R.mode === 'normal' && S.best > (R.bestBefore || 0)) add('★', `Neuer Rekord: <b>Stufe ${S.best}</b>`, '#ffb547', 'hot');
+    if (res.area) add('⚑', `Neues Startgebiet frei: <b>${esc(res.area)}</b>`, '#7ee08a', 'hot');
+    if (R.ahnReward && !R.ahnReward.sigil) add('✦', `Mission ${R.ahnReward.mission + 2} ist frei: <b>${esc(AHN_MISSIONS[R.ahnReward.mission + 1].name)}</b>`, '#ffd27a');
+    for (const a of res.ach || []) add('🏆', `Erfolg: <b>${esc(a.name)}</b> (+3 % Stärke)`, '#ffd23f', 'hot');
+    // Besondere Belohnungen mit Animation
+    if (R.ahnReward && R.ahnReward.sigil) special = `<div class="rl-rsigil"><div class="rays"></div><div class="seal"><span>✦</span></div>
+        <h3>Ahnensiegel erhalten!</h3><p>Der Urahn ist besiegt. Du hast jetzt <b>${S.ahn.sig}</b> freie${S.ahn.sig === 1 ? 's' : ''} Siegel.</p>
+        <button class="btn gold" data-m="go" data-go="sigil">Siegel setzen</button></div>`;
+    const ex = R.expReward;
+    if (ex && ex.piece != null) { const h = HERO_BY_ID[ex.hero];
+      special = ex.complete ? `<div class="rl-rpuzzle done" style="--hc:${h.color}">${puzzleHTML(ex.hero, false, ex.piece)}<h3>${h.name} ist bereit!</h3><p>Alle 6 Puzzleteile sind zusammen. Heuere ${h.name} im Heldenreiter an. Freigeschaltete Helden bleiben für immer.</p><button class="btn" data-m="go" data-go="hero:${h.tree}">Zu ${h.name}</button></div>`
+        : `<div class="rl-rpuzzle" style="--hc:${h.color}">${puzzleHTML(ex.hero, false, ex.piece)}<h3>Puzzleteil gefunden!</h3><p>Ein Teil für ${h.name}: jetzt <b>${pieceCount(S, ex.hero)} von 6</b>.</p></div>`;
+      if (ex.complete && S.exp.target === ex.hero) { const nx = PUZZLE.find(x => !assembled(S, x)); if (nx) { S.exp.target = nx; save(); } } }
+    const stats = `<div class="rl-rstats"><span><b>${R.mode === 'tower' ? `Etage ${R.stage}` : `Stufe ${R.stage}`}</b>${R.mode === 'exp' || R.mode === 'ahnen' ? 'Gegnerstärke' : 'erreicht'}</span><span><b>${R.kills}</b>Gegner besiegt</span><span><b>${mins}:${String(secs).padStart(2, '0')}</b>Spielzeit</span></div>`;
+    const showAgain = again && inCamp() && (again !== 'tower' || feature(S, 'turm')) && (again !== 'ahn' || ahnOpen(S));
+    modal(`<div class="rl-rhead"><span class="rl-remb">${win ? '🏆' : '💀'}</span><h2>${title}</h2><p>${sub}</p></div>
+      ${special}
+      ${stats}
+      ${items.length ? `<h4 class="rl-rlabel">${win ? 'Deine Belohnungen' : 'Das nimmst du mit'}</h4><ul class="rl-rlist">${items.join('')}</ul>` : special ? '' : '<p class="note rl-rnone">Diesmal keine Beute. Verbessere deine Helden und versuch es nochmal.</p>'}
+      <div class="row rl-ract">${showAgain ? `<button class="btn ${win ? 'gold' : ''}" data-m="go" data-go="${again}">${againLabel}</button>` : ''}<button class="btn ghost" data-m="ok">Zum Lager</button></div>`, `rl-result ${win ? 'win' : 'lose'}`);
   }
   /* ---------- Leisten ---------- */
   const crown = '<i class="rl-crown" aria-hidden="true"></i>', coin = '<i class="rl-coin" aria-hidden="true"></i>', soul = '<i class="rl-soulic" aria-hidden="true"></i>', star = '<i class="rl-star" aria-hidden="true"></i>', dust = '<i class="rl-dust" aria-hidden="true"></i>';
   function hud() {
-    $('#rlStat').innerHTML = `<span class="note">Rekord ${S.best} von ${capOf(S) === Infinity ? '∞' : capOf(S)} · ${S.asc ? `Aufstieg ${S.asc} · ` : ''}${S.rebirths ? `${S.rebirths}× wiedergeboren · ` : ''}${S.runs} Läufe</span>`;
+    { const el = $('#rlStat'); el.innerHTML = ''; el.hidden = true; }
     { const d = $('#soloNews .dot'); if (d) d.hidden = newsSeen() >= UPDATES[0].id; }
     $('#soloSpeed').textContent = `Tempo ×${String(S.speed).replace('.', ',')}`;
   }
   function heroes() {
-    const live = run && !run.dead;
-    const list = HEROES.filter(h => hired(S, h.tree) || classOpen(S, h.tree));
-    const next = HEROES.find(h => !h.puzzle && !classOpen(S, h.tree));
+    const live = run && !run.dead, box = $('#rlHeroes');
+    box.hidden = !S.uiTroop;
+    if (!S.uiTroop) { box.innerHTML = ''; return; }
+    // Nur die Helden, die gerade in der Truppe sind
+    const inTroop = live ? run.order : fieldOf(S);
+    const list = HEROES.filter(h => st[h.id] && inTroop.includes(h.id));
+    const next = null;
     const field = fieldOf(S), slots = fieldSlots(S), hiredN = HEROES.filter(h => hired(S, h.tree)).length;
     const bar = '';
     $('#rlHeroes').innerHTML = bar + list.map(h => {
@@ -2395,8 +2446,9 @@
   }
   function action() {
     const a = $('#rlAction');
-    if (inCamp()) a.innerHTML = `<button class="btn ghost rl-boardbtn" data-rl="board">📋 Anschlagbrett</button><button class="btn rl-go" data-rl="start">Feldzug starten${st.startStage > 1 ? ` ab Stufe ${st.startStage}` : ''}</button>`;
-    else a.innerHTML = `<button class="btn ${confirm === 'giveup' ? 'danger' : 'ghost'} small" data-rl="giveup">${confirm === 'giveup' ? 'Wirklich aufgeben?' : run.mode === 'tower' ? 'Turm verlassen' : run.mode === 'weekly' ? 'Herausforderung beenden'   : run.mode === 'exp' || run.mode === 'ahnen' ? 'Mission abbrechen' : 'Feldzug aufgeben'}</button>`;
+    const troopBtn = `<button class="btn ghost rl-troopbtn ${S.uiTroop ? 'on' : ''}" data-rl="troop" aria-expanded="${!!S.uiTroop}">Truppe ${S.uiTroop ? '▴' : '▾'}</button>`;
+    if (inCamp()) a.innerHTML = `${troopBtn}<button class="btn ghost rl-boardbtn" data-rl="board">📋 Anschlagbrett</button><button class="btn rl-go" data-rl="start">Feldzug starten${st.startStage > 1 ? ` ab Stufe ${st.startStage}` : ''}</button>`;
+    else a.innerHTML = `${troopBtn}<button class="btn ${confirm === 'giveup' ? 'danger' : 'ghost'} small" data-rl="giveup">${confirm === 'giveup' ? 'Wirklich aufgeben?' : run.mode === 'tower' ? 'Turm verlassen' : run.mode === 'weekly' ? 'Herausforderung beenden'   : run.mode === 'exp' || run.mode === 'ahnen' ? 'Mission abbrechen' : 'Feldzug aufgeben'}</button>`;
   }
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const costHTML = c => [c.g ? `<span class="rl-cur gold">${coin}${fmt(c.g)}</span>` : '', c.s ? `<span class="rl-cur soul">${soul}${c.s}</span>` : ''].join(' ');
@@ -2816,7 +2868,7 @@
     if (b.dataset.fsel) { forgeSel = forgeSel === b.dataset.fsel ? null : b.dataset.fsel; confirm = ''; SND.play('tick'); panel(); return; }
     if (b.dataset.shopjump) { const el = document.getElementById('shop-' + b.dataset.shopjump); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     if (b.dataset.target) { S.exp.target = b.dataset.target; save(); panel(); return; }
-    if (b.dataset.piece) { const [hid, i] = b.dataset.piece.split(':'); if (buyPiece(S, hid, Number(i))) { const h = HERO_BY_ID[hid]; if (assembled(S, hid)) heroDone(hid); else toast(`Puzzleteil ${pieceCount(S, hid)}/6 für ${h.name}`); afterChange(); } return; }
+    if (b.dataset.piece) { const [hid, i] = b.dataset.piece.split(':'); testerSplinters(); if (buyPiece(S, hid, Number(i))) { const h = HERO_BY_ID[hid]; if (assembled(S, hid)) heroDone(hid); else toast(`Puzzleteil ${pieceCount(S, hid)}/6 für ${h.name}`); afterChange(); } return; }
     if (b.dataset.tempo) { if (buyTempo(S)) { toast(`Tempo ×${String(maxSpeed(S)).replace('.', ',')} freigeschaltet!`, true); afterChange(); } return; }
     if (b.dataset.pathmode) { pathMode = b.dataset.pathmode; panel(); return; }
     if (b.dataset.perk) { if (buyPerk(S, PERKS.find(p => p.id === b.dataset.perk))) afterChange(); return; }
@@ -2830,6 +2882,7 @@
     else if (a === 'tower') startRun('tower');
     else if (a === 'area') showAreas();
     else if (a === 'board') { if (inCamp()) showBoard(); }
+    else if (a === 'troop') { S.uiTroop = !S.uiTroop; save(); heroes(); action(); }
     else if (a === 'giveup') { if (ask('giveup', action)) { run.dead = true; S.runs++; save(); cloudSave(true); refresh(); } }
     else if (a === 'tgold' || a === 'tsouls') { if (acct && acct.tester) { const el = $(a === 'tgold' ? '#rlTGold' : '#rlTSouls'); let t = String(el.value).replace(/\s/g, '');
         if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.'); else if (/^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, '');
@@ -2920,7 +2973,8 @@
   function crownShop() {
     return `<h3 class="rl-h3">Kronen-Laden</h3><p class="note">Du hast <span class="rl-cur crown">${crown}${S.crowns}</span> Kronen. Kronen-Boni bleiben für immer.</p><div class="rl-perks">${CPERKS.map(p => {
       const r = cperk(S, p.id), maxed = r >= p.max, c = cperkCost(S, p);
-      return `<div class="rl-perk crown ${r ? 'has' : ''}"><b>${esc(p.name)}</b><span class="note">${p.max > 99 ? `Stufe ${r}` : `${r} / ${p.max}`}</span><p class="note">${esc(p.desc)}</p>
+      const hot = p.id === 'k_veteran' && !r;
+      return `<div class="rl-perk crown ${r ? 'has' : ''} ${hot ? 'hot' : ''}">${hot ? '<span class="rl-reddot" title="Wichtig: ohne Veteranen musst du nach jedem Aufstieg alle Helden neu anheuern"></span>' : ''}<b>${esc(p.name)}</b><span class="note">${p.max > 99 ? `Stufe ${r}` : `${r} / ${p.max}`}</span><p class="note">${esc(p.desc)}</p>
         <div class="row"><button class="btn small gold" data-cperk="${p.id}" ${maxed || S.crowns < c ? 'disabled' : ''}>${maxed ? 'Voll' : `${c} ${c === 1 ? 'Krone' : 'Kronen'}`}</button>${acct && acct.tester ? `<button class="btn ghost small" data-tmenu="c:${p.id}">🧪</button>` : ''}</div></div>`;
     }).join('')}</div>`;
   }
@@ -2968,11 +3022,11 @@
       <p class="note">Jedes Fähnchen ist ein gespeicherter Spielstand. W = Wiedergeburten, A = Aufstiege. ${acct ? '' : 'Lege im Reiter „Spielstand“ einen Spielstand an, damit deine Freunde dich hier auch sehen.'}${boardData ? '' : ' Die anderen Spielstände werden geladen …'}</p>`;
   }
   const PIECE_POS = [[0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1]];
-  function puzzleHTML(id, shop) {
+  function puzzleHTML(id, shop, newIdx) {
     const h = HERO_BY_ID[id], m = pieceMask(S, id);
     return `<div class="rl-puz" style="--hc:${h.color}">${PIECE_POS.map(([x, y], i) => {
       const got = m & (1 << i);
-      return got ? `<span class="pc got" style="--x:${x};--y:${y}"><i>${PORTRAIT[id]}</i></span>`
+      return got ? `<span class="pc got ${i === newIdx ? 'new' : ''}" style="--x:${x};--y:${y}"><i>${PORTRAIT[id]}</i></span>`
         : shop ? `<button class="pc buy" style="--x:${x};--y:${y}" data-piece="${id}:${i}" ${S.exp.spl >= PIECE_COST ? '' : 'disabled'} title="Teil ${i + 1} kaufen"><b>${PIECE_COST}</b></button>` : `<span class="pc" style="--x:${x};--y:${y}"></span>`;
     }).join('')}</div>`;
   }
@@ -3032,7 +3086,7 @@
     ];
     let cur = shopSel; if (!LIST.some(([id]) => id === cur && open[id])) cur = (LIST.find(([id]) => open[id]) || ['stern'])[0];
     let html = `${wallet({ stern: ['stars'], zeit: ['souls'], altar: ['gold'], krone: ['crowns'], puzzle: ['spl'] }[cur] || [])}
-      <div class="rl-shopnav">${LIST.map(([id, name, when, ic]) => open[id] ? `<button data-shoptab="${id}" class="${id === cur ? 'on' : ''}">${ic} ${name}</button>` : `<span class="lock" title="Kommt ${when}">🔒 ${name}</span>`).join('')}</div>`;
+      <div class="rl-shopnav">${LIST.map(([id, name, when, ic]) => open[id] ? `<button data-shoptab="${id}" class="${id === cur ? 'on' : ''}">${ic} ${name}${id === 'krone' && !cperk(S, 'k_veteran') ? '<span class="rl-reddot"></span>' : ''}</button>` : `<span class="lock" title="Kommt ${when}">🔒 ${name}</span>`).join('')}</div>`;
     if (open.stern && cur === 'stern') html += `<section id="shop-stern" class="rl-shop"><h3 class="rl-h3">Sternen-Laden</h3><p class="note">Du hast <span class="rl-cur star">${star}${S.stars}</span> Sterne. Sterne bekommst du bei jeder Wiedergeburt und aus der Wochen-Herausforderung. Beim Aufstieg werden die Sternen-Boni zurückgesetzt.</p><div class="rl-perks">${perkCards()}</div><div class="row" style="margin-top:10px"><button class="btn ${confirm === 'pres' ? 'danger' : 'ghost'} small" data-rl="pres" ${inCamp() && Object.keys(S.perks).length ? '' : 'disabled'}>${confirm === 'pres' ? 'Wirklich alles zurücksetzen?' : '↺ Sternen-Laden zurücksetzen (alle Sterne zurück)'}</button></div></section>`;
     if (open.zeit && cur === 'zeit') html += `<section id="shop-zeit" class="rl-shop">${zeitTab()}</section>`;
     if (open.altar && cur === 'altar') { const L = S.altar || 0, c = altarCost(L), maxed = L >= ALTAR_MAX;
@@ -3294,8 +3348,11 @@
     else if (go === 'area') showAreas(true);
     else if (go === 'ahn' && ahnOpen(S)) { startRun('ahnen'); save(); }
     else if (go === 'ahnmap') toTab('ahnen');
+    else if (go === 'exp' && run && run.mission && MISSION[run.mission]) { S.exp.mission = run.mission; startRun('exp'); }
     else if (go === 'exp') toTab('exp');
-    if (['normal', 'weekly', 'tower', 'ahn'].includes(go)) $('#soloCanvas').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    else if (go === 'sigil') toTab('ahnen');
+    else if (go.startsWith('hero:')) toTab(go.slice(5));
+    if (['normal', 'weekly', 'tower', 'ahn'].includes(go) || (go === 'exp' && run && !run.dead)) $('#soloCanvas').scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   /* ---------- Fenster: Willkommen und Neuigkeiten ---------- */
@@ -3339,6 +3396,16 @@
   }
   // Neuigkeiten: neueste Einträge oben. Neue Updates OBEN mit höherer id anhängen.
   const UPDATES = [
+    { id: 38, date: '14.10.2026', title: 'Ergebnis-Bildschirm', items: [
+      ['Neu', 'Nach jedem Lauf erscheint ein Ergebnis-Bildschirm: „Gefallen“, wenn deine Gruppe besiegt wurde, oder „Geschafft“ mit Pokal, wenn du etwas abgeschlossen hast (Stufengrenze, Expedition, Ahnen-Mission). Darin stehen alle Belohnungen: Gold, Seelen, Runen, Sterne, Kronen, Splitter, neue Rekorde, neue Startgebiete und Erfolge.'],
+      ['Neu', 'Ein Ahnensiegel schwebt jetzt mit Strahlen und Leuchten herein. Ein neues Puzzleteil fliegt sichtbar in seinen Platz im Puzzle.'],
+      ['Neu', 'Mit „Nochmal“ startest du direkt den gleichen Modus erneut, bei der Ahnenprüfung die nächste Mission.'],
+    ] },
+    { id: 37, date: '14.10.2026', title: 'Expeditionen und Ahnenprüfung nach Aufstiegs-Rekord', items: [
+      ['Umbau', 'Expeditionen und Ahnenprüfung richten sich jetzt nach deiner höchsten Stufe in diesem Aufstieg. Direkt nach einem Aufstieg werden sie also wieder leichter und wachsen mit dir mit.'],
+      ['Balance', 'Expeditionen sind deutlich schwerer: Streifzug auf 90 %, Bosshatz auf 87 % und Belagerung auf 81 % deiner höchsten Stufe im Aufstieg, und die Gegner sind so hart wie im Feldzug. Vorher waren es nur 60 bis 70 % deines Rekords seit der letzten Wiedergeburt, ohne Härte-Zuschlag.'],
+      ['Umbau', 'Die Stärke der Ahnenprüfung wird bei jedem Missionsstart neu berechnet (80 % deiner höchsten Stufe im Aufstieg).'],
+    ] },
     { id: 36, date: '14.10.2026', title: 'Zeitbaum ab dem Aufstieg', items: [
       ['Umbau', 'Den Zeitbaum für schnellere Spieltempos gibt es jetzt erst ab dem 1. Aufstieg. Wer vorher schon Tempo-Stufen gekauft hat, behält sie.'],
     ] },
@@ -3696,7 +3763,7 @@
   function ahnAbilChips(ph) { return ph.map((p, i) => `<span class="ahn-ph"><b>P${i + 1}</b>${[...p.a.map(id => AHN_ABIL[id].name), ...Object.entries(p.t || {}).map(([k, v]) => AHN_TRAIT[k] ? AHN_TRAIT[k](v) : '')].filter(Boolean).join(' · ') || 'Grundangriff'}</span>`).join(''); }
   function ahnTab() {
     if (!ahnOpen(S)) return '<p class="note">Die Ahnenprüfung wird mit der 6. Wiedergeburt freigeschaltet.</p>';
-    const cur = S.ahn.m, sel = ahnSel == null ? cur : Math.max(0, Math.min(AHN_COUNT - 1, ahnSel)), M = AHN_MISSIONS[sel], lvl = S.ahn.lvl || ahnLevelFor(S);
+    const cur = S.ahn.m, sel = ahnSel == null ? cur : Math.max(0, Math.min(AHN_COUNT - 1, ahnSel)), M = AHN_MISSIONS[sel], lvl = ahnLevelFor(S);
     const state = sel < cur ? 'done' : sel === cur ? 'cur' : 'later';
     const bosses = ahnBossesOf(sel);
     let html = `<div class="ahn-head"><div><h3 class="rl-h3">Ahnenprüfung</h3>
@@ -3706,7 +3773,7 @@
     html += `<div class="ahn-mission" style="--mc:${M.col}"><div class="ahn-mhead"><span class="ahn-mnum">${sel + 1}</span><div><b>${esc(M.name)}</b><small>${esc(M.desc)}</small></div>
       <span class="ahn-state ${state}">${state === 'done' ? 'Geschafft' : state === 'cur' ? 'Nächste Mission' : 'Noch gesperrt'}</span></div>
       <ol class="ahn-bosses">${bosses.map((d, i) => `<li class="${d.ahne ? 'ahne' : ''}" style="--bc:${d.tint || '#ffd27a'}"><span class="ahn-bi">${d.ahne ? '♛' : i + 1}</span><div><b>${esc(d.name)}</b><i>„${esc(d.quote)}“</i><div class="ahn-phs">${ahnAbilChips(d.ph)}</div></div></li>`).join('')}</ol>
-      <p class="note">Vor jedem Boss kommen 2 Wellen Diener. Nach jedem Boss stehen gefallene Helden wieder auf. Scheitert die Mission, fängst du sie neu an. Gegnerstärke: <b>Stufe ${lvl}</b> (80 % deines höchsten Rekords überhaupt${S.ahn.lvl ? ', festgelegt für diese Prüfung' : ', wird beim Start festgelegt'}).</p>
+      <p class="note">Vor jedem Boss kommen 2 Wellen Diener. Nach jedem Boss stehen gefallene Helden wieder auf. Scheitert die Mission, fängst du sie neu an. Gegnerstärke: <b>Stufe ${lvl}</b> (80 % deiner höchsten Stufe in diesem Aufstieg, wird bei jedem Missionsstart neu berechnet).</p>
       <div class="row">${state === 'cur' ? `<button class="btn gold" data-rl="ahnstart" ${inCamp() ? '' : 'disabled'}>Mission ${sel + 1} starten</button>` : ''}${ahnSel != null && ahnSel !== cur ? '<button class="btn ghost small" data-rl="ahncur">Zur nächsten Mission</button>' : ''}</div></div>`;
     // Siegel setzen
     const hiredH = HEROES.filter(h => hired(S, h.tree));
@@ -3741,7 +3808,7 @@
   }
   function sigilGot() {
     SND.play('rebirth');
-    modal(`<span class="rl-mic ahn-mic">✦</span><h2>Ahnensiegel erhalten!</h2>
+    modal(`<div class="rl-rsigil"><div class="rays"></div><div class="seal"><span>✦</span></div></div><h2>Ahnensiegel erhalten!</h2>
       <p>Der Urahn ist besiegt. Du hast jetzt <b>${S.ahn.sig}</b> freie${S.ahn.sig === 1 ? 's' : ''} Siegel.</p>
       <p class="note">Setze es im Reiter Ahnenprüfung auf einen Helden. Die Prüfung beginnt jetzt von vorne, mit neu festgelegter Gegnerstärke.</p>
       <button class="btn gold" data-m="ok">Weiter</button>`);
