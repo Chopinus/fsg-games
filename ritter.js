@@ -32,7 +32,7 @@
   // Was jede Wiedergeburt freischaltet
   const CAPS = [30, 45, 60, 75, 90, 105, 120, 135, 150];
   const ROADMAP = [
-    { r: 1, text: 'Wächter als neue Klasse, dazu Seelenaltar und Tempo' }, { r: 2, text: 'Runen: Bosse lassen Runen fallen, jede Klasse hat 3 Sockel. Runen zerstören und das Lager mit Runensplittern erweitern' }, { r: 3, text: 'Schützin als neue Klasse' },
+    { r: 1, text: 'Wächter als neue Klasse, dazu der Seelenaltar' }, { r: 2, text: 'Runen: Bosse lassen Runen fallen, jede Klasse hat 3 Sockel. Runen zerstören und das Lager mit Runensplittern erweitern' }, { r: 3, text: 'Schützin als neue Klasse' },
     { r: 4, text: 'Runenschmied: 3 gleiche Runen verschmelzen, zufällige Runen kaufen' }, { r: 5, text: 'Magier als neue Klasse' }, { r: 6, text: 'Ahnenprüfung: 10 Missionen voller Bosse, am Ende wartet der Urahn mit einem Ahnensiegel' },
     { r: 7, text: 'Priesterin als neue Klasse' }, { r: 8, text: 'Turm-Modus: endloser Turm mit dauerhaftem Bonus' }, { r: 9, text: 'Tierbändiger als neue Klasse. Alle 150 Stufen, danach endlose Albtraum-Stufen. Der Aufstieg wird möglich.' },
   ];
@@ -1601,7 +1601,7 @@
   const maxSpeed = S => 3 + 0.5 * Math.min(TEMPO_COST.length, S.tempo || 0);
   function buyTempo(S) {
     const lv = S.tempo || 0, cost = TEMPO_COST[lv];
-    if (cost == null || (S.rebirths < 1 && !S.asc) || S.souls < cost) return false;
+    if (cost == null || !(S.asc > 0) || S.souls < cost) return false;
     S.souls -= cost; S.tempo = lv + 1; S.speed = maxSpeed(S);
     return true;
   }
@@ -3025,9 +3025,9 @@
       <div class="rl-forgelist">${list.map(row).join('') || '<p class="note">Noch keine Runen. Bosse lassen Runen fallen.</p>'}</div>`;
   }
   function ladenTab() {
-    const open = { stern: S.rebirths >= 1 || S.stars > 0 || S.asc > 0, zeit: S.rebirths >= 1 || S.asc > 0 || S.tempo > 0, altar: S.rebirths >= 1 || S.asc > 0 || S.altar > 0, schmiede: feature(S, 'runen') || S.asc > 0, krone: S.asc > 0 || S.crowns > 0, puzzle: expOpen(S) };
+    const open = { stern: S.rebirths >= 1 || S.stars > 0 || S.asc > 0, zeit: S.asc > 0, altar: S.rebirths >= 1 || S.asc > 0 || S.altar > 0, schmiede: feature(S, 'runen') || S.asc > 0, krone: S.asc > 0 || S.crowns > 0, puzzle: expOpen(S) };
     const LIST = [
-      ['stern', 'Sternen-Laden', 'mit der 1. Wiedergeburt', star], ['zeit', 'Zeitbaum', 'mit der 1. Wiedergeburt', '⏱'], ['altar', 'Seelenaltar', 'mit der 1. Wiedergeburt', soul],
+      ['stern', 'Sternen-Laden', 'mit der 1. Wiedergeburt', star], ['zeit', 'Zeitbaum', 'mit dem 1. Aufstieg', '⏱'], ['altar', 'Seelenaltar', 'mit der 1. Wiedergeburt', soul],
       ['krone', 'Kronen-Laden', 'mit dem 1. Aufstieg', crown], ['puzzle', 'Puzzle-Laden', 'mit dem 1. Aufstieg (Expeditionen)', '◈'],
     ];
     let cur = shopSel; if (!LIST.some(([id]) => id === cur && open[id])) cur = (LIST.find(([id]) => open[id]) || ['stern'])[0];
@@ -3157,12 +3157,102 @@
 
   // Geldbörse: zeigt nur die Währungen, die an dieser Stelle gebraucht werden
   const wallet = (list, cls = '') => `<div class="rl-wallet rl-wsmall ${cls}">${list.map(k => ({ gold: `<span class="rl-cur gold" title="Gold">${coin}${fmt(S.gold)}</span>`, souls: `<span class="rl-cur soul" title="Seelen">${soul}${S.souls}</span>`, stars: `<span class="rl-cur star" title="Sterne">${star}${S.stars}</span>`, dust: `<span class="rl-cur dust" title="Runensplitter">${dust}${S.dust}</span>`, crowns: `<span class="rl-cur crown" title="Kronen">${crown}${S.crowns}</span>`, spl: `<span class="rl-cur spl" title="Heldensplitter">◈ ${S.exp.spl}</span>` })[k]).join('')}</div>`;
+  // ---------- Bilder für die Plakate am Anschlagbrett (einmal gezeichnet, dann gemerkt) ----------
+  const POSTER_ART = {};
+  function posterArt(id) {
+    if (POSTER_ART[id]) return POSTER_ART[id];
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const main = ctx; ctx = c.getContext('2d');
+    try { ctx.setTransform(1, 0, 0, 1, 0, 0); ART_SCENES[id](1.7); } catch (err) { ctx.fillStyle = '#3a2a1a'; ctx.fillRect(0, 0, W, H); } finally { ctx = main; }
+    return (POSTER_ART[id] = c.toDataURL('image/jpeg', 0.86));
+  }
+  const artTeam = (ks, x0, t, walk, gap = 30) => ks.forEach((k, i) => DRAW[k](x0 - i * gap, null, t, walk));
+  const artScene = (env, sc, t) => { env.back(t, sc); env.props(t, sc); };
+  const ART_SCENES = {
+    feld1(t) { const env = ENV_CAMP, fx = 250; artScene(env, 0, t);
+      lightPool(fx, GROUND - 14, 150, '255,150,60', 0.32); lightPool(fx, GROUND - 8, 60, '255,200,120', 0.25);
+      ctx.beginPath(); ctx.moveTo(350, GROUND); ctx.lineTo(400, GROUND - 70); ctx.lineTo(450, GROUND); fillO('#7a6046');
+      ctx.fillStyle = '#2a1f17'; ctx.beginPath(); ctx.moveTo(390, GROUND); ctx.lineTo(400, GROUND - 32); ctx.lineTo(410, GROUND); ctx.fill();
+      ctx.fillStyle = '#e5484d'; ctx.beginPath(); ctx.moveTo(400, GROUND - 70); ctx.lineTo(400, GROUND - 88); ctx.lineTo(417, GROUND - 82); ctx.lineTo(400, GROUND - 76); ctx.fill();
+      campFire(fx, t, true); env.front(t, 0); },
+    feld2(t) { const env = ENV[4]; artScene(env, 260, t); env.front(t, 260); },
+    woche1(t) {
+      skyFill(['#1b2a4a', '#3a4f7a', '#d98a5a']);
+      ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(0, GROUND - 20, W, H);
+      ctx.save(); ctx.translate(W / 2, 135); ctx.rotate(-0.03);
+      ctx.fillStyle = '#c9a874'; ctx.fillRect(-170, -100, 340, 200); ctx.fillStyle = '#efdcb4'; ctx.fillRect(-160, -92, 320, 184);
+      ctx.fillStyle = '#3a2410'; ctx.font = '20px "Bungee","Arial Black",sans-serif'; ctx.textAlign = 'center'; ctx.fillText('DIESE WOCHE', 0, -60);
+      const days = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+      days.forEach((d, i) => { const x = -135 + i * 45, y = -40; ctx.fillStyle = i < 4 ? '#d8c39a' : '#f7ecd2'; ctx.fillRect(x - 18, y, 38, 50); ctx.strokeStyle = '#8a6a40'; ctx.lineWidth = 1.5; ctx.strokeRect(x - 18, y, 38, 50);
+        ctx.fillStyle = '#5a3a1a'; ctx.font = 'bold 12px sans-serif'; ctx.fillText(d, x + 1, y + 16); if (i < 4) { ctx.strokeStyle = '#b3261e'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x - 10, y + 24); ctx.lineTo(x + 12, y + 44); ctx.moveTo(x + 12, y + 24); ctx.lineTo(x - 10, y + 44); ctx.stroke(); } });
+      for (let i = 0; i < 5; i++) { const x = -110 + i * 55, y = 50; ctx.fillStyle = '#ffd23f'; ctx.beginPath(); for (let k = 0; k < 10; k++) { const r = k % 2 ? 6 : 14, a = -Math.PI / 2 + k * Math.PI / 5; ctx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); } ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#a07010'; ctx.lineWidth = 1.5; ctx.stroke(); }
+      ctx.restore();
+      ctx.fillStyle = '#b3261e'; ctx.beginPath(); ctx.arc(W / 2 + 150, 215, 26, 0, 7); ctx.fill(); ctx.fillStyle = '#e04a40'; ctx.beginPath(); ctx.arc(W / 2 + 147, 212, 18, 0, 7); ctx.fill();
+      ctx.fillStyle = '#ffe2a8'; ctx.font = '20px "Bungee","Arial Black",sans-serif'; ctx.textAlign = 'center'; ctx.fillText('7', W / 2 + 147, 219);
+    },
+    woche2(t) { const env = ENV[10]; artScene(env, 80, t); env.front(t, 80); },
+    turm1(t) {
+      // Der Turm von außen: wächst bis über die Wolken hinaus, kein Ende in Sicht
+      const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#0b0820'); g.addColorStop(0.55, '#2a1f52'); g.addColorStop(1, '#a0607a'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      for (let i = 0; i < 110; i++) { ctx.fillStyle = `rgba(255,255,255,${0.3 + 0.6 * hash(i)})`; ctx.fillRect(hash(i + 3) * W, hash(i + 9) * H * 0.75, 1.3, 1.3); }
+      const cloud = (y, a, seed) => { ctx.fillStyle = `rgba(230,210,255,${a})`; for (let i = 0; i < 7; i++) { ctx.beginPath(); ctx.ellipse(hash(seed + i) * W, y + Math.sin(i * 2.1) * 6, 46 + 50 * hash(i + seed), 7 + 4 * hash(seed - i), 0, 0, 7); ctx.fill(); } };
+      cloud(48, 0.18, 11); cloud(110, 0.16, 23);
+      const cx = W / 2, base = 230, top = 34;
+      const wAt = y => top + (base - top) * Math.pow(Math.max(0, y) / H, 1.3);
+      ctx.beginPath(); ctx.moveTo(cx - base / 2, H); for (let y = H; y >= -12; y -= 6) ctx.lineTo(cx - wAt(y) / 2, y); for (let y = -12; y <= H; y += 6) ctx.lineTo(cx + wAt(y) / 2, y); ctx.closePath();
+      const tg = ctx.createLinearGradient(cx - base / 2, 0, cx + base / 2, 0); tg.addColorStop(0, '#2a2140'); tg.addColorStop(0.35, '#7a6aa0'); tg.addColorStop(0.55, '#9a8ac0'); tg.addColorStop(1, '#2c2244');
+      ctx.fillStyle = tg; ctx.fill(); ctx.strokeStyle = 'rgba(255,230,190,.35)'; ctx.lineWidth = 1.5; ctx.stroke();
+      for (let y = H - 10, k = 0; y > -12; k++) { const w = wAt(y), f = w / base, step = 5 + 30 * f;
+        ctx.strokeStyle = 'rgba(20,10,40,.45)'; ctx.lineWidth = Math.max(0.6, f * 2.5); ctx.beginPath(); ctx.moveTo(cx - w / 2, y); ctx.lineTo(cx + w / 2, y); ctx.stroke();
+        const n = Math.max(1, Math.round(w / 30)); for (let i = 0; i < n; i++) { if (hash(k * 7 + i) < 0.35) continue; const wx = cx - w / 2 + (i + 0.5) * w / n, ww = 3 + 7 * f, wh = step * 0.45;
+          ctx.fillStyle = '#2a1830'; ctx.fillRect(wx - ww / 2 - 1, y - step * 0.75 - 1, ww + 2, wh + 2); ctx.fillStyle = `rgba(255,${190 + 40 * hash(k + i) | 0},110,${0.75 + 0.25 * hash(k - i)})`; ctx.fillRect(wx - ww / 2, y - step * 0.75, ww, wh); }
+        y -= step; }
+      const tl = ctx.createRadialGradient(cx, 0, 4, cx, 0, 90); tl.addColorStop(0, 'rgba(255,240,200,.85)'); tl.addColorStop(1, 'rgba(255,240,200,0)'); ctx.fillStyle = tl; ctx.fillRect(cx - 100, -10, 200, 100);
+      cloud(36, 0.32, 41); cloud(92, 0.24, 57); cloud(160, 0.14, 71);
+      ctx.fillStyle = '#140d22'; ctx.fillRect(0, H - 16, W, 16);
+      ctx.fillStyle = '#3a2410'; ctx.beginPath(); ctx.moveTo(cx - 14, H - 16); ctx.lineTo(cx - 14, H - 40); ctx.quadraticCurveTo(cx, H - 54, cx + 14, H - 40); ctx.lineTo(cx + 14, H - 16); ctx.fill();
+      ctx.fillStyle = '#ffd27a'; ctx.beginPath(); ctx.moveTo(cx - 10, H - 16); ctx.lineTo(cx - 10, H - 38); ctx.quadraticCurveTo(cx, H - 49, cx + 10, H - 38); ctx.lineTo(cx + 10, H - 16); ctx.fill();
+      lightPool(cx, H - 20, 40, '255,200,120', 0.4);
+    },
+    turm2(t) { artScene(ENV_TOWER, 40, t); for (const x of [43, 117, 194, 233]) lightPool(x * 2 - (x > 200 ? 0 : 0), 140, 70, '255,170,80', 0.28); lightPool(W / 2, GROUND, 160, '255,160,90', 0.12); ENV_TOWER.front(t, 40); },
+    ahnen1(t) { artScene(ENV_AHNEN, 20, t); ENV_AHNEN.front(t, 20); },
+    ahnen2(t) {
+      const g = ctx.createRadialGradient(W / 2, H / 2, 10, W / 2, H / 2, W * 0.6); g.addColorStop(0, '#4a2f10'); g.addColorStop(1, '#0e0716'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      ctx.save(); ctx.translate(W / 2, H / 2 + 6);
+      for (let i = 0; i < 24; i++) { ctx.rotate(Math.PI / 12); ctx.fillStyle = `rgba(255,210,122,${i % 2 ? 0.08 : 0.16})`; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-18, -260); ctx.lineTo(18, -260); ctx.fill(); }
+      ctx.restore();
+      lightPool(W / 2, H / 2 + 6, 120, '255,200,110', 0.35);
+      ctx.fillStyle = '#b8862f'; ctx.beginPath(); ctx.arc(W / 2, H / 2 + 6, 82, 0, 7); ctx.fill();
+      ctx.fillStyle = '#ffd27a'; ctx.beginPath(); ctx.arc(W / 2, H / 2 + 6, 74, 0, 7); ctx.fill();
+      ctx.strokeStyle = '#8a5f1a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(W / 2, H / 2 + 6, 60, 0, 7); ctx.stroke();
+      for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8; ctx.fillStyle = '#8a5f1a'; ctx.beginPath(); ctx.arc(W / 2 + Math.cos(a) * 67, H / 2 + 6 + Math.sin(a) * 67, 2.5, 0, 7); ctx.fill(); }
+      ctx.fillStyle = '#fff6d8'; ctx.beginPath(); for (let k = 0; k < 8; k++) { const r = k % 2 ? 11 : 46, a = -Math.PI / 2 + k * Math.PI / 4; ctx.lineTo(W / 2 + Math.cos(a) * r, H / 2 + 6 + Math.sin(a) * r); } ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#8a5f1a'; ctx.lineWidth = 2; ctx.stroke();
+      for (let i = 0; i < 30; i++) { ctx.fillStyle = `rgba(255,230,160,${0.4 + 0.5 * hash(i)})`; ctx.fillRect(hash(i + 4) * W, hash(i + 8) * H, 2, 2); }
+    },
+    exp1(t) { const env = ENV[11]; artScene(env, 200, t); artTeam(['d', 'a', 'n', 'e'], 230, t, true, 32);
+      ctx.fillStyle = '#5a3d25'; ctx.fillRect(380, GROUND - 70, 6, 70); ctx.fillStyle = '#c9a874'; ctx.beginPath(); ctx.moveTo(360, GROUND - 66); ctx.lineTo(420, GROUND - 66); ctx.lineTo(432, GROUND - 56); ctx.lineTo(420, GROUND - 46); ctx.lineTo(360, GROUND - 46); ctx.fill();
+      ctx.fillStyle = '#3a2410'; ctx.font = '9px "Bungee","Arial Black",sans-serif'; ctx.textAlign = 'center'; ctx.fillText('ABENTEUER', 394, GROUND - 52); env.front(t, 200); },
+    exp2(t) {
+      ctx.fillStyle = '#2a2236'; ctx.fillRect(0, 0, W, H);
+      const x0 = W / 2 - 120, y0 = 25, pw = 80, ph = 110;
+      ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, pw * 3, ph * 2); ctx.clip();
+      const g = ctx.createLinearGradient(0, y0, 0, y0 + ph * 2); g.addColorStop(0, '#ff8a9a'); g.addColorStop(1, '#5a2a4a'); ctx.fillStyle = g; ctx.fillRect(x0, y0, pw * 3, ph * 2);
+      ctx.translate(W / 2, y0 + ph * 2 + 30); ctx.scale(2.4, 2.4); ctx.translate(0, -GROUND); DRAW.a(0, null, t, false); ctx.restore();
+      ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 2.5;
+      for (let i = 1; i < 3; i++) { ctx.beginPath(); ctx.moveTo(x0 + i * pw, y0); for (let y = 0; y < 2; y++) { ctx.lineTo(x0 + i * pw, y0 + y * ph + ph * 0.4); ctx.arc(x0 + i * pw + 8, y0 + y * ph + ph * 0.5, 10, -Math.PI * 0.75, Math.PI * 0.75); ctx.lineTo(x0 + i * pw, y0 + (y + 1) * ph); } ctx.stroke(); }
+      ctx.beginPath(); ctx.moveTo(x0, y0 + ph); for (let i = 0; i < 3; i++) { ctx.lineTo(x0 + i * pw + pw * 0.4, y0 + ph); ctx.arc(x0 + i * pw + pw * 0.5, y0 + ph + 8, 10, -Math.PI * 1.25, Math.PI * 0.25, true); ctx.lineTo(x0 + (i + 1) * pw, y0 + ph); } ctx.stroke();
+      ctx.fillStyle = '#1a1424'; ctx.fillRect(x0 + 2 * pw + 2, y0 + ph + 2, pw - 4, ph - 4);
+      ctx.save(); ctx.translate(x0 + 3 * pw + 34, y0 + ph + 20); ctx.rotate(0.25); ctx.fillStyle = '#5a2a4a'; ctx.fillRect(0, 0, pw - 10, ph - 10); ctx.strokeStyle = '#fff'; ctx.strokeRect(0, 0, pw - 10, ph - 10); ctx.restore();
+      ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 3; ctx.strokeRect(x0, y0, pw * 3, ph * 2);
+    },
+  };
   /* ---------- Anschlagbrett: alle Spielarten als Plakate ---------- */
   function poster(o) {
     const lock = o.lock ? `<span class="rl-pstamp">${esc(o.lock)}</span>` : '';
     return `<article class="rl-poster ${o.lock ? 'locked' : ''}" style="--pc:${o.col};--rot:${o.rot}deg">
       <span class="rl-ppin" aria-hidden="true"></span>
       <div class="rl-pband"><span class="rl-pico" aria-hidden="true">${o.icon}</span><h3>${esc(o.title)}</h3></div>
+      ${o.art ? `<div class="rl-pimgs">${o.art.map((id, i) => `<img src="${posterArt(id)}" alt="" style="--r:${i ? 2.5 : -2}deg">`).join('')}</div>` : ''}
       <p class="rl-pdesc">${esc(o.desc)}</p>
       ${o.info && o.info.length ? `<ul class="rl-pinfo">${o.info.map(x => `<li>${x}</li>`).join('')}</ul>` : ''}
       ${lock}
@@ -3175,19 +3265,19 @@
     const rules = weekRules(weekId()).map(id => RULE[id]).filter(Boolean), nextTier = WEEK_TIERS.find(x => x.st > wk);
     const tOpen = feature(S, 'turm'), aOpen = ahnOpen(S), eOpen = expOpen(S);
     const list = [
-      { title: 'Feldzug', icon: '⚔️', col: '#ffb547', rot: -2, desc: 'Der klassische Lauf: Kämpf dich Stufe um Stufe durch die Gebiete. Bringt Gold, Seelen und Runen.',
+      { title: 'Feldzug', art: ['feld1', 'feld2'], icon: '⚔️', col: '#ffb547', rot: -2, desc: 'Der klassische Lauf: Kämpf dich Stufe um Stufe durch die Gebiete. Bringt Gold, Seelen und Runen.',
         info: [`Rekord: <b>Stufe ${S.best}</b> von ${cap === Infinity ? '∞' : cap}`, `Start: <b>${esc(zoneName(stg))}</b> (Stufe ${stg})`],
         acts: `<button class="btn" data-m="go" data-go="normal">Aufbrechen</button>${areaMax(S) >= 1 ? '<button class="btn ghost small" data-m="go" data-go="area">Startgebiet ändern</button>' : ''}` },
-      { title: 'Wochen-Herausforderung', icon: '📜', col: '#4fc3ff', rot: 1.5, desc: 'Jede Woche neue Regeln. Alle starten bei Stufe 1. Je weiter du kommst, desto mehr Sterne gibt es.',
+      { title: 'Wochen-Herausforderung', art: ['woche1', 'woche2'], icon: '📜', col: '#4fc3ff', rot: 1.5, desc: 'Jede Woche neue Regeln. Alle starten bei Stufe 1. Je weiter du kommst, desto mehr Sterne gibt es.',
         info: [...(rules.length ? [`Regeln: ${rules.map(r => `<b title="${esc(r.desc)}">${esc(r.name)}</b>`).join(', ')}`] : []), `Diese Woche: <b>${wk ? `Stufe ${wk}` : 'noch nicht gespielt'}</b>`, nextTier ? `Nächste Belohnung ab Stufe ${nextTier.st}: <b>${nextTier.stars} Sterne${nextTier.crown ? ' + 1 Krone' : ''}</b>` : '<b>Alle Belohnungen geholt</b>'],
         acts: '<button class="btn" data-m="go" data-go="weekly">Herausforderung annehmen</button>' },
-      { title: 'Turm', icon: '🏰', col: '#c9a6ff', rot: -1, desc: 'Etage für Etage nach oben, nur Elite-Gegner. Jede Rekord-Etage gibt allen Helden für immer +3 % Schaden und Leben.',
+      { title: 'Turm', art: ['turm1', 'turm2'], icon: '🏰', col: '#c9a6ff', rot: -1, desc: 'Etage für Etage nach oben, nur Elite-Gegner. Jede Rekord-Etage gibt allen Helden für immer +3 % Schaden und Leben.',
         info: tOpen ? [`Rekord: <b>Etage ${S.towerBest}</b>`, `Dauerhafter Bonus: <b>+${S.towerBest * 3} %</b>`, `Nächste Rune bei Etage ${5 * Math.floor(S.towerBest / 5) + 5}`] : [],
         lock: tOpen ? '' : 'Ab der 8. Wiedergeburt', acts: '<button class="btn" data-m="go" data-go="tower">Turm betreten</button>' },
-      { title: 'Ahnenprüfung', icon: '✦', col: '#ffd27a', rot: 2, desc: '10 Missionen voller Bosse mit je 3 Phasen. Am Ende wartet der Urahn mit einem Ahnensiegel.',
+      { title: 'Ahnenprüfung', art: ['ahnen1', 'ahnen2'], icon: '✦', col: '#ffd27a', rot: 2, desc: '10 Missionen voller Bosse mit je 3 Phasen. Am Ende wartet der Urahn mit einem Ahnensiegel.',
         info: aOpen ? [`Nächste Mission: <b>${S.ahn.m + 1}/10 · ${esc(AHN_MISSIONS[S.ahn.m].name)}</b>`, `Freie Siegel: <b>${S.ahn.sig}</b> · erhalten: ${S.ahn.got}`] : [],
         lock: aOpen ? '' : 'Ab der 6. Wiedergeburt', acts: `<button class="btn" data-m="go" data-go="ahn">Mission ${S.ahn.m + 1} starten</button><button class="btn ghost small" data-m="go" data-go="ahnmap">Zur Karte</button>` },
-      { title: 'Expedition', icon: '🧭', col: '#9bd14a', rot: -1.5, desc: 'Kurze Aufträge für Heldensplitter. Mit etwas Glück findest du Puzzleteile für neue Helden.',
+      { title: 'Expedition', art: ['exp1', 'exp2'], icon: '🧭', col: '#9bd14a', rot: -1.5, desc: 'Kurze Aufträge für Heldensplitter. Mit etwas Glück findest du Puzzleteile für neue Helden.',
         info: eOpen ? [`Heldensplitter: <b>${S.exp.spl}</b>`, `Puzzle ${esc(HERO_BY_ID[S.exp.target].name)}: <b>${pieceCount(S, S.exp.target)}/6</b>`] : [],
         lock: eOpen ? '' : 'Ab dem 1. Aufstieg', acts: '<button class="btn" data-m="go" data-go="exp">Aufträge ansehen</button>' },
     ];
@@ -3249,6 +3339,9 @@
   }
   // Neuigkeiten: neueste Einträge oben. Neue Updates OBEN mit höherer id anhängen.
   const UPDATES = [
+    { id: 36, date: '14.10.2026', title: 'Zeitbaum ab dem Aufstieg', items: [
+      ['Umbau', 'Den Zeitbaum für schnellere Spieltempos gibt es jetzt erst ab dem 1. Aufstieg. Wer vorher schon Tempo-Stufen gekauft hat, behält sie.'],
+    ] },
     { id: 35, date: '14.10.2026', title: 'Das Anschlagbrett', items: [
       ['Neu', 'Links im Lager steht jetzt ein Anschlagbrett. Tippst du es an, öffnet sich ein Holzbrett mit Plakaten für alle Spielarten: Feldzug, Wochen-Herausforderung, Turm, Ahnenprüfung und Expedition. Jedes Plakat zeigt deinen Stand und startet direkt.'],
       ['Umbenannt', 'Der normale Lauf heißt jetzt Feldzug. Der Knopf „Feldzug starten“ unter dem Lager bleibt für den schnellen Start.'],
