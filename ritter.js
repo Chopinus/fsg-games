@@ -637,7 +637,7 @@
   const AHN_COUNT = AHN_MISSIONS.length;
   const ahnOpen = S => feature(S, 'ahnen');
   const ahnBossesOf = mi => (mi === AHN_COUNT - 1 ? [...AHN_MISSIONS[mi].bosses, AHNE] : AHN_MISSIONS[mi].bosses);
-  const ahnLevelFor = S => Math.max(10, Math.round(AHN_TUNE.lvl * Math.max(S.best || 0, 10)));
+  const ahnLevelFor = S => Math.max(10, Math.round(AHN_TUNE.lvl * Math.max(S.bestEver || 0, S.best || 0, 10)));
   function ahnFix(d) {
     const a = d && typeof d === 'object' ? d : {}, n = x => Math.max(0, Math.floor(Number(x) || 0));
     const out = { m: Math.min(AHN_COUNT - 1, n(a.m)), lvl: n(a.lvl), sig: n(a.sig), got: n(a.got), place: {} };
@@ -860,6 +860,8 @@
     out.rlager = Math.max(0, Math.min(LAGER_MAX, Math.floor(Number(d.rlager) || 0)));
     out.altar = Math.max(0, Math.min(ALTAR_MAX, Math.floor(Number(d.altar) || 0)));
     out.ahn = ahnFix(d.ahn);
+    if (!d.ahnV) out.ahn.lvl = 0; // Stärke neu: nach dem höchsten Rekord überhaupt
+    out.ahnV = 1;
     for (const h of [...HEROES].reverse()) while (kPlaced(out) > out.kslots && out.kplace[h.id]) { if (--out.kplace[h.id] <= 0) delete out.kplace[h.id]; }
     for (const h of HEROES) { const keys = NODES.filter(n => n.tree === h.tree && n.kind === 'key' && out.nodes[n.id]); for (const n of keys.slice(keyCap(out, h.tree))) { const c = n.cost(0); out.gold += c.g; out.souls += c.s; delete out.nodes[n.id]; } }
     delete out.reset;
@@ -2819,6 +2821,9 @@
   }
   // Neuigkeiten: neueste Einträge oben. Neue Updates OBEN mit höherer id anhängen.
   const UPDATES = [
+    { id: 32, date: '14.10.2026', title: 'Ahnenprüfung: Stärke nach Allzeit-Rekord', items: [
+      ['Umstellung', 'Die Gegnerstärke der Ahnenprüfung richtet sich jetzt nach deinem höchsten Rekord überhaupt (80 %), nicht mehr nach dem Rekord seit der letzten Wiedergeburt. Eine schon begonnene Prüfung bekommt beim nächsten Missionsstart die neue Stärke, dein Fortschritt auf der Karte bleibt.'],
+    ] },
     { id: 31, date: '14.10.2026', title: 'Aufgeräumte Reiter', items: [
       ['Neu', 'Alle Helden sind jetzt unter einem Reiter „Helden“ zusammengefasst. Darunter wählst du den Helden über eine Zeile mit Porträts.'],
       ['Neu', 'Ahnenprüfung und Expedition stehen gemeinsam unter „Abenteuer“, sobald beide offen sind.'],
@@ -3161,7 +3166,7 @@
     html += `<div class="ahn-mission" style="--mc:${M.col}"><div class="ahn-mhead"><span class="ahn-mnum">${sel + 1}</span><div><b>${esc(M.name)}</b><small>${esc(M.desc)}</small></div>
       <span class="ahn-state ${state}">${state === 'done' ? 'Geschafft' : state === 'cur' ? 'Nächste Mission' : 'Noch gesperrt'}</span></div>
       <ol class="ahn-bosses">${bosses.map((d, i) => `<li class="${d.ahne ? 'ahne' : ''}" style="--bc:${d.tint || '#ffd27a'}"><span class="ahn-bi">${d.ahne ? '♛' : i + 1}</span><div><b>${esc(d.name)}</b><i>„${esc(d.quote)}“</i><div class="ahn-phs">${ahnAbilChips(d.ph)}</div></div></li>`).join('')}</ol>
-      <p class="note">Vor jedem Boss kommen 2 Wellen Diener. Nach jedem Boss stehen gefallene Helden wieder auf. Scheitert die Mission, fängst du sie neu an. Gegnerstärke: <b>Stufe ${lvl}</b> (80 % deines Rekords${S.ahn.lvl ? ', festgelegt für diese Prüfung' : ', wird beim Start festgelegt'}).</p>
+      <p class="note">Vor jedem Boss kommen 2 Wellen Diener. Nach jedem Boss stehen gefallene Helden wieder auf. Scheitert die Mission, fängst du sie neu an. Gegnerstärke: <b>Stufe ${lvl}</b> (80 % deines höchsten Rekords überhaupt${S.ahn.lvl ? ', festgelegt für diese Prüfung' : ', wird beim Start festgelegt'}).</p>
       <div class="row">${state === 'cur' ? `<button class="btn gold" data-rl="ahnstart" ${inCamp() ? '' : 'disabled'}>Mission ${sel + 1} starten</button>` : ''}${ahnSel != null && ahnSel !== cur ? '<button class="btn ghost small" data-rl="ahncur">Zur nächsten Mission</button>' : ''}</div></div>`;
     // Siegel setzen
     const hiredH = HEROES.filter(h => hired(S, h.tree));
