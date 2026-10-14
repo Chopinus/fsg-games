@@ -436,7 +436,7 @@
       P4: sQ('sg_w_wucht', 'Wucht', '!', '+15 % kritischer Schaden des Wächters je Stufe', [ad('w', 'critD', 0.15)]),
       P5: sQ('sg_w_wehr', 'Wehrturm', '◎', 'Alle Helden nehmen 2 % weniger Schaden je Stufe', [ad('g', 'partyDr', 0.02)]),
       K1: sK('sg_w_schlag', 'Schildschlag', '◘', 'jeder abgewehrte Treffer betäubt den Angreifer 0,5 s (Bosse 0,25 s)', [ad('w', 'blockStun', 1)]),
-      K2: sK('sg_w_koloss', 'Koloss', '▣', 'Angriffe des Wächters machen zusätzlich 4 % seines maximalen Lebens als Schaden', [ad('w', 'koloss', 0.04)]),
+      K2: sK('sg_w_koloss', 'Koloss', '▣', 'Angriffe des Wächters machen zusätzlich 4 % seines maximalen Lebens als Schaden, höchstens so viel wie sein normaler Schaden (also bis doppelt so viel)', [ad('w', 'koloss', 0.04)]),
       K3: sK('sg_w_wille', 'Eiserner Wille', '◈', 'Eiserne Haut löst schon bei 90 % Leben aus und hält 3 s länger', [ad('w', 'wille', 1)]),
       K4: sK('sg_w_schutz', 'Beschützer', '⛨', 'fällt ein anderer Held unter 25 %, schirmt der Wächter ihn 3 s komplett ab (einmal je Held und Welle)', [ad('w', 'protector', 1)]),
     } },
@@ -478,7 +478,7 @@
       P4: sQ('sg_p_schein', 'Heiligenschein', '♥', '+2 % Leben aller Helden je Stufe', [mu('g', 'partyHp', 0.02)]),
       P5: sQ('sg_p_haende', 'Sanfte Hände', '❦', 'Alle Helden heilen 0,1 % ihres Lebens pro Sekunde je Stufe', [ad('g', 'partyRegen', 0.001)]),
       K1: sK('sg_p_fluegel', 'Engelsflügel', '⚚', 'wiederbelebte Helden sind 5 s unverwundbar', [ad('p', 'angel', 1)]),
-      K2: sK('sg_p_feuer', 'Heiliges Feuer', '♨', 'die Hälfte jeder Heilung der Priesterin trifft den vordersten Gegner als Schaden', [ad('p', 'holyFire', 0.5)]),
+      K2: sK('sg_p_feuer', 'Heiliges Feuer', '♨', 'die Hälfte jeder Heilung der Priesterin trifft den vordersten Gegner als Schaden, höchstens so viel wie ihre normale Heilung', [ad('p', 'holyFire', 0.5)]),
       K3: sK('sg_p_hohe', 'Hohepriesterin', '♛', 'Schutzschild ist doppelt so stark', [ad('p', 'hohe', 1)]),
       K4: sK('sg_p_wut', 'Heilige Wut', '☀', 'jede Wiederbelebung gibt allen Helden 6 s lang +40 % Schaden', [ad('p', 'wrath', 0.4)]),
     } },
@@ -1407,7 +1407,7 @@
     heil: { cd: () => 22, ready: (run, st) => anyBelow(run, st, 0.55), cast: (c, r) => c.healSplit('r', 0.4 + 0.08 * (r - 1), 0.1 + 0.03 * (r - 1)) },
     blitz: { cd: () => 14, ready: run => !!strongest(run, 320), cast: (c, r) => { const t = strongest(c.run, 320); c.hit('r', t, (4 + 1.5 * (r - 1)) * c.st.r.actMul, '#cfe6ff'); c.run.fx.blitzX = t.x; c.run.shake = 0.25; } },
     schild: { cd: () => 9, ready: engaged, cast: (c, r) => { const m = (2.5 + 0.5 * (r - 1)) * c.st.r.actMul; for (let i = 0; i < 2; i++) { const e = c.run.enemies.find(x => x.hp > 0); if (e) c.hit('r', e, m, '#ffe0a8'); } if (c.run.cds.wirbel > 0) c.run.cds.wirbel = Math.max(0, c.run.cds.wirbel - 3); } },
-    schrei: { cd: () => 20, ready: engaged, cast: (c, r) => { c.run.buffT = c.st.r.schwur ? 12 : 6; c.run.buffMul = 0.4 + 0.15 * (r - 1); c.float('r', 'Kriegsschrei!', '#ffb547'); } },
+    schrei: { minCd: (S, st) => (st.r && st.r.schwur ? 24 : 0), cd: () => 20, ready: engaged, cast: (c, r) => { c.run.buffT = c.st.r.schwur ? 12 : 6; c.run.buffMul = 0.4 + 0.15 * (r - 1); c.float('r', 'Kriegsschrei!', '#ffb547'); } },
     w_wall: { cd: () => 12, ready: run => near(run).length >= 2 || near(run).some(e => e.boss), cast: (c, r) => { near(c.run).forEach(e => { c.hit('w', e, (1.5 + 0.5 * (r - 1)) * c.st.w.actMul, '#cfe0ff'); e.stun = Math.max(e.stun, 1); }); c.run.shake = 0.2; } },
     w_haut: { cd: () => 16, ready: (run, st) => run.h.w.hp < st.w.hp * (st.w.wille ? 0.9 : 0.7), cast: (c, r) => { c.run.hautT = 5 + r + (c.st.w.wille ? 3 : 0); c.float('w', 'Eiserne Haut', '#7fb2ff'); } },
     w_rache: { cd: () => 15, ready: engaged, cast: (c, r) => { c.run.racheT = 6 + r; c.float('w', 'Vergeltung', '#7fb2ff'); } },
@@ -1436,7 +1436,7 @@
     b_wiegen: { cd: () => 16, ready: run => near(run).length >= 2 || near(run).some(e => e.boss), cast: (c, r) => near(c.run).forEach(e => { e.stun = Math.max(e.stun, 2 + 0.5 * (r - 1)); e.sleep = 2 + 0.5 * (r - 1); }) },
     b_schall: { cd: () => 12, ready: run => near(run).length >= 1, cast: (c, r) => { near(c.run).forEach(e => { c.hit('b', e, (2 + 0.6 * (r - 1)) * c.st.b.actMul, '#ffd0ea'); e.x += e.boss ? 15 : 40; }); c.run.fx.schallX = c.run.pos.b || 80; } },
     d_ranken: { cd: () => 14, ready: run => near(run).length >= 1, cast: (c, r) => c.run.enemies.filter(e => e.x < 460).forEach(e => { c.hit('d', e, 1.5 * c.st.d.actMul, '#c8f08a'); e.stun = Math.max(e.stun, 2 + 0.5 * (r - 1)); e.rooted = 2 + 0.5 * (r - 1); }) },
-    d_bruell: { cd: () => 18, ready: engaged, cast: (c, r) => { c.run.roarT = (6 + (r - 1)) * (c.st.d.rinde ? 2 : 1); c.float('d', 'Bärengebrüll!', '#9bd14a'); c.run.shake = 0.2; } },
+    d_bruell: { minCd: (S, st) => (st.d && st.d.rinde ? 32 : 0), cd: () => 18, ready: engaged, cast: (c, r) => { c.run.roarT = (6 + (r - 1)) * (c.st.d.rinde ? 2 : 1); c.float('d', 'Bärengebrüll!', '#9bd14a'); c.run.shake = 0.2; } },
     d_adler: { cd: () => 12, ready: run => run.enemies.some(e => e.x < 480), cast: (c, r) => {
       const vis = c.run.enemies.filter(e => e.x < 480), rng = vis.filter(e => e.ranged), base = (rng.length ? rng : [...vis].sort((a, b) => b.x - a.x)).slice(0, 3), ts = [...base, ...[...vis].filter(e => !base.includes(e)).sort((a, b) => b.x - a.x)].slice(0, 3 + (c.st.d.eagle || 0));
       ts.forEach(e => c.hit('d', e, (3 + (r - 1)) * c.st.d.actMul, '#e8f5c8')); c.run.fx.adlerXs = ts.map(e => e.x); } },
@@ -1448,57 +1448,59 @@
   // Aktive Fähigkeiten der Ahnensiegel
   const aliveIn = run => run.order.filter(k => run.h[k].alive);
   Object.assign(ACT, {
-    sg_r_schlag: { cd: () => 20, ready: run => engaged(run) && aliveIn(run).some(k => k !== 'r'), cast: (c, r) => {
+    sg_r_schlag: { minCd: 16, cd: () => 20, ready: run => engaged(run) && aliveIn(run).some(k => k !== 'r'), cast: (c, r) => {
       const k = aliveIn(c.run).filter(x => x !== 'r').sort((a, b) => c.st[b].atk - c.st[a].atk)[0]; if (!k) return;
       c.run.atkB[k] = { t: 8, v: 0.5 + 0.15 * (r - 1) }; c.float(k, 'Ritterschlag!', '#ffb547', 15); } },
-    sg_r_banner: { cd: () => 35, ready: (run, st) => anyBelow(run, st, 0.35), cast: (c, r) => { c.run.honorT = 8 + (r - 1); c.float('r', 'Banner der Ehre!', '#ffd27a', 15); } },
-    sg_r_duell: { cd: () => 18, ready: run => !!strongest(run, 400), cast: (c, r) => { const t = strongest(c.run, 400); t.duelT = 8; t.duelV = 1 + 0.25 * (r - 1); c.efloat(t, 'Duell!', '#ffb547', 15); } },
-    sg_w_spott: { cd: () => 18, ready: run => engaged(run), cast: (c, r) => { c.run.tauntT = 5 + (r - 1); c.float('w', 'Spott!', '#7fb2ff', 15); } },
+    sg_r_banner: { minCd: 24, cd: () => 35, ready: (run, st) => anyBelow(run, st, 0.35), cast: (c, r) => { c.run.honorT = 8 + (r - 1); c.float('r', 'Banner der Ehre!', '#ffd27a', 15); } },
+    sg_r_duell: { minCd: 16, cd: () => 18, ready: run => !!strongest(run, 400), cast: (c, r) => { const t = strongest(c.run, 400); t.duelT = 8; t.duelV = 1 + 0.25 * (r - 1); c.efloat(t, 'Duell!', '#ffb547', 15); } },
+    sg_w_spott: { minCd: 14, cd: () => 18, ready: run => engaged(run), cast: (c, r) => { c.run.tauntT = 5 + (r - 1); c.float('w', 'Spott!', '#7fb2ff', 15); } },
     sg_w_beben: { cd: () => 16, ready: run => near(run).length >= 2 || near(run).some(e => e.boss), cast: (c, r) => {
       c.run.enemies.filter(e => e.x < 520).forEach(e => { c.hit('w', e, (2.5 + 0.6 * (r - 1)) * c.st.w.actMul, '#cfe0ff'); e.quakeT = 4; }); c.run.shake = 0.35; } },
-    sg_w_prall: { cd: () => 15, ready: run => run.enemies.some(e => (e.ranged || e.ahn) && e.x < 470), cast: (c, r) => { c.run.prallT = 6; c.run.prallV = (2 + 0.6 * (r - 1)) * c.st.w.actMul; c.float('w', 'Prallschild', '#7fb2ff'); } },
+    sg_w_prall: { minCd: 12, cd: () => 15, ready: run => run.enemies.some(e => (e.ranged || e.ahn) && e.x < 470), cast: (c, r) => { c.run.prallT = 6; c.run.prallV = (2 + 0.6 * (r - 1)) * c.st.w.actMul; c.float('w', 'Prallschild', '#7fb2ff'); } },
     sg_s_ziel: { cd: () => 16, ready: run => !!strongest(run, 420) && !(run.aimT > 0), cast: (c, r) => { c.run.aimT = 1.5; c.run.aimV = (12 + 4 * (r - 1)) * c.st.s.actMul; c.float('s', 'Zielt …', '#c8f5cf'); } },
-    sg_s_sperr: { cd: () => 18, ready: run => run.enemies.some(e => e.x < 380), cast: (c, r) => { c.run.apsB.s = { t: 4 + (r - 1), v: 2 }; c.float('s', 'Sperrfeuer!', '#7ee08a'); } },
+    sg_s_sperr: { minCd: 12, cd: () => 18, ready: run => run.enemies.some(e => e.x < 380), cast: (c, r) => { c.run.apsB.s = { t: 4 + (r - 1), v: 2 }; c.float('s', 'Sperrfeuer!', '#7ee08a'); } },
     sg_s_sprung: { cd: () => 14, ready: run => near(run).length >= 1, cast: (c, r) => {
       c.run.enemies.slice(0, 2).forEach(e => c.hit('s', e, (2 + 0.6 * (r - 1)) * c.st.s.actMul, '#c8f5cf')); const h = c.run.h.s; if (h) h.invT = 2; c.float('s', 'Rückzug!', '#7ee08a'); } },
-    sg_m_loch: { cd: () => 18, ready: run => near(run).length >= 2 || near(run).some(e => e.boss), cast: (c, r) => {
+    sg_m_loch: { minCd: 8, cd: () => 18, ready: run => near(run).length >= 2 || near(run).some(e => e.boss), cast: (c, r) => {
       c.run.holeT = 3; c.run.holeTick = 0; c.run.holeV = (1.5 + 0.5 * (r - 1)) * c.st.m.actMul; c.run.holeX = Math.min(430, (c.run.enemies[0] ? c.run.enemies[0].x : 300) + 50); } },
     sg_m_strahl: { cd: () => 16, ready: run => !!strongest(run, 420), cast: (c, r) => { c.run.beam = { t: 3, tick: 0, i: 0, v: (1 + 0.25 * (r - 1)) * c.st.m.actMul }; } },
-    sg_m_mana: { cd: () => 16, ready: run => !!strongest(run, 420), cast: (c, r) => { const t = strongest(c.run, 420); t.manaT = 4 + (r - 1); c.efloat(t, 'Manabrand', '#c08cff', 14); } },
-    sg_p_boden: { cd: () => 22, ready: (run, st) => anyBelow(run, st, 0.8), cast: (c, r) => { c.run.groundT = 8; c.run.groundV = 0.03 + 0.01 * (r - 1); c.float('p', 'Heiliger Boden', '#ffe48a'); } },
-    sg_p_eile: { cd: () => 18, ready: run => engaged(run) || run.enemies.some(e => e.x < 380), cast: (c, r) => {
+    sg_m_mana: { minCd: 12, cd: () => 16, ready: run => !!strongest(run, 420), cast: (c, r) => { const t = strongest(c.run, 420); t.manaT = 4 + (r - 1); c.efloat(t, 'Manabrand', '#c08cff', 14); } },
+    sg_p_boden: { minCd: 16, cd: () => 22, ready: (run, st) => anyBelow(run, st, 0.8), cast: (c, r) => { c.run.groundT = 8; c.run.groundV = 0.03 + 0.01 * (r - 1); c.float('p', 'Heiliger Boden', '#ffe48a'); } },
+    sg_p_eile: { minCd: 12, cd: () => 18, ready: run => engaged(run) || run.enemies.some(e => e.x < 380), cast: (c, r) => {
       aliveIn(c.run).sort((a, b) => c.st[b].atk - c.st[a].atk).slice(0, 2).forEach(k => { c.run.apsB[k] = { t: 6, v: 0.5 + 0.1 * (r - 1) }; c.float(k, 'Eile!', '#ffe48a', 13); }); } },
     sg_p_gebet: { cd: () => 20, ready: (run, st, S) => S.equip.some(id => NODE[id].tree !== 'priester' && run.cds[id] > 3), cast: (c, r) => {
       for (const id of c.S.equip) if (NODE[id].tree !== 'priester' && c.run.cds[id] > 0) c.run.cds[id] = Math.max(0, c.run.cds[id] - (4 + (r - 1))); c.float('p', 'Gebet der Eile', '#ffe48a'); } },
     sg_t_eber: { cd: () => 14, ready: run => near(run).length >= 2 || near(run).some(e => e.boss), cast: (c, r) => {
       c.run.enemies.filter(e => e.x < 520).forEach(e => { c.hit('t', e, (2.5 + 0.8 * (r - 1)) * c.st.t.actMul, '#ffd2a8'); e.stun = Math.max(e.stun, e.boss ? 0.5 : 1); }); c.run.fx.eberX = 0; c.run.shake = 0.2; } },
-    sg_t_geheul: { cd: () => 18, ready: run => engaged(run), cast: (c, r) => { c.run.howlT = 6 + (r - 1); c.float('t', 'Wolfsgeheul!', '#d9935a'); } },
+    sg_t_geheul: { minCd: 16, cd: () => 18, ready: run => engaged(run), cast: (c, r) => { c.run.howlT = 6 + (r - 1); c.float('t', 'Wolfsgeheul!', '#d9935a'); } },
     sg_t_instinkt: { cd: () => 20, ready: (run, st) => run.h.t && run.h.t.hp < st.t.hp * 0.5, cast: (c, r) => c.healOne('t', c.st.t.hp * (0.35 + 0.1 * (r - 1))) },
     sg_a_kehle: { cd: () => 10, ready: run => run.enemies.some(e => e.x < 480 && (e.boss || e.hp < e.max * 0.25)), cast: (c, r) => {
       const vis = c.run.enemies.filter(e => e.x < 480), low = vis.filter(e => !e.boss && e.hp < e.max * 0.25).sort((a, b) => a.hp / a.max - b.hp / b.max)[0];
       if (low) { low.hp = 0; low.lastBy = 'a'; c.efloat(low, 'Kehlschnitt!', '#ff6b7a', 15); c.burst(low.x, 190, '#ff6b7a', 10); }
       else { const b = vis.find(e => e.boss); if (b) c.hit('a', b, (5 + 1.5 * (r - 1)) * c.st.a.actMul, '#ff6b7a'); } } },
-    sg_a_klon: { cd: () => 20, ready: run => run.enemies.some(e => e.x < 420), cast: (c, r) => { c.run.cloneT = 8; c.run.cloneV = 0.5 + 0.15 * (r - 1); c.run.cloneAtk = 0.2; c.float('a', 'Schattenklon', '#ff6b7a'); } },
+    sg_a_klon: { minCd: 16, cd: () => 20, ready: run => run.enemies.some(e => e.x < 420), cast: (c, r) => { c.run.cloneT = 8; c.run.cloneV = 0.5 + 0.15 * (r - 1); c.run.cloneAtk = 0.2; c.float('a', 'Schattenklon', '#ff6b7a'); } },
     sg_a_mal: { cd: () => 16, ready: run => run.enemies.filter(e => e.x < 480).length >= 2, cast: (c, r) => {
       c.run.enemies.filter(e => e.x < 480).slice(0, 3).forEach(e => { e.smarkT = 8; c.efloat(e, '✕', '#ff6b7a', 16); }); c.run.smarkV = (4 + 1.2 * (r - 1)) * c.st.a.actMul; } },
-    sg_n_wand: { cd: () => 22, ready: run => engaged(run), cast: (c, r) => { c.run.wallT = 4 + (r - 1); c.float('n', 'Knochenwand!', '#6be0b8', 15); } },
-    sg_n_riese: { cd: () => 25, ready: run => engaged(run) && !run.giant, cast: (c, r) => { const hp = c.st.n.hp * (3 + (r - 1)); c.run.giant = { t: 12, hp, max: hp }; c.float('n', 'Knochenriese!', '#6be0b8', 15); } },
-    sg_n_fessel: { cd: () => 16, ready: run => run.enemies.filter(e => e.x < 480).length >= 2, cast: (c, r) => {
+    sg_n_wand: { minCd: 14, cd: () => 22, ready: run => engaged(run), cast: (c, r) => { c.run.wallT = 4 + (r - 1); c.float('n', 'Knochenwand!', '#6be0b8', 15); } },
+    sg_n_riese: { minCd: 24, cd: () => 25, ready: run => engaged(run) && !run.giant, cast: (c, r) => { const hp = c.st.n.hp * (3 + (r - 1)); c.run.giant = { t: 12, hp, max: hp }; c.float('n', 'Knochenriese!', '#6be0b8', 15); } },
+    sg_n_fessel: { minCd: 16, cd: () => 16, ready: run => run.enemies.filter(e => e.x < 480).length >= 2, cast: (c, r) => {
       [...c.run.enemies].filter(e => e.x < 480).sort((a, b) => b.hp - a.hp).slice(0, 3).forEach(e => { e.linkT = 6 + (r - 1); c.efloat(e, '∞', '#6be0b8', 16); }); } },
-    sg_b_diss: { cd: () => 16, ready: run => engaged(run), cast: (c, r) => { c.run.enemies.forEach(e => (e.dissT = 5 + (r - 1))); c.float('b', 'Dissonanz!', '#ff8ac8'); } },
-    sg_b_echo: { cd: r => 20 - 2 * (r - 1), ready: (run, st, S) => { const id = run.lastAct; return !!(id && ACT[id] && rank(S, id) && ACT[id].ready(run, st, S)); }, cast: (c, r) => {
+    sg_b_diss: { minCd: 14, cd: () => 16, ready: run => engaged(run), cast: (c, r) => { c.run.enemies.forEach(e => (e.dissT = 5 + (r - 1))); c.float('b', 'Dissonanz!', '#ff8ac8'); } },
+    sg_b_echo: { cd: r => 20 - 2 * (r - 1), ready: (run, st, S) => { const id = run.lastAct; return !!(id && ACT[id] && rank(S, id) && !minCdOf(id, S, st) && ACT[id].ready(run, st, S)); }, cast: (c, r) => {
       const id = c.run.lastAct; if (!id) return; try { ACT[id].cast(c, rank(c.S, id)); c.run.fx[id] = 0.5; } catch (err) {} c.float('b', `Echo: ${NODE[id].name}`, '#ff8ac8', 13); } },
-    sg_b_ahnen: { cd: () => 20, ready: run => engaged(run) || run.enemies.some(e => e.x < 380), cast: (c, r) => { c.run.critBT = 8; c.run.critBV = 0.25 + 0.05 * (r - 1); c.float('b', 'Ballade der Ahnen', '#ffd27a'); } },
-    sg_d_gestalt: { cd: () => 22, ready: run => engaged(run), cast: (c, r) => { c.run.bearT = 8 + (r - 1); c.float('d', 'Wildgestalt!', '#9bd14a', 15); } },
-    sg_d_wachs: { cd: () => 24, ready: run => engaged(run), cast: (c, r) => {
+    sg_b_ahnen: { minCd: 16, cd: () => 20, ready: run => engaged(run) || run.enemies.some(e => e.x < 380), cast: (c, r) => { c.run.critBT = 8; c.run.critBV = 0.25 + 0.05 * (r - 1); c.float('b', 'Ballade der Ahnen', '#ffd27a'); } },
+    sg_d_gestalt: { minCd: 20, cd: () => 22, ready: run => engaged(run), cast: (c, r) => { c.run.bearT = 8 + (r - 1); c.float('d', 'Wildgestalt!', '#9bd14a', 15); } },
+    sg_d_wachs: { minCd: 20, cd: () => 24, ready: run => engaged(run), cast: (c, r) => {
       const f = 0.2 + 0.05 * (r - 1); c.run.growT = 10;
-      aliveIn(c.run).forEach(k => { const h = c.run.h[k], add = c.st[k].hp * f; h.shield = (h.shield || 0) + add; h.growS = (h.growS || 0) + add; }); c.float('d', 'Wachstum', '#9bd14a'); } },
-    sg_d_gewalt: { cd: () => 20, ready: run => engaged(run), cast: (c, r) => { c.run.natureT = 5 + (r - 1); c.float('d', 'Naturgewalt', '#9bd14a'); } },
+      aliveIn(c.run).forEach(k => { const h = c.run.h[k], add = c.st[k].hp * f; if (h.growS) h.shield = Math.max(0, (h.shield || 0) - h.growS); h.shield = (h.shield || 0) + add; h.growS = add; }); c.float('d', 'Wachstum', '#9bd14a'); } },
+    sg_d_gewalt: { minCd: 14, cd: () => 20, ready: run => engaged(run), cast: (c, r) => { c.run.natureT = 5 + (r - 1); c.float('d', 'Naturgewalt', '#9bd14a'); } },
     sg_e_flamme: { cd: () => 14, ready: run => near(run).length >= 1, cast: (c, r) => { c.run.flameT = 3; c.run.flameTick = 0; c.run.flameV = (2 + 0.5 * (r - 1)) * c.st.e.actMul; } },
     sg_e_rakete: { cd: () => 15, ready: run => !!strongest(run, 420), cast: (c, r) => {
       const t = strongest(c.run, 420); for (let i = 0; i < 3; i++) { c.arrow('e', t, 0.3 + i * 0.12, 'bomb'); c.hit('e', t, (4 + 1.2 * (r - 1)) * c.st.e.actMul, '#ffc58a'); } c.burst(t.x, 180, '#ff9a3d', 14); c.run.shake = 0.2; } },
-    sg_e_druck: { cd: () => 18, ready: run => engaged(run) || run.enemies.some(e => e.x < 420), cast: (c, r) => { c.run.overT = 6 + (r - 1); c.float('e', 'Überdruck!', '#f28c28'); } },
+    sg_e_druck: { minCd: 16, cd: () => 18, ready: run => engaged(run) || run.enemies.some(e => e.x < 420), cast: (c, r) => { c.run.overT = 6 + (r - 1); c.float('e', 'Überdruck!', '#f28c28'); } },
   });
+  // Mindestabstand zwischen zwei Einsätzen: Effekte mit Dauer laufen höchstens die halbe Zeit, egal wie schnell sie laden
+  const minCdOf = (id, S, st) => { const m = ACT[id] && ACT[id].minCd; return typeof m === 'function' ? m(S, st) : m || 0; };
   // Wird jeden Schritt aufgerufen: laufende Siegel-Effekte
   function sigStep(S, st, run, c, dt) {
     for (const k in run.atkB) if (run.atkB[k]) { run.atkB[k].t -= dt; if (run.atkB[k].t <= 0) run.atkB[k] = null; }
@@ -1635,7 +1637,7 @@
       mission: exp ? (MISSION[S.exp.mission] ? S.exp.mission : 'streif') : null, waves: 0, bossKills: 0, minions: [], turretT: 1, extraTurretT: 0, songT: 0, songMul: 0, roarT: 0,
       hard: hardMul(S, exp), diff: ascDiff(S), speed: rules.includes('speed') ? 1.5 : 1, hpMul: rules.includes('giant') ? 2 : 1, eliteChance: rules.includes('elite') ? 0.4 : 0.12, noheal: rules.includes('noheal'),
       dragonT: 2, compRevive: false, bannerT: 0, kills: 0, gold: 0, souls: 0, runes: [], phoenixUsed: false, miracleUsed: false,
-      fx: {}, cds: {}, atkB: {}, apsB: {}, buffT: 0, buffMul: 0, hautT: 0, racheT: 0, packT: 0, order, pos, frontX: pos[order[0]], h,
+      fx: {}, cds: {}, castAt: {}, atkB: {}, apsB: {}, buffT: 0, buffMul: 0, hautT: 0, racheT: 0, packT: 0, order, pos, frontX: pos[order[0]], h,
       enemies: [], floats: [], arrows: [], eshots: [], parts: [], scroll: 0, dead: false, victory: false, deadT: 0, time: 0, shake: 0 };
     // Abkürzung: übersprungene Bosse geben einen Teil ihrer Seelen
     if (run.mode === 'normal' && run.stage > 10) {
@@ -1704,7 +1706,7 @@
       const h = run.h[k], T = st[k]; if (!h || !h.alive || run.noheal) return;
       if (run.curseT > 0) amt *= 0.4;
       if (k === 'd' && T.bloom) run.bloomT = 4;
-      if (src === 'p' && st.p && st.p.holyFire && st.p.atk > 0 && run.enemies[0]) c.hit('p', run.enemies[0], amt * st.p.holyFire / st.p.atk, '#fff2b0');
+      if (src === 'p' && st.p && st.p.holyFire && st.p.atk > 0 && run.enemies[0]) c.hit('p', run.enemies[0], Math.min(amt * st.p.holyFire, st.p.heal) / st.p.atk, '#fff2b0');
       const over = h.hp + amt - T.hp; h.hp = Math.min(T.hp, h.hp + amt);
       if (over > 0 && st.p && st.p.overShield) h.shield = Math.min(T.hp * 0.5, h.shield + over * st.p.overShield);
       c.float(k, '+' + fmt(amt), '#7ee08a', 12);
@@ -1783,10 +1785,12 @@
       const n = NODE[id], hk = HERO[n.tree].id, h = run.h[hk];
       if (!h || !h.alive || h.stunT > 0 || !rank(S, id) || run.cds[id] > 0 || !run.enemies.length) continue;
       if (n.sig && !sigOn(S, n.tree)) continue;
+      const mc = minCdOf(id, S, st);
+      if (mc && run.time - (run.castAt[id] ?? -1e9) < mc) continue;
       if (!ACT[id].ready(run, st, S)) continue;
       ACT[id].cast(c, rank(S, id));
-      run.cds[id] = ACT[id].cd(rank(S, id), S) * (1 - st[hk].cdr); run.fx[id] = 0.5; sfx('skill');
-      if (hk !== 'b') run.lastAct = id;
+      run.cds[id] = Math.max(mc, ACT[id].cd(rank(S, id), S) * (1 - st[hk].cdr)); run.castAt[id] = run.time; run.fx[id] = 0.5; sfx('skill');
+      if (hk !== 'b' && !mc) run.lastAct = id;
       if (hk === 'e' && st.e.tinker) run.tinkT = 4;
     }
     sigStep(S, st, run, c, dt);
@@ -1823,7 +1827,7 @@
           for (let i = 0; i < T.shots; i++) { c.arrow('m', tgt, 0.35 + i * 0.1, 'feuer'); c.hit('m', tgt, 1, '#ffd0a0'); run.enemies.slice(1).filter(e => e.x - tgt.x < 70).forEach(e => c.hit('m', e, T.splash, '#ffd0a0')); }
           if (T.overload && (h.cnt = (h.cnt || 0) + 1) % 4 === 0) { const ts = run.enemies.filter(e => e !== tgt && e.hp > 0).slice(0, 3); ts.forEach(e => c.hit('m', e, 1, '#e2c9ff')); if (ts.length) { run.fx.m_kette = 0.35; run.fx.chain = ts.map(e => e.x); } }
         } else {
-          c.hit(k, tgt, 1 + (T.koloss ? T.koloss * T.hp / Math.max(1e-9, T.atk) : 0), k === 'w' ? '#cfe0ff' : null);
+          c.hit(k, tgt, 1 + (T.koloss ? Math.min(1, T.koloss * T.hp / Math.max(1e-9, T.atk)) : 0), k === 'w' ? '#cfe0ff' : null);
           if (T.dbl && Math.random() < T.dbl && tgt.hp > 0) c.hit(k, tgt, 1);
           if (T.wmaster && (h.cnt = (h.cnt || 0) + 1) % 5 === 0) { near(run).filter(e => e !== tgt).forEach(e => c.hit(k, e, 1, '#ffe0a8')); run.fx.wirbel = 0.25; }
           if (T.stunChance && Math.random() < T.stunChance) tgt.stun = Math.max(tgt.stun, 0.5);
@@ -2433,6 +2437,8 @@
       const on = S.equip.includes(n.id), used = eqOf(S, tree, n.sig).length, lim = slotLim(S, tree, n.sig);
       act += `<button class="btn ghost small" data-rl="equip" ${inCamp() && lim > 0 ? '' : 'disabled'}>${on ? 'Ablegen' : used >= lim ? 'Ausrüsten (tauscht)' : 'Ausrüsten'}</button>${n.sig ? '<span class="note">Kommt in den Siegel-Platz.</span>' : ''}`;
     }
+    const mcd = n.active && ACT[n.id] && typeof ACT[n.id].minCd === 'number' ? ACT[n.id].minCd : 0;
+    if (mcd) act = `<span class="note">Höchstens alle ${mcd} s, auch wenn die Fähigkeit schneller lädt.</span>` + act;
     return `<div class="rl-detail" style="--hc:${h.color}"><div class="rl-dhead"><span class="rl-dic">${n.icon}</span><div><b>${esc(n.name)}</b><span class="pill">${type}</span></div></div>
       ${n.max > 1 ? `<span class="note">${n.max > 99 ? `Stufe ${r}` : `Stufe ${r} von ${n.max}`}</span>` : ''}<p>${esc(n.desc)}</p>${n.cap ? `<p class="note">${r >= n.cap ? `Grenze erreicht${r > n.cap ? ` · ${r - n.cap} Bonus-Stufen aktiv` : ''}` : `Noch ${n.cap - r} Stufen bis zur Grenze`}</p>` : ''}<div class="row">${act}</div></div>`;
   }
@@ -3184,6 +3190,13 @@
   }
   // Neuigkeiten: neueste Einträge oben. Neue Updates OBEN mit höherer id anhängen.
   const UPDATES = [
+    { id: 34, date: '14.10.2026', title: 'Effekt-Symbole und Siegel-Feinschliff', items: [
+      ['Neu', 'Über jedem Helden und Gegner zeigen kleine Symbole, welche Effekte gerade wirken: Stärkungen, Schwächungen, Gift, Brand, Blutung, Betäubung und alles, was Fähigkeiten und Bosse auslösen. Rote Ränder sind schlechte Effekte, dunkelgrüne gute.'],
+      ['Neu', 'Effekte für die ganze Gruppe (zum Beispiel Kriegsschrei, Kriegslied, Fluch oder Verlangsamung) stehen gemeinsam oben links unter der Stufe.'],
+      ['Balance', 'Koloss (Wächter) gibt höchstens so viel Zusatzschaden wie der normale Schaden des Wächters. Vorher wurde aus viel Leben riesiger Schaden.'],
+      ['Balance', 'Siegel-Fähigkeiten mit Dauer, zum Beispiel Banner der Ehre, Knochenwand oder Wildgestalt, können höchstens die halbe Zeit laufen, auch mit sehr schnellem Laden. Echo wiederholt solche Fähigkeiten nicht.'],
+      ['Balance', 'Heiliges Feuer macht pro Heilung höchstens so viel Schaden wie eine normale Heilung der Priesterin. Wachstum stapelt sich nicht mehr.'],
+    ] },
     { id: 33, date: '14.10.2026', title: 'Ahnensiegel: die Bäume wachsen', items: [
       ['Neu', 'Setzt du ein Ahnensiegel auf einen Helden, wächst sein Fertigkeitenbaum nach unten: 5 passive Fähigkeiten, 3 Siegel-Fähigkeiten und 4 Siegel-Schlüssel. Jeder der 11 Helden hat seine eigene Erweiterung, so wie du sie in der Umfrage gewählt hast.'],
       ['Neu', 'Siegel-Fähigkeiten haben einen eigenen Platz. Damit kämpft jeder Held mit Siegel mit einer zusätzlichen aktiven Fähigkeit.'],
@@ -6254,6 +6267,7 @@
       if (R.fx.phoenix > 0) { ctx.fillStyle = `rgba(255,154,61,${Math.min(1, R.fx.phoenix) * 0.4})`; ctx.fillRect(0, 0, W, H); }
       env.front(t, scroll);
       if (R.mode === 'ahnen') ahnScreen(R, t);
+      statusIcons(R, t);
       if (!tower && R.mode !== 'ahnen' && nightmare(stage)) { parts(t, 14, { type: 'ember', rgb: '255,60,60', vx: 4, vy: -18, size: 1.4, alpha: 0.8, seed: 40 }); vignette(0.45, '60,0,10'); }
       for (const p of R.parts) { ctx.globalAlpha = Math.min(1, p.t * 2); ctx.fillStyle = p.c; ctx.fillRect(p.x, p.y, 3, 3); }
       ctx.globalAlpha = 1;
@@ -6541,6 +6555,95 @@
     const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.45, W / 2, H / 2, W * 0.75); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.4)');
     ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
   }
+  // Kleine Symbole über Helden und Gegnern für jeden laufenden Effekt (Stärkungen, Schwächungen, Schaden über Zeit)
+  const ST_GOOD = 'rgba(16,30,22,.9)', ST_BAD = 'rgba(46,10,16,.9)';
+  function heroStatus(R, k) {
+    const h = R.h[k], L = [], A = R.ahn, add = (i, c, bad) => L.push([i, c, bad]);
+    if (h.invT > 0 || h.protT > 0) add('✧', '#fff2b0');
+    if (h.shield > 0) add('◈', '#fff2b0');
+    if (R.atkB && R.atkB[k]) add('⚔', '#ffb547');
+    if (R.apsB && R.apsB[k]) add('»', '#ffe48a');
+    if (k === 'w') { if (R.hautT > 0) add('▣', '#7fb2ff'); if (R.racheT > 0) add('⚡', '#7fb2ff'); if (R.tauntT > 0) add('☄', '#ff8a8a'); if (R.prallT > 0) add('◖', '#7fb2ff'); }
+    if (k === 't') { if (R.packT > 0) add('✥', '#d9935a'); if (R.howlT > 0) add('☾', '#e6dcff'); }
+    if (k === 'd') { if (R.bearT > 0) add('❖', '#9bd14a'); if (R.natureT > 0) add('❀', '#9bd14a'); if (R.bloomT > 0) add('✿', '#c8f08a'); }
+    if (k === 'a') { if (R.cloneT > 0) add('☾', '#d9a0ff'); if (R.flowN > 0) add('≫', '#ff6b7a'); if (h.nextCrit) add('!', '#ffd23f'); }
+    if (k === 's') { if (R.huntT > 0) add('➶', '#7ee08a'); if (R.aimT > 0) add('⌖', '#7ee08a'); }
+    if (k === 'r' && R.brother) add('✠', '#ffb547');
+    if (k === 'e') { if (R.overT > 0) add('⇶', '#f28c28'); if (R.tinkT > 0) add('⚙', '#f28c28'); }
+    if (k === 'n' && R.collectN > 0) add('◇', '#6be0b8');
+    if (h.stunT > 0) add('✶', '#ffe58a', 1);
+    if (h.markT > 0) add('◎', '#ff5a5a', 1);
+    if (h.dotT > 0) add('☣', '#9be36b', 1);
+    if (A && A.fx && A.fx.some(f => f.kind === 'bomb' && f.k === k && f.t > 0)) add('✹', '#ff9a3d', 1);
+    return L;
+  }
+  // Effekte, die auf die ganze Gruppe wirken: eine gemeinsame Leiste oben links
+  function partyStatus(R) {
+    const L = [], A = R.ahn, add = (i, c, bad) => L.push([i, c, bad]);
+    if (R.buffT > 0) add('▲', '#ffb547');
+    if (R.songT > 0) add('♬', '#ff8ac8');
+    if (R.roarT > 0) add('Ʊ', '#9bd14a');
+    if (R.honorT > 0) add('⚐', '#ffd27a');
+    if (R.wrathT > 0) add('☀', '#ffe48a');
+    if (R.critBT > 0) add('✦', '#ffd27a');
+    if (R.crescN > 0) add('↗', '#ff8ac8');
+    if (R.groundT > 0 && R.h.p && R.h.p.alive) add('✚', '#7ee08a');
+    if (R.curseT > 0) add('☠', '#c08cff', 1);
+    if (R.slowT > 0) add('❄', '#bfe6ff', 1);
+    if (R.blindT > 0) add('◌', '#c0c6cc', 1);
+    if (R.silT > 0) add('✕', '#ff9a9a', 1);
+    if (A && A.fx && A.fx.some(f => f.kind === 'burn' && f.t > 0)) add('♨', '#ff7a3d', 1);
+    return L;
+  }
+  function enemyStatus(e) {
+    const L = [], add = (i, c, bad) => L.push([i, c, bad]);
+    if (e.sleep > 0) add('z', '#dcdcff', 1); else if (e.frozen > 0) add('❄', '#bfe6ff', 1); else if (e.rooted > 0) add('❦', '#c8f08a', 1); else if (e.stun > 0) add('✶', '#ffe58a', 1);
+    if (e.poisonT > 0) add(e.poisonN > 1 ? '☣' + e.poisonN : '☣', '#9be36b', 1);
+    if (e.burnT > 0) add('♨', '#ff7a3d', 1);
+    if (e.bleedT > 0) add('♦', '#ff4d5e', 1);
+    if (e.markT > 0 && e.mark > 0) add('◎', '#ff6b7a', 1);
+    if (e.cursed > 0) add('☠', '#6be0b8', 1);
+    if (e.duelT > 0) add('⚔', '#ffb547', 1);
+    if (e.smarkT > 0) add('✕', '#ff6b7a', 1);
+    if (e.linkT > 0) add('∞', '#6be0b8', 1);
+    if (e.manaT > 0) add('✺', '#c08cff', 1);
+    if (e.dissT > 0) add('♭', '#ff8ac8', 1);
+    if (e.quakeT > 0) add('≋', '#d2a878', 1);
+    if (e.shieldHp > 0) add('◈', '#a0d7ff');
+    if (e.invT > 0) add('✧', '#ffffff');
+    if (e.reflT > 0) add('◐', '#c8e6ff');
+    if (e.healT > 0 || (e.traits && e.traits.regen)) add('✚', '#7ee08a');
+    if (e.frenzyT > 0) add('»', '#ff5a5a');
+    if (e.traits && e.traits.armor) add('▣', '#c8c8d8');
+    if (e.enrage > 1) add('▲', '#ff5a5a');
+    return L;
+  }
+  const ST_FONT = '"Segoe UI Symbol","Apple Symbols","Noto Sans Symbols 2","Noto Sans Symbols",sans-serif';
+  function badgeRow(L, cx, y, per, dir = -1, sz = 9) {
+    L.forEach(([g, c, bad], i) => {
+      const row = Math.floor(i / per), inRow = Math.min(per, L.length - row * per), col = i % per;
+      const x = cx + (col - (inRow - 1) / 2) * (sz + 1), yy = y + dir * row * (sz + 1);
+      ctx.fillStyle = bad ? ST_BAD : ST_GOOD; ctx.beginPath(); ctx.arc(x, yy, sz / 2, 0, 7); ctx.fill();
+      ctx.strokeStyle = c; ctx.lineWidth = 1.1; ctx.stroke();
+      ctx.fillStyle = c; ctx.font = `bold ${Math.round(sz * (g.length > 1 ? 0.6 : 0.78))}px ${ST_FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(g, x, yy + 0.5);
+    });
+    ctx.textBaseline = 'alphabetic';
+  }
+  function statusIcons(R, t) {
+    const P = partyStatus(R);
+    if (P.length) { const sz = 11; badgeRow(P, 16 + (Math.min(P.length, 12) - 1) * (sz + 1) / 2, 40, 12, 1, sz); }
+    for (const k of R.order) {
+      const h = R.h[k]; if (!h.alive) continue;
+      const L = heroStatus(R, k); if (!L.length) continue;
+      badgeRow(L, R.pos[k], GROUND - (k === 'w' ? 96 : k === 'm' ? 92 : 88) - (h.shield > 0 ? 11 : 7), 3);
+    }
+    for (const e of R.enemies) {
+      if (e.hp <= 0 || e.x > 500) continue;
+      const L = enemyStatus(e); if (!L.length) continue;
+      if (e.ahn) badgeRow(L, W / 2, H - 46, 12);
+      else badgeRow(L, e.x, GROUND - (e.boss ? 170 : e.elite ? 62 : 56) - 7, e.boss ? 6 : 3);
+    }
+  }
   // Zeichnet die laufenden Effekte der Siegel-Fähigkeiten
   function sigFx(R, t) {
     const hy = GROUND - 34, P = k => R.pos[k];
@@ -6555,8 +6658,6 @@
       ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(x - 16, GROUND - 104, 32, 4); ctx.fillStyle = '#6be0b8'; ctx.fillRect(x - 16, GROUND - 104, 32 * a, 4); }
     if (R.cloneT > 0 && P('a')) { ctx.globalAlpha = 0.45 + Math.sin(t * 8) * 0.1; ctx.fillStyle = '#7a3a8a'; ctx.beginPath(); ctx.ellipse(P('a') + 14, hy + 6, 7, 16, 0, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(P('a') + 14, hy - 14, 6, 0, 7); ctx.fill(); ctx.globalAlpha = 1; }
     if (R.bearT > 0 && P('d')) ring(P('d'), hy + 6, 24, 'rgba(155,209,74,.8)', 4);
-    if (R.howlT > 0 && P('t')) sym(P('t'), hy - 46, '☾', 'rgba(230,220,255,.9)', 16);
-    if (R.critBT > 0) R.order.forEach(k => R.h[k].alive && sym(P(k), hy - 44 - Math.sin(t * 5 + P(k)) * 3, '✦', 'rgba(255,210,122,.85)', 11));
     R.order.forEach(k => { const h = R.h[k]; if (h.alive && (h.invT > 0 || h.protT > 0)) ring(P(k), hy, 22, h.protT > 0 ? 'rgba(127,178,255,.7)' : 'rgba(255,242,176,.8)', 2.5); });
     if (R.holeT > 0) { const x = R.holeX, y = GROUND - 40; ctx.fillStyle = 'rgba(20,6,40,.85)'; ctx.beginPath(); ctx.arc(x, y, 18, 0, 7); ctx.fill(); for (let i = 0; i < 3; i++) ring(x, y, 22 + ((t * 30 + i * 9) % 26), `rgba(192,140,255,${0.6 - i * 0.15})`, 2); }
     if (R.beam && R.beam.tgt && P('m')) { const w = 2 + R.beam.i * 1.2; ctx.strokeStyle = 'rgba(226,201,255,.9)'; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(P('m') + 10, hy - 6); ctx.lineTo(R.beam.tgt.x, GROUND - (R.beam.tgt.boss ? 60 : 30)); ctx.stroke(); glowDot(R.beam.tgt.x, GROUND - (R.beam.tgt.boss ? 60 : 30), 14 + w * 2, '200,150,255', 0.8); }
@@ -6565,13 +6666,8 @@
     if (R.fx.sg_t_eber > 0) { const x = R.frontX + (0.5 - R.fx.sg_t_eber) * 600; ctx.fillStyle = '#7a4e2c'; ctx.beginPath(); ctx.ellipse(x, GROUND - 14, 18, 11, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#f2e6cc'; ctx.fillRect(x + 14, GROUND - 14, 6, 2); }
     if (R.fx.sg_w_beben > 0) { ctx.fillStyle = `rgba(120,90,60,${R.fx.sg_w_beben})`; ctx.fillRect(R.frontX + 20, GROUND - 2, W, 6); }
     if (R.fx.sg_e_rakete > 0) glowDot(R.frontX + 120, GROUND - 60, 30 * R.fx.sg_e_rakete * 2, '255,150,60', 0.7);
-    if (R.overT > 0 && P('e')) sym(P('e') + 26, GROUND - 30, '⇶', 'rgba(242,140,40,.9)', 12);
     for (const e of R.enemies) {
-      const ey = GROUND - (e.boss ? 150 : 62);
-      if (e.duelT > 0) sym(e.x, ey - 4, '⚔', '#ffb547', 13);
-      if (e.smarkT > 0) sym(e.x + 10, ey - 4, '✕', '#ff6b7a', 13);
       if (e.manaT > 0) glowDot(e.x, GROUND - (e.boss ? 70 : 30), 16, '192,140,255', 0.5 + Math.sin(t * 12) * 0.2);
-      if (e.dissT > 0) sym(e.x - 10, ey - 4, '♭', '#ff8ac8', 13);
       if (e.quakeT > 0) { ctx.fillStyle = 'rgba(120,90,60,.5)'; ctx.fillRect(e.x - 12, GROUND - 3, 24, 4); }
       if (e.bleedT > 0) glowDot(e.x, GROUND - 22, 6, '200,30,40', 0.6);
     }
