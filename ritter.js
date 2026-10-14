@@ -2564,7 +2564,7 @@
     if (S.starNews) { const n = S.starNews; delete S.starNews; save(); setTimeout(() => toast(`Sternen-Laden zurückgesetzt: ${n} Sterne zurück. Verteile sie neu!`, true), 1200); }
     if (S.startNews) { const n = S.startNews; delete S.startNews; save(); setTimeout(() => toast(`Sprungstart wurde zu Beutezug umgebaut: ${n} Sterne zurück.`, true), 600); }
     if (conflict) setTimeout(() => resolveConflict(conflict), 300); else if (acct) setTimeout(() => cloudSave(true), 800);
-    if (!titleDone) showTitle(); else openChain();
+    showTitle();
 
     last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
   }
@@ -2572,7 +2572,7 @@
   const testerSplinters = () => { if (acct && acct.tester && expOpen(S) && S.exp.spl < 1e6) S.exp.spl = 9999999; };
   function refresh() { testerSplinters(); st = run && !run.dead ? statsFor(S, run.mode) : stats(S); renderTabs(); hud(); heroes(); action(); panel(); }
   function achCheck(run, quiet) { const got = checkAch(S, run); if (got.length) { st = run && !run.dead ? statsFor(S, run.mode) : stats(S); if (!quiet) got.forEach((a, i) => setTimeout(() => toast(`Erfolg: ${a.name} (+3 % Stärke)`, true), i * 1800)); save(); } return got; }
-  function close() { closeSquad(); active = false; cancelAnimationFrame(raf); save(); cloudSave(true); $('#solo').hidden = true; $('#hub').hidden = false; }
+  function close() { closeSquad(); intro = null; const tov = document.querySelector('.rl-title'); if (tov) tov.remove(); active = false; cancelAnimationFrame(raf); save(); cloudSave(true); $('#solo').hidden = true; $('#hub').hidden = false; }
   function sizeCanvas() {
     const host = $('#soloCanvas'); const w = Math.min(host.clientWidth || 360, 960);
     const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -3709,14 +3709,44 @@
   // Hinweis bei jedem Start: Testphase
   function openChain() { if (seasonNote) seasonInfo(); else if (!S.seenIntro) showIntro(); else if (S.news && !cine) showNews(); else if (S.keyNews != null) showKeyInfo(); else if (S.infNews) showInfInfo(); else if (!S.seenField && HEROES.filter(h => hired(S, h.tree)).length > fieldSlots(S)) showFieldInfo(); else if (expOpen(S) && !S.seenExp) showExpInfo(); }
   document.addEventListener('click', e => { if (e.target.closest && e.target.closest('[data-beta]')) setTimeout(() => { if (active) openChain(); }, 80); }, true);
-  let betaShown = false, titleDone = false;
+  let betaShown = false;
   // Sitzender Ritter auf einem Baumstamm, für den Startbildschirm
-  function knightSit(x, t) {
-    ctx.save(); ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(x + 4, GROUND + 1, 30, 4, 0, 0, 7); ctx.fill(); ctx.restore();
-    ctx.save(); ctx.beginPath(); ctx.rect(x - 70, 0, 140, GROUND - 17); ctx.clip(); ctx.translate(0, 5); DRAW.r(x, null, t * 0.5, false); ctx.restore();
+  // Baumstamm am Lagerfeuer (Sitzplatz des Ritters)
+  function campLog(x) {
     rr(x - 22, GROUND - 17, 44, 17, 7); fillO(LG(GROUND - 17, GROUND, '#7a5434', '#4a3220'));
     ctx.strokeStyle = 'rgba(40,25,15,.55)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(x + 20, GROUND - 8.5, 3, 7, 0, 0, 7); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - 16, GROUND - 11); ctx.lineTo(x + 8, GROUND - 11); ctx.stroke();
-    for (const [dx, k] of [[-4, 0], [3, 1]]) { rr(x + dx - 2, GROUND - 22, 18, 7, 3); fillO(k ? '#e9edf3' : '#c6ccd6'); rr(x + dx + 11, GROUND - 19, 7, 17, 3); fillO(k ? '#e9edf3' : '#c6ccd6'); rr(x + dx + 10, GROUND - 5, 11, 5, 2); fillO('#4a4e5a'); }
+  }
+  // angewinkelte Beine des sitzenden Ritters
+  function sitLegs(x) { for (const [dx, k] of [[-4, 0], [3, 1]]) { rr(x + dx - 2, GROUND - 22, 18, 7, 3); fillO(k ? '#e9edf3' : '#c6ccd6'); rr(x + dx + 11, GROUND - 19, 7, 17, 3); fillO(k ? '#e9edf3' : '#c6ccd6'); rr(x + dx + 10, GROUND - 5, 11, 5, 2); fillO('#4a4e5a'); } }
+  // Sitzender Ritter auf einem Baumstamm (lean: nach vorne beugen beim Aufstehen)
+  function knightSit(x, t, lean = 0, noLog = false) {
+    ctx.save(); ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(x + 4, GROUND + 1, 30, 4, 0, 0, 7); ctx.fill(); ctx.restore();
+    ctx.save(); ctx.beginPath(); ctx.rect(x - 70, 0, 140, GROUND - 17); ctx.clip(); ctx.translate(x, GROUND - 17); ctx.rotate(lean); ctx.translate(-x, -(GROUND - 17)); ctx.translate(0, 5); DRAW.r(x, null, t * 0.5, false); ctx.restore();
+    if (!noLog) campLog(x);
+    sitLegs(x);
+  }
+  // Ritter steht auf: k = 0 (sitzt) bis 1 (steht), wandert dabei vom Stamm zu seinem Platz
+  function knightRise(x0, x1, t, k) {
+    const e = k * k * (3 - 2 * k), x = x0 + (x1 - x0) * e, dy = 5 * (1 - e), clipB = GROUND - 17 + 17 * e + 0.01;
+    ctx.save(); ctx.beginPath(); ctx.rect(x - 70, 0, 140, clipB); ctx.clip(); ctx.translate(0, dy); DRAW.r(x, null, t, false); ctx.restore();
+    if (e < 1) { const pa = ctx.globalAlpha; ctx.globalAlpha = pa * (1 - e); sitLegs(x0 + (x1 - x0) * e * 0.5); ctx.globalAlpha = pa; }
+    if (k > 0.3 && k < 1) for (let i = 0; i < 5; i++) { const p = (k - 0.3) / 0.7; ctx.fillStyle = `rgba(200,180,150,${0.35 * (1 - p)})`; ctx.beginPath(); ctx.arc(x - 10 + i * 6 + (i - 2) * p * 8, GROUND - 2 - p * 6 * (1 + (i % 2)), 2 + p * 3, 0, 7); ctx.fill(); }
+  }
+  // Teleport-Strahl in der Farbe des Helden (tb: Sekunden seit Beginn); gibt die Sichtbarkeit des Helden zurück
+  function heroBeam(x, col, tb) {
+    if (tb < 0) return 0;
+    const rgb = hexRgb(col), grow = Math.min(1, tb / 0.2), fade = tb < 0.2 ? 1 : Math.max(0, 1 - (tb - 0.2) / 0.5);
+    if (fade > 0) {
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const w = 12 + 10 * (1 - fade) + 4 * Math.sin(tb * 40) * fade, bot = GROUND * grow;
+      const g = ctx.createLinearGradient(x - w, 0, x + w, 0); g.addColorStop(0, `rgba(${rgb},0)`); g.addColorStop(0.35, `rgba(${rgb},${0.55 * fade})`); g.addColorStop(0.5, `rgba(255,255,255,${0.9 * fade})`); g.addColorStop(0.65, `rgba(${rgb},${0.55 * fade})`); g.addColorStop(1, `rgba(${rgb},0)`);
+      ctx.fillStyle = g; ctx.fillRect(x - w, 0, w * 2, bot);
+      glowDot(x, bot - 4, 26 * fade + 6, rgb, fade);
+      if (tb > 0.2) { const p = (tb - 0.2) / 0.5; ctx.strokeStyle = `rgba(${rgb},${0.8 * (1 - p)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, GROUND + 1, 10 + p * 34, 3 + p * 6, 0, 0, 7); ctx.stroke(); }
+      for (let i = 0; i < 6; i++) { const q = (tb * 1.8 + i / 6) % 1; glowDot(x + Math.sin(i * 2.1 + tb * 9) * (8 + q * 10), GROUND - q * 70, 2, rgb, fade * (1 - q)); }
+      ctx.restore();
+    }
+    return Math.max(0, Math.min(1, (tb - 0.16) / 0.2));
   }
   function titleScene(t) {
     const env = ENV_CAMP, fx = 262; env.back(t, 0); env.props(t, 0);
@@ -3729,22 +3759,46 @@
     for (let i = 0; i < 6; i++) { const ph = (t * 0.35 + i / 6) % 1; glowDot(fx + Math.sin(i * 2.3 + t) * 10, GROUND - 24 - ph * 90, 2.2, '255,180,90', 0.8 * (1 - ph)); }
     env.front(t, 0);
   }
+  // Helden, die im Lager stehen
+  const campHeroes = () => HEROES.filter(h => st[h.id] && (!st.field || st.field.includes(h.id))).map(h => h.id);
+  // Zeitplan des Einstiegs: Aufstehen, dann ein Strahl pro Held
+  function introTimes(camp) {
+    const n = camp.filter(k => k !== 'r').length, gap = Math.min(0.28, 1.3 / Math.max(1, n)), start = 0.85;
+    return { start, gap, end: n ? start + gap * (n - 1) + 0.55 : 1.1 };
+  }
+  let intro = null;
   function showTitle() {
+    if (document.querySelector('.rl-title')) return;
+    const camp = !(run && !run.dead) && !cine;
+    intro = camp ? { t0: null } : null;
     const ov = document.createElement('div'); ov.className = 'rl-title';
     ov.innerHTML = `<canvas width="960" height="540"></canvas><div class="rl-ttext"><h1>Ritterlauf</h1><p>Legenden am Lagerfeuer</p><button class="btn rl-tplay">Spielen</button><small>Version ${GAME_VERSION}</small></div>`;
     document.body.appendChild(ov);
     const c = ov.querySelector('canvas'), g = c.getContext('2d'); let alive = true, raf2 = 0;
-    const frame = now => { if (!alive) return; const main = ctx; ctx = g; try { g.setTransform(2, 0, 0, 2, 0, 0); titleScene(now / 1000); } catch (e) {} finally { ctx = main; } raf2 = requestAnimationFrame(frame); };
+    const frame = now => {
+      if (!alive) return; const main = ctx, ms = scale; ctx = g;
+      try { if (camp) { scale = 2; draw(now / 1000); } else { g.setTransform(2, 0, 0, 2, 0, 0); titleScene(now / 1000); } } catch (e) {} finally { ctx = main; scale = ms; }
+      raf2 = requestAnimationFrame(frame);
+    };
     raf2 = requestAnimationFrame(frame);
-    const go = () => {
-      if (ov.classList.contains('go')) return; titleDone = true; SND.play && SND.play('tick');
+    let shrunk = false, tm = 0;
+    const shrink = () => {
+      if (shrunk) return; shrunk = true; clearTimeout(tm);
       const target = document.querySelector('#soloCanvas canvas') || document.querySelector('#soloCanvas'), r = target ? target.getBoundingClientRect() : null;
       ov.classList.add('go');
       if (r && r.width > 0) { ov.style.left = r.left + 'px'; ov.style.top = r.top + 'px'; ov.style.width = r.width + 'px'; ov.style.height = r.height + 'px'; }
       setTimeout(() => { ov.classList.add('fade'); }, 950);
       setTimeout(() => { alive = false; cancelAnimationFrame(raf2); ov.remove(); if (active) openChain(); }, 1350);
     };
-    ov.querySelector('.rl-tplay').onclick = go;
+    const go = () => {
+      if (ov.classList.contains('play')) { shrink(); return; } // zweiter Klick: Einstieg abkürzen
+      ov.classList.add('play'); SND.play && SND.play('tick');
+      if (!camp || !intro) { shrink(); return; }
+      intro.t0 = performance.now() / 1000;
+      tm = setTimeout(shrink, Math.max(400, (introTimes(campHeroes()).end - 0.1) * 1000));
+    };
+    ov.querySelector('.rl-tplay').onclick = e => { e.stopPropagation(); go(); };
+    ov.addEventListener('click', () => { if (ov.classList.contains('play')) shrink(); });
     ov.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') go(); });
     setTimeout(() => { const b = ov.querySelector('.rl-tplay'); if (b) b.focus(); }, 50);
   }
@@ -7425,22 +7479,37 @@
       ctx.fillStyle = '#2a1f17'; ctx.beginPath(); ctx.moveTo(390, GROUND); ctx.lineTo(400, GROUND - 32); ctx.lineTo(410, GROUND); ctx.fill();
       ctx.fillStyle = S.asc ? rankOf(S.asc).col : '#e5484d'; ctx.beginPath(); ctx.moveTo(400, GROUND - 70); ctx.lineTo(400, GROUND - 88); ctx.lineTo(417 + Math.sin(t * 3) * 1.5, GROUND - 82); ctx.lineTo(400, GROUND - 76); ctx.fill();
       campFire(fx, t, true);
-      if (!(run && run.dead)) { const pa = 0.25 + 0.2 * Math.sin(t * 3); ctx.strokeStyle = `rgba(255,210,140,${pa})`; ctx.lineWidth = 2; ctx.setLineDash([5, 5]); ctx.beginPath(); ctx.ellipse(fx, GROUND + 2, 40, 9, 0, 0, 7); ctx.stroke(); ctx.setLineDash([]); }
-      const camp = HEROES.filter(h => st[h.id] && (!st.field || st.field.includes(h.id))).map(h => h.id);
+      if (!(run && run.dead) && !intro) { const pa = 0.25 + 0.2 * Math.sin(t * 3); ctx.strokeStyle = `rgba(255,210,140,${pa})`; ctx.lineWidth = 2; ctx.setLineDash([5, 5]); ctx.beginPath(); ctx.ellipse(fx, GROUND + 2, 40, 9, 0, 0, 7); ctx.stroke(); ctx.setLineDash([]); }
+      const camp = campHeroes();
       const spots = {}; let fr = 0, bk = 0;
       for (const k of ['w', 'o', 'd', 't']) if (camp.includes(k)) spots[k] = 296 + 30 * fr++ + (k === 'o' ? 4 : 0);
       for (const k of ['r', 's', 'a', 'm', 'n', 'b', 'e', 'p']) if (camp.includes(k)) spots[k] = 210 - 30 * bk++;
-      camp.forEach(k => DRAW[k](spots[k], null, t, false));
-      if (camp.includes('t')) wolf(spots.t + 32, t, false);
-      if (camp.includes('e')) turret(spots.e - 22, t, 0);
-      drawComps(t, null);
+      // Einstieg: Ritter sitzt am Feuer, steht auf, die anderen kommen per Lichtstrahl dazu
+      const IT = introTimes(camp), it = intro ? (intro.t0 == null ? -1 : t - intro.t0) : 99;
+      if (intro && intro.t0 != null && it > IT.end + 0.8) intro = null;
+      const uiA = Math.max(0, Math.min(1, (it - IT.end) / 0.6)), others = camp.filter(k => k !== 'r');
+      campLog(194);
+      if (it < 99) {
+        const kx = spots.r || 210, kR = it < 0 ? 0 : Math.max(0, Math.min(1, (it - 0.25) / 0.6));
+        if (kR <= 0) knightSit(194, t, it < 0 ? 0 : Math.min(1, it / 0.25) * 0.14, true);
+        else { const pa = ctx.globalAlpha, gone = camp.includes('r') ? 1 : Math.max(0, 1 - (it - 1) / 0.4); ctx.globalAlpha = pa * gone; if (gone > 0) knightRise(194, kx, t, kR); ctx.globalAlpha = pa; }
+      }
+      others.forEach((k, i) => {
+        const tb = it - (IT.start + IT.gap * i), a = it >= 99 ? 1 : it < 0 ? 0 : Math.max(0, Math.min(1, (tb - 0.16) / 0.2));
+        if (a > 0) { const pa = ctx.globalAlpha; ctx.globalAlpha = pa * a; DRAW[k](spots[k], null, t, false); if (k === 't') wolf(spots.t + 32, t, false); if (k === 'e') turret(spots.e - 22, t, 0); ctx.globalAlpha = pa; }
+        if (it < 99 && it >= 0) heroBeam(spots[k], (HEROES.find(h => h.id === k) || HEROES[0]).color, tb);
+      });
+      if (it >= 99 && camp.includes('r')) DRAW.r(spots.r, null, t, false);
+      if (uiA > 0) { const pa = ctx.globalAlpha; ctx.globalAlpha = pa * uiA; drawComps(t, null); ctx.globalAlpha = pa; }
       noticeBoard(t);
       env.front(t, 0);
+      ctx.globalAlpha = uiA;
       ctx.textAlign = 'center'; ctx.font = '20px "Bungee","Arial Black",sans-serif'; ctx.fillStyle = '#ffb547';
       const done = run && run.dead;
       ctx.fillText(done ? (run.mode === 'tower' ? `Turm: Etage ${run.stage}` : run.victory ? `Stufengrenze ${st.cap} erreicht!` : run.wf ? 'Vom Weltenfresser verschlungen' : `Gefallen auf Stufe ${run.stage}`) : S.asc ? `Lager · ${rankOf(S.asc).name}` : 'Lager', W / 2, 42);
       ctx.font = '12px "Figtree",sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.85)';
       ctx.fillText(done ? `${run.kills} Gegner${run.gold ? ` · +${fmt(run.gold)} Gold` : ''}${run.souls ? ` · +${run.souls} Seelen` : ''}${run.runes.length ? ` · ${run.runes.length} Runen` : ''}` : 'Lagerfeuer: Truppe anpassen · Brett links: Abenteuer wählen', W / 2, 64);
+      ctx.globalAlpha = 1;
     }
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
     const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.45, W / 2, H / 2, W * 0.75); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.35)');

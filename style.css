@@ -958,7 +958,8 @@ input{font:inherit;font-size:18px;color:var(--fg);background:var(--bg);border:1p
 .rl-ttext small{color:rgba(255,233,200,.55);font-size:12px;margin-top:6px}
 @keyframes rlTPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
 .rl-title.go{border-radius:14px}
-.rl-title.go .rl-ttext{opacity:0}
+.rl-title.go .rl-ttext,.rl-title.play .rl-ttext{opacity:0}
+.rl-title.play .rl-tplay{pointer-events:none}
 .rl-title.fade{opacity:0}
 @media (prefers-reduced-motion:reduce){.rl-ttext .rl-tplay{animation:none}}
 
