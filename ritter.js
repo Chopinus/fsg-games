@@ -1042,6 +1042,8 @@
     out.ahn = ahnFix(d.ahn);
     out.ascBest = d.ascBest != null ? Math.max(0, Math.floor(Number(d.ascBest) || 0)) : out.asc > 0 ? out.best : Math.max(out.bestEver, out.best); // vor Version 37 unbekannt: beste Schätzung
     out.ascBest = Math.max(out.ascBest, out.best);
+    if (!d.puzV) for (const id of PUZZLE) puzzleHire(out, id);
+    out.puzV = 1;
     if (!d.ahnV) out.ahn.lvl = 0; // Stärke neu: nach dem höchsten Rekord überhaupt
     out.ahnV = 1;
     for (const h of [...HEROES].reverse()) while (kPlaced(out) > out.kslots && out.kplace[h.id]) { if (--out.kplace[h.id] <= 0) delete out.kplace[h.id]; }
@@ -1375,11 +1377,16 @@
     const id = S.exp.target, have = pieceMask(S, id), missing = [0, 1, 2, 3, 4, 5].filter(i => !(have & (1 << i)));
     let piece = null;
     if (missing.length && Math.random() < PIECE_CHANCE * missing.length) { piece = missing[Math.floor(Math.random() * missing.length)]; S.exp.pieces[id] = have | (1 << piece); }
-    return { spl: m.spl, piece, hero: id, complete: piece != null && assembled(S, id) };
+    const complete = piece != null && assembled(S, id);
+    if (complete) puzzleHire(S, id);
+    return { spl: m.spl, piece, hero: id, complete };
   }
+  // Fertiges Puzzle: der Held schließt sich sofort kostenlos an
+  function puzzleHire(S, id) { const h = HERO_BY_ID[id]; if (h && h.hire && assembled(S, id) && !rank(S, h.hire)) S.nodes[h.hire] = 1; }
   function buyPiece(S, id, i) {
     if (!PUZZLE.includes(id) || !(i >= 0 && i < 6) || (pieceMask(S, id) & (1 << i)) || S.exp.spl < PIECE_COST) return false;
     S.exp.spl -= PIECE_COST; S.exp.pieces[id] = pieceMask(S, id) | (1 << i);
+    puzzleHire(S, id);
     return true;
   }
   // Werte mit den Regeln der Wochen-Herausforderung
@@ -2401,7 +2408,7 @@
         <button class="btn gold" data-m="go" data-go="sigil">Siegel setzen</button></div>`;
     const ex = R.expReward;
     if (ex && ex.piece != null) { const h = HERO_BY_ID[ex.hero];
-      special = ex.complete ? `<div class="rl-rpuzzle done" style="--hc:${h.color}">${puzzleHTML(ex.hero, false, ex.piece)}<h3>${h.name} ist bereit!</h3><p>Alle 6 Puzzleteile sind zusammen. Heuere ${h.name} im Heldenreiter an. Freigeschaltete Helden bleiben für immer.</p><button class="btn" data-m="go" data-go="hero:${h.tree}">Zu ${h.name}</button></div>`
+      special = ex.complete ? `<div class="rl-rpuzzle done" style="--hc:${h.color}">${puzzleHTML(ex.hero, false, ex.piece)}<h3>${h.name} ist bereit!</h3><p>Alle 6 Puzzleteile sind zusammen. ${h.name} hat sich deiner Gruppe angeschlossen. Stell den Helden in der Aufstellung am Lagerfeuer auf.</p><button class="btn" data-m="go" data-go="hero:${h.tree}">Zu ${h.name}</button></div>`
         : `<div class="rl-rpuzzle" style="--hc:${h.color}">${puzzleHTML(ex.hero, false, ex.piece)}<h3>Puzzleteil gefunden!</h3><p>Ein Teil für ${h.name}: jetzt <b>${pieceCount(S, ex.hero)} von 6</b>.</p></div>`;
       if (ex.complete && S.exp.target === ex.hero) { const nx = PUZZLE.find(x => !assembled(S, x)); if (nx) { S.exp.target = nx; save(); } } }
     const stats = `<div class="rl-rstats"><span><b>${R.mode === 'tower' ? `Etage ${R.stage}` : `Stufe ${R.stage}`}</b>${R.mode === 'exp' || R.mode === 'ahnen' ? 'Gegnerstärke' : 'erreicht'}</span><span><b>${R.kills}</b>Gegner besiegt</span><span><b>${mins}:${String(secs).padStart(2, '0')}</b>Spielzeit</span></div>`;
@@ -2547,7 +2554,8 @@
   function runenTab() {
     const used = new Set(Object.values(S.sockets).flat().filter(Boolean));
     const selR = runeSel && S.runes.find(r => r.id === runeSel);
-    let html = `<p class="note">Bosse lassen Runen fallen. Setze bis zu 3 Runen pro Klasse ein. Drei Runen der gleichen Art in einer Klasse geben +50 % Bonus. Runen bleiben bei der Wiedergeburt erhalten.</p>`;
+    let html = !feature(S, 'runen') && S.runes.length ? `<p class="warn">🔒 Deine ${S.runes.length} Runen sind sicher aufbewahrt, auch in ihren Sockeln. Sie wirken aber erst wieder ab der 2. Wiedergeburt, und bis dahin fallen keine neuen.</p>` : '';
+    html += `<p class="note">Bosse lassen Runen fallen. Setze bis zu 3 Runen pro Klasse ein. Drei Runen der gleichen Art in einer Klasse geben +50 % Bonus. Runen bleiben bei der Wiedergeburt erhalten.</p>`;
     if (selR) html += `<div class="rl-runesel" style="--rc:${RUNE[selR.t].color}"><b>${RUNE[selR.t].name} ${ROMAN[selR.tier]}</b><span>${RUNE[selR.t].desc(runeVal(selR.t, selR.tier))}</span><span class="note">Tippe auf einen Sockel, um sie einzusetzen.</span>
       ${feature(S, 'runen') ? `<div class="row">${feature(S, 'schmiede') ? `<button class="btn small" data-rl="merge" ${canMerge(S, selR) ? '' : 'disabled'}>3 verschmelzen → ${ROMAN[selR.tier + 1] || ''} (${dust}${mergeCost(selR.tier)})</button>` : ''}<button class="btn ghost small" data-rl="dismantle">Zerstören (+${dust}${shardOf(selR.tier)})</button></div>` : ''}</div>`;
     html += '<div class="rl-sockets">' + HEROES.filter(h => st[h.id]).map(h => {
@@ -3059,7 +3067,7 @@
     const h = HERO_BY_ID[id];
     if (S.exp.target === id) { const nx = PUZZLE.find(x => !assembled(S, x)); if (nx) { S.exp.target = nx; save(); } }
     modal(`<span class="rl-mic" style="border-color:${h.color};color:${h.color}">${PORTRAIT[id]}</span><h2>${h.name} ist bereit!</h2>
-      <ul class="rl-list"><li>Alle 6 Puzzleteile sind zusammengesetzt.</li><li>${esc(h.desc)}</li><li>Heuere ${h.name} im neuen Reiter <b>${h.name}</b> an und stell den Helden in deine Aufstellung.</li><li>Freigeschaltete Helden bleiben für immer, auch nach Wiedergeburt und Aufstieg.</li></ul>
+      <ul class="rl-list"><li>Alle 6 Puzzleteile sind zusammengesetzt.</li><li>${esc(h.desc)}</li><li>${h.name} hat sich deiner Gruppe angeschlossen. Stell den Helden in der Aufstellung am Lagerfeuer auf.</li><li>Das Puzzle bleibt für immer fertig. Ohne „Veteranen“ aus dem Kronen-Laden musst du den Helden nach einem Aufstieg neu anheuern, direkt in der Aufstellung.</li></ul>
       <div class="row" style="justify-content:center"><button class="btn" data-m="ok">Los geht’s</button></div>`);
   }
   // Runenschmied: Runen zerstören (gibt Runensplitter) und 3 gleiche verschmelzen (kostet so viel wie 3 zerstörte)
@@ -3175,8 +3183,8 @@
     el.querySelector('.sq-count').textContent = `${field.length} / ${slots} Plätze`;
     const list = squadHeroes();
     el.querySelector('.sq-row').innerHTML = list.map(h => {
-      const own = hired(S, h.tree), on = field.includes(h.id), col = ROLE_INFO[ROLE[h.id]].col;
-      return `<button class="sq-tile ${own ? (on ? 'on' : 'bench') : 'locked'}" data-sq="${h.id}" style="--rc:${col}"><span class="pic"><img src="${portraitURL(h.id)}" alt="">${own ? '' : '<b class="lk">🔒</b>'}</span><span class="nm">${h.name}</span>${on ? '<em>✓</em>' : ''}</button>`;
+      const own = hired(S, h.tree), on = field.includes(h.id), col = ROLE_INFO[ROLE[h.id]].col, can = !own && classOpen(S, h.tree), c = can ? nodeCost(S, NODE[h.hire]) : null;
+      return `<button class="sq-tile ${own ? (on ? 'on' : 'bench') : can ? 'hire' : 'locked'}" data-sq="${h.id}" style="--rc:${col}"><span class="pic"><img src="${portraitURL(h.id)}" alt="">${own ? '' : can ? '<b class="lk hire">＋</b>' : '<b class="lk">🔒</b>'}</span><span class="nm">${h.name}</span>${on ? '<em>✓</em>' : ''}${can ? `<small class="sq-cost">Anheuern: ${fmt(c.g)} Gold${c.s ? ` · ${c.s} Seelen` : ''}</small>` : ''}</button>`;
     }).join('');
     el.querySelector('.sq-tip').textContent = `Tippe ein Porträt an, um den Helden ein- oder auszuwechseln. Rechts steht die vorderste Reihe.${slots < 6 ? ` Mehr Plätze: ${perk(S, 'p_feld') ? '' : 'Fünfter Platz im Sternen-Laden'}${!perk(S, 'p_feld') && !cperk(S, 'k_feld') ? ', ' : ''}${cperk(S, 'k_feld') ? '' : 'Sechster Platz im Kronen-Laden'}.` : ''}`;
     const roles = [...new Set(LINE_ORDER.filter(k => list.some(h => h.id === k)).map(k => ROLE[k]))];
@@ -3197,6 +3205,11 @@
     if (t) {
       const h = HERO_BY_ID[t.dataset.sq];
       if (hired(S, h.tree)) squadToggle(h.id);
+      else if (classOpen(S, h.tree) && h.hire) {
+        if (!inCamp()) toast('Anheuern geht nur im Lager.');
+        else if (buy(S, NODE[h.hire])) { SND.play('buy'); toast(`${h.name} schließt sich deiner Gruppe an!`, true); afterChange(); renderSquad(); }
+        else { const c = nodeCost(S, NODE[h.hire]); toast(`Zum Anheuern fehlen dir Gold oder Seelen (${fmt(c.g)} Gold${c.s ? `, ${c.s} Seelen` : ''}).`); }
+      }
       else if (!h.puzzle && S.rebirths >= h.rebirth) { closeSquad(); tab = h.tree; confirm = ''; renderTabs(); panel(); $('.rl-tabs').scrollIntoView({ behavior: 'smooth', block: 'start' }); toast(lockReason(h)); }
       else toast(lockReason(h));
       return;
@@ -3396,6 +3409,10 @@
   }
   // Neuigkeiten: neueste Einträge oben. Neue Updates OBEN mit höherer id anhängen.
   const UPDATES = [
+    { id: 39, date: '14.10.2026', title: 'Puzzle-Helden schließen sich sofort an', items: [
+      ['Verbessert', 'Ist ein Puzzle fertig, schließt sich der Held sofort kostenlos an und steht in der Aufstellung bereit. Wer schon fertige Puzzles hatte, bekommt die Helden jetzt automatisch.'],
+      ['Verbessert', 'Helden, die freigeschaltet, aber nicht angeheuert sind (zum Beispiel nach einem Aufstieg ohne Veteranen), zeigen in der Aufstellung „Anheuern“ mit Preis. Ein Tipp heuert sie an.'],
+    ] },
     { id: 38, date: '14.10.2026', title: 'Ergebnis-Bildschirm', items: [
       ['Neu', 'Nach jedem Lauf erscheint ein Ergebnis-Bildschirm: „Gefallen“, wenn deine Gruppe besiegt wurde, oder „Geschafft“ mit Pokal, wenn du etwas abgeschlossen hast (Stufengrenze, Expedition, Ahnen-Mission). Darin stehen alle Belohnungen: Gold, Seelen, Runen, Sterne, Kronen, Splitter, neue Rekorde, neue Startgebiete und Erfolge.'],
       ['Neu', 'Ein Ahnensiegel schwebt jetzt mit Strahlen und Leuchten herein. Ein neues Puzzleteil fliegt sichtbar in seinen Platz im Puzzle.'],

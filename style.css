@@ -883,3 +883,7 @@ input{font:inherit;font-size:18px;color:var(--fg);background:var(--bg);border:1p
 @keyframes rlPieceIn{0%{transform:translate(120px,-90px) rotate(160deg) scale(.4);opacity:0}60%{opacity:1}100%{transform:none;opacity:1}}
 @keyframes rlPieceGlow{50%{box-shadow:0 0 18px color-mix(in srgb,var(--hc) 80%,transparent)}}
 @media (prefers-reduced-motion:reduce){.rl-remb,.rl-rlist li,.rl-rsigil *,.rl-rpuzzle *,.rl-puz .pc.new{animation:none!important;opacity:1!important}}
+/* Aufstellung: freigeschaltete Helden zum Anheuern */
+.sq-tile.hire{opacity:.85;border-style:dashed}
+.sq-tile .lk.hire{background:#27a06a;color:#fff}
+.sq-tile .sq-cost{display:block;font-size:10px;color:#7ee08a;line-height:1.2;margin-top:2px}
