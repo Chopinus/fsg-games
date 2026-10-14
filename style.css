@@ -749,3 +749,14 @@ input{font:inherit;font-size:18px;color:var(--fg);background:var(--bg);border:1p
 .ahn-selring{animation:ahnflow 1.8s linear infinite}
 .ahn-node.later .ahn-isl{opacity:.82}
 @media (prefers-reduced-motion:reduce){.ahn-isl,.ahn-tw,.ahn-flow,.ahn-shoot,.ahn-rays,.ahn-hero,.ahn-pulse{animation:none}}
+/* Reiter in Gruppen */
+.rl-tabs{flex-direction:column;gap:0;overflow:visible}
+.rl-trow{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+.rl-trow::-webkit-scrollbar,.rl-sub::-webkit-scrollbar{display:none}
+.rl-sub{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:10px 0 10px;border-top:1px solid var(--line)}
+.rl-tabs .rl-sub button{display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:5px 12px 5px 5px;border:1.5px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted);font-weight:800;font-size:14px}
+.rl-tabs .rl-sub button:not(:has(.pt)){padding-left:12px}
+.rl-tabs .rl-sub button .pt{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:14px;color:var(--tc);border:2px solid var(--tc);background:color-mix(in srgb,var(--tc) 16%,var(--bg))}
+.rl-tabs .rl-sub button.on{color:var(--fg);border-color:var(--tc);background:color-mix(in srgb,var(--tc) 16%,var(--surface));box-shadow:0 0 12px color-mix(in srgb,var(--tc) 35%,transparent)}
+.rl-tabs .rl-sub button.locked{opacity:.5}
+.rl-tabs .rl-sub .sig{font-style:normal;color:#ffd27a;font-size:12px;text-shadow:0 0 6px rgba(255,210,122,.8)}

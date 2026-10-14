@@ -1889,10 +1889,31 @@
     t.push({ id: 'halle', label: 'Ruhmeshalle', color: '#ffd23f' }, { id: 'ruhm', label: S.asc || S.rebirths >= 9 ? 'Wiedergeburt & Aufstieg' : 'Wiedergeburt', color: '#c9a6ff' }, { id: 'stand', label: 'Spielstand', color: '#a99fbb' });
     return t;
   }
+  // Reiter in Gruppen: alle Helden unter „Helden“, Ahnenprüfung und Expedition unter „Abenteuer“
+  const TAB_GROUPS = { helden: { label: 'Helden', color: '#ffb547' }, abenteuer: { label: 'Abenteuer', color: '#ffd27a' } };
+  const groupOf = id => (HERO[id] ? 'helden' : id === 'ahnen' || id === 'exp' ? 'abenteuer' : null);
+  const lastSub = { helden: 'ritter', abenteuer: 'ahnen' };
   function renderTabs() {
     const list = tabsList();
     if (!list.some(t => t.id === tab)) tab = 'ritter';
-    $('.rl-tabs').innerHTML = list.map(t => `<button data-tab="${t.id}" class="${t.id === tab ? 'on' : ''} ${t.locked ? 'locked' : ''}" style="--tc:${t.color}">${t.label}</button>`).join('');
+    const g = groupOf(tab); if (g) lastSub[g] = tab;
+    const top = [], seen = new Set();
+    for (const t of list) {
+      const gr = groupOf(t.id);
+      if (!gr) { top.push(t); continue; }
+      if (seen.has(gr)) continue; seen.add(gr);
+      const members = list.filter(x => groupOf(x.id) === gr), target = members.some(x => x.id === lastSub[gr]) ? lastSub[gr] : members[0].id;
+      top.push(members.length > 1 || gr === 'helden' ? { id: target, label: TAB_GROUPS[gr].label, color: g === gr ? (list.find(x => x.id === tab) || {}).color || TAB_GROUPS[gr].color : TAB_GROUPS[gr].color, group: gr } : members[0]);
+    }
+    const isOn = t => (t.group ? t.group === g : t.id === tab);
+    let html = `<div class="rl-trow">${top.map(t => `<button data-tab="${t.id}" class="${isOn(t) ? 'on' : ''} ${t.locked ? 'locked' : ''}" style="--tc:${t.color}">${t.label}</button>`).join('')}</div>`;
+    if (g) {
+      const members = list.filter(x => groupOf(x.id) === g);
+      if (members.length > 1) html += `<div class="rl-sub">${members.map(t => { const h = HERO[t.id];
+        return `<button data-tab="${t.id}" class="${t.id === tab ? 'on' : ''} ${t.locked ? 'locked' : ''}" style="--tc:${t.color}">${h ? `<span class="pt">${PORTRAIT[h.id]}</span>` : ''}${t.label}${h && S.ahn && S.ahn.place[h.id] ? '<i class="sig" title="Ahnensiegel">✦</i>' : ''}</button>`; }).join('')}</div>`;
+    }
+    $('.rl-tabs').innerHTML = html;
+    const on = document.querySelector('.rl-sub .on'); if (on && on.offsetLeft + on.offsetWidth > on.parentNode.clientWidth) on.parentNode.scrollLeft = on.offsetLeft - 24;
   }
   function open() {
     active = true;
@@ -2798,6 +2819,10 @@
   }
   // Neuigkeiten: neueste Einträge oben. Neue Updates OBEN mit höherer id anhängen.
   const UPDATES = [
+    { id: 31, date: '14.10.2026', title: 'Aufgeräumte Reiter', items: [
+      ['Neu', 'Alle Helden sind jetzt unter einem Reiter „Helden“ zusammengefasst. Darunter wählst du den Helden über eine Zeile mit Porträts.'],
+      ['Neu', 'Ahnenprüfung und Expedition stehen gemeinsam unter „Abenteuer“, sobald beide offen sind.'],
+    ] },
     { id: 30, date: '14.10.2026', title: 'Sternenkarte und echte Drachen', items: [
       ['Neu', 'Die Karte der Ahnenprüfung ist jetzt ein Sternenhimmel: Jede Mission ist eine schwebende Insel im Licht ihres Themas, verbunden durch Sternenbrücken. Mission 10 ist das goldene Schloss der Ahnen.'],
       ['Neu', 'Knochendrache, Weißer Wyrm, Sumpfhydra und Dornendrache haben jetzt eigene Köpfe, Körper, Atemangriffe und Animationen. Die Hydra hat drei Köpfe.'],
