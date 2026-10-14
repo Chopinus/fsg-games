@@ -3252,9 +3252,9 @@
     return `<article class="rl-poster ${o.lock ? 'locked' : ''}" style="--pc:${o.col};--rot:${o.rot}deg">
       <span class="rl-ppin" aria-hidden="true"></span>
       <div class="rl-pband"><span class="rl-pico" aria-hidden="true">${o.icon}</span><h3>${esc(o.title)}</h3></div>
-      ${o.art ? `<div class="rl-pimgs">${o.art.map((id, i) => `<img src="${posterArt(id)}" alt="" style="--r:${i ? 2.5 : -2}deg">`).join('')}</div>` : ''}
       <p class="rl-pdesc">${esc(o.desc)}</p>
-      ${o.info && o.info.length ? `<ul class="rl-pinfo">${o.info.map(x => `<li>${x}</li>`).join('')}</ul>` : ''}
+      ${o.art ? `<div class="rl-pimgs">${o.art.map((id, i) => `<img src="${posterArt(id)}" alt="" style="--r:${i ? 2.5 : -2}deg">`).join('')}</div>` : ''}
+      ${o.info && o.info.length ? `<div class="rl-pinfo">${o.info.map(x => `<span>${x}</span>`).join('')}</div>` : ''}
       ${lock}
       <div class="rl-pact">${o.lock ? '' : o.acts || ''}</div>
     </article>`;
@@ -3283,7 +3283,7 @@
     ];
     modal(`<div class="rl-boardhead"><h2>Anschlagbrett</h2><p>Wähle dein nächstes Abenteuer</p></div>
       <div class="rl-posters">${list.map(poster).join('')}</div>
-      <div class="row" style="justify-content:center"><button class="btn ghost rl-boardclose" data-m="ok">Schließen</button></div>`, 'rl-board');
+      <div class="row" style="justify-content:center"><button class="btn ghost rl-boardclose" data-m="ok">Schließen</button></div>`, 'rl-anschlag');
   }
   function boardGo(go) {
     if (!inCamp()) return;
