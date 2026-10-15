@@ -23,7 +23,7 @@ const testData = d => !!(d && d.tst);
 let accounts = {};   // key (Name klein) -> { name, salt, hash, tokens: [sha256], data, updated }
 let sha = null, dirty = false, flushTimer = null, ready = false, lastError = '';
 
-const gh = (method, body) => fetch(`https://api.github.com/repos/${REPO}/contents/${FILE}`, {
+const gh = (method, body, file = FILE) => fetch(`https://api.github.com/repos/${REPO}/contents/${file}`, {
   method,
   headers: { Authorization: `Bearer ${TOKEN}`, Accept: 'application/vnd.github+json', 'User-Agent': 'fsg-spiele', 'X-GitHub-Api-Version': '2022-11-28' },
   body: body ? JSON.stringify(body) : undefined,
@@ -73,6 +73,101 @@ async function flush() {
 function markDirty() {
   dirty = true;
   if (!flushTimer) flushTimer = setTimeout(() => { flushTimer = null; flush(); }, 15000);
+}
+
+// ---------- Freunde und Chat ----------
+// Freundeslisten stehen im Konto (acc.fr). Nachrichten liegen in einer eigenen Datei (ritter-chats.json),
+// damit der Spielstand-Speicher klein bleibt. Je Freundespaar werden nur die letzten 60 Nachrichten behalten.
+const CHAT_FILE = 'ritter-chats.json', CHAT_LOCAL = path.join(__dirname, 'chats.local.json');
+let chats = {}, chatSha = null, chatDirty = false, chatTimer = null;
+async function chatLoad() {
+  try {
+    if (durable) {
+      const res = await gh('GET', null, CHAT_FILE);
+      if (res.status === 200) { const j = await res.json(); chatSha = j.sha; let text = j.content ? Buffer.from(j.content, 'base64').toString('utf8') : '';
+        if (!text && j.size > 0) { const raw = await fetch(`https://api.github.com/repos/${REPO}/contents/${CHAT_FILE}`, { headers: { Authorization: `Bearer ${TOKEN}`, Accept: 'application/vnd.github.raw', 'User-Agent': 'fsg-spiele', 'X-GitHub-Api-Version': '2022-11-28' } }); if (raw.ok) text = await raw.text(); }
+        chats = JSON.parse(text || '{}'); }
+    } else if (fs.existsSync(CHAT_LOCAL)) chats = JSON.parse(fs.readFileSync(CHAT_LOCAL, 'utf8'));
+  } catch (e) { console.error('Chats laden:', e); }
+}
+async function chatFlush() {
+  if (!chatDirty) return; chatDirty = false;
+  const text = JSON.stringify(chats);
+  try {
+    if (durable) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const res = await gh('PUT', { message: 'Chats aktualisiert', content: Buffer.from(text).toString('base64'), ...(chatSha ? { sha: chatSha } : {}) }, CHAT_FILE);
+        if (res.ok) { chatSha = (await res.json()).content.sha; return; }
+        if (res.status === 409 || res.status === 422) { const g = await gh('GET', null, CHAT_FILE); if (g.ok) chatSha = (await g.json()).sha; continue; }
+        console.error('Chats speichern:', res.status); break;
+      }
+      chatDirty = true;
+    } else fs.writeFileSync(CHAT_LOCAL, text);
+  } catch (e) { chatDirty = true; console.error('Chats speichern:', e); }
+}
+function chatMark() { chatDirty = true; if (!chatTimer) chatTimer = setTimeout(() => { chatTimer = null; chatFlush(); }, 60000); }
+const pairOf = (a, b) => (a < b ? a + '|' + b : b + '|' + a);
+const seen = new Map();            // wer zuletzt da war (nur im Speicher): key -> Zeitpunkt
+const ONLINE_MS = 45000;
+const isOnline = key => Date.now() - (seen.get(key) || 0) < ONLINE_MS;
+const sendTimes = new Map();       // Bremse gegen Spam: höchstens 8 Nachrichten in 10 Sekunden
+const FR_MAX = 60, REQ_MAX = 30, MSG_MAX = 300, KEEP = 60;
+const frOf = acc => (acc.fr = acc.fr || { f: [], i: [], o: [] });
+const cleanMsg = t => String(t || '').replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '').replace(/\n{3,}/g, '\n\n').trim().slice(0, MSG_MAX);
+function friendsView(key, acc) {
+  const fr = frOf(acc), rd = (chats._read && chats._read[key]) || {};
+  const nameOf = k => (accounts[k] ? accounts[k].name : null);
+  const friends = fr.f.filter(nameOf).map(k => { const c = chats[pairOf(key, k)] || [], last = c[c.length - 1];
+    return { name: nameOf(k), online: isOnline(k), unread: c.filter(m => m.f !== key && m.t > (rd[k] || 0)).length, last: last ? last.t : 0 }; })
+    .sort((a, b) => (b.online - a.online) || (b.last - a.last) || a.name.localeCompare(b.name));
+  return { me: acc.name, friends, inc: fr.i.filter(nameOf).map(nameOf), out: fr.o.filter(nameOf).map(nameOf) };
+}
+function social(action, key, acc, body) {
+  seen.set(key, Date.now());
+  const fr = frOf(acc), wn = cleanName(body.who), wk = keyOf(wn), other = accounts[wk];
+  if (action === 'friends') return [200, friendsView(key, acc)];
+  if (!other) return [404, { error: 'Diesen Namen gibt es nicht.' }];
+  if (wk === key) return [400, { error: 'Das bist du selbst.' }];
+  const ofr = frOf(other), drop = (arr, k) => { const i = arr.indexOf(k); if (i >= 0) arr.splice(i, 1); };
+  if (action === 'friend_add') {
+    if (fr.f.includes(wk)) return [400, { error: `Ihr seid schon befreundet.` }];
+    if (fr.i.includes(wk)) { drop(fr.i, wk); drop(ofr.o, key); fr.f.push(wk); ofr.f.push(key); markDirty(); return [200, { ...friendsView(key, acc), msg: `Du und ${other.name} seid jetzt befreundet.` }]; }
+    if (fr.o.includes(wk)) return [400, { error: 'Anfrage ist schon unterwegs.' }];
+    if (fr.f.length >= FR_MAX) return [400, { error: `Du hast schon ${FR_MAX} Freunde.` }];
+    if (ofr.i.length >= REQ_MAX || fr.o.length >= REQ_MAX) return [400, { error: 'Gerade sind zu viele Anfragen offen.' }];
+    fr.o.push(wk); ofr.i.push(key); markDirty();
+    return [200, { ...friendsView(key, acc), msg: `Anfrage an ${other.name} geschickt.` }];
+  }
+  if (action === 'friend_answer') {
+    if (!fr.i.includes(wk)) return [400, { error: 'Diese Anfrage gibt es nicht mehr.' }];
+    drop(fr.i, wk); drop(ofr.o, key);
+    if (body.ok) { if (!fr.f.includes(wk)) fr.f.push(wk); if (!ofr.f.includes(key)) ofr.f.push(key); }
+    markDirty();
+    return [200, { ...friendsView(key, acc), msg: body.ok ? `Du und ${other.name} seid jetzt befreundet.` : 'Anfrage abgelehnt.' }];
+  }
+  if (action === 'friend_remove') {
+    drop(fr.f, wk); drop(ofr.f, key); drop(fr.o, wk); drop(ofr.i, key); drop(fr.i, wk); drop(ofr.o, key); markDirty();
+    if (chats[pairOf(key, wk)]) { delete chats[pairOf(key, wk)]; chatMark(); }
+    return [200, friendsView(key, acc)];
+  }
+  if (!fr.f.includes(wk)) return [403, { error: 'Ihr seid nicht befreundet.' }];
+  const pk = pairOf(key, wk);
+  if (action === 'chat_send') {
+    const text = cleanMsg(body.text); if (!text) return [400, { error: 'Leere Nachricht.' }];
+    const ts = (sendTimes.get(key) || []).filter(x => Date.now() - x < 10000);
+    if (ts.length >= 8) return [429, { error: 'Langsam! Warte kurz.' }];
+    sendTimes.set(key, [...ts, Date.now()]);
+    const list = chats[pk] = chats[pk] || [], t = Math.max(Date.now(), list.length ? list[list.length - 1].t + 1 : 0);
+    list.push({ f: key, x: text, t }); if (list.length > KEEP) list.splice(0, list.length - KEEP);
+    chatMark();
+  }
+  if (action === 'chat' || action === 'chat_send') {
+    const list = chats[pk] || [], since = Number(body.since) || 0;
+    const rd = (chats._read = chats._read || {})[key] = (chats._read[key] || {});
+    if (list.length && rd[wk] !== list[list.length - 1].t) { rd[wk] = list[list.length - 1].t; chatMark(); }
+    return [200, { name: other.name, online: isOnline(wk), msgs: list.filter(m => m.t > since).map(m => ({ me: m.f === key, x: m.x, t: m.t })) }];
+  }
+  return [404, { error: 'Unbekannt' }];
 }
 
 const keyOf = n => n.toLowerCase();
@@ -146,6 +241,10 @@ async function handle(action, body, ip) {
     return [200, { token }];
   }
   if (action === 'board') return [200, board()];
+  if (['friends', 'friend_add', 'friend_answer', 'friend_remove', 'chat', 'chat_send'].includes(action)) {
+    if (!acc || !(acc.tokens || []).includes(sha256(String(body.token || '')))) return [401, { error: 'Bitte melde dich neu an.' }];
+    return social(action, key, acc, body);
+  }
   return [404, { error: 'Unbekannt' }];
 }
 
@@ -174,9 +273,9 @@ function board() {
   return boardCache;
 }
 
-load();
+load(); chatLoad();
 // Render beendet den Dienst mit SIGTERM – vorher noch speichern
-process.on('SIGTERM', async () => { await flush(); process.exit(0); });
-process.on('SIGINT', async () => { await flush(); process.exit(0); });
+process.on('SIGTERM', async () => { await flush(); await chatFlush(); process.exit(0); });
+process.on('SIGINT', async () => { await flush(); await chatFlush(); process.exit(0); });
 
 module.exports = { handle, flush, durable };

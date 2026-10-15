@@ -40,7 +40,7 @@
   const CAPS = [30, 45, 60, 75, 90, 105, 120, 135, 150];
   const ROADMAP = [
     { r: 1, text: 'Wächter als neue Klasse, dazu der Seelenaltar' }, { r: 2, text: 'Runen: Bosse lassen Runen fallen, jede Klasse hat 3 Sockel. Runen zerstören und das Lager mit Runensplittern erweitern' }, { r: 3, text: 'Schützin als neue Klasse' },
-    { r: 4, text: 'Runenschmied: 3 gleiche Runen verschmelzen, zufällige Runen kaufen' }, { r: 5, text: 'Magier als neue Klasse' }, { r: 6, text: 'Ahnenprüfung: 10 Missionen voller Bosse, am Ende wartet der Urahn mit einem Ahnensiegel' },
+    { r: 4, text: 'Runenschmied und Wandler: 3 gleiche Runen verschmelzen, zufällige Runen kaufen, 2 Runen umwandeln' }, { r: 5, text: 'Magier als neue Klasse' }, { r: 6, text: 'Ahnenprüfung: 10 Missionen voller Bosse, am Ende wartet der Urahn mit einem Ahnensiegel' },
     { r: 7, text: 'Priesterin als neue Klasse' }, { r: 8, text: 'Turm-Modus: endloser Turm mit Bonus bis zum nächsten Aufstieg' }, { r: 9, text: 'Tierbändiger als neue Klasse. Alle 150 Stufen, danach endlose Albtraum-Stufen. Der Aufstieg wird möglich.' },
   ];
   const capOf = S => (S.rebirths >= CAPS.length ? Infinity : CAPS[Math.min(S.rebirths, CAPS.length - 1)]);
@@ -1329,7 +1329,7 @@
     return x < 0.4 ? b - 2 : x < 0.75 ? b - 1 : b;
   }
   // Runenwandler: 2 freie Runen derselben Stufe rein, 1 zufällige Rune derselben Stufe einer anderen Art raus
-  function transmute(S, idA, idB) {
+  function transmute(S, idA, idB) { if (!feature(S, 'schmiede')) return null;
     if (!feature(S, 'runen') || idA === idB) return null;
     const used = socketed(S), a = S.runes.find(r => r.id === idA), b = S.runes.find(r => r.id === idB);
     if (!a || !b || used.has(a.id) || used.has(b.id) || a.tier !== b.tier) return null;

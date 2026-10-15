@@ -208,13 +208,13 @@
   function open() {
     if (UPD.pending) { active = true; updApply(true); return; }
     seasonCheck();
-    active = true; bgPreload();
+    active = true; bgPreload(); frStart();
     $('#hub').hidden = true; $('#room').hidden = true; $('#solo').hidden = false;
     st = stats(S);
     if (!cv) {
       $('#solo').innerHTML = `
         <div class="topbar"><button class="btn ghost small" id="soloBack">‹ Spiele</button><div class="title"><b>Ritterlauf</b><small>Solo</small></div>
-          <div class="rl-topr"><button class="btn ghost small rl-newsbtn" id="soloSnd" aria-label="Ton an oder aus"></button><button class="btn ghost small rl-newsbtn" id="soloNews" aria-label="Neuigkeiten">📰<span class="dot" hidden></span></button><button class="btn ghost small" id="soloSpeed">Tempo ×1</button></div></div>
+          <div class="rl-topr"><button class="btn ghost small rl-newsbtn" id="soloSnd" aria-label="Ton an oder aus"></button><button class="btn ghost small rl-newsbtn" id="soloFriends" aria-label="Freunde">👥<span class="dot" hidden></span></button><button class="btn ghost small rl-newsbtn" id="soloNews" aria-label="Neuigkeiten">📰<span class="dot" hidden></span></button><button class="btn ghost small" id="soloSpeed">Tempo ×1</button></div></div>
         <div class="rl-stage"><div id="soloCanvas" class="rl-canvas"></div></div>
         <div class="rl-heroes" id="rlHeroes"></div>
         <div class="rl-bar"><div class="rl-stat" id="rlStat"></div><div id="rlAction" class="row"></div></div>
@@ -230,7 +230,7 @@
       });
       window.addEventListener('resize', () => { sizeCanvas(); if (squad && !squad.el.hidden) sizeSquad(); });
       $('#soloBack').onclick = close;
-      $('#soloNews').onclick = showUpdates;
+      $('#soloNews').onclick = showUpdates; $('#soloFriends').onclick = showFriends;
       $('#soloSnd').onclick = () => soundMenu();
       $('#soloSnd').textContent = SND.isOn() ? '🔊' : '🔇';
       $('#soloSpeed').onclick = () => { if (acct && acct.tester) { testSpeed(); return; } S.speed = S.speed >= maxSpeed(S) ? 1 : S.speed < 3 ? S.speed + 1 : S.speed + 0.5; save(); hud(); };
@@ -250,7 +250,110 @@
   const testerSplinters = () => { if (acct && acct.tester && expOpen(S) && S.exp.spl < 1e6) S.exp.spl = 9999999; };
   function refresh() { testerSplinters(); st = run && !run.dead ? statsFor(S, run.mode) : stats(S); renderTabs(); hud(); heroes(); action(); panel(); }
   function achCheck(run, quiet) { const got = checkAch(S, run); if (got.length) { st = run && !run.dead ? statsFor(S, run.mode) : stats(S); if (!quiet) got.forEach((a, i) => setTimeout(() => toast(`Erfolg: ${a.name} (+3 % Stärke)`, true), i * 1800)); save(); } return got; }
-  function close() { MUS.set(null); SND.ambient(false); closeSquad(); intro = null; const tov = document.querySelector('.rl-title'); if (tov) tov.remove(); active = false; cancelAnimationFrame(raf); save(); cloudSave(true); $('#solo').hidden = true; $('#hub').hidden = false; }
+  /* ---------- Freunde und Chat ---------- */
+  // Freunde per Benutzername anfragen, sehen wer online ist, miteinander schreiben. Läuft über kurze Abfragen an den Server:
+  // alle 20 s die Freundesliste (zählt zugleich als „online“), bei offenem Chat alle 3 s neue Nachrichten.
+  const FR = { data: null, timer: 0, poll: 0, chat: null, last: 0, sure: false };
+  const frCall = (action, extra = {}) => api(action, { name: acct.name, token: acct.token, ...extra });
+  const frOpen = () => { const p = $('#picker'); return p && !p.hidden && p.querySelector('.rl-friends'); };
+  const hhmm = t => { const d = new Date(t); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+  function frDot() { const d = $('#soloFriends .dot'), D = FR.data; if (d) d.hidden = !(D && (D.inc.length || D.friends.some(f => f.unread))); }
+  async function frRefresh() {
+    if (!active || document.hidden || !acct || !acct.token) return;
+    const r = await frCall('friends'); if (r.error) return;
+    const before = FR.data; FR.data = r; frDot();
+    if (before && r.inc.some(n => !before.inc.includes(n))) toast(`👥 Freundschaftsanfrage von ${r.inc.find(n => !before.inc.includes(n))}`);
+    if (frOpen() && !FR.chat) frLists();
+  }
+  function frStart() { clearInterval(FR.timer); FR.timer = setInterval(frRefresh, 20000); setTimeout(frRefresh, 1500); }
+  function frStop() { clearInterval(FR.timer); clearInterval(FR.poll); FR.chat = null; }
+  function showFriends() {
+    SND.play('tick');
+    if (!acct || !acct.token) {
+      modal(`<h2>👥 Freunde</h2><p>Für Freunde und Chat brauchst du ein Konto mit <b>Name und Passwort</b>. Dein Name ist dann dein Benutzername, unter dem dich andere finden.</p>
+        <div class="row" style="justify-content:center"><button class="btn" data-m="x" id="frGoStand">Konto anlegen oder anmelden</button><button class="btn ghost" data-m="x">Später</button></div>`, 'rl-friends');
+      $('#frGoStand').addEventListener('click', () => { tab = 'stand'; renderTabs(); panel(); const t = $('.rl-tabs'); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+      return;
+    }
+    FR.chat = null; clearInterval(FR.poll);
+    modal(`<div id="frBody"></div>`, 'rl-friends');
+    const sheet = $('#picker .rl-friends');
+    sheet.addEventListener('click', frClick);
+    sheet.addEventListener('keydown', e => { if (e.key !== 'Enter' || e.shiftKey) return; if (e.target.id === 'frName') { e.preventDefault(); frAct('add'); } if (e.target.id === 'frText') { e.preventDefault(); frAct('send'); } });
+    frMain(); frRefresh();
+  }
+  function frMain() {
+    const b = $('#frBody'); if (!b) return;
+    b.innerHTML = `<h2>👥 Freunde</h2><p class="note">Dein Benutzername: <b>${esc(acct.name)}</b>. Unter diesem Namen können dich Freunde anfragen.</p>
+      <div class="rl-fradd"><input id="frName" maxlength="20" placeholder="Benutzername eingeben" autocomplete="off" spellcheck="false"><button class="btn small" data-fr="add">Anfragen</button></div>
+      <p class="note rl-frmsg" id="frMsg"></p><div id="frLists"><p class="note">Lädt …</p></div>
+      <div class="row" style="justify-content:center;margin-top:10px"><button class="btn ghost" data-m="x">Schließen</button></div>`;
+    frLists();
+  }
+  function frLists() {
+    const el = $('#frLists'), D = FR.data; if (!el || !D) return;
+    const inc = D.inc.map(n => `<div class="rl-frrow"><b>${esc(n)}</b><span class="sp"></span><button class="btn small" data-fr="yes" data-who="${esc(n)}">Annehmen</button><button class="btn ghost small" data-fr="no" data-who="${esc(n)}">Ablehnen</button></div>`).join('');
+    const fr = D.friends.map(f => `<button class="rl-frrow rl-frbtn" data-fr="open" data-who="${esc(f.name)}"><span class="rl-on ${f.online ? 'on' : ''}"></span><b>${esc(f.name)}</b><small>${f.online ? 'online' : 'offline'}</small><span class="sp"></span>${f.unread ? `<span class="rl-badge">${f.unread}</span>` : ''}<span class="go">💬</span></button>`).join('');
+    const out = D.out.map(n => `<div class="rl-frrow"><b>${esc(n)}</b><small>wartet auf Antwort</small><span class="sp"></span><button class="btn ghost small" data-fr="cancel" data-who="${esc(n)}">Zurückziehen</button></div>`).join('');
+    el.innerHTML = (inc ? `<h3 class="rl-h3">Anfragen an dich</h3>${inc}` : '')
+      + `<h3 class="rl-h3">Freunde (${D.friends.length}) · ${D.friends.filter(f => f.online).length} online</h3>${fr || '<p class="note">Noch keine Freunde. Frag jemanden mit seinem Benutzernamen an.</p>'}`
+      + (out ? `<h3 class="rl-h3">Gesendete Anfragen</h3>${out}` : '');
+  }
+  function frChat(who) {
+    const b = $('#frBody'); if (!b) return;
+    FR.chat = who; FR.last = 0; FR.sure = false;
+    b.innerHTML = `<div class="rl-chathead"><button class="btn ghost small" data-fr="back">‹ Zurück</button><span class="rl-on" id="frOn"></span><b>${esc(who)}</b><small id="frOnT"></small></div>
+      <div class="rl-chat" id="frLog"><p class="note">Lädt …</p></div>
+      <div class="rl-fradd"><input id="frText" maxlength="300" placeholder="Nachricht schreiben …" autocomplete="off"><button class="btn small" data-fr="send">Senden</button></div>
+      <p class="note rl-frmsg" id="frMsg"></p>
+      <div class="row" style="justify-content:space-between;margin-top:6px"><button class="btn ghost small" data-fr="remove">Freund entfernen</button><button class="btn ghost small" data-m="x">Schließen</button></div>`;
+    clearInterval(FR.poll); frPull(true); FR.poll = setInterval(() => { if (!frOpen() || !FR.chat) { clearInterval(FR.poll); FR.chat = null; return; } frPull(); }, 3000);
+    setTimeout(() => { const i = $('#frText'); if (i && matchMedia('(pointer:fine)').matches) i.focus(); }, 50);
+  }
+  function frShow(r, first) {
+    const log = $('#frLog'); if (!log || r.name.toLowerCase() !== String(FR.chat).toLowerCase()) return;
+    const on = $('#frOn'), ot = $('#frOnT'); if (on) on.classList.toggle('on', !!r.online); if (ot) ot.textContent = r.online ? 'online' : 'offline';
+    if (first) log.innerHTML = r.msgs.length ? '' : '<p class="note" id="frEmpty">Noch keine Nachrichten. Sag Hallo! 👋</p>';
+    const fresh = r.msgs.filter(m => m.t > FR.last); if (!fresh.length) return;
+    const e = $('#frEmpty'); if (e) e.remove();
+    const nearEnd = log.scrollHeight - log.scrollTop - log.clientHeight < 60;
+    for (const m of fresh) { const d = document.createElement('div'); d.className = 'rl-msg' + (m.me ? ' me' : ''); d.innerHTML = `<span>${esc(m.x).replace(/\n/g, '<br>')}</span><small>${hhmm(m.t)}</small>`; log.appendChild(d); FR.last = Math.max(FR.last, m.t); }
+    if (first || nearEnd || fresh.some(m => m.me)) log.scrollTop = log.scrollHeight;
+    if (!first && fresh.some(m => !m.me)) SND.play('tick');
+  }
+  async function frPull(first) {
+    const who = FR.chat; const r = await frCall('chat', { who, since: first ? 0 : FR.last });
+    if (FR.chat !== who) return;
+    if (r.error) { const m = $('#frMsg'); if (m) m.textContent = r.error; return; }
+    frShow(r, first);
+    if (FR.data) { const f = FR.data.friends.find(x => x.name === r.name); if (f && f.unread) { f.unread = 0; frDot(); } }
+  }
+  function frClick(e) { const b = e.target.closest('[data-fr]'); if (!b) return; frAct(b.dataset.fr, b.dataset.who); }
+  async function frAct(a, who) {
+    const msg = t => { const m = $('#frMsg'); if (m) { m.textContent = t || ''; m.classList.remove('bad'); } }, bad = t => { const m = $('#frMsg'); if (m) { m.textContent = t; m.classList.add('bad'); } };
+    if (a === 'open') { SND.play('tick'); frChat(who); return; }
+    if (a === 'back') { SND.play('tick'); FR.chat = null; clearInterval(FR.poll); frMain(); frRefresh(); return; }
+    if (a === 'send') {
+      const i = $('#frText'), text = i ? i.value.trim() : ''; if (!text || FR.busy) return;
+      FR.busy = true; const r = await frCall('chat_send', { who: FR.chat, text, since: FR.last }); FR.busy = false;
+      if (r.error) { bad(r.error); return; } msg(''); if (i) i.value = ''; frShow(r, false); SND.play('tick'); return;
+    }
+    if (a === 'remove') {
+      if (!FR.sure) { FR.sure = true; bad(`Wirklich ${FR.chat} als Freund entfernen? Der Chat wird dabei gelöscht. Tippe noch einmal.`); return; }
+      const r = await frCall('friend_remove', { who: FR.chat }); if (r.error) { bad(r.error); return; }
+      FR.data = r; FR.chat = null; clearInterval(FR.poll); frMain(); frDot(); return;
+    }
+    let action = null, extra = {};
+    if (a === 'add') { const i = $('#frName'); who = i ? i.value.trim() : ''; if (!who) { bad('Gib einen Benutzernamen ein.'); return; } action = 'friend_add'; }
+    if (a === 'yes' || a === 'no') { action = 'friend_answer'; extra.ok = a === 'yes'; }
+    if (a === 'cancel') action = 'friend_remove';
+    if (!action) return;
+    const r = await frCall(action, { who, ...extra });
+    if (r.error) { bad(r.error); return; }
+    FR.data = r; frDot(); frLists(); msg(r.msg || ''); SND.play('buy');
+    if (a === 'add') { const i = $('#frName'); if (i) i.value = ''; }
+  }
+  function close() { frStop(); MUS.set(null); SND.ambient(false); closeSquad(); intro = null; const tov = document.querySelector('.rl-title'); if (tov) tov.remove(); active = false; cancelAnimationFrame(raf); save(); cloudSave(true); $('#solo').hidden = true; $('#hub').hidden = false; }
   function sizeCanvas() {
     const host = $('#soloCanvas'); const w = Math.min(host.clientWidth || 360, 960);
     const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -634,8 +737,8 @@
 </svg>`;
   function runenWrap() {
     if (!feature(S, 'runen')) return runenTab();
-    return `${wallet(['dust'])}<div class="rl-subtabs"><button data-runeview="ausr" class="${runeView === 'ausr' ? 'on' : ''}">🛡️ Ausrüstung</button><button data-runeview="schmied" class="${runeView === 'schmied' ? 'on' : ''}">⚒️ Schmied</button><button data-runeview="wandler" class="${runeView === 'wandler' ? 'on' : ''}">🎲 Wandler</button></div>`
-      + (runeView === 'schmied' ? forgeView() : runeView === 'wandler' ? wandlerView() : runenTab());
+    return `${wallet(['dust'])}<div class="rl-subtabs"><button data-runeview="ausr" class="${runeView === 'ausr' ? 'on' : ''}">🛡️ Ausrüstung</button>${feature(S, 'schmiede') ? `<button data-runeview="schmied" class="${runeView === 'schmied' ? 'on' : ''}">⚒️ Schmied</button><button data-runeview="wandler" class="${runeView === 'wandler' ? 'on' : ''}">🎲 Wandler</button>` : `<button data-runeview="schmied" class="${runeView === 'schmied' ? 'on' : ''}">💥 Zerlegen</button>`}</div>`
+      + (runeView === 'schmied' ? forgeView() : runeView === 'wandler' && feature(S, 'schmiede') ? wandlerView() : runenTab());
   }
   // Runenschmied: Stapel als Kacheln, sortierbar nach Art oder Stufe, mit Kobold am Amboss
   function forgeGroups() {
@@ -679,9 +782,9 @@
       <div class="rl-wallet"><span class="rl-cur dust">${dust}${S.dust} Runensplitter</span><span class="note">Lager ${S.runes.length}/${runeCap(S)}</span>
         <button class="btn small" data-rl="lager" ${ln < LAGER_MAX && S.dust >= lc && inCamp() ? '' : 'disabled'}>${ln >= LAGER_MAX ? 'Lager voll ausgebaut' : `Lager +5 (${dust}${lc})`}</button>
         ${canForge ? `<button class="btn ghost small" data-rl="buyrune" ${S.dust >= DUST_RUNE && S.runes.length < runeCap(S) ? '' : 'disabled'}>Zufällige Rune (${dust}${DUST_RUNE})</button>` : ''}</div>
-      <p class="note">Tippe eine Rune an, um sie auf den Amboss zu legen (bis zu 3 gleiche). ${canForge ? '<b>3 gleiche</b> schmiedest du zu einer Rune der nächsten Stufe.' : 'Schmieden geht ab der 4. Wiedergeburt.'} Alles auf dem Amboss kannst du auch zerstören.</p>
-      <div class="rl-wmach">${slot(sel[0], 0)}<span class="plus">+</span>${slot(sel[1], 1)}<span class="plus">+</span>${slot(sel[2], 2)}<span class="plus">→</span>
-        <div class="rl-wslot res ${fRes ? 'reveal' : ''}" ${fRes ? `style="--rc:${RUNE[fRes.t].color}"` : ''}>${fRes ? `<span class="roll">⚒️</span><b>${ROMAN[fRes.tier]}</b><small>${RUNE[fRes.t].name}</small>` : (g0 && canForge && g0.tier < 10 ? `<b style="opacity:.35">${ROMAN[g0.tier + 1]}</b><small style="opacity:.5">${RUNE[g0.t].name}</small>` : '<span>⚒️</span>')}</div></div>
+      <p class="note">${canForge ? 'Tippe eine Rune an, um sie auf den Amboss zu legen (bis zu 3 gleiche). <b>3 gleiche</b> schmiedest du zu einer Rune der nächsten Stufe. Alles auf dem Amboss kannst du auch zerstören.' : 'Tippe Runen an, die du nicht brauchst (bis zu 3 gleiche), und zerstöre sie für Runensplitter. Schmieden und Wandeln kommen erst mit der 4. Wiedergeburt.'}</p>
+      <div class="rl-wmach">${slot(sel[0], 0)}<span class="plus">+</span>${slot(sel[1], 1)}<span class="plus">+</span>${slot(sel[2], 2)}${canForge ? `<span class="plus">→</span>
+        <div class="rl-wslot res ${fRes ? 'reveal' : ''}" ${fRes ? `style="--rc:${RUNE[fRes.t].color}"` : ''}>${fRes ? `<span class="roll">⚒️</span><b>${ROMAN[fRes.tier]}</b><small>${RUNE[fRes.t].name}</small>` : (g0 && canForge && g0.tier < 10 ? `<b style="opacity:.35">${ROMAN[g0.tier + 1]}</b><small style="opacity:.5">${RUNE[g0.t].name}</small>` : '<span>⚒️</span>')}</div>` : ''}</div>
       <div class="row" style="justify-content:center;margin:8px 0;flex-wrap:wrap">${canForge ? `<button class="btn" data-rl="fup" ${canM && inCamp() ? '' : 'disabled'}>⚒️ Schmieden${g0 ? ` (${dust}${mc})` : ''}</button>` : ''}
         <button class="btn ghost" data-rl="fdel" ${sel.length && inCamp() ? '' : 'disabled'}>💥 Zerstören${sel.length ? ` (+${dust}${sel.reduce((a, r) => a + shardOf(r.tier), 0)})` : ''}</button></div>
       <div class="rl-fbar"><span class="note">Sortieren:</span><button data-fsort="art" class="${forgeSort === 'art' ? 'on' : ''}">nach Art</button><button data-fsort="stufe" class="${forgeSort === 'stufe' ? 'on' : ''}">nach Stufe</button></div>
@@ -689,8 +792,8 @@
       <div class="rl-fgrid">${list.map(g => { const R = RUNE[g.t], left = g.free - inUse(g.key); return `<button class="rl-ftile ${left ? '' : 'used'}" data-fpick="${g.key}" style="--rc:${R.color}" ${left ? '' : 'disabled'}><b>${ROMAN[g.tier]}</b><small>${R.name}</small><span class="cnt">×${left}</span>${g.n - g.free ? `<span class="lock" title="eingesetzt">⚑${g.n - g.free}</span>` : ''}</button>`; }).join('') || '<p class="note">Keine Runen. Bosse lassen Runen fallen.</p>'}</div>`;
     const lab = confirm === 'fall2' ? `Wirklich ${killN} Runen zerstören?` : confirm === 'fall' ? 'Sicher? Nochmal tippen' : `Alle ${forgeFilt === 'all' ? '' : 'gefilterten '}freien zerstören (${killN} Runen, +${killS} Splitter)`;
     html += `<div class="row" style="margin-top:10px"><button class="btn small ${confirm ? 'danger' : 'ghost'}" data-rl="fall" ${killN && inCamp() ? '' : 'disabled'}>💥 ${lab}</button></div>
-      <p class="note">Eingesetzte Runen (⚑) werden nie zerstört. Schmieden kostet so viel, wie 3 zerstörte Runen dieser Stufe geben.</p></div>
-      <div class="rl-kobold ${fRes ? 'hit' : ''}" aria-hidden="true">${KOBOLD_SVG}</div></div>`;
+      <p class="note">Eingesetzte Runen (⚑) werden nie zerstört.${canForge ? ' Schmieden kostet so viel, wie 3 zerstörte Runen dieser Stufe geben.' : ''}</p></div>
+      ${canForge ? `<div class="rl-kobold ${fRes ? 'hit' : ''}" aria-hidden="true">${KOBOLD_SVG}</div>` : ''}</div>`;
     return html;
   }
 

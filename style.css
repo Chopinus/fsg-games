@@ -1,4 +1,4 @@
-/* FSG Spieleabend – ein Spieltisch bei Nacht. Ruhige Lobby, im Spiel füllt das Brett den Bildschirm. */
+/* Spiele-Hub – ein Spieltisch bei Nacht. Ruhige Lobby, im Spiel füllt das Brett den Bildschirm. */
 :root{
   --bg:#1b1726; --surface:#262035; --surface2:#30293f; --line:#3d3452;
   --fg:#f4ede1; --muted:#a99fbb; --accent:#ffb547; --accent-ink:#2a1a00;
@@ -978,3 +978,32 @@ input{font:inherit;font-size:18px;color:var(--fg);background:var(--bg);border:1p
 .rl-howto{gap:7px;margin:6px 0 10px}
 .rl-howto li{padding:8px 11px}
 .rl-howto small{font-size:13px;line-height:1.35}
+
+.rl-vol{display:flex;flex-direction:column;gap:6px;margin:10px 0;font-weight:600}
+.rl-vol span{display:flex;justify-content:space-between}
+.rl-vol input[type=range]{width:100%;accent-color:#ffd27a;height:28px}
+
+/* Freunde und Chat */
+.rl-friends{max-width:440px}
+.rl-friends h2{margin-bottom:4px}
+.rl-fradd{display:flex;gap:8px;margin:10px 0 4px}
+.rl-fradd input{flex:1;min-width:0;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.3);color:inherit;font:inherit;font-size:16px}
+.rl-fradd input:focus{outline:2px solid #ffb547;outline-offset:1px}
+.rl-frmsg{min-height:1.2em;margin:2px 0 6px;color:#9be36b}
+.rl-frmsg.bad{color:#ff8a8a}
+.rl-frrow{display:flex;align-items:center;gap:8px;width:100%;padding:9px 10px;margin:5px 0;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:inherit;font:inherit;text-align:left}
+.rl-frrow small{opacity:.65;font-size:12px}
+.rl-frrow .sp{flex:1}
+.rl-frbtn{cursor:pointer}
+.rl-frbtn:hover{background:rgba(255,181,71,.12);border-color:rgba(255,181,71,.35)}
+.rl-frbtn .go{font-size:15px;opacity:.8}
+.rl-on{flex:none;width:10px;height:10px;border-radius:50%;background:#6b6474;box-shadow:0 0 0 2px rgba(0,0,0,.3)}
+.rl-on.on{background:#4ade80;box-shadow:0 0 8px #4ade80}
+.rl-badge{min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:#ff3b3b;color:#fff;font-size:12px;font-weight:700;display:grid;place-items:center}
+.rl-chathead{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.rl-chathead b{font-size:17px}
+.rl-chathead small{opacity:.65}
+.rl-chat{height:min(46vh,360px);overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:12px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.08)}
+.rl-msg{align-self:flex-start;max-width:80%;padding:7px 10px;border-radius:14px 14px 14px 4px;background:rgba(255,255,255,.1);word-wrap:break-word;overflow-wrap:anywhere}
+.rl-msg.me{align-self:flex-end;border-radius:14px 14px 4px 14px;background:rgba(255,181,71,.25)}
+.rl-msg small{display:block;font-size:10px;opacity:.55;margin-top:2px;text-align:right}
