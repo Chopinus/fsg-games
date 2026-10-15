@@ -17,7 +17,28 @@ const GAMES = {
   spion: require('./spion.js'),
   kniffel: require('./kniffel.js'),
 };
-const konten = require('./konten.js');
+// Umzug: Ist auf diesem Render-Dienst die Umgebungsvariable MOVED_TO gesetzt (z. B. https://onegame.onrender.com),
+// zeigt jede Seite nur noch den Umzugs-Hinweis. Spielstände werden dann hier weder geladen noch gespeichert,
+// damit dieser alte Dienst die Spielstand-Datei des neuen nicht überschreibt.
+const MOVED = String(process.env.MOVED_TO || '').trim().replace(/\/+$/, '');
+const konten = MOVED ? null : require('./konten.js');
+const MOVED_HOST = MOVED.replace(/^https?:\/\//, '');
+const MOVED_PAGE = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wir sind umgezogen</title><style>
+:root{color-scheme:dark}*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px 16px;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#f4ecdf;
+background:radial-gradient(ellipse at 50% 120%,#5a2c12 0%,#1c1424 45%,#0b0a14 100%)}
+.card{max-width:520px;width:100%;text-align:center;padding:36px 28px;border-radius:20px;background:rgba(28,22,40,.85);border:1px solid rgba(255,190,110,.25);box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.fire{font-size:54px;line-height:1;filter:drop-shadow(0 0 18px rgba(255,150,60,.7))}
+h1{margin:14px 0 10px;font-size:clamp(26px,6vw,34px);color:#ffd27a}
+p{margin:0 0 14px;font-size:17px;line-height:1.5;color:#e9dccb}
+.url{display:inline-block;margin:6px 0 22px;padding:8px 14px;border-radius:10px;background:rgba(255,210,122,.1);border:1px dashed rgba(255,210,122,.45);font-weight:700;color:#ffd27a;word-break:break-all}
+a.btn{display:inline-block;padding:14px 34px;border-radius:999px;background:#ffb547;color:#2a1608;font-weight:800;font-size:18px;text-decoration:none;box-shadow:0 8px 24px rgba(255,150,60,.35)}
+a.btn:hover{background:#ffc66a}small{display:block;margin-top:20px;color:rgba(233,220,203,.6);font-size:14px}
+</style></head><body><main class="card"><div class="fire">🔥</div><h1>Wir sind umgezogen!</h1>
+<p>Die Spiele gibt es ab jetzt auf einer neuen Website. Bitte spiele ab sofort dort weiter:</p>
+<div class="url">OneGame.onrender.com</div><br><a class="btn" href="${MOVED}/">Zur neuen Website</a>
+<small>Dein Ritterlauf-Spielstand mit Name und Passwort ist dort weiterhin da. Melde dich einfach mit denselben Daten an.<br>Speichere dir am besten die neue Adresse als Lesezeichen.</small></main></body></html>`;
 const ROOM_CAP = 12;           // Personen pro Raum (inkl. Zuschauer)
 const IDLE_MS = 30 * 60 * 1000; // Räume ohne verbundene Spieler verschwinden nach 30 Min.
 
@@ -30,6 +51,10 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; ch
 const server = http.createServer((req, res) => {
   const url = req.url.split('?')[0];
   if (url === '/health') { res.end('ok'); return; }
+  if (MOVED) {
+    if (url.startsWith('/api/')) { res.writeHead(410, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify({ error: `Die Spiele sind umgezogen auf ${MOVED_HOST}. Bitte spiele dort weiter.` })); return; }
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(req.method === 'HEAD' ? undefined : MOVED_PAGE); return;
+  }
   if (url.startsWith('/api/')) { api(req, res, url.slice(5)); return; }
   const file = STATIC[url];
   if (!file) { res.writeHead(302, { Location: '/' }); res.end(); return; }
