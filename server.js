@@ -50,6 +50,25 @@ const STATIC = {
 };
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
 
+// Sounddateien: gesucht im Ordner sounds/ (Groß-/Kleinschreibung egal), sonst neben server.js oder in ritter/
+const SOUND_DIRS = (() => {
+  const out = [];
+  try { for (const d of fs.readdirSync(__dirname, { withFileTypes: true })) if (d.isDirectory() && /^(sounds?|audio|musik)$/i.test(d.name)) out.push(path.join(__dirname, d.name)); } catch {}
+  try { for (const d of fs.readdirSync(__dirname, { withFileTypes: true })) if (d.isDirectory() && d.name.toLowerCase() === 'ritter') out.push(path.join(__dirname, d.name)); } catch {}
+  out.push(__dirname);
+  return out;
+})();
+function soundFile(name) {
+  for (const d of SOUND_DIRS) {
+    try { const hit = fs.readdirSync(d).find(f => f.toLowerCase() === name.toLowerCase()); if (hit) return path.join(d, hit); } catch {}
+  }
+  return path.join(SOUND_DIRS[0], name);
+}
+{
+  const n = SOUND_DIRS.map(d => { try { return [path.relative(__dirname, d) || 'Hauptordner', fs.readdirSync(d).filter(f => /\.mp3$/i.test(f)).length]; } catch { return null; } }).filter(x => x && x[1]);
+  console.log(n.length ? 'Sounds gefunden: ' + n.map(([d, c]) => `${c} mp3 in ${d}`).join(', ') : 'FEHLER Sounds: keine mp3-Dateien gefunden. Ordner "sounds" neben server.js anlegen. Ordner von server.js: ' + __dirname);
+}
+
 // Musik: Streaming mit Range-Anfragen (nötig für iPhone/Safari), lange Browser-Zwischenspeicherung
 function sendSound(req, res, file) {
   fs.stat(file, (err, st) => {
@@ -105,7 +124,7 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(req.method === 'HEAD' ? undefined : MOVED_PAGE); return;
   }
   if (url.startsWith('/api/')) { api(req, res, url.slice(5)); return; }
-  if (/^\/sounds\/[a-z0-9_-]+\.mp3$/.test(url)) { sendSound(req, res, path.join(__dirname, 'sounds', path.basename(url))); return; }
+  if (/^\/sounds\/[a-z0-9_-]+\.mp3$/.test(url)) { sendSound(req, res, soundFile(path.basename(url))); return; }
   const file = STATIC[url];
   if (!file) { res.writeHead(302, { Location: '/' }); res.end(); return; }
   readStatic(file, (err, data) => {
