@@ -1083,6 +1083,7 @@
     if (Array.isArray(d.knownTabs)) out.knownTabs = d.knownTabs.filter(x => typeof x === 'string').slice(0, 60);
     if (Array.isArray(d.knownBoard)) out.knownBoard = d.knownBoard.filter(x => typeof x === 'string').slice(0, 10);
     out.season = Math.max(0, Math.floor(Number(d.season) || 0));
+    if (d.tst) out.tst = 1;
     out.daily = { day: String(d.daily?.day || ''), best: Math.max(0, Math.floor(Number(d.daily?.best) || 0)), claimed: Math.max(0, Math.floor(Number(d.daily?.claimed) || 0)) };
     out.weekly = { week: String(d.weekly?.week || ''), best: Math.max(0, Math.floor(Number(d.weekly?.best) || 0)), claimed: Math.max(0, Math.floor(Number(d.weekly?.claimed) || 0)) };
     out.comps = {}; for (const c of COMPS) { const l = Math.floor(Number(d.comps?.[c.id]) || 0); if (l > 0) out.comps[c.id] = Math.min(100, l); }
@@ -2178,7 +2179,7 @@
       S.tot.kills, S.tot.souls, COMPS.length, ...COMPS.map(c => S.comps[c.id] || 0), ...[0, 1].map(i => (S.compActive[i] ? COMPS.findIndex(c => c.id === S.compActive[i]) + 1 : 0)), S.tempo || 0,
       S.exp.spl, S.exp.done, Math.max(0, PUZZLE.indexOf(S.exp.target)), PUZZLE.length, ...PUZZLE.map(id => pieceMask(S, id)),
       1, kSlots(S), HEROES.length, ...HEROES.map(h => (S.kplace || {})[h.id] || 0), S.altar || 0, 1, 1, 1, S.rlager || 0, 1,
-      1, S.ahn.sig, S.ahn.got, S.ahn.m, S.ahn.lvl, HEROES.length, ...HEROES.map(h => (S.ahn.place[h.id] ? 1 : 0)), S.ascBest || 0, 1, S.rankGot || 0, S.wf || 0, HEROES.length, ...HEROES.map(h => (S.mast || {})[h.id] || 0), ...HEROES.map(h => Math.max(0, SKINS.findIndex(k => k.id === (S.skin || {})[h.id]))), 1, HEROES.length, ...HEROES.flatMap(h => [3, 4, 5].map(i => rIdx((S.sockets[h.id] || [])[i]))), 1, S.season || 0]);
+      1, S.ahn.sig, S.ahn.got, S.ahn.m, S.ahn.lvl, HEROES.length, ...HEROES.map(h => (S.ahn.place[h.id] ? 1 : 0)), S.ascBest || 0, 1, S.rankGot || 0, S.wf || 0, HEROES.length, ...HEROES.map(h => (S.mast || {})[h.id] || 0), ...HEROES.map(h => Math.max(0, SKINS.findIndex(k => k.id === (S.skin || {})[h.id]))), 1, HEROES.length, ...HEROES.flatMap(h => [3, 4, 5].map(i => rIdx((S.sockets[h.id] || [])[i]))), 1, S.season || 0, 1, S.tst ? 1 : 0]);
   }
   function decode(code) {
     const nums = unpackNums(code); if (!nums) return null;
@@ -2224,6 +2225,7 @@
           if (i < nums.length) { next(); d.rankGot = next(); d.wf = next(); const hc4 = next(); d.mast = {}; d.skin = {}; for (let k = 0; k < hc4; k++) { const x = next(); if (HEROES[k] && x) d.mast[HEROES[k].id] = x; } for (let k = 0; k < hc4; k++) { const x = next(); if (HEROES[k] && SKINS[x]) d.skin[HEROES[k].id] = SKINS[x].id; } }
           if (i < nums.length) { next(); const hc5 = next(); for (let k = 0; k < hc5; k++) { const a = [next(), next(), next()]; if (HEROES[k] && d.sockets[HEROES[k].id]) d.sockets[HEROES[k].id].push(...a.map(x => (x > 0 ? x : null))); } }
           if (i < nums.length) { next(); d.season = next(); }
+          if (i < nums.length) { next(); if (next()) d.tst = 1; }
         }
       } else return null;
       return migrate(d);
@@ -2280,7 +2282,7 @@
   let notice = S.reset ? 'Neue Version: Dein alter Spielstand stammte aus der allerersten Version und wurde zurückgesetzt. Ab jetzt bleibt dein Fortschritt bei Updates erhalten.' : '';
   if (S.reset) delete S.reset;
   function load() { try { const raw = localStorage.getItem(KEY); if (raw) return migrate(JSON.parse(raw)); } catch {} return fresh(); }
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} cloudDirty = true; }
+  function save() { if (acct && acct.tester) S.tst = 1; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} cloudDirty = true; }
   const inCamp = () => !run || run.dead;
 
   /* ---------- Soundeffekte (werden live erzeugt, leise und weich) ---------- */
@@ -2364,7 +2366,7 @@
     modal(`<span class="rl-mic">⚔</span><h2>Ritterlauf ${GAME_VERSION}</h2><p>Mit dem Start von Version ${GAME_VERSION} beginnen <b>alle neu</b>. Die Testphase ist vorbei, und dein Spielstand wurde zurückgesetzt. Dein Name und Passwort bleiben erhalten.</p><p class="note">Danke fürs Testen und viel Spaß beim neuen Abenteuer!</p>
       <div class="row" style="justify-content:center"><button class="btn" data-m="ok">Los geht’s</button></div>`);
   }
-  const setAcct = a => { acct = a; try { a ? localStorage.setItem(AKEY, JSON.stringify(a)) : localStorage.removeItem(AKEY); } catch {} };
+  const setAcct = a => { acct = a; if (a && a.tester && S && !S.tst) { S.tst = 1; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} } try { a ? localStorage.setItem(AKEY, JSON.stringify(a)) : localStorage.removeItem(AKEY); } catch {} };
   async function api(action, body, keepalive) {
     try {
       const res = await fetch('/api/' + action, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), keepalive: !!keepalive });
@@ -3175,7 +3177,18 @@
     else if (a === 'dismantle') { const r = S.runes.find(x => x.id === runeSel); if (r) { const d = dismantle(S, r); runeSel = null; toast(`+${d} Runensplitter`); afterChange(); } }
     else if (a === 'buyrune') { const r = buyRune(S); if (r) { runeSel = r.id; toast(`Neue Rune: ${RUNE[r.t].name} I`); afterChange(); } }
     else if (a === 'cloudsave') { cloudMsg = 'Wird gespeichert …'; panel(); cloudSave(true); }
-    else if (a === 'logout') { cloudSave(true).then(() => { conflict = null; setAcct(null); cloudMsg = ''; panel(); toast('Abgemeldet. Dein Spielstand bleibt auf dem Server.'); }); }
+    else if (a === 'logout') {
+      if (run && !run.dead) { toast('Beende zuerst den laufenden Feldzug.'); return; }
+      if (conflict) { resolveConflict(conflict); return; }
+      cloudSave(true).then(r => {
+        if (conflict || (r && r.conflict)) return; // erst den Konflikt entscheiden
+        if (r && r.error && !/anmelden/.test(r.error)) { toast(`Abmelden abgebrochen: ${r.error} Dein Fortschritt wäre sonst verloren.`, true); panel(); return; }
+        conflict = null; setAcct(null); cloudMsg = '';
+        // Der Spielstand gehört zum Konto: auf diesem Gerät neu beginnen, damit kein anderes Konto ihn übernehmen kann
+        adopt(fresh()); S.seenIntro = true; S.season = SEASON; run = null; save(); refresh();
+        toast('Abgemeldet. Dein Spielstand ist sicher auf dem Server.');
+      });
+    }
     else if (a === 'copy') {
       const code = $('#rlCode').textContent;
       (navigator.clipboard ? navigator.clipboard.writeText(code) : Promise.reject()).then(() => toast('Code kopiert'), () => {
@@ -3184,6 +3197,7 @@
     } else if (a === 'load') {
       const s = decode($('#rlIn').value);
       if (!s) { toast('Dieser Code stimmt nicht. Prüfe jedes Zeichen.'); return; }
+      if (s.tst && !(acct && acct.tester)) { toast('Dieser Code stammt von einem Test-Spielstand und gilt nur für Tester.'); return; }
       if ((s.season || 0) < SEASON && !(acct && acct.tester)) { toast(`Dieser Code ist von vor Version ${GAME_VERSION} und gilt nicht mehr.`); return; }
       s.speed = Math.min(S.speed, maxSpeed(s)); adopt(s); save(); toast('Spielstand geladen');
     } else if (a === 'reset') { if (ask('reset', panel)) { adopt(fresh()); save(); toast('Neuer Spielstand'); } }
@@ -3199,13 +3213,15 @@
         const r = await api('create', { name: val('#rlCName'), pass: $('#rlCPw').value, data: S });
         if (r.error) { toast(r.error); return; }
         setAcct({ name: r.name, token: r.token, updated: r.updated, tester: !!r.tester }); cloudMsg = `Gespeichert um ${timeStr(r.updated)}`; cloudDirty = false;
-        toast(`Spielstand „${r.name}“ angelegt`); panel();
+        if (r.reset) { adopt(fresh()); S.seenIntro = true; S.season = SEASON; run = null; save(); refresh(); toast(`Spielstand „${r.name}“ angelegt. Fortschritt aus einem Test-Spielstand wird nicht übernommen.`, true); }
+        else toast(`Spielstand „${r.name}“ angelegt`);
+        panel();
       } else if (f.id === 'rlLogin') {
         const r = await api('login', { name: val('#rlLName'), pass: $('#rlLPw').value });
         if (r.error) { toast(r.error); return; }
         setAcct({ name: r.name, token: r.token, updated: r.updated, tester: !!r.tester });
         const fresh1 = !!(r.data && r.data.season && !r.data.v), old = !fresh1 && (!r.data || !r.data.v || r.data.v < 2);
-        adopt(r.data || {}); cloudDirty = true;
+        adopt(r.data || {}); if (r.tester) S.tst = 1; cloudDirty = true;
         cloudMsg = `Geladen – zuletzt gespeichert um ${timeStr(r.updated)}`;
         toast(fresh1 ? `Angemeldet. Mit Version ${GAME_VERSION} beginnt dein Abenteuer neu.` : old ? 'Angemeldet. Dein Spielstand stammte aus der allerersten Version und wurde zurückgesetzt.' : `Willkommen zurück, ${r.name}!`); panel();
       } else if (f.id === 'rlPwForm') {

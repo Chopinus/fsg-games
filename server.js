@@ -1,4 +1,4 @@
-// FSG Spielehub – Server
+// Spiele-Hub – Server
 // Liefert die Webseite aus und hält alle Spielrunden im Speicher.
 const http = require('http');
 const fs = require('fs');
@@ -20,9 +20,11 @@ const GAMES = {
 // Umzug: Ist auf diesem Render-Dienst die Umgebungsvariable MOVED_TO gesetzt (z. B. https://onegame.onrender.com),
 // zeigt jede Seite nur noch den Umzugs-Hinweis. Spielstände werden dann hier weder geladen noch gespeichert,
 // damit dieser alte Dienst die Spielstand-Datei des neuen nicht überschreibt.
-const MOVED = String(process.env.MOVED_TO || '').trim().replace(/\/+$/, '');
+// (MOVE_TO ohne D wird auch akzeptiert; fehlt https://, wird es ergänzt)
+const MOVED = (s => (s && !/^https?:\/\//i.test(s) ? 'https://' + s : s))(String(process.env.MOVED_TO || process.env.MOVE_TO || '').trim().replace(/\/+$/, ''));
 const konten = MOVED ? null : require('./konten.js');
-const MOVED_HOST = MOVED.replace(/^https?:\/\//, '');
+const MOVED_HOST = MOVED.replace(/^https?:\/\//i, '');
+if (MOVED) console.log(`Umzugs-Modus: alle Seiten zeigen den Hinweis auf ${MOVED}`);
 const MOVED_PAGE = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Wir sind umgezogen</title><style>
 :root{color-scheme:dark}*{box-sizing:border-box}
@@ -37,7 +39,7 @@ a.btn{display:inline-block;padding:14px 34px;border-radius:999px;background:#ffb
 a.btn:hover{background:#ffc66a}small{display:block;margin-top:20px;color:rgba(233,220,203,.6);font-size:14px}
 </style></head><body><main class="card"><div class="fire">🔥</div><h1>Wir sind umgezogen!</h1>
 <p>Die Spiele gibt es ab jetzt auf einer neuen Website. Bitte spiele ab sofort dort weiter:</p>
-<div class="url">OneGame.onrender.com</div><br><a class="btn" href="${MOVED}/">Zur neuen Website</a>
+<div class="url">${MOVED_HOST}</div><br><a class="btn" href="${MOVED}/">Zur neuen Website</a>
 <small>Dein Ritterlauf-Spielstand mit Name und Passwort ist dort weiterhin da. Melde dich einfach mit denselben Daten an.<br>Speichere dir am besten die neue Adresse als Lesezeichen.</small></main></body></html>`;
 const ROOM_CAP = 12;           // Personen pro Raum (inkl. Zuschauer)
 const IDLE_MS = 30 * 60 * 1000; // Räume ohne verbundene Spieler verschwinden nach 30 Min.
@@ -259,4 +261,4 @@ setInterval(() => {
 }, 30000);
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`FSG Spielehub läuft auf Port ${PORT}`));
+server.listen(PORT, () => console.log(`Spiele-Hub läuft auf Port ${PORT}`));

@@ -17,6 +17,8 @@ const isTester = key => TESTERS.includes(key);
 // Name und Passwort bleiben, nur der Spielstand beginnt neu. Die alten Stände bleiben im Verlauf des GitHub-Projekts erhalten.
 const SEASON = 1;
 const oldSeason = d => !d || (Number(d.season) || 0) < SEASON;
+// Test-Spielstände (mit Testwerkzeugen erspielt) dürfen nicht in normale Konten wandern
+const testData = d => !!(d && d.tst);
 
 let accounts = {};   // key (Name klein) -> { name, salt, hash, tokens: [sha256], data, updated }
 let sha = null, dirty = false, flushTimer = null, ready = false, lastError = '';
@@ -109,12 +111,13 @@ async function handle(action, body, ip) {
     if (acc) return [409, { error: 'Diesen Namen gibt es schon. Wähle einen anderen oder lade den Spielstand.' }];
     let data = cleanData(body.data);
     if (!data) return [400, { error: 'Der Spielstand ist ungültig.' }];
-    if (!isTester(key) && oldSeason(data)) data = { season: SEASON };
+    const wiped = !isTester(key) && (oldSeason(data) || testData(data));
+    if (wiped) data = { season: SEASON };
     if (Object.keys(accounts).length >= 5000) return [507, { error: 'Der Speicher ist voll.' }];
     const salt = crypto.randomBytes(16).toString('hex');
     const a = accounts[key] = { name, salt, hash: hashPw(body.pass, salt), tokens: [], data, updated: Date.now(), season: SEASON };
     const token = newToken(a); markDirty();
-    return [200, { name, token, updated: a.updated, durable, tester: isTester(key) }];
+    return [200, { name, token, updated: a.updated, durable, tester: isTester(key), reset: wiped && testData(cleanData(body.data)) }];
   }
   if (action === 'login') {
     if (blocked(ip)) return [429, { error: 'Zu viele falsche Versuche. Warte eine Minute.' }];
@@ -127,7 +130,7 @@ async function handle(action, body, ip) {
     const data = cleanData(body.data);
     if (!data) return [400, { error: 'Der Spielstand ist ungültig.' }];
     // Stand aus einer alten Saison (z. B. ein noch offener Tab): nicht annehmen, das Spiel setzt sich dann selbst zurück
-    if (!isTester(key) && oldSeason(data)) return [409, { reset: true, updated: acc.updated, error: 'Neue Version: Der Spielstand wurde zurückgesetzt.' }];
+    if (!isTester(key) && (oldSeason(data) || testData(data))) return [409, { reset: true, updated: acc.updated, error: 'Neue Version: Der Spielstand wurde zurückgesetzt.' }];
     // Wurde inzwischen auf einem anderen Gerät gespeichert? Dann nicht einfach überschreiben.
     const base = Number(body.base) || 0;
     if (base && acc.updated > base && !body.force) return [409, { conflict: true, data: acc.data, updated: acc.updated, error: 'Auf einem anderen Gerät wurde weitergespielt.' }];
