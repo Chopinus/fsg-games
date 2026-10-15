@@ -1980,6 +1980,71 @@
     ctx.restore();
   }
 
+  // ---------- Gemalte Hintergründe (Bilder) mit Bewegung obendrauf ----------
+  // Je Gebiet ein Bild (gespiegelt, damit es nahtlos wiederholt). Himmel und Kulisse ziehen langsamer vorbei als der Boden.
+  // Leuchtende Stellen (Fackeln, Lava, Kristalle) flackern bzw. pulsieren. Ohne Bild wird wie früher gezeichnet.
+  const BG_V = 1; // bei neuen Bildern erhöhen
+  const BG_META = {"himmel":{"w":2136,"h":515,"gy":425,"g":[]},"gruft":{"w":2136,"h":515,"gy":415,"g":[[552,90,32,"164,105,210","c"],[1577,90,32,"164,105,210","c"],[1216,136,32,"152,103,199","c"],[913,136,32,"152,103,199","c"],[814,304,15,"126,107,184","c"],[1315,304,15,"126,107,184","c"],[421,148,15,"137,94,186","c"],[1708,148,15,"137,94,186","c"],[889,205,9,"119,108,159","c"],[1240,205,9,"119,108,159","c"]]},"lager":{"w":2136,"h":515,"gy":415,"g":[[503,404,40,"216,156,68","f"],[1626,404,40,"216,156,68","f"],[545,359,40,"239,151,49","f"],[1584,359,40,"239,151,49","f"],[1475,339,27,"200,134,65","f"],[654,339,27,"200,134,65","f"],[902,204,16,"216,183,98","f"],[1228,204,16,"216,183,98","f"],[482,358,20,"179,108,53","f"],[1647,358,20,"179,108,53","f"],[266,330,12,"168,111,74","f"],[1864,330,12,"168,111,74","f"],[542,300,12,"201,118,44","f"],[1588,300,12,"201,118,44","f"],[1635,386,13,"178,116,57","f"],[494,386,13,"178,116,57","f"],[1450,404,9,"174,128,77","f"],[680,404,9,"174,128,77","f"],[282,341,9,"164,106,72","f"],[1847,341,9,"164,106,72","f"]]},"moor":{"w":2136,"h":515,"gy":417,"g":[[630,384,40,"80,189,216","c"],[1500,384,40,"80,189,216","c"],[334,380,40,"70,188,213","c"],[1795,380,40,"70,188,213","c"],[127,290,40,"155,198,112","c"],[2002,290,40,"155,198,112","c"],[998,158,40,"111,177,153","c"],[1131,158,40,"111,177,153","c"],[1653,379,35,"64,179,179","c"],[476,379,35,"64,179,179","c"],[194,134,40,"123,189,171","c"],[1935,134,40,"123,189,171","c"],[729,358,33,"98,179,167","c"],[1400,358,33,"98,179,167","c"],[377,378,28,"62,166,184","c"],[1752,378,28,"62,166,184","c"],[861,406,26,"66,139,169","c"],[1268,406,26,"66,139,169","c"],[100,406,25,"54,121,179","c"],[2029,406,25,"54,121,179","c"]]},"krypta":{"w":2136,"h":515,"gy":419,"g":[[1520,262,40,"83,63,160","c"],[609,262,40,"83,63,160","c"],[1871,166,40,"152,84,211","c"],[258,166,40,"152,84,211","c"],[1704,382,40,"101,60,195","c"],[425,382,40,"101,60,195","c"],[1238,164,40,"151,80,206","c"],[891,164,40,"151,80,206","c"],[1334,331,40,"99,59,189","c"],[795,331,40,"99,59,189","c"],[429,298,40,"134,83,214","c"],[1700,298,40,"134,83,214","c"],[165,103,27,"163,87,201","c"],[1964,103,27,"163,87,201","c"],[478,384,24,"93,53,184","c"],[1651,384,24,"93,53,184","c"],[771,297,25,"105,72,188","c"],[1358,297,25,"105,72,188","c"],[1410,266,26,"87,65,164","c"],[719,266,26,"87,65,164","c"]]},"sterne":{"w":2136,"h":515,"gy":420,"g":[[437,366,40,"87,141,238","c"],[1692,366,40,"87,141,238","c"],[202,388,40,"65,159,214","c"],[1927,388,40,"65,159,214","c"],[818,376,40,"73,168,233","c"],[1311,376,40,"73,168,233","c"],[904,297,40,"114,186,250","c"],[1225,297,40,"114,186,250","c"],[125,316,40,"100,164,246","c"],[2004,316,40,"100,164,246","c"],[1486,406,40,"65,164,185","c"],[643,406,40,"65,164,185","c"],[1031,215,40,"88,99,232","c"],[1098,215,40,"88,99,232","c"],[1046,130,37,"73,151,229","c"],[1083,130,37,"73,151,229","c"],[755,381,35,"54,143,214","c"],[1374,381,35,"54,143,214","c"],[315,343,37,"55,119,212","c"],[1814,343,37,"55,119,212","c"]]},"toten":{"w":2136,"h":515,"gy":425,"g":[]},"hain":{"w":2136,"h":515,"gy":425,"g":[]},"albtraum":{"w":2136,"h":515,"gy":425,"g":[]},"wueste":{"w":2136,"h":515,"gy":420,"g":[]},"dornen":{"w":2136,"h":515,"gy":418,"g":[[457,218,40,"88,174,162","c"],[1672,218,40,"88,174,162","c"],[876,162,40,"96,180,162","c"],[1253,162,40,"96,180,162","c"],[742,200,40,"99,185,168","c"],[1387,200,40,"99,185,168","c"],[574,282,40,"92,175,155","c"],[1555,282,40,"92,175,155","c"],[685,283,40,"105,183,153","c"],[1444,283,40,"105,183,153","c"],[334,237,30,"93,181,165","c"],[1795,237,30,"93,181,165","c"],[386,136,33,"75,164,158","c"],[1743,136,33,"75,164,158","c"],[814,222,26,"98,187,169","c"],[1315,222,26,"98,187,169","c"],[110,122,20,"98,189,177","c"],[2020,122,20,"98,189,177","c"],[323,176,25,"70,170,156","c"],[1806,176,25,"70,170,156","c"]]},"hort":{"w":2136,"h":515,"gy":426,"g":[[265,415,40,"199,63,47","f"],[1864,415,40,"199,63,47","f"],[971,325,40,"227,59,17","f"],[1158,325,40,"227,59,17","f"],[248,291,40,"238,78,23","f"],[1881,291,40,"238,78,23","f"],[400,358,40,"235,68,20","f"],[1729,358,40,"235,68,20","f"],[1074,417,40,"181,53,46","f"],[2084,321,40,"217,50,15","f"],[45,321,40,"217,50,15","f"],[1499,351,40,"239,75,29","f"],[630,351,40,"239,75,29","f"],[571,400,40,"239,86,26","f"],[1558,400,40,"239,86,26","f"],[759,319,40,"223,52,21","f"],[1370,319,40,"223,52,21","f"],[80,412,40,"200,52,28","f"],[2049,412,40,"200,52,28","f"],[681,416,40,"197,57,45","f"]]},"eis":{"w":2136,"h":515,"gy":420,"g":[[1074,395,40,"64,150,234","c"],[329,259,40,"79,183,248","c"],[1800,259,40,"79,183,248","c"],[884,232,40,"86,178,247","c"],[1245,232,40,"86,178,247","c"],[772,328,40,"83,172,240","c"],[1357,328,40,"83,172,240","c"],[1010,191,40,"33,96,191","c"],[1119,191,40,"33,96,191","c"],[2104,307,40,"57,150,235","c"],[25,307,40,"57,150,235","c"],[183,219,40,"90,184,248","c"],[1946,219,40,"90,184,248","c"],[974,321,40,"44,127,224","c"],[1155,321,40,"44,127,224","c"],[640,152,40,"42,112,203","c"],[1489,152,40,"42,112,203","c"],[745,132,40,"40,103,195","c"],[1384,132,40,"40,103,195","c"],[469,313,39,"101,177,234","c"]]},"finster":{"w":2136,"h":515,"gy":415,"g":[[1487,370,40,"58,154,195","c"],[642,370,40,"58,154,195","c"],[406,406,37,"178,183,82","c"],[1723,406,37,"178,183,82","c"],[976,137,40,"50,122,163","c"],[1153,137,40,"50,122,163","c"],[741,125,40,"57,133,170","c"],[1388,125,40,"57,133,170","c"],[789,143,40,"56,130,171","c"],[1340,143,40,"56,130,171","c"],[1219,294,35,"55,139,170","c"],[910,294,35,"55,139,170","c"],[408,158,40,"52,129,170","c"],[1721,158,40,"52,129,170","c"],[252,153,39,"54,129,174","c"],[1877,153,39,"54,129,174","c"],[1023,128,37,"51,126,167","c"],[1106,128,37,"51,126,167","c"],[464,277,34,"41,128,170","c"],[1665,277,34,"41,128,170","c"]]},"frost":{"w":2136,"h":515,"gy":417,"g":[]},"glut":{"w":2136,"h":515,"gy":417,"g":[[651,371,40,"219,69,19","f"],[1478,371,40,"219,69,19","f"],[429,382,40,"231,73,18","f"],[1700,382,40,"231,73,18","f"],[774,327,40,"209,60,22","f"],[1355,327,40,"209,60,22","f"],[1005,391,40,"215,81,15","f"],[1124,391,40,"215,81,15","f"],[60,391,40,"209,57,13","f"],[2069,391,40,"209,57,13","f"],[1029,68,40,"192,80,50","f"],[1100,68,40,"192,80,50","f"],[546,406,38,"211,76,19","f"],[1583,406,38,"211,76,19","f"],[358,341,40,"226,81,18","f"],[1771,341,40,"226,81,18","f"],[1074,153,40,"177,56,39","f"],[215,294,27,"201,93,10","f"],[1914,294,27,"201,93,10","f"],[1628,369,30,"219,79,21","f"]]},"wiesen":{"w":2136,"h":515,"gy":415,"g":[]}};
+  const ZONE_BG = ['wiesen', 'finster', 'gruft', 'glut', 'frost', 'moor', 'dornen', 'krypta', 'wueste', 'eis', 'sterne', 'hain', 'toten', 'hort', 'himmel'];
+  const BG_FIRE = 545; // Lagerfeuer im Bild (x)
+  const BG_IMG = {};
+  function bgImg(k) {
+    let e = BG_IMG[k];
+    if (!e) { e = BG_IMG[k] = { ok: false, img: new Image() }; e.img.onload = () => { e.ok = true; }; e.img.src = `/bilder/bg_${k}.jpg?v=${BG_V}`; }
+    return e.ok ? e.img : null;
+  }
+  let bgPre = false;
+  function bgPreload() { if (bgPre) return; bgPre = true; bgImg('lager'); ['albtraum', ...ZONE_BG].forEach((k, i) => setTimeout(() => bgImg(k), 400 + 250 * i)); }
+  const bgScale = k => GROUND / (BG_META[k].gy - 8);
+  function bgKey(R, stage, tower) {
+    if (!R) return 'lager';
+    if (tower || R.mode === 'ahnen' || areaOf(R)) return null;
+    return nightmare(stage) ? 'albtraum' : ZONE_BG[zoneOf(stage) % ZONE_BG.length];
+  }
+  function drawBg(k, sc, t, fixX) {
+    const img = bgImg(k); if (!img) return false;
+    const M = BG_META[k], s = bgScale(k), dw = M.w * s, cut = M.gy - 16;
+    const wrap = v => -(((v % dw) + dw) % dw);
+    const far = fixX != null ? fixX : wrap(sc * 0.4), near = fixX != null ? fixX : wrap(sc);
+    for (let x = Math.floor(far); x < W; x += dw) ctx.drawImage(img, x, 0, dw + 1, M.h * s);
+    if (fixX == null) for (let x = Math.floor(near); x < W; x += dw) {
+      const pa = ctx.globalAlpha; ctx.globalAlpha = pa * 0.5; ctx.drawImage(img, 0, cut - 4, M.w, 4, x, (cut - 4) * s, dw + 1, 4 * s); ctx.globalAlpha = pa;
+      ctx.drawImage(img, 0, cut, M.w, M.h - cut, x, cut * s, dw + 1, (M.h - cut) * s);
+    }
+    if (!lowFx && M.g.length) {
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (const [gx, gy, r, rgb, kind] of M.g) {
+        const ph = gx * 0.013 + gy * 0.007, R2 = r * s * 1.7;
+        const a = kind === 'f' ? 0.2 + 0.1 * Math.sin(t * 9 + ph) * Math.sin(t * 5.3 + ph * 2) + 0.07 * Math.sin(t * 2.1 + ph) : 0.13 + 0.1 * Math.sin(t * 1.5 + ph);
+        for (let x = (gy >= cut ? near : far) + gx * s; x < W + R2; x += dw) if (x > -R2) glowDot(x, gy * s, R2, rgb, a);
+      }
+      ctx.restore();
+    }
+    if (BG_AMB[k]) { ctx.save(); if (fixX != null && k === 'lager') ctx.translate(fixX - campBgX(), 0); try { BG_AMB[k](t); } catch (e) {} ctx.restore(); }
+    return true;
+  }
+  const campBgX = () => 250 - BG_FIRE * bgScale('lager');
+  // Kleine Bewegungen je Gebiet, hinter den Figuren: Nebel, Funken, Glühwürmchen, Schnee, Staub …
+  const BG_AMB = {
+    wiesen: t => { sunRays(t, 330, '255,245,200', 0.06, 4, 46, -100); parts(t, 6, { type: 'glow', rgb: '255,250,200', vx: 4, vy: -2, wob: 1, wa: 8, size: 1, tw: 2, alpha: 0.5, area: [0, 120, W, 90], seed: 61 }); },
+    finster: t => { fog(t, 186, 34, '110,170,190', 0.22, 5, 5, 2); parts(t, 12, { type: 'glow', rgb: '190,255,140', vx: 3, vy: -3, wob: 1, wa: 12, size: 1.2, tw: 2, alpha: 0.75, area: [0, 100, W, 110], seed: 62 }); },
+    gruft: t => { fog(t, 200, 30, '150,110,210', 0.22, 4, 5, 3); parts(t, 10, { rgb: '220,200,255', vx: 2, vy: -4, size: 1.1, tw: 1.5, alpha: 0.5, seed: 63 }); },
+    glut: t => { parts(t, 22, { type: 'ember', rgb: '255,140,60', vx: 6, vy: -26, wob: 2, wa: 6, size: 1.5, tw: 4, alpha: 0.9, seed: 64 }); fog(t, 205, 28, '255,90,40', 0.12, 6, 4, 4); },
+    frost: t => { parts(t, 30, { type: 'flake', rgb: '255,255,255', vx: -10, vy: 22, wob: 1.2, wa: 8, size: 1.6, alpha: 0.85, area: [0, 0, W, H], seed: 65 }); fog(t, 200, 26, '230,240,255', 0.18, 7, 4, 5); },
+    moor: t => { fog(t, 196, 36, '140,220,200', 0.24, 4, 6, 6); parts(t, 12, { type: 'glow', rgb: '160,255,200', vx: 2, vy: -2, wob: 1, wa: 10, size: 1.2, tw: 2, alpha: 0.75, area: [0, 110, W, 100], seed: 66 }); },
+    dornen: t => { parts(t, 14, { type: 'petal', rgb: '255,120,150', vx: 14, vy: 10, wob: 2, wa: 8, size: 1.4, alpha: 0.7, area: [0, 0, W, H], seed: 67 }); fog(t, 205, 26, '120,220,190', 0.14, 4, 4, 7); },
+    krypta: t => { fog(t, 205, 28, '140,100,230', 0.22, 3, 5, 8); parts(t, 14, { rgb: '210,190,255', vx: 2, vy: 3, wob: 1, wa: 6, size: 1, tw: 1.2, alpha: 0.45, seed: 68 }); },
+    wueste: t => { parts(t, 26, { type: 'streak', rgb: '255,210,150', vx: 70, vy: 3, size: 1, alpha: 0.35, area: [0, 110, W, 110], seed: 69 }); fog(t, 200, 34, '255,180,110', 0.16, 14, 5, 9); },
+    eis: t => { parts(t, 18, { type: 'glow', rgb: '150,210,255', vx: 1, vy: -3, size: 1.1, tw: 3, alpha: 0.8, seed: 70 }); fog(t, 205, 26, '120,180,255', 0.16, 3, 4, 10); },
+    sterne: t => { parts(t, 26, { type: 'glow', rgb: '200,190,255', size: 0.9, tw: 2.5, alpha: 0.9, area: [0, 0, W, 120], seed: 71 }); const p = frac(t / 7), sx = 420 - p * 260, sy = 20 + p * 60; if (p < 0.18) { ctx.strokeStyle = `rgba(255,255,255,${0.8 * (1 - p / 0.18)})`; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + 26, sy - 6); ctx.stroke(); } },
+    hain: t => { sunRays(t, 250, '255,240,170', 0.09, 5, 40, -96); parts(t, 12, { type: 'leaf', rgb: '170,210,90', vx: 10, vy: 14, wob: 2, wa: 10, size: 1.6, alpha: 0.75, area: [0, 0, W, H], seed: 72 }); parts(t, 10, { type: 'glow', rgb: '255,240,170', vx: 1, vy: -2, size: 1, tw: 2, alpha: 0.6, area: [0, 90, W, 120], seed: 73 }); },
+    toten: t => { fog(t, 196, 38, '170,160,230', 0.26, 4, 6, 11); parts(t, 8, { type: 'glow', rgb: '170,255,220', vx: 3, vy: -6, wob: 1.4, wa: 14, size: 1.3, tw: 2, alpha: 0.7, area: [0, 90, W, 120], seed: 74 }); },
+    hort: t => { parts(t, 24, { type: 'ember', rgb: '255,110,50', vx: 4, vy: -30, wob: 2, wa: 6, size: 1.5, tw: 4, alpha: 0.9, seed: 75 }); fog(t, 208, 26, '255,70,30', 0.14, 5, 4, 12); },
+    himmel: t => { fog(t, 190, 40, '255,255,255', 0.3, 9, 6, 13); parts(t, 8, { type: 'glow', rgb: '255,250,220', vx: 3, vy: -2, size: 1, tw: 2, alpha: 0.6, area: [0, 40, W, 150], seed: 76 }); },
+    albtraum: t => { fog(t, 198, 38, '230,90,200', 0.24, 5, 6, 14); parts(t, 18, { type: 'ember', rgb: '255,90,180', vx: 3, vy: -18, wob: 2, wa: 8, size: 1.4, tw: 3, alpha: 0.8, seed: 77 }); },
+    lager: t => { parts(t, 8, { type: 'ember', rgb: '255,170,80', vx: 2, vy: -24, wob: 2, wa: 5, size: 1.1, tw: 4, alpha: 0.8, area: [228, 60, 44, 150], seed: 78 }); },
+  };
+
   // ---------- Die 15 Gebiete ----------
   const ENV = [];
   // 0 Grüne Wiesen
@@ -3860,8 +3925,12 @@
     const stage = R ? (tower ? 15 + R.stage * 2 : R.stage) : 1;
     const bm = biomeOf(stage), scroll = R ? R.scroll : 0, night = !R;
     const env = R && R.mode === 'ahnen' ? ahnEnv(R) : R && areaOf(R) ? AREA_ENV[MISSION[R.mission].area] : envOf(stage, night ? 'camp' : tower ? 'tower' : 'run');
-    env.back(t, scroll); env.props(t, scroll);
-    if (R && !tower && R.mode !== 'ahnen' && nightmare(stage)) { ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = 'rgba(170,40,60,.7)'; ctx.fillRect(0, 0, W, H); ctx.restore(); ctx.fillStyle = 'rgba(90,0,20,.22)'; ctx.fillRect(0, 0, W, H); }
+    const bgk = bgKey(R, stage, tower), painted = !!bgk && drawBg(bgk, scroll, t, night ? campBgX() : null);
+    if (!painted) { env.back(t, scroll); env.props(t, scroll); }
+    if (R && !tower && R.mode !== 'ahnen' && nightmare(stage)) {
+      if (painted) { ctx.fillStyle = 'rgba(90,0,30,.18)'; ctx.fillRect(0, 0, W, H); }
+      else { ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = 'rgba(170,40,60,.7)'; ctx.fillRect(0, 0, W, H); ctx.restore(); ctx.fillStyle = 'rgba(90,0,20,.22)'; ctx.fillRect(0, 0, W, H); }
+    }
     if (R) {
       const wfZ = wfZoom(R, t);
       if (wfZ < 0.995 || R.wf || R.wfKilled) wfBeast(R, t, wfZ);
@@ -3980,9 +4049,10 @@
       // Lager
       const fx = 250;
       lightPool(fx, GROUND - 14, 150 + Math.sin(t * 5) * 6, '255,150,60', 0.32); lightPool(fx, GROUND - 8, 60, '255,200,120', 0.25);
-      ctx.beginPath(); ctx.moveTo(350, GROUND); ctx.lineTo(400, GROUND - 70); ctx.lineTo(450, GROUND); fillO('#7a6046');
-      ctx.fillStyle = '#2a1f17'; ctx.beginPath(); ctx.moveTo(390, GROUND); ctx.lineTo(400, GROUND - 32); ctx.lineTo(410, GROUND); ctx.fill();
-      ctx.fillStyle = S.asc ? rankOf(S.asc).col : '#e5484d'; ctx.beginPath(); ctx.moveTo(400, GROUND - 70); ctx.lineTo(400, GROUND - 88); ctx.lineTo(417 + Math.sin(t * 3) * 1.5, GROUND - 82); ctx.lineTo(400, GROUND - 76); ctx.fill();
+      if (!painted) { ctx.beginPath(); ctx.moveTo(350, GROUND); ctx.lineTo(400, GROUND - 70); ctx.lineTo(450, GROUND); fillO('#7a6046');
+      ctx.fillStyle = '#2a1f17'; ctx.beginPath(); ctx.moveTo(390, GROUND); ctx.lineTo(400, GROUND - 32); ctx.lineTo(410, GROUND); ctx.fill(); }
+      if (painted) { ctx.save(); ctx.translate(-9, 15); ctx.fillStyle = '#3a2a1c'; ctx.fillRect(399.3, GROUND - 88, 1.4, 18); }
+      ctx.fillStyle = S.asc ? rankOf(S.asc).col : '#e5484d'; ctx.beginPath(); ctx.moveTo(400, GROUND - 70); ctx.lineTo(400, GROUND - 88); ctx.lineTo(417 + Math.sin(t * 3) * 1.5, GROUND - 82); ctx.lineTo(400, GROUND - 76); ctx.fill(); if (painted) ctx.restore();
       campFire(fx, t, true);
       if (!(run && run.dead) && !intro) { const pa = 0.25 + 0.2 * Math.sin(t * 3); ctx.strokeStyle = `rgba(255,210,140,${pa})`; ctx.lineWidth = 2; ctx.setLineDash([5, 5]); ctx.beginPath(); ctx.ellipse(fx, GROUND + 2, 40, 9, 0, 0, 7); ctx.stroke(); ctx.setLineDash([]); }
       const camp = campHeroes();
@@ -4008,7 +4078,7 @@
       });
       if (it >= 99 && camp.includes('r')) DRAW.r(spots.r, null, t, false);
       if (uiA > 0) { const pa = ctx.globalAlpha; ctx.globalAlpha = pa * uiA; drawComps(t, null); ctx.globalAlpha = pa; }
-      noticeBoard(t);
+      noticeBoard(t, painted);
       env.front(t, 0);
       ctx.globalAlpha = uiA;
       ctx.textAlign = 'center'; ctx.font = '20px "Bungee","Arial Black",sans-serif'; ctx.fillStyle = '#ffb547';
@@ -4023,8 +4093,9 @@
     ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
   }
   // Anschlagbrett links im Lager: Holzbrett mit bunten Plakaten
-  function noticeBoard(t) {
+  function noticeBoard(t, painted) {
     const x = 10, y = GROUND - 100, w = 70, h = 56;
+    if (painted) { const pulse = 0.35 + 0.25 * Math.sin(t * 3); if (!(run && run.dead)) { ctx.strokeStyle = `rgba(255,210,140,${pulse})`; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]); rr(x - 5, y - 10, w + 10, h + 15, 6); ctx.stroke(); ctx.setLineDash([]); } return; }
     shadow(x + w / 2, 34);
     ctx.fillStyle = '#4a3220'; ctx.fillRect(x + 8, y + 10, 6, GROUND - y - 10); ctx.fillRect(x + w - 14, y + 10, 6, GROUND - y - 10);
     const pulse = 0.35 + 0.25 * Math.sin(t * 3);
@@ -4094,7 +4165,7 @@
       ctx.fillStyle = g; ctx.fillRect(0, 0, W, off + 60);
       // Unten: das Lager mit der Truppe
       ctx.save(); ctx.translate(0, off); ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
-      ENV_CAMP.back(t, 0); ENV_CAMP.props(t, 0);
+      if (!drawBg('lager', 0, t, 64 - BG_FIRE * bgScale('lager'))) { ENV_CAMP.back(t, 0); ENV_CAMP.props(t, 0); }
       campFire(64, t);
       const sp = squadSpots(sq.ids, sq.slots);
       sp.empty.forEach(x => roleRing(x, null, t, true));

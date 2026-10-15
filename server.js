@@ -53,7 +53,7 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; ch
 // Sounddateien: gesucht im Ordner sounds/ (Groß-/Kleinschreibung egal), sonst neben server.js oder in ritter/
 const SOUND_DIRS = (() => {
   const out = [];
-  try { for (const d of fs.readdirSync(__dirname, { withFileTypes: true })) if (d.isDirectory() && /^(sounds?|audio|musik)$/i.test(d.name)) out.push(path.join(__dirname, d.name)); } catch {}
+  try { for (const d of fs.readdirSync(__dirname, { withFileTypes: true })) if (d.isDirectory() && /^(sounds?|audio|musik|bilder|images?|grafik)$/i.test(d.name)) out.push(path.join(__dirname, d.name)); } catch {}
   try { for (const d of fs.readdirSync(__dirname, { withFileTypes: true })) if (d.isDirectory() && d.name.toLowerCase() === 'ritter') out.push(path.join(__dirname, d.name)); } catch {}
   out.push(__dirname);
   return out;
@@ -65,15 +65,15 @@ function soundFile(name) {
   return path.join(SOUND_DIRS[0], name);
 }
 {
-  const n = SOUND_DIRS.map(d => { try { return [path.relative(__dirname, d) || 'Hauptordner', fs.readdirSync(d).filter(f => /\.mp3$/i.test(f)).length]; } catch { return null; } }).filter(x => x && x[1]);
-  console.log(n.length ? 'Sounds gefunden: ' + n.map(([d, c]) => `${c} mp3 in ${d}`).join(', ') : 'FEHLER Sounds: keine mp3-Dateien gefunden. Ordner "sounds" neben server.js anlegen. Ordner von server.js: ' + __dirname);
+  const n = SOUND_DIRS.map(d => { try { return [path.relative(__dirname, d) || 'Hauptordner', fs.readdirSync(d).filter(f => /\.(mp3|jpg|png|webp)$/i.test(f)).length]; } catch { return null; } }).filter(x => x && x[1]);
+  console.log(n.length ? 'Sounds und Bilder gefunden: ' + n.map(([d, c]) => `${c} Dateien in ${d}`).join(', ') : 'FEHLER Sounds: keine mp3-Dateien gefunden. Ordner "sounds" neben server.js anlegen. Ordner von server.js: ' + __dirname);
 }
 
 // Musik: Streaming mit Range-Anfragen (nötig für iPhone/Safari), lange Browser-Zwischenspeicherung
 function sendSound(req, res, file) {
   fs.stat(file, (err, st) => {
     if (err || !st.isFile()) { res.writeHead(404); res.end(); return; }
-    const base = { 'Content-Type': 'audio/mpeg', 'Accept-Ranges': 'bytes', 'Cache-Control': 'public, max-age=2592000', ETag: '"' + st.size + '-' + Math.floor(st.mtimeMs) + '"' };
+    const base = { 'Content-Type': { '.jpg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp' }[path.extname(file).toLowerCase()] || 'audio/mpeg', 'Accept-Ranges': 'bytes', 'Cache-Control': 'public, max-age=2592000', ETag: '"' + st.size + '-' + Math.floor(st.mtimeMs) + '"' };
     if (req.headers['if-none-match'] === base.ETag) { res.writeHead(304, base); res.end(); return; }
     let a = 0, b = st.size - 1, code = 200;
     const m = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
@@ -124,7 +124,7 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(req.method === 'HEAD' ? undefined : MOVED_PAGE); return;
   }
   if (url.startsWith('/api/')) { api(req, res, url.slice(5)); return; }
-  if (/^\/sounds\/[a-z0-9_-]+\.mp3$/.test(url)) { sendSound(req, res, soundFile(path.basename(url))); return; }
+  if (/^\/(sounds|bilder)\/[a-z0-9_-]+\.(mp3|jpg|png|webp)$/.test(url)) { sendSound(req, res, soundFile(path.basename(url))); return; }
   const file = STATIC[url];
   if (!file) { res.writeHead(302, { Location: '/' }); res.end(); return; }
   readStatic(file, (err, data) => {

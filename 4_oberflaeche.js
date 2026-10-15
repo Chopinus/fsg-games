@@ -208,7 +208,7 @@
   function open() {
     if (UPD.pending) { active = true; updApply(true); return; }
     seasonCheck();
-    active = true;
+    active = true; bgPreload();
     $('#hub').hidden = true; $('#room').hidden = true; $('#solo').hidden = false;
     st = stats(S);
     if (!cv) {
