@@ -50,6 +50,53 @@ const STATIC = {
 };
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
 
+// Musik: Streaming mit Range-Anfragen (nötig für iPhone/Safari), lange Browser-Zwischenspeicherung
+function sendSound(req, res, file) {
+  fs.stat(file, (err, st) => {
+    if (err || !st.isFile()) { res.writeHead(404); res.end(); return; }
+    const base = { 'Content-Type': 'audio/mpeg', 'Accept-Ranges': 'bytes', 'Cache-Control': 'public, max-age=2592000', ETag: '"' + st.size + '-' + Math.floor(st.mtimeMs) + '"' };
+    if (req.headers['if-none-match'] === base.ETag) { res.writeHead(304, base); res.end(); return; }
+    let a = 0, b = st.size - 1, code = 200;
+    const m = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
+    if (m && (m[1] || m[2])) {
+      if (m[1]) { a = Number(m[1]); if (m[2]) b = Math.min(b, Number(m[2])); } else { a = Math.max(0, st.size - Number(m[2])); }
+      if (a > b || a >= st.size) { res.writeHead(416, { 'Content-Range': 'bytes */' + st.size }); res.end(); return; }
+      code = 206; base['Content-Range'] = `bytes ${a}-${b}/${st.size}`;
+    }
+    base['Content-Length'] = b - a + 1;
+    res.writeHead(code, base);
+    if (req.method === 'HEAD') { res.end(); return; }
+    fs.createReadStream(file, { start: a, end: b }).on('error', () => res.destroy()).pipe(res);
+  });
+}
+
+// Ritterlauf ist in Teile aufgeteilt. Der Server setzt sie in fester Reihenfolge zu /ritter.js zusammen.
+// Gesucht wird im Ordner ritter/ (Groß-/Kleinschreibung egal) und direkt neben server.js.
+// Fehlen Teile, wird wie früher die einzelne Datei ritter.js geliefert.
+const RITTER_PARTS = ['1_spiel.js', '2_audio.js', '3_grafik.js', '4_oberflaeche.js'];
+function ritterDir() {
+  const dirs = [];
+  try { for (const d of fs.readdirSync(__dirname, { withFileTypes: true })) if (d.isDirectory() && d.name.toLowerCase() === 'ritter') dirs.push(path.join(__dirname, d.name)); } catch {}
+  dirs.push(__dirname);
+  return dirs.find(d => RITTER_PARTS.every(p => fs.existsSync(path.join(d, p)))) || null;
+}
+{
+  const d = ritterDir(), single = fs.existsSync(path.join(__dirname, 'ritter.js'));
+  if (d) console.log('Ritterlauf: Teile gefunden in ' + (path.relative(__dirname, d) || 'Hauptordner'));
+  else if (single) console.log('Ritterlauf: einzelne Datei ritter.js wird benutzt');
+  else {
+    const found = [];
+    (function walk(dir, depth) { if (depth > 2) return; try { for (const x of fs.readdirSync(dir, { withFileTypes: true })) { if (x.name === 'node_modules' || x.name.startsWith('.')) continue; const p = path.join(dir, x.name); if (x.isDirectory()) walk(p, depth + 1); else if (RITTER_PARTS.includes(x.name)) found.push(path.relative(__dirname, p)); } } catch {} })(__dirname, 0);
+    console.log('FEHLER Ritterlauf: weder Ordner ritter/ mit allen 4 Teilen noch ritter.js gefunden. Gefundene Teile: ' + (found.join(', ') || 'keine') + '. Ordner von server.js: ' + __dirname);
+  }
+}
+function readStatic(file, cb) {
+  const d = file === 'ritter.js' ? ritterDir() : null;
+  if (!d) { fs.readFile(path.join(__dirname, file), cb); return; }
+  Promise.all(RITTER_PARTS.map(p => fs.promises.readFile(path.join(d, p))))
+    .then(parts => cb(null, Buffer.concat(parts)), err => cb(err));
+}
+
 const server = http.createServer((req, res) => {
   const url = req.url.split('?')[0];
   if (url === '/health') { res.end('ok'); return; }
@@ -58,10 +105,11 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(req.method === 'HEAD' ? undefined : MOVED_PAGE); return;
   }
   if (url.startsWith('/api/')) { api(req, res, url.slice(5)); return; }
+  if (/^\/sounds\/[a-z0-9_-]+\.mp3$/.test(url)) { sendSound(req, res, path.join(__dirname, 'sounds', path.basename(url))); return; }
   const file = STATIC[url];
   if (!file) { res.writeHead(302, { Location: '/' }); res.end(); return; }
-  fs.readFile(path.join(__dirname, file), (err, data) => {
-    if (err) { res.writeHead(500); res.end('Fehler'); return; }
+  readStatic(file, (err, data) => {
+    if (err) { console.log('Datei fehlt: ' + file); res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' }); res.end(file === 'ritter.js' ? 'console.error("Ritterlauf fehlt auf dem Server: Ordner ritter/ mit 1_spiel.js, 2_audio.js, 3_grafik.js, 4_oberflaeche.js hochladen.")' : 'Fehler'); return; }
     // ETag: Fingerabdruck der Datei. Damit erkennen offene Spiele ein Update und Browser laden nur Geändertes neu.
     const etag = '"' + crypto.createHash('sha1').update(data).digest('hex').slice(0, 16) + '"';
     if (req.headers['if-none-match'] === etag) { res.writeHead(304, { ETag: etag, 'Cache-Control': 'no-cache' }); res.end(); return; }
