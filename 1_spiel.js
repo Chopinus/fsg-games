@@ -793,7 +793,9 @@
   const shardOf = tier => Math.pow(3, tier - 1), mergeCost = tier => Math.pow(3, tier);
   /* ================= Ahnenprüfung ================= */
   // 10 Missionen mit je 5 eigenen Bossen (3 Phasen), am Ende von Mission 10 wartet der Urahn. Wer die Kette schafft, bekommt ein Ahnensiegel.
-  const AHN_TUNE = { hp: 22, dmg: 0.14, minHp: 0.55, waves: 2, lvl: 0.8, ahneHp: 1.2, enr: 140 };
+  // len: Bosskämpfe dauern so viel länger. Leben ×len, Fähigkeiten und Wut entsprechend seltener bzw. später, Grundangriff schwächer.
+  // So bleibt die Zahl der Fähigkeiten und der Gesamtschaden pro Kampf gleich, nur die Dauer wächst (Ziel: ganze Prüfung ≈ 1 h bei Tempo ×3).
+  const AHN_TUNE = { hp: 22, dmg: 0.14, minHp: 0.55, waves: 2, lvl: 0.8, ahneHp: 1.2, enr: 140, len: 10 };
   // Fähigkeiten der Bosse. dmg-Werte sind Vielfache des Boss-Angriffs.
   const AHN_ABIL = {
     slam: { name: 'Erdstoß', desc: 'holt aus und trifft alle Helden', cd: 9, tele: 1.4 },
@@ -929,8 +931,8 @@
     run.enemies = [];
     if (A.wave < AHN_TUNE.waves) { for (let i = 0; i < 4; i++) run.enemies.push(ahnMinion(run, i, i === 3)); return; }
     const def = list[A.bi], e = makeEnemy(run.stage, 1.2, true, false, run);
-    const hpMul = AHN_TUNE.hp * (def.ahne ? AHN_TUNE.ahneHp : 1);
-    e.hp *= hpMul; e.max = e.hp; e.dmg *= AHN_TUNE.dmg; e.lastHp = e.hp;
+    const hpMul = AHN_TUNE.hp * AHN_TUNE.len * (def.ahne ? AHN_TUNE.ahneHp : 1);
+    e.hp *= hpMul; e.max = e.hp; e.adm = e.dmg * AHN_TUNE.dmg; e.dmg = e.adm / AHN_TUNE.len; e.lastHp = e.hp;
     e.ahn = def; e.bk = def.bk; e.type = def.bk >= 0 && def.bk < 5 ? ENEMY_KINDS[def.bk] : AHN_MISSIONS[A.mi].minion;
     e.reach = def.ahne ? 62 : 30; e.phase = 0; e.phaseT = 0; e.shieldHp = 0; e.invT = 0; e.reflT = 0; e.healT = 0; e.frenzyT = 0; e.x = 600;
     ahnPhase(e, 0);
@@ -946,7 +948,7 @@
   }
   const aliveHeroes = run => run.order.filter(k => run.h[k].alive);
   function ahnCast(S, st, run, c, e, id) {
-    const D = e.dmg, A = run.ahn, al = aliveHeroes(run); if (!al.length) return;
+    const D = e.adm || e.dmg, A = run.ahn, al = aliveHeroes(run); if (!al.length) return;
     const fk = al[0], back = al[al.length - 1], rnd = () => al[Math.floor(Math.random() * al.length)];
     const hurt = (k, m) => hurtHero(c, k, D * m, null);
     c.efloat(e, AHN_ABIL[id].name, '#ffd27a', 15); e.castT = 0.8; e.castId = id;
@@ -973,7 +975,7 @@
       case 'vanish': e.invT = 2; e.x += 40; break;
       case 'burn': A.fx.push({ kind: 'burn', t: 6, d: 6, dps: D * 0.15 }); break;
       case 'chain': { const ks = [...al].sort(() => Math.random() - 0.5).slice(0, 3); ks.forEach(k => hurt(k, 0.7)); A.fx.push({ kind: 'chain', ks, t: 0.5, d: 0.5 }); break; }
-      case 'split': for (let i = 0; i < 2; i++) { const m = makeEnemy(run.stage, 0, false, true, run); m.type = e.type; m.hp = m.max = e.max * 0.06; m.dmg = D * 0.35; m.x = e.x - 30 - i * 26; m.echo = e.ahn.tint || '#ffd27a'; run.enemies.push(m); } c.burst(e.x, 170, e.ahn.tint || '#ffd27a', 16); break;
+      case 'split': for (let i = 0; i < 2; i++) { const m = makeEnemy(run.stage, 0, false, true, run); m.type = e.type; m.hp = m.max = e.max * 0.06 / AHN_TUNE.len; m.dmg = D * 0.35; m.x = e.x - 30 - i * 26; m.echo = e.ahn.tint || '#ffd27a'; run.enemies.push(m); } c.burst(e.x, 170, e.ahn.tint || '#ffd27a', 16); break;
     }
   }
   // Wird jeden Schritt in der Ahnenprüfung aufgerufen
@@ -993,7 +995,7 @@
       if (f.kind === 'burn') aliveHeroes(run).forEach(k => { const h = run.h[k]; h.hp -= f.dps * dt * (1 - st[k].dr * 0.6); if (h.hp <= 0) { h.hp = 1; hurtHero(c, k, 2, null); } });
       if (f.t <= 0 && !f.done) {
         f.done = true;
-        const D = A.boss ? A.boss.dmg : 0;
+        const D = A.boss ? A.boss.adm || A.boss.dmg : 0;
         if (f.kind === 'slam') { aliveHeroes(run).forEach(k => hurtHero(c, k, D * 0.9, null)); run.shake = 0.4; c.burst(run.frontX, 210, '#ffb070', 18); }
         if (f.kind === 'bomb' && run.h[f.k] && run.h[f.k].alive) { hurtHero(c, f.k, D * 1.8, null); aliveHeroes(run).filter(k => k !== f.k).forEach(k => hurtHero(c, k, D * 0.4, null)); c.burst(run.pos[f.k], 180, '#ff9a3d', 20); run.shake = 0.3; }
       }
@@ -1009,7 +1011,7 @@
       else {
         if (e.shieldHp > 0) { const a = Math.min(e.shieldHp, lost); e.shieldHp -= a; back += a; if (e.shieldHp <= 0) c.efloat(e, 'Schild gebrochen!', '#9fd0ff', 16); }
         if (e.traits.armor) back += (lost - back) * e.traits.armor;
-        if (e.reflT > 0) { const fk = frontHero(run); if (fk) hurtHero(c, fk, (lost - back) * 0.25, null); }
+        if (e.reflT > 0) { const fk = frontHero(run); if (fk) hurtHero(c, fk, Math.min((lost - back) * 0.25, st[fk].hp * 0.12 * dt), null); } // höchstens 12 % Leben pro Sekunde
       }
       e.hp += back;
     }
@@ -1025,14 +1027,14 @@
     e.lastHp = e.hp;
     e.invT -= dt; e.reflT -= dt; e.frenzyT -= dt; e.castT = (e.castT || 0) - dt; e.lunge = Math.max(0, (e.lunge || 0) - dt);
     if (e.healT > 0) { e.healT -= dt; e.hp = Math.min(e.max * (3 - e.phase) / 3, e.hp + e.max * 0.0012 * dt); e.lastHp = e.hp; }
-    if (e.traits.regen) { e.hp = Math.min(e.max * (3 - e.phase) / 3, e.hp + e.max * e.traits.regen * dt); e.lastHp = e.hp; }
+    if (e.traits.regen) { e.hp = Math.min(e.max * (3 - e.phase) / 3, e.hp + e.max * e.traits.regen / AHN_TUNE.len * dt); e.lastHp = e.hp; }
     e.atkMul = e.frenzyT > 0 ? 2 : 1;
     if (run.introT > 0 || e.stun > 0 || e.x > 470) return;
     // Wut, wenn eine Phase zu lange dauert
     e.phaseT += dt;
-    const en = e.phaseT > AHN_TUNE.enr ? 1 + 0.15 * Math.floor((e.phaseT - AHN_TUNE.enr) / 8 + 1) : 1;
+    const enr = AHN_TUNE.enr * AHN_TUNE.len, en = e.phaseT > enr ? 1 + 0.15 * Math.floor((e.phaseT - enr) / 8 + 1) : 1;
     if (en > (e.enrage || 1)) { e.enrage = en; c.efloat(e, `Wut ×${en.toFixed(1).replace('.', ',')}`, '#ff5a5a', 15); }
-    for (const ab of e.ab) { ab.t -= dt; if (ab.t <= 0) { ahnCast(S, st, run, c, e, ab.id); ab.t = AHN_ABIL[ab.id].cd * (0.85 + Math.random() * 0.3); } }
+    for (const ab of e.ab) { ab.t -= dt; if (ab.t <= 0) { ahnCast(S, st, run, c, e, ab.id); ab.t = AHN_ABIL[ab.id].cd * AHN_TUNE.len * (0.85 + Math.random() * 0.3); } }
   }
   // Welle geschafft: nächste Welle, nächster Boss oder Mission gewonnen
   function ahnNext(S, st, run, c) {
