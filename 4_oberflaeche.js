@@ -208,13 +208,13 @@
   function open() {
     if (UPD.pending) { active = true; updApply(true); return; }
     seasonCheck();
-    active = true; bgPreload(); frStart();
+    active = true; bgPreload(); frStart(); gdStart(); setTimeout(() => wbFetch(true), 2500); clearInterval(WBC.timer); WBC.timer = setInterval(() => { if (active && !document.hidden) wbFetch(); }, 300000);
     $('#hub').hidden = true; $('#room').hidden = true; $('#solo').hidden = false;
     st = stats(S);
     if (!cv) {
       $('#solo').innerHTML = `
         <div class="topbar"><button class="btn ghost small" id="soloBack">‹ Spiele</button><div class="title"><b>Ritterlauf</b><small>Solo</small></div>
-          <div class="rl-topr"><button class="btn ghost small rl-newsbtn" id="soloSnd" aria-label="Ton an oder aus"></button><button class="btn ghost small rl-newsbtn" id="soloFriends" aria-label="Freunde">👥<span class="dot" hidden></span></button><button class="btn ghost small rl-newsbtn" id="soloNews" aria-label="Neuigkeiten">📰<span class="dot" hidden></span></button><button class="btn ghost small" id="soloSpeed">Tempo ×1</button></div></div>
+          <div class="rl-topr"><button class="btn ghost small rl-newsbtn" id="soloSnd" aria-label="Ton an oder aus"></button><button class="btn ghost small rl-newsbtn" id="soloFriends" aria-label="Freunde">👥<span class="dot" hidden></span></button><button class="btn ghost small rl-newsbtn" id="soloGuild" aria-label="Gilde">🛡<span class="dot" hidden></span></button><button class="btn ghost small rl-newsbtn" id="soloNews" aria-label="Neuigkeiten">📰<span class="dot" hidden></span></button><button class="btn ghost small" id="soloSpeed">Tempo ×1</button></div></div>
         <div class="rl-stage"><div id="soloCanvas" class="rl-canvas"></div></div>
         <div class="rl-heroes" id="rlHeroes"></div>
         <div class="rl-bar"><div class="rl-stat" id="rlStat"></div><div id="rlAction" class="row"></div></div>
@@ -230,7 +230,7 @@
       });
       window.addEventListener('resize', () => { sizeCanvas(); if (squad && !squad.el.hidden) sizeSquad(); });
       $('#soloBack').onclick = close;
-      $('#soloNews').onclick = showUpdates; $('#soloFriends').onclick = showFriends;
+      $('#soloNews').onclick = showUpdates; $('#soloFriends').onclick = showFriends; $('#soloGuild').onclick = showGuild;
       $('#soloSnd').onclick = () => soundMenu();
       $('#soloSnd').textContent = SND.isOn() ? '🔊' : '🔇';
       $('#soloSpeed').onclick = () => { if (acct && acct.tester) { testSpeed(); return; } S.speed = S.speed >= maxSpeed(S) ? 1 : S.speed < 3 ? S.speed + 1 : S.speed + 0.5; save(); hud(); };
@@ -266,7 +266,7 @@
     if (frOpen() && !FR.chat) frLists();
   }
   function frStart() { clearInterval(FR.timer); FR.timer = setInterval(frRefresh, 20000); setTimeout(frRefresh, 1500); }
-  function frStop() { clearInterval(FR.timer); clearInterval(FR.poll); FR.chat = null; }
+  function frStop() { clearInterval(GD.timer); clearInterval(FR.timer); clearInterval(FR.poll); FR.chat = null; }
   function showFriends() {
     SND.play('tick');
     if (!acct || !acct.token) {
@@ -293,7 +293,7 @@
   function frLists() {
     const el = $('#frLists'), D = FR.data; if (!el || !D) return;
     const inc = D.inc.map(n => `<div class="rl-frrow"><b>${esc(n)}</b><span class="sp"></span><button class="btn small" data-fr="yes" data-who="${esc(n)}">Annehmen</button><button class="btn ghost small" data-fr="no" data-who="${esc(n)}">Ablehnen</button></div>`).join('');
-    const fr = D.friends.map(f => `<button class="rl-frrow rl-frbtn" data-fr="open" data-who="${esc(f.name)}"><span class="rl-on ${f.online ? 'on' : ''}"></span><b>${esc(f.name)}</b><small>${f.online ? 'online' : 'offline'}</small><span class="sp"></span>${f.unread ? `<span class="rl-badge">${f.unread}</span>` : ''}<span class="go">💬</span></button>`).join('');
+    const fr = D.friends.map(f => `<div class="rl-frrow"><button class="rl-frname" data-fr="prof" data-who="${esc(f.name)}"><span class="rl-on ${f.online ? 'on' : ''}"></span><b>${esc(f.name)}</b><small>${f.online ? 'online' : 'offline'}</small></button><span class="sp"></span>${f.unread ? `<span class="rl-badge">${f.unread}</span>` : ''}<button class="btn ghost small" data-fr="prof" data-who="${esc(f.name)}" aria-label="Profil">👤</button><button class="btn small" data-fr="open" data-who="${esc(f.name)}" aria-label="Chat">💬</button></div>`).join('');
     const out = D.out.map(n => `<div class="rl-frrow"><b>${esc(n)}</b><small>wartet auf Antwort</small><span class="sp"></span><button class="btn ghost small" data-fr="cancel" data-who="${esc(n)}">Zurückziehen</button></div>`).join('');
     el.innerHTML = (inc ? `<h3 class="rl-h3">Anfragen an dich</h3>${inc}` : '')
       + `<h3 class="rl-h3">Freunde (${D.friends.length}) · ${D.friends.filter(f => f.online).length} online</h3>${fr || '<p class="note">Noch keine Freunde. Frag jemanden mit seinem Benutzernamen an.</p>'}`
@@ -302,7 +302,7 @@
   function frChat(who) {
     const b = $('#frBody'); if (!b) return;
     FR.chat = who; FR.last = 0; FR.sure = false;
-    b.innerHTML = `<div class="rl-chathead"><button class="btn ghost small" data-fr="back">‹ Zurück</button><span class="rl-on" id="frOn"></span><b>${esc(who)}</b><small id="frOnT"></small></div>
+    b.innerHTML = `<div class="rl-chathead"><button class="btn ghost small" data-fr="back">‹ Zurück</button><span class="rl-on" id="frOn"></span><b>${esc(who)}</b><small id="frOnT"></small><span class="sp"></span><button class="btn ghost small" data-fr="prof" data-who="${esc(who)}">👤 Profil</button></div>
       <div class="rl-chat" id="frLog"><p class="note">Lädt …</p></div>
       <div class="rl-fradd"><input id="frText" maxlength="300" placeholder="Nachricht schreiben …" autocomplete="off"><button class="btn small" data-fr="send">Senden</button></div>
       <p class="note rl-frmsg" id="frMsg"></p>
@@ -328,10 +328,38 @@
     frShow(r, first);
     if (FR.data) { const f = FR.data.friends.find(x => x.name === r.name); if (f && f.unread) { f.unread = 0; frDot(); } }
   }
+  // Profil eines Freundes: Rang, Rekorde, Aufstellung mit Runen, Begleiter, Erfolge
+  async function frProfile(who, host = '#frBody') {
+    const b = $(host); if (!b) return;
+    FR.chat = null; clearInterval(FR.poll);
+    b.innerHTML = `<div class="rl-chathead"><button class="btn ghost small" data-fr="back">‹ Zurück</button><b>${esc(who)}</b></div><p class="note">Lädt …</p>`;
+    const r = await frCall('profile', { who });
+    if (!$(host) || FR.chat) return;
+    if (r.error) { b.innerHTML = `<div class="rl-chathead"><button class="btn ghost small" data-fr="back">‹ Zurück</button><b>${esc(who)}</b></div><p class="warn">${esc(r.error)}</p>`; return; }
+    let P; try { P = migrate(JSON.parse(JSON.stringify(r.data || {}))); } catch { P = fresh(); }
+    const rk = rankOf(P.asc), field = fieldOf(P), num = n => fmt(Math.floor(Number(n) || 0));
+    const ago = t => { if (!t) return ''; const m = Math.round((Date.now() - t) / 60000); return m < 2 ? 'gerade eben' : m < 60 ? `vor ${m} min` : m < 1440 ? `vor ${Math.round(m / 60)} h` : `vor ${Math.round(m / 1440)} Tagen`; };
+    const stat = (ic, label, val) => `<div class="rl-pstat"><span>${ic}</span><b>${val}</b><small>${label}</small></div>`;
+    const heroCard = k => {
+      const h = HERO_BY_ID[k]; if (!h) return '';
+      const rs = (P.sockets[k] || []).map(id => id && P.runes.find(x => x.id === id)).filter(Boolean);
+      const L = mastLevel(P, k);
+      return `<div class="rl-phero" style="--hc:${h.color}"><img src="${portraitURL(k)}" alt=""><b>${esc(h.name)}</b>${L ? `<small>Meisterschaft ${L}</small>` : ''}${P.ahn && P.ahn.place && P.ahn.place[k] ? '<small class="sig">✦ Ahnensiegel</small>' : ''}
+        <div class="rl-prunes">${rs.map(x => `<span class="rl-rune mini" style="--rc:${RUNE[x.t].color}" title="${esc(RUNE[x.t].name)} ${ROMAN[x.tier]}"><b>${ROMAN[x.tier]}</b></span>`).join('') || '<small>keine Runen</small>'}</div></div>`;
+    };
+    const comps = (P.compActive || []).filter(id => P.comps && P.comps[id] && COMP[id]);
+    b.innerHTML = `<div class="rl-chathead"><button class="btn ghost small" data-fr="back">‹ Zurück</button><span class="rl-on ${r.online ? 'on' : ''}"></span><b>${esc(r.name)}</b><small>${r.online ? 'online' : `offline${r.updated ? ' · zuletzt ' + ago(r.updated) : ''}`}</small><span class="sp"></span>${host === '#frBody' ? `<button class="btn small" data-fr="open" data-who="${esc(r.name)}">💬 Chat</button>` : ''}</div>
+      <div class="rl-prank" style="--rc:${rk.col}">${P.asc ? `👑 ${esc(rk.name)}` : 'Abenteurer'}</div>${r.guild ? `<p class="note rl-pguild">🛡 Gilde: <b>${esc(r.guild)}</b></p>` : ''}
+      <div class="rl-pstats">${stat('🏁', 'Rekord', num(Math.max(P.bestEver || 0, P.best || 0, P.ascBest || 0)))}${stat('🔄', 'Wiedergeburten', num(P.rebirths))}${stat('👑', 'Aufstiege', num(P.asc))}${stat('🗼', 'Turm-Rekord', num(P.towerBest))}${stat('✦', 'Ahnensiegel', num(P.ahn && P.ahn.got))}${stat('🐉', 'Weltenfresser', num(P.wf))}${stat('⚔️', 'Gegner besiegt', num(P.tot && P.tot.kills))}${stat('🏆', 'Erfolge', `${Object.keys(P.ach || {}).length}/${ACH.length}`)}</div>
+      <h3 class="rl-h3">Aufstellung</h3><div class="rl-pteam">${field.map(heroCard).join('')}</div>
+      ${comps.length ? `<h3 class="rl-h3">Begleiter</h3><div class="rl-pcomps">${comps.map(id => `<div class="rl-pcomp"><img src="${compPic(id)}" alt=""><b>${esc(COMP[id].name)}</b><small>Stufe ${P.comps[id]}</small></div>`).join('')}</div>` : ''}
+      <div class="row" style="justify-content:center;margin-top:10px"><button class="btn ghost" data-m="x">Schließen</button></div>`;
+  }
   function frClick(e) { const b = e.target.closest('[data-fr]'); if (!b) return; frAct(b.dataset.fr, b.dataset.who); }
   async function frAct(a, who) {
     const msg = t => { const m = $('#frMsg'); if (m) { m.textContent = t || ''; m.classList.remove('bad'); } }, bad = t => { const m = $('#frMsg'); if (m) { m.textContent = t; m.classList.add('bad'); } };
     if (a === 'open') { SND.play('tick'); frChat(who); return; }
+    if (a === 'prof') { SND.play('tick'); frProfile(who); return; }
     if (a === 'back') { SND.play('tick'); FR.chat = null; clearInterval(FR.poll); frMain(); frRefresh(); return; }
     if (a === 'send') {
       const i = $('#frText'), text = i ? i.value.trim() : ''; if (!text || FR.busy) return;
@@ -358,6 +386,253 @@
     const host = $('#soloCanvas'); const w = Math.min(host.clientWidth || 360, 960);
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     cv.style.width = w + 'px'; cv.style.height = (w * H / W) + 'px'; cv.width = Math.round(w * dpr); cv.height = Math.round(w * H / W * dpr); scale = cv.width / W;
+  }
+  /* ---------- Gilden ---------- */
+  // Bis zu 5 Spieler. Beitreten per Einladung des Gründers oder per Anfrage, die der Gründer bestätigt.
+  // Beim Wochenboss zählen die Gruppenziele nur für die eigene Gilde (ohne Gilde: Zufallsgruppe).
+  const GD = { data: null, timer: 0, busy: false, view: 'main', list: null };
+  const gdOpen = () => { const p = $('#picker'); return p && !p.hidden && p.querySelector('.rl-guild'); };
+  function gdDot() { const d = $('#soloGuild .dot'), D = GD.data; if (d) d.hidden = !(D && (D.guild ? D.guild.me && D.guild.req.length : D.invites.length)); }
+  async function gdRefresh() {
+    if (!active || document.hidden || !acct || !acct.token) return;
+    const r = await frCall('guild'); if (r.error) return;
+    const before = GD.data; GD.data = r; gdDot();
+    if (before && before.guild && r.guild && r.guild.me && r.guild.req.some(n => !before.guild.req.includes(n))) toast(`🛡 ${r.guild.req.find(n => !before.guild.req.includes(n))} möchte in deine Gilde.`);
+    if (before && r.invites.some(i => !before.invites.some(x => x.id === i.id))) toast(`🛡 Einladung in die Gilde „${r.invites[r.invites.length - 1].name}“`);
+    if (gdOpen() && GD.view === 'main') gdRender();
+  }
+  function gdStart() { clearInterval(GD.timer); GD.timer = setInterval(gdRefresh, 45000); setTimeout(gdRefresh, 2000); }
+  function showGuild() {
+    SND.play('tick');
+    if (!acct || !acct.token) {
+      modal(`<h2>🛡 Gilde</h2><p>Für Gilden brauchst du ein Konto mit <b>Name und Passwort</b>.</p>
+        <div class="row" style="justify-content:center"><button class="btn" data-m="save">Konto anlegen oder anmelden</button><button class="btn ghost" data-m="x">Später</button></div>`, 'rl-guild');
+      return;
+    }
+    GD.view = 'main'; GD.list = null;
+    modal('<div id="gdBody"><p class="note">Lädt …</p></div>', 'rl-guild');
+    const sheet = $('#picker .rl-guild');
+    sheet.addEventListener('click', gdClick);
+    sheet.addEventListener('keydown', e => { if (e.key !== 'Enter') return; const id = e.target.id; if (id === 'gdNew') { e.preventDefault(); gdAct('create'); } if (id === 'gdQ') { e.preventDefault(); gdAct('search'); } if (id === 'gdWho') { e.preventDefault(); gdAct('invite'); } if (id === 'gdRen') { e.preventDefault(); gdAct('rename'); } });
+    gdRender(); gdRefresh().then(() => { if (gdOpen() && GD.data && !GD.data.guild && !GD.list) gdAct('search'); });
+  }
+  function gdRender() {
+    const b = $('#gdBody'), D = GD.data; if (!b) return;
+    GD.view = 'main';
+    if (!D) { b.innerHTML = '<h2>🛡 Gilde</h2><p class="note">Lädt …</p>'; return; }
+    const close = '<div class="row" style="justify-content:center;margin-top:10px"><button class="btn ghost" data-m="x">Schließen</button></div>';
+    const msg = '<p class="note rl-frmsg" id="gdMsg"></p>';
+    if (!D.guild) {
+      const inv = D.invites.map(g => `<div class="rl-frrow"><b>${esc(g.name)}</b><small>${g.n} / ${D.max}</small><span class="sp"></span><button class="btn small" data-gd="accept" data-id="${g.id}">Beitreten</button><button class="btn ghost small" data-gd="decline" data-id="${g.id}">Ablehnen</button></div>`).join('');
+      const asked = D.asked.map(g => `<div class="rl-frrow"><b>${esc(g.name)}</b><small>wartet auf den Gründer</small><span class="sp"></span><button class="btn ghost small" data-gd="cancel" data-id="${g.id}">Zurückziehen</button></div>`).join('');
+      const list = GD.list ? (GD.list.length ? GD.list.map(g => `<div class="rl-frrow"><b>${esc(g.name)}</b><small>${g.n} / ${D.max} · Gründer: ${esc(g.owner)}</small><span class="sp"></span>${g.n >= D.max ? '<small>voll</small>' : g.asked ? '<small>angefragt</small>' : `<button class="btn small" data-gd="ask" data-id="${g.id}">Anfragen</button>`}</div>`).join('') : '<p class="note">Keine Gilde gefunden.</p>') : '';
+      b.innerHTML = `<h2>🛡 Gilde</h2><p class="note">In einer Gilde sind bis zu <b>${D.max} Spieler</b>. Beim Wochenboss kämpft ihr zusammen für eure Gruppenziele. Ohne Gilde kommst du dort in eine Zufallsgruppe mit anderen Spielern ohne Gilde.</p>
+        ${inv ? `<h3 class="rl-h3">Einladungen an dich</h3>${inv}` : ''}
+        <h3 class="rl-h3">Eigene Gilde gründen</h3><div class="rl-fradd"><input id="gdNew" maxlength="24" placeholder="Name der Gilde" autocomplete="off" spellcheck="false"><button class="btn small" data-gd="create">Gründen</button></div>
+        <h3 class="rl-h3">Gilde suchen</h3><div class="rl-fradd"><input id="gdQ" maxlength="24" placeholder="Name oder leer für alle" autocomplete="off" spellcheck="false"><button class="btn small" data-gd="search">Suchen</button></div>
+        ${msg}${asked ? `<h3 class="rl-h3">Deine Anfragen</h3>${asked}` : ''}<div id="gdList">${list}</div>${close}`;
+      return;
+    }
+    const G = D.guild, free = D.max - G.members.length;
+    const mem = G.members.map(m => `<div class="rl-frrow"><button class="rl-frname" data-gd="prof" data-who="${esc(m.name)}"><span class="rl-on ${m.online ? 'on' : ''}"></span><b>${esc(m.name)}</b>${m.owner ? '<em class="rl-gdown">Gründer</em>' : ''}${m.me ? '<small>du</small>' : ''}</button><span class="sp"></span><small title="Beste Leisten beim Wochenboss diese Woche">👹 ${m.best}</small>${G.me && !m.me ? `<button class="btn ghost small" data-gd="kick" data-who="${esc(m.name)}" aria-label="Entfernen">✕</button>` : ''}</div>`).join('')
+      + Array.from({ length: free }, () => '<div class="rl-frrow rl-gdfree"><small>freier Platz</small></div>').join('');
+    const req = G.me && G.req.length ? `<h3 class="rl-h3">Anfragen</h3>${G.req.map(n => `<div class="rl-frrow"><b>${esc(n)}</b><span class="sp"></span><button class="btn small" data-gd="yes" data-who="${esc(n)}" ${free ? '' : 'disabled'}>Aufnehmen</button><button class="btn ghost small" data-gd="no" data-who="${esc(n)}">Ablehnen</button></div>`).join('')}` : '';
+    const inv = G.me && G.inv.length ? `<h3 class="rl-h3">Eingeladen</h3>${G.inv.map(n => `<div class="rl-frrow"><b>${esc(n)}</b><small>wartet auf Antwort</small><span class="sp"></span><button class="btn ghost small" data-gd="uninv" data-who="${esc(n)}">Zurückziehen</button></div>`).join('')}` : '';
+    const goals = WBC.info && WBC.info.group && WBC.info.group.kind === 'guild' ? WBC.info : null;
+    const friends = FR.data ? FR.data.friends.filter(f => !G.members.some(m => m.name === f.name) && !G.inv.includes(f.name)) : [];
+    b.innerHTML = `<h2>🛡 ${esc(G.name)}</h2><p class="note">${G.members.length} / ${D.max} Mitglieder · Gründer: <b>${esc(G.owner)}</b>${goals ? ` · Wochenboss: <b>${goals.group.total}</b> Leisten, ${goals.reached} / ${goals.goals.length} Ziele` : ''}</p>
+      <h3 class="rl-h3">Mitglieder</h3>${mem}
+      ${req}
+      ${G.me ? `<h3 class="rl-h3">Spieler einladen</h3><div class="rl-fradd"><input id="gdWho" maxlength="20" placeholder="Benutzername" autocomplete="off" spellcheck="false" list="gdFr"><button class="btn small" data-gd="invite" ${free ? '' : 'disabled'}>Einladen</button></div><datalist id="gdFr">${friends.map(f => `<option value="${esc(f.name)}">`).join('')}</datalist>
+        ${inv}<h3 class="rl-h3">Name ändern</h3><div class="rl-fradd"><input id="gdRen" maxlength="24" value="${esc(G.name)}" autocomplete="off" spellcheck="false"><button class="btn ghost small" data-gd="rename">Ändern</button></div>` : '<p class="note">Nur der Gründer kann einladen, Anfragen annehmen und den Namen ändern.</p>'}
+      ${msg}
+      <div class="row" style="justify-content:space-between;margin-top:10px"><button class="btn ghost small" data-gd="leave">${GD.sure ? 'Wirklich verlassen?' : 'Gilde verlassen'}</button><button class="btn ghost" data-m="x">Schließen</button></div>`;
+  }
+  function gdClick(e) {
+    if (e.target.closest('[data-fr="back"]')) { gdRender(); return; }
+    const b = e.target.closest('[data-gd]'); if (!b || b.disabled) return;
+    gdAct(b.dataset.gd, b.dataset.who, b.dataset.id);
+  }
+  async function gdAct(a, who, id) {
+    if (GD.busy) return;
+    const say = (t, bad) => { const m = $('#gdMsg'); if (m) { m.textContent = t || ''; m.classList.toggle('bad', !!bad); } };
+    const val = sel => { const i = $(sel); return i ? i.value.trim() : ''; };
+    if (a === 'prof') { GD.view = 'prof'; frProfile(who, '#gdBody'); return; }
+    if (a === 'leave' && !GD.sure) { GD.sure = true; gdRender(); setTimeout(() => { GD.sure = false; if (gdOpen() && GD.view === 'main') gdRender(); }, 4000); return; }
+    const map = { create: ['guild_create', { gname: val('#gdNew') }], search: ['guild_search', { q: val('#gdQ') }], ask: ['guild_request', { gid: id }], cancel: ['guild_cancel', { gid: id }],
+      accept: ['guild_answer', { gid: id, yes: true }], decline: ['guild_answer', { gid: id, yes: false }], leave: ['guild_leave', {}], rename: ['guild_rename', { gname: val('#gdRen') }],
+      invite: ['guild_invite', { who: val('#gdWho') }], uninv: ['guild_uninvite', { who }], yes: ['guild_decide', { who, yes: true }], no: ['guild_decide', { who, yes: false }], kick: ['guild_kick', { who }] };
+    const m = map[a]; if (!m) return;
+    if ((a === 'create' || a === 'rename') && !m[1].gname) { say('Gib einen Namen ein.', true); return; }
+    if (a === 'invite' && !m[1].who) { say('Gib einen Benutzernamen ein.', true); return; }
+    GD.busy = true; const r = await frCall(m[0], m[1]); GD.busy = false; GD.sure = false;
+    if (r.error) { say(r.error, true); SND.play('tick'); return; }
+    if (a === 'search') { GD.list = r.list; gdRender(); return; }
+    GD.data = r; gdDot(); gdRender(); if (r.msg) say(r.msg);
+    if (['create', 'accept', 'yes', 'leave', 'kick'].includes(a)) { SND.play('buy'); wbFetch(true); }
+    if (a === 'ask') { GD.list = null; gdAct('search'); }
+  }
+  /* ---------- Heldenreisen ---------- */
+  // Ein Held zieht 1, 3 oder 9 Stunden allein los und bringt danach Gold, Seelen, Runensplitter und Heldensplitter mit.
+  // In der Zeit fehlt er in der Truppe. Die Uhr läuft auch, wenn das Spiel zu ist.
+  const tripsReady = (now = Date.now()) => HEROES.filter(h => onTrip(S, h.id) && tripLeft(S, h.id, now) <= 0);
+  const durStr = ms => { const m = Math.ceil(ms / 60000); return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min` : `${Math.max(1, m)} min`; };
+  const rewHTML = r => [r.gold ? `<span class="rl-cur gold">${coin}${fmt(r.gold)}</span>` : '', r.souls ? `<span class="rl-cur soul">${soul}${r.souls}</span>` : '', r.dust ? `<span class="rl-cur dust">${dust}${r.dust}</span>` : '', r.spl ? `<span class="rl-cur spl">◈ ${r.spl}</span>` : ''].filter(Boolean).join(' ') || '<span class="note">kaum etwas</span>';
+  let trTimer = 0, trReadyN = -1;
+  function showTrips() {
+    SND.play('tick');
+    modal('<div id="trBody"></div>', 'rl-trips');
+    $('#picker .rl-trips').addEventListener('click', trClick);
+    trRender();
+    clearInterval(trTimer);
+    trTimer = setInterval(() => { if ($('#picker').hidden || !$('#picker .rl-trips')) { clearInterval(trTimer); return; } trRender(); }, 1000);
+  }
+  function trRender() {
+    const b = $('#trBody'); if (!b) return;
+    const now = Date.now(), own = HEROES.filter(h => hired(S, h.tree)), free = own.filter(h => !onTrip(S, h.id));
+    const rows = own.map(h => {
+      const T = S.trips && S.trips[h.id], left = T ? tripLeft(S, h.id, now) : 0;
+      const pic = `<span class="rl-trpic" style="--hc:${h.color}"><img src="${portraitURL(h.id)}" alt=""></span>`;
+      if (T && left <= 0) return `<div class="rl-trrow done">${pic}<div class="rl-trmid"><b>${h.name} ist zurück!</b><small>${(TRIPS.find(o => o.h === T.h) || TRIPS[0]).name} · Mitgebracht: ${rewHTML(tripReward(S, T))}</small></div><button class="btn gold small" data-tr="claim" data-id="${h.id}">Abholen</button></div>`;
+      if (T) { const pc = 100 - left / (T.h * 3600000) * 100;
+        return `<div class="rl-trrow away">${pic}<div class="rl-trmid"><b>${h.name} <em class="rl-trtag">unterwegs</em></b><span class="rl-trbar"><i style="width:${pc.toFixed(1)}%"></i></span><small>Zurück in <b>${durStr(left)}</b> · bringt ${rewHTML(tripReward(S, T))}</small></div></div>`; }
+      const last = free.length <= 1, camp = inCamp();
+      const btns = TRIPS.map(o => `<button class="btn ghost small rl-trgo" data-tr="go" data-id="${h.id}" data-h="${o.h}" ${last || !camp ? 'disabled' : ''}><b>${o.h} h</b><small>${rewHTML(tripReward(S, { h: o.h }))}</small></button>`).join('');
+      return `<div class="rl-trrow">${pic}<div class="rl-trmid"><b>${h.name}</b><small>${last ? 'Bleibt im Lager: Ein Held muss immer da sein.' : !camp ? 'Losschicken geht nur im Lager.' : `${fieldOf(S).includes(h.id) ? 'Kämpft gerade mit. ' : ''}Wohin soll die Reise gehen?`}</small><div class="rl-trbtns">${btns}</div></div></div>`;
+    }).join('');
+    const ready = tripsReady(now).length;
+    b.innerHTML = `<h2>🧭 Heldenreisen</h2><p class="note">Schick Helden für 1, 3 oder 9 Stunden auf Reisen. Solange sie weg sind, fehlen sie in der Truppe. Die Zeit läuft auch weiter, wenn das Spiel zu ist. Kurze Reisen bringen pro Stunde etwas mehr, lange sind bequemer.</p>
+      ${ready > 1 ? `<div class="row" style="justify-content:center"><button class="btn gold" data-tr="all">Alle ${ready} abholen</button></div>` : ''}
+      <div class="rl-trlist">${rows}</div>
+      <p class="note" style="margin-top:8px">Bisher heimgekehrt: <b>${S.tripsDone || 0}</b> Reisen</p>
+      <div class="row" style="justify-content:center;margin-top:6px"><button class="btn ghost" data-m="x">Schließen</button></div>`;
+  }
+  function trClaim(id) {
+    const r = claimTrip(S, id); if (!r) return null;
+    noteTripAch(); return r;
+  }
+  const noteTripAch = () => {};
+  function trClick(e) {
+    const b = e.target.closest('[data-tr]'); if (!b || b.disabled) return;
+    const k = b.dataset.tr, id = b.dataset.id;
+    if (k === 'go') {
+      if (!inCamp()) { toast('Losschicken geht nur im Lager.'); return; }
+      const h = Number(b.dataset.h);
+      if (!startTrip(S, id, h)) { toast('Mindestens ein Held muss im Lager bleiben.'); return; }
+      SND.play('buy'); toast(`${HERO_BY_ID[id].name} bricht für ${h} Stunde${h > 1 ? 'n' : ''} auf.`);
+    } else if (k === 'claim' || k === 'all') {
+      const ids = k === 'all' ? tripsReady().map(h => h.id) : [id], sum = { gold: 0, souls: 0, dust: 0, spl: 0 };
+      for (const x of ids) { const r = trClaim(x); if (r) for (const q in sum) sum[q] += r[q] || 0; }
+      SND.play('gold'); toast(`Reisebeute: ${[sum.gold ? fmt(sum.gold) + ' Gold' : '', sum.souls ? sum.souls + ' Seelen' : '', sum.dust ? sum.dust + ' Runensplitter' : '', sum.spl ? sum.spl + ' Heldensplitter' : ''].filter(Boolean).join(', ') || 'nichts'}`, true);
+    }
+    trReadyN = tripsReady().length;
+    afterChange(); trRender();
+  }
+  // Wird regelmäßig aufgerufen: meldet Heimkehrer
+  function trWatch() {
+    const n = tripsReady().length;
+    if (n !== trReadyN) {
+      if (trReadyN >= 0 && n > trReadyN) { const h = tripsReady().pop(); toast(`🧭 ${h ? h.name : 'Ein Held'} ist von der Reise zurück! Abholen am Anschlagbrett.`); SND.play('tick'); }
+      trReadyN = n; if (inCamp()) action();
+    }
+  }
+
+  /* ---------- Wochenboss ---------- */
+  // Alle Spieler kämpfen eine Woche lang gegen denselben Boss. Der Server zählt Versuche (3 pro Tag) und Punkte.
+  // Die beste Leistenzahl pro Spieler zählt für die Gruppenziele seiner Gilde (ohne Gilde: Zufallsgruppe). Belohnung am Wochenende pro erreichtem Ziel.
+  const WBC = { info: null, at: 0, busy: false, tryId: null, timer: 0 };
+  const wbCall = (action, extra = {}) => api(action, { name: acct.name, token: acct.token, ...extra });
+  const wbOpen = () => { const p = $('#picker'); return p && !p.hidden && p.querySelector('.rl-wboss'); };
+  async function wbFetch(force) {
+    if (!acct || !acct.token || WBC.busy || (!force && Date.now() - WBC.at < 60000)) return WBC.info;
+    WBC.busy = true; const r = await wbCall('wb_info'); WBC.busy = false;
+    if (!r.error) { const had = WBC.info && WBC.info.last; WBC.info = r; WBC.at = Date.now(); if (r.last && !had && inCamp()) action(); if (wbOpen()) wbRender(); }
+    return r;
+  }
+  const wbClaimable = () => !!(acct && acct.token && WBC.info && WBC.info.last);
+  const wbBossName = bk => BOSS_NAMES[bk % BOSS_NAMES.length];
+  function wbInfoLines() {
+    if (!acct || !acct.token) return ['Alle gegen einen Boss mit unendlich vielen Leisten. Jede Leiste bringt Beute.'];
+    const I = WBC.info; if (!I) { wbFetch(); return ['Lädt …']; }
+    wbFetch();
+    return [`Diese Woche: <b>${esc(wbBossName(I.bk))}</b>`,
+      `${wbGroupLabel(I)}: <b>${fmt(I.group ? I.group.total : 0)}</b> Leisten · Ziel ${I.reached} / ${I.goals.length}`,
+      `Dein Rekord: <b>${I.me.best}</b> Leisten · Versuche heute: ${I.me.triesMax - I.me.tries} / ${I.me.triesMax}`]
+      .concat(I.last ? ['<b style="color:#ffd23f">Belohnung der Vorwoche wartet!</b>'] : []);
+  }
+  const wbGroupLabel = I => !I.group || I.group.kind === 'none' ? 'Deine Gruppe' : I.group.kind === 'guild' ? `Gilde ${esc(I.group.name)}` : 'Zufallsgruppe';
+  function showWboss() {
+    SND.play('tick');
+    if (!acct || !acct.token) {
+      modal(`<h2>👹 Wochenboss</h2><p>Beim Wochenboss kämpfen alle Spieler zusammen gegen denselben Gegner. Dafür brauchst du ein Konto mit <b>Name und Passwort</b>, damit deine Leisten gezählt werden.</p>
+        <div class="row" style="justify-content:center"><button class="btn" data-m="save">Konto anlegen oder anmelden</button><button class="btn ghost" data-m="x">Später</button></div>`, 'rl-wboss');
+      return;
+    }
+    modal('<div id="wbBody"><p class="note">Lädt …</p></div>', 'rl-wboss');
+    $('#picker .rl-wboss').addEventListener('click', wbClick);
+    wbRender(); wbFetch(true);
+  }
+  function wbRender(msg) {
+    const b = $('#wbBody'), I = WBC.info; if (!b || !I) return;
+    const left = Math.max(0, I.endsAt - Date.now()), d = Math.floor(left / 86400000), hh = Math.floor(left % 86400000 / 3600000);
+    const triesLeft = I.me.triesMax - I.me.tries, top = I.goals[I.goals.length - 1], GR = I.group || { kind: 'none', total: 0, members: [] }, gt = GR.total;
+    // Zielleiste mit Markierungen für jedes Ziel
+    const marks = I.goals.map((g, i) => `<span class="rl-wbmark ${gt >= g ? 'ok' : ''}" style="left:${(g / top * 100).toFixed(1)}%"><i></i><b>${i + 1}</b><small>${fmt(g)}</small></span>`).join('');
+    const goals = I.goals.map((g, i) => `<div class="rl-wbgrow ${gt >= g ? 'ok' : ''}"><span class="n">${gt >= g ? '✓' : i + 1}</span><span>Ziel ${i + 1}: <b>${fmt(g)}</b> Leisten</span><span class="sp"></span>${rewHTML(hoursReward(S, i + 1, 0.5))}</div>`).join('');
+    const list = I.top.length ? I.top.map(p => `<div class="rl-wbrow ${p.me ? 'me' : ''}"><span class="rk">${p.rank}.</span><b>${esc(p.name)}</b><span class="sp"></span><span>${p.best} Leisten</span></div>`).join('') : '<p class="note">Noch hat niemand gekämpft. Sei die oder der Erste!</p>';
+    const mates = GR.kind === 'none' ? '<p class="note">Du hast keine Gilde. Beim ersten Kampf dieser Woche kommst du in eine Zufallsgruppe mit bis zu 4 anderen Spielern ohne Gilde. <button class="btn ghost small" data-wb="guild">🛡 Gilde suchen</button></p>'
+      : GR.members.map(p => `<div class="rl-wbrow ${p.me ? 'me' : ''}"><span class="rl-on ${p.online ? 'on' : ''}"></span><b>${esc(p.name)}</b><span class="sp"></span><span>${p.best ? `${p.best} Leisten` : '<small>noch nicht gekämpft</small>'}</span></div>`).join('')
+        + (GR.kind === 'pool' ? '<p class="note">Ihr seid eine Zufallsgruppe, weil ihr alle keine Gilde habt. <button class="btn ghost small" data-wb="guild">🛡 Gilde suchen</button></p>' : '');
+    let claim = '';
+    if (I.last) claim = `<div class="rl-wbclaim" style="--tc:#ffd23f"><h3>Belohnung der letzten Woche</h3><p>Dein Rekord: <b>${I.last.best}</b> Leisten · ${I.last.group && I.last.group !== 'Zufallsgruppe' ? `Gilde ${esc(I.last.group)}` : 'Deine Gruppe'}: <b>${I.last.total}</b> Leisten, <b>${I.last.goals} von ${I.goals.length}</b> Zielen erreicht</p>${I.last.goals ? `<p>${rewHTML(hoursReward(S, wbGoalHours(I.last.goals), 0.5))}</p>` : '<p class="note">Kein Ziel geschafft, diesmal gibt es nichts.</p>'}<button class="btn gold" data-wb="claim">${I.last.goals ? 'Abholen' : 'Schade, weiter'}</button></div>`;
+    const ex = [10, 30, 60].map(n => `<span><b>${n} Leisten</b>${rewHTML(wbBarPreview(n))}</span>`).join('');
+    b.innerHTML = `<h2>👹 Wochenboss: ${esc(wbBossName(I.bk))}</h2>
+      <p class="note">Alle kämpfen diese Woche gegen denselben Boss mit unendlich vielen Lebensleisten. Mit jeder Leiste werden seine Leben und sein Schaden um ${Math.round((WB.grow - 1) * 100)} % stärker. <b>Jede Leiste bringt sofort Beute.</b> Du hast <b>${I.me.triesMax} Versuche pro Tag</b>. Dein bester Versuch zählt für die Ziele deiner Gilde. Noch <b>${d} Tage ${hh} Std.</b></p>
+      ${claim}
+      <div class="rl-wbgoal"><div class="lb"><span>${wbGroupLabel(I)}: <b>${fmt(gt)}</b> Leisten</span><b>${I.reached} / ${I.goals.length} Ziele</b></div><div class="rl-wbtrack"><span class="rl-trbar big"><i style="width:${Math.min(100, gt / top * 100).toFixed(1)}%"></i></span>${marks}</div><small>Summe der besten Versuche deiner Gruppe (bis zu 5 Spieler). Jedes erreichte Ziel gibt am Wochenende allen aus der Gruppe, die mitgekämpft haben, eine Belohnung.</small></div>
+      <h3 class="rl-h3">${wbGroupLabel(I)}</h3><div class="rl-wblist">${mates}</div>
+      <div class="rl-wbme"><span><b>${I.me.best}</b>dein Rekord</span><span><b>${I.me.rank || '–'}</b>dein Platz</span><span><b>${triesLeft}</b>Versuche heute</span><span><b>${S.wbBest || 0}</b>Allzeit-Rekord</span></div>
+      <h3 class="rl-h3">Beute pro Versuch</h3><div class="rl-wbex">${ex}</div>
+      <h3 class="rl-h3">Gruppenziele</h3><div class="rl-wbgoals">${goals}</div>
+      <h3 class="rl-h3">Bestenliste (alle ${I.players} Spieler)</h3><div class="rl-wblist">${list}</div>
+      <p class="note rl-frmsg" id="wbMsg">${msg ? esc(msg) : ''}</p>
+      <div class="row" style="justify-content:center;margin-top:8px"><button class="btn ${triesLeft > 0 && inCamp() ? '' : 'ghost'}" data-wb="start" ${triesLeft > 0 && inCamp() ? '' : 'disabled'}>${triesLeft > 0 ? (inCamp() ? 'Kämpfen' : 'Erst den Feldzug beenden') : 'Morgen wieder'}</button><button class="btn ghost" data-m="x">Schließen</button></div>`;
+  }
+  // Vorschau der Beute für n Leisten, ohne etwas gutzuschreiben
+  function wbBarPreview(n) { const R = rateOf(S), sec = wbBarSecs(n); return { gold: Math.floor(R.g * sec), souls: Math.floor(R.s * sec), dust: feature(S, 'runen') ? Math.floor(R.d * sec) : 0, spl: expOpen(S) ? Math.floor(n / 10) : 0 }; }
+  async function wbClick(e) {
+    const b = e.target.closest('[data-wb]'); if (!b || b.disabled || WBC.busy) return;
+    const m = $('#wbMsg');
+    if (b.dataset.wb === 'start') {
+      if (!inCamp()) return;
+      b.disabled = true; WBC.busy = true; const r = await wbCall('wb_start'); WBC.busy = false;
+      if (r.error) { if (m) m.textContent = r.error; b.disabled = false; return; }
+      WBC.info = r; WBC.at = Date.now(); WBC.tryId = r.tryId;
+      S.wbBk = r.bk; $('#picker').hidden = true;
+      startRun('wboss'); run.wb.tryId = r.tryId; save();
+      $('#soloCanvas').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else if (b.dataset.wb === 'guild') { showGuild();
+    } else if (b.dataset.wb === 'claim') {
+      b.disabled = true; WBC.busy = true; const r = await wbCall('wb_claim'); WBC.busy = false;
+      if (r.error) { if (m) m.textContent = r.error; return; }
+      const g = wbReward(S, r.goals); WBC.info = r; WBC.at = Date.now();
+      if (g.goals) { SND.play('victory'); toast(`Wochenboss: ${g.goals} Ziele geschafft! ${[g.gold ? fmt(g.gold) + ' Gold' : '', g.souls ? g.souls + ' Seelen' : '', g.dust ? g.dust + ' Runensplitter' : '', g.spl ? g.spl + ' Heldensplitter' : ''].filter(Boolean).join(', ')}`, true); }
+      afterChange(); wbRender();
+    }
+  }
+  // Ende eines Kampfs: Beute pro Leiste gutschreiben (nur bei einem gültigen Versuch) und Ergebnis melden
+  function wbFinish(R) {
+    const bars = wbScore(R);
+    R.wbLoot = R.wb.tryId ? wbBarReward(S, bars) : null;
+    if (!R.wbLoot) R.wbMsg = 'Ohne gültigen Versuch wird nichts gezählt.';
+    wbSubmit(R, bars);
+  }
+  async function wbSubmit(R, bars) {
+    if (!R.wb.tryId || !acct || !acct.token) return;
+    const r = await wbCall('wb_hit', { tryId: R.wb.tryId, bars }); R.wb.tryId = null;
+    if (r.error) R.wbMsg = r.error;
+    else { WBC.info = r; WBC.at = Date.now(); R.wbMsg = r.better ? `Neuer Wochenrekord: ${r.me.best} Leisten! ${wbGroupLabel(r)}: ${fmt(r.group.total)} Leisten, ${r.reached} / ${r.goals.length} Ziele.` : `Dein Wochenrekord bleibt bei ${r.me.best} Leisten. ${wbGroupLabel(r)}: ${fmt(r.group.total)} Leisten.`; }
+    const el = $('#wbRes'); if (el) el.textContent = R.wbMsg;
   }
   function playCine(kind, team) {
     const n = S.news; if (!n) return;
@@ -389,6 +664,7 @@
     const t = document.querySelector('.rl-title'); if (t && !t.classList.contains('play')) return null;
     if (!run || run.dead) return run && run.dead && !run.victory && defeatFor !== run ? 'defeat' : 'lobby';
     if (run.wf) return 'wf';
+    if (run.mode === 'wboss') return 'boss';
     if (run.mode === 'ahnen' || run.mode === 'tower' || run.mode === 'exp') return 'tempel';
     if (run.stage > 150) return 'albtraum';
     if (run.enemies && run.enemies.some(e => e.boss || e.isBoss || e.wf)) return 'boss';
@@ -406,9 +682,10 @@
       const n = Math.ceil(S.speed), sdt = dt * S.speed / n;
       for (let i = 0; i < n; i++) if (step(S, st, run, sdt) === 'dead') { endRun(); break; }
     } else if (run) run.deadT += dt;
+    if (STRIP.on) stripTick();
     draw(now / 1000);
     if (squad && !squad.el.hidden) drawSquad(now / 1000, squad);
-    hudT += dt; if (hudT > 0.2) { hudT = 0; hud(); if (run && !run.dead) heroes(); }
+    hudT += dt; if (hudT > 0.2) { hudT = 0; hud(); if (run && !run.dead) heroes(); trWatch(); }
     raf = requestAnimationFrame(loop);
   }
 
@@ -417,6 +694,8 @@
     if (R.mode === 'weekly') { const r = claimWeekly(S, R); R.weeklyReward = r; }
     if (R.mode === 'exp') { const r = claimExp(S, R); R.expReward = r; }
     if (R.mode === 'ahnen') { const r = ahnClaim(S, R); R.ahnReward = r; ahnSel = null; }
+    if (R.mode === 'wboss') { R.victory = true; wbFinish(R); }
+    noteRate(S, R);
     if (R.mode === 'normal' && areaMax(S) > areaBefore) res.area = zoneName(10 * areaMax(S) + 1);
     SND.play(R.victory ? 'victory' : 'defeat');
     res.ach = achCheck(R, true); save(); cloudSave(true); refresh();
@@ -435,6 +714,9 @@
       title = win ? `Mission ${A.mi + 1} geschafft` : `Mission ${A.mi + 1} gescheitert`;
       sub = win ? esc(M.name) : A.wave < AHN_TUNE.waves || !d ? `Bei den Dienern vor Boss ${A.bi + 1}` : `Bei ${esc(d.name)}${A.boss ? `, Phase ${A.boss.phase + 1}` : ''}`;
       again = 'ahn'; againLabel = win ? (R.ahnReward && R.ahnReward.sigil ? 'Neue Prüfung' : `Mission ${S.ahn.m + 1} starten`) : 'Nochmal versuchen'; }
+    if (R.mode === 'wboss') { title = `Wochenboss: ${wbScore(R)} Leisten`; sub = esc(wbBossName(R.wb.bk)); again = 'wboss'; againLabel = 'Zum Wochenboss';
+      special = `<div class="rl-wbres"><b>${wbScore(R)}</b><small>Leisten abgezogen</small><p class="note" id="wbRes">${esc(R.wbMsg || 'Wird gemeldet …')}</p></div>`;
+      if (R.wbLoot) { const L = R.wbLoot; if (L.gold) add(coin, `<b>+${fmt(L.gold)}</b> Gold`, '#ffcf4a'); if (L.souls) add(soul, `<b>+${L.souls}</b> Seelen`, '#c9a6ff'); if (L.dust) add(dust, `<b>+${L.dust}</b> Runensplitter`, '#e2c9ff'); if (L.spl) add('◈', `<b>+${L.spl}</b> Heldensplitter`, '#9bd14a'); } }
     // Belohnungen
     if (R.gold) add(coin, `<b>+${fmt(R.gold)}</b> Gold`, '#ffcf4a');
     if (R.souls) add(soul, `<b>+${R.souls}</b> Seele${R.souls > 1 ? 'n' : ''}`, '#c9a6ff');
@@ -460,7 +742,7 @@
       special = ex.complete ? `<div class="rl-rpuzzle done" style="--hc:${h.color}">${puzzleHTML(ex.hero, false, ex.piece)}<h3>${h.name} ist bereit!</h3><p>Alle 6 Puzzleteile sind zusammen. ${h.name} hat sich deiner Gruppe angeschlossen. Stell den Helden in der Aufstellung am Lagerfeuer auf.</p><button class="btn" data-m="go" data-go="hero:${h.tree}">Zu ${h.name}</button></div>`
         : `<div class="rl-rpuzzle" style="--hc:${h.color}">${puzzleHTML(ex.hero, false, ex.piece)}<h3>Puzzleteil gefunden!</h3><p>Ein Teil für ${h.name}: jetzt <b>${pieceCount(S, ex.hero)} von 6</b>.</p></div>`;
       if (ex.complete && S.exp.target === ex.hero) { const nx = PUZZLE.find(x => !assembled(S, x)); if (nx) { S.exp.target = nx; save(); } } }
-    const stats = `<div class="rl-rstats"><span><b>${R.mode === 'tower' ? `Etage ${R.stage}` : `Stufe ${R.stage}`}</b>${R.mode === 'exp' || R.mode === 'ahnen' ? 'Gegnerstärke' : 'erreicht'}</span><span><b>${R.kills}</b>Gegner besiegt</span><span><b>${mins}:${String(secs).padStart(2, '0')}</b>Spielzeit</span></div>`;
+    const stats = `<div class="rl-rstats"><span><b>${R.mode === 'wboss' ? `×${fmt(Math.pow(WB.grow, wbScore(R)))}` : R.mode === 'tower' ? `Etage ${R.stage}` : `Stufe ${R.stage}`}</b>${R.mode === 'wboss' ? 'Bossstärke am Ende' : R.mode === 'exp' || R.mode === 'ahnen' ? 'Gegnerstärke' : 'erreicht'}</span><span><b>${R.kills}</b>Gegner besiegt</span><span><b>${mins}:${String(secs).padStart(2, '0')}</b>Spielzeit</span></div>`;
     const showAgain = again && inCamp() && (again !== 'tower' || feature(S, 'turm')) && (again !== 'ahn' || ahnOpen(S));
     modal(`<div class="rl-rhead"><span class="rl-remb">${win ? '🏆' : '💀'}</span><h2>${title}</h2><p>${sub}</p></div>
       ${special}
@@ -503,8 +785,8 @@
   function action() {
     const a = $('#rlAction');
     const troopBtn = `<button class="btn ghost rl-troopbtn ${S.uiTroop ? 'on' : ''}" data-rl="troop" aria-expanded="${!!S.uiTroop}">Truppe ${S.uiTroop ? '▴' : '▾'}</button>`;
-    if (inCamp()) a.innerHTML = `${troopBtn}<button class="btn ghost rl-boardbtn" data-rl="board">📋 Anschlagbrett${boardNew().length ? '<i class="rl-reddot" aria-label="neu"></i>' : ''}</button>${areaMax(S) >= 1 ? `<button class="btn ghost rl-area" data-rl="area"><small>Startgebiet</small><b>${esc(zoneName(st.startStage))} ▾</b></button>` : ''}<button class="btn rl-go" data-rl="start">Feldzug starten</button>`;
-    else a.innerHTML = `${troopBtn}<button class="btn ${confirm === 'giveup' ? 'danger' : 'ghost'} small" data-rl="giveup">${confirm === 'giveup' ? 'Wirklich aufgeben?' : run.mode === 'tower' ? 'Turm verlassen' : run.mode === 'weekly' ? 'Herausforderung beenden'   : run.mode === 'exp' || run.mode === 'ahnen' ? 'Mission abbrechen' : 'Feldzug aufgeben'}</button>`;
+    if (inCamp()) a.innerHTML = `${troopBtn}<button class="btn ghost rl-boardbtn" data-rl="board">📋 Anschlagbrett${boardNew().length || tripsReady().length || wbClaimable() ? '<i class="rl-reddot" aria-label="neu"></i>' : ''}</button>${areaMax(S) >= 1 ? `<button class="btn ghost rl-area" data-rl="area"><small>Startgebiet</small><b>${esc(zoneName(st.startStage))} ▾</b></button>` : ''}<button class="btn rl-go" data-rl="start">Feldzug starten</button>`;
+    else a.innerHTML = `${troopBtn}<button class="btn ${confirm === 'giveup' ? 'danger' : 'ghost'} small" data-rl="giveup">${confirm === 'giveup' ? 'Wirklich aufgeben?' : run.mode === 'tower' ? 'Turm verlassen' : run.mode === 'weekly' ? 'Herausforderung beenden'   : run.mode === 'wboss' ? 'Kampf beenden' : run.mode === 'exp' || run.mode === 'ahnen' ? 'Mission abbrechen' : 'Feldzug aufgeben'}</button>`;
   }
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const costHTML = c => [c.g ? `<span class="rl-cur gold">${coin}${fmt(c.g)}</span>` : '', c.s ? `<span class="rl-cur soul">${soul}${c.s}</span>` : ''].join(' ');
@@ -897,6 +1179,7 @@
       const r = toggleField(S, lu.dataset.lineup);
       if (r === 'full') toast('Alle Plätze sind belegt. Nimm zuerst jemanden raus.');
       else if (r === 'last') toast('Mindestens ein Held muss kämpfen.');
+      else if (r === 'trip') toast('Dieser Held ist gerade auf Reise.');
       afterChange(); return;
     }
     const tb = e.target.closest('.rl-hero[data-tab], .rl-gotree[data-tab]');
@@ -948,7 +1231,7 @@
     else if (a === 'board') { if (inCamp()) showBoard(); }
     else if (a === 'twf') { if (acct && acct.tester && inCamp()) { startRun(); if (run) { run.stage = WF_STAGE; spawnWave(run); $('#soloCanvas').scrollIntoView({ behavior: 'smooth', block: 'center' }); } } }
     else if (a === 'troop') { S.uiTroop = !S.uiTroop; save(); heroes(); action(); }
-    else if (a === 'giveup') { if (ask('giveup', action)) { run.dead = true; S.runs++; save(); cloudSave(true); refresh(); } }
+    else if (a === 'giveup') { if (ask('giveup', action)) { run.dead = true; if (run.mode === 'wboss') endRun(); else { S.runs++; save(); cloudSave(true); refresh(); } } }
     else if (a === 'tgold' || a === 'tsouls') { if (acct && acct.tester) { const el = $(a === 'tgold' ? '#rlTGold' : '#rlTSouls'); let t = String(el.value).replace(/\s/g, '');
         if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.'); else if (/^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, '');
         const v = Number(t);
@@ -1279,6 +1562,8 @@
     const list = squadHeroes();
     el.querySelector('.sq-row').innerHTML = list.map(h => {
       const own = hired(S, h.tree), on = field.includes(h.id), col = ROLE_INFO[ROLE[h.id]].col, can = !own && classOpen(S, h.tree), c = can ? nodeCost(S, NODE[h.hire]) : null;
+      const away = own && onTrip(S, h.id);
+      if (away) return `<button class="sq-tile trip" data-sq="${h.id}" style="--rc:${col}"><span class="pic"><img src="${portraitURL(h.id)}" alt=""><b class="lk">🧭</b></span><span class="nm">${h.name}</span><small class="sq-cost">${tripLeft(S, h.id) > 0 ? `auf Reise · ${durStr(tripLeft(S, h.id))}` : 'zurück, abholen!'}</small></button>`;
       return `<button class="sq-tile ${own ? (on ? 'on' : 'bench') : can ? 'hire' : 'locked'}" data-sq="${h.id}" style="--rc:${col}"><span class="pic"><img src="${portraitURL(h.id)}" alt="">${own ? '' : can ? '<b class="lk hire">＋</b>' : '<b class="lk">🔒</b>'}</span><span class="nm">${h.name}</span>${on ? '<em>✓</em>' : ''}${can ? `<small class="sq-cost">Anheuern: ${fmt(c.g)} Gold${c.s ? ` · ${c.s} Seelen` : ''}</small>` : ''}</button>`;
     }).join('');
     el.querySelector('.sq-tip').textContent = `Tippe ein Porträt an, um den Helden ein- oder auszuwechseln. Rechts steht die vorderste Reihe.${slots < 6 ? ` Mehr Plätze: ${perk(S, 'p_feld') ? '' : 'Fünfter Platz im Sternen-Laden'}${!perk(S, 'p_feld') && !cperk(S, 'k_feld') ? ', ' : ''}${cperk(S, 'k_feld') ? '' : 'Sechster Platz im Kronen-Laden'}.` : ''}`;
@@ -1291,6 +1576,7 @@
     const r = toggleField(S, id);
     if (r === 'full') toast('Alle Plätze sind belegt. Nimm zuerst jemanden raus.');
     else if (r === 'last') toast('Mindestens ein Held muss kämpfen.');
+    else if (r === 'trip') { toast(`${HERO_BY_ID[id].name} ist auf Reise und kommt in ${durStr(tripLeft(S, id))} zurück.`); return; }
     else SND.play(r === 'in' ? 'buy' : 'tick');
     afterChange(); renderSquad();
   }
@@ -1319,6 +1605,37 @@
 
   // Geldbörse: zeigt nur die Währungen, die an dieser Stelle gebraucht werden
   const wallet = (list, cls = '') => `<div class="rl-wallet rl-wsmall ${cls}">${list.map(k => ({ gold: `<span class="rl-cur gold" title="Gold">${coin}${fmt(S.gold)}</span>`, souls: `<span class="rl-cur soul" title="Seelen">${soul}${S.souls}</span>`, stars: `<span class="rl-cur star" title="Sterne">${star}${S.stars}</span>`, dust: `<span class="rl-cur dust" title="Runensplitter">${dust}${S.dust}</span>`, crowns: `<span class="rl-cur crown" title="Kronen">${crown}${S.crowns}</span>`, spl: `<span class="rl-cur spl" title="Heldensplitter">◈ ${S.exp.spl}</span>` })[k]).join('')}</div>`;
+  /* ---------- Leisten-Modus (eigene Seite strip.html / Taskleisten-Version) ---------- */
+  // Nur aktiv, wenn die Seite vor ritter.js window.RITTER_STRIP = true setzt. Dann laufen Feldzüge von allein weiter
+  // und die Leiste liest über window.RitterStrip Stand, Bild und Knöpfe aus.
+  const STRIP = { on: !!window.RITTER_STRIP, auto: true };
+  try { STRIP.auto = localStorage.getItem('fsg.ritter.leiste.auto') !== '0'; } catch {}
+  function stripTick() {
+    if (!STRIP.auto || cine || !S) return;
+    if (document.querySelector('.rl-title')) return;
+    const noRun = !run, over = run && run.dead && run.deadT > 3.5;
+    if (!noRun && !over) return;
+    if (squad && !squad.el.hidden) return;
+    const p = $('#picker'); if (p && !p.hidden && !(run && run.dead && p.querySelector('.rl-result'))) return; // offenes Fenster nicht wegklicken (außer Ergebnis)
+    if (p) p.hidden = true;
+    startRun();
+  }
+  if (STRIP.on) window.RitterStrip = {
+    W, H, GROUND,
+    canvas: () => cv,
+    state: () => {
+      const live = run && !run.dead, boss = live ? run.enemies.find(e => e.boss || e.wb) : null;
+      return { live, camp: inCamp(), mode: run ? run.mode : null, stage: run ? run.stage : 0, zone: run ? zoneName(run.stage) : '', best: S.best, cap: capOf(S),
+        gold: S.gold, souls: S.souls, runGold: run ? run.gold : 0, runSouls: run ? run.souls : 0, time: run ? run.time : 0, speed: S.speed, maxSpeed: maxSpeed(S), auto: STRIP.auto,
+        boss: boss ? { name: run.mode === 'wboss' ? wbBossName(run.wb.bk) : BOSS_NAMES[boss.bk % BOSS_NAMES.length] || 'Boss', hp: Math.max(0, boss.hp / boss.max) } : null,
+        heroes: live ? run.order.filter(k => run.h[k]).map(k => ({ id: k, color: HERO_BY_ID[k].color, hp: run.h[k].alive ? Math.max(0, run.h[k].hp / st[k].hp) : 0 })) : [],
+        trips: tripsReady().length, sound: SND.isOn(), title: !!document.querySelector('.rl-title') };
+    },
+    setAuto: v => { STRIP.auto = !!v; try { localStorage.setItem('fsg.ritter.leiste.auto', v ? '1' : '0'); } catch {} },
+    start: () => { if (inCamp()) { $('#picker').hidden = true; startRun(); } },
+    speed: () => { const b = $('#soloSpeed'); if (b) b.click(); },
+    sound: () => { const b = $('#soloSnd'); if (b) b.click(); },
+  };
   window.Ritter = { open, close, isOpen: () => active };
 })();
 

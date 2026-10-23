@@ -1058,6 +1058,89 @@
     S.ahn.m = mi + 1; return { mission: mi, sigil: false };
   }
 
+  /* ================= Heldenreisen ================= */
+  // Ein Held geht 1, 3 oder 9 Stunden auf Reise. In der Zeit kämpft er nicht mit. Danach bringt er Gold, Seelen und Splitter mit.
+  // Ertrag: ein Teil dessen, was die Gruppe in derselben Zeit im Feldzug verdienen würde (gemessen an den letzten Feldzügen).
+  const TRIPS = [{ h: 1, eff: 0.5, name: 'Kurze Reise' }, { h: 3, eff: 0.42, name: 'Lange Reise' }, { h: 9, eff: 0.33, name: 'Große Expedition' }];
+  const TRIP_SHARE = 0.25; // ein Held bringt ein Viertel des Gruppen-Ertrags
+  const HOUR = 3600000;
+  const onTrip = (S, id) => !!(S.trips && S.trips[id]);
+  const tripLeft = (S, id, now = Date.now()) => { const T = S.trips && S.trips[id]; return T ? Math.max(0, T.at + T.h * HOUR - now) : 0; };
+  // Ertrag pro Sekunde im Feldzug: gleitender Durchschnitt der letzten Feldzüge, sonst eine grobe Schätzung nach Rekord
+  function rateOf(S) {
+    const r = S.rate;
+    if (r && r.t >= 120) return { g: r.g / r.t, s: r.s / r.t, d: r.d / r.t };
+    const b = Math.max(5, S.best || 1);
+    return { g: grow(b, ...TUNE.gold) * 0.8, s: (1 + Math.floor(b / 20)) / 70, d: feature(S, 'runen') ? shardOf(bossRuneTier(b)) / 90 : 0 };
+  }
+  function noteRate(S, run) {
+    if (!run || run.mode !== 'normal' || run.time < 20) return;
+    const r = S.rate || { g: 0, s: 0, d: 0, t: 0 }, k = 0.75, d = run.runes.reduce((a, x) => a + shardOf(x.tier), 0) + Math.max(0, S.dust - (run.dust0 || S.dust));
+    S.rate = { g: r.g * k + run.gold, s: r.s * k + run.souls, d: r.d * k + d, t: r.t * k + run.time };
+  }
+  // Belohnung für h Stunden Ertrag mit Wirkungsgrad eff (auch für den Wochenboss benutzt)
+  function hoursReward(S, h, eff) {
+    const R = rateOf(S), sec = h * 3600 * eff;
+    const out = { gold: Math.floor(R.g * sec), souls: Math.floor(R.s * sec), dust: feature(S, 'runen') ? Math.floor(R.d * sec) : 0, spl: expOpen(S) ? Math.max(1, Math.round(h * eff * 4)) : 0 };
+    return out;
+  }
+  const tripReward = (S, T) => { const o = TRIPS.find(x => x.h === T.h) || TRIPS[0]; return hoursReward(S, T.h * TRIP_SHARE, o.eff); };
+  function startTrip(S, id, h) {
+    const o = TRIPS.find(x => x.h === h);
+    if (!o || !HERO_BY_ID[id] || !hired(S, HERO_BY_ID[id].tree) || onTrip(S, id)) return false;
+    const free = HEROES.filter(x => hired(S, x.tree) && !onTrip(S, x.id) && x.id !== id);
+    if (!free.length) return false; // mindestens ein Held bleibt im Lager
+    S.trips = S.trips || {}; S.trips[id] = { at: Date.now(), h }; S.bench = (S.bench || []).filter(x => x !== id);
+    return true;
+  }
+  // Heimkehr: gibt die Belohnung zurück (oder null, wenn die Reise noch läuft)
+  function claimTrip(S, id, now = Date.now()) {
+    const T = S.trips && S.trips[id]; if (!T || tripLeft(S, id, now) > 0) return null;
+    const r = tripReward(S, T);
+    S.gold = Math.min(1e18, S.gold + r.gold); S.souls += r.souls; S.tot.souls += r.souls; S.dust += r.dust; if (r.spl) S.exp.spl += r.spl;
+    // Platz für spätere Fundstücke: r.extra
+    delete S.trips[id]; S.tripsDone = (S.tripsDone || 0) + 1;
+    return { id, h: T.h, ...r };
+  }
+
+  /* ================= Wochenboss ================= */
+  // Alle Spieler kämpfen eine Woche lang gegen denselben Boss. Er ist für alle gleich stark und hat unendlich viele
+  // Lebensleisten. Mit jeder abgezogenen Leiste werden Leben und Schaden um einen festen Faktor stärker.
+  // Jede Leiste bringt sofort Beute. Die beste Leistenzahl pro Spieler (ein Versuch) zählt fürs Gemeinschaftsziel.
+  const WB = { lvl: 8, grow: 1.15, hp: 4, tries: 3, maxT: 600, goals: [40, 100, 180, 280, 400] }; // goals: Gruppenziele (Gilde bzw. Zufallsgruppe), müssen zu WB_GOALS in konten.js passen
+  const wbScore = run => (run.wb && run.wb.bars) || 0;
+  function wbSpawn(run) {
+    const e = makeEnemy(WB.lvl, 1.2, true, false, run);
+    e.hp *= WB.hp; e.max = e.hp; e.wb = true; e.bk = run.wb.bk; e.type = ENEMY_KINDS[run.wb.bk % ENEMY_KINDS.length];
+    run.enemies = [e]; run.bannerT = 2.2;
+  }
+  function wbBars(run, c) {
+    for (const e of run.enemies) if (e.wb) while (e.hp <= 0) {
+      run.wb.bars++; e.max *= WB.grow; e.hp += e.max; e.dmg *= WB.grow;
+      c.efloat(e, `Leiste ${run.wb.bars}!`, '#ffd27a', 16); c.burst(e.x, 150, '#ffd27a', 18); run.shake = 0.25; sfx('boss');
+    }
+  }
+  // Beute pro Leiste: Leiste n ist so viel wert wie (3 + n/10) Sekunden Feldzug, spätere Leisten also etwas mehr
+  // (80 Leisten ≈ 9 Minuten Feldzug, 20 Leisten ≈ 1,4 Minuten)
+  function wbBarSecs(bars) { return bars * 3 + bars * bars * 0.05; }
+  function wbBarReward(S, bars) {
+    if (!bars) return { gold: 0, souls: 0, dust: 0, spl: 0 };
+    const R = rateOf(S), sec = wbBarSecs(bars);
+    const r = { gold: Math.floor(R.g * sec), souls: Math.floor(R.s * sec), dust: feature(S, 'runen') ? Math.floor(R.d * sec) : 0, spl: expOpen(S) ? Math.floor(bars / 10) : 0 };
+    S.gold = Math.min(1e18, S.gold + r.gold); S.souls += r.souls; S.tot.souls += r.souls; S.dust += r.dust; if (r.spl) S.exp.spl += r.spl;
+    S.wbBest = Math.max(S.wbBest || 0, bars);
+    return r;
+  }
+  // Wochenende: Belohnung für jedes erreichte Gemeinschaftsziel (Ziel i ist i+1 Stunden Feldzug wert)
+  const wbGoalHours = n => { let h = 0; for (let i = 0; i < n; i++) h += i + 1; return h; };
+  function wbReward(S, goals) {
+    const n = Math.max(0, Math.min(WB.goals.length, Math.floor(goals) || 0));
+    const r = n ? hoursReward(S, wbGoalHours(n), 0.5) : { gold: 0, souls: 0, dust: 0, spl: 0 };
+    S.gold = Math.min(1e18, S.gold + r.gold); S.souls += r.souls; S.tot.souls += r.souls; S.dust += r.dust; if (r.spl) S.exp.spl += r.spl;
+    S.wbWeeks = (S.wbWeeks || 0) + 1;
+    return { goals: n, ...r };
+  }
+
   /* ================= Spielstand ================= */
   function fresh() {
     return { v: SAVE_VERSION, gold: 0, souls: 0, best: 0, bestEver: 0, runs: 0, nodes: { start: 1 }, equip: [], speed: 1, stars: 0, rebirths: 0, perks: {},
@@ -1099,6 +1182,11 @@
     out.tempo = Math.max(0, Math.min(TEMPO_COST.length, Math.floor(Number(d.tempo) || 0)));
     out.bench = Array.isArray(d.bench) ? [...new Set(d.bench.filter(id => HERO_BY_ID[id]))] : [];
     out.seenField = !!d.seenField; out.seenExp = !!d.seenExp;
+    out.trips = {}; for (const h of HEROES) { const T = d.trips && d.trips[h.id]; if (T && TRIPS.some(o => o.h === T.h) && Number(T.at) > 0) out.trips[h.id] = { at: Number(T.at), h: T.h }; }
+    { const r = d.rate || {}, n = x => Math.max(0, Number(x) || 0); out.rate = { g: n(r.g), s: n(r.s), d: n(r.d), t: n(r.t) }; }
+    out.tripsDone = Math.max(0, Math.floor(Number(d.tripsDone) || 0));
+    out.wbBest = Math.max(0, Math.floor(Number(d.wbBest) || 0)); out.wbWeeks = Math.max(0, Math.floor(Number(d.wbWeeks) || 0));
+    out.wbBk = Math.max(0, Math.floor(Number(d.wbBk) || 0));
     const ex = d.exp && typeof d.exp === 'object' ? d.exp : {};
     out.exp = { spl: Math.max(0, Math.floor(Number(ex.spl) || 0)), done: Math.max(0, Math.floor(Number(ex.done) || 0)), target: PUZZLE.includes(ex.target) ? ex.target : 'a', pieces: {} };
     for (const id of PUZZLE) { const m = Math.floor(Number(ex.pieces && ex.pieces[id]) || 0); if (m > 0) out.exp.pieces[id] = m & 63; }
@@ -1408,14 +1496,15 @@
   // Aufstellung: 4 Plätze auf dem Feld, +1 aus dem Sternen-Laden, +1 aus dem Kronen-Laden
   const fieldSlots = S => Math.min(6, 4 + perk(S, 'p_feld') + cperk(S, 'k_feld'));
   function fieldOf(S) {
-    const avail = HEROES.filter(h => hired(S, h.tree)).map(h => h.id), bench = S.bench || [];
+    const avail = HEROES.filter(h => hired(S, h.tree) && !onTrip(S, h.id)).map(h => h.id), bench = S.bench || [];
     const f = avail.filter(id => !bench.includes(id)).slice(0, fieldSlots(S));
     return f.length ? f : avail.slice(0, 1);
   }
   function toggleField(S, id) {
     const f = fieldOf(S);
     if (!HEROES.some(h => h.id === id && hired(S, h.tree))) return 'none';
-    S.bench = HEROES.filter(h => hired(S, h.tree) && !f.includes(h.id) && h.id !== id).map(h => h.id);
+    if (onTrip(S, id)) return 'trip';
+    S.bench = HEROES.filter(h => hired(S, h.tree) && !onTrip(S, h.id) && !f.includes(h.id) && h.id !== id).map(h => h.id);
     if (f.includes(id)) { if (f.length <= 1) return 'last'; S.bench.push(id); return 'out'; }
     if (f.length >= fieldSlots(S)) { S.bench.push(id); return 'full'; }
     return fieldOf(S).includes(id) ? 'in' : 'full';
@@ -1502,7 +1591,7 @@
     mine: { name: 'Runenmine', melee: 'grubenwicht', ranged: 'kristallwisp', boss: 'Der Runenwächter', bk: 'x_mine', col: '#46d4ee' },
   };
   const areaOf = run => (run && run.mode === 'exp' && MISSION[run.mission] && AREAS[MISSION[run.mission].area]) || null;
-  const bossNameOf = (run, stage) => (areaOf(run) ? areaOf(run).boss : bossOf(stage));
+  const bossNameOf = (run, stage) => (run && run.wb ? BOSS_NAMES[run.wb.bk] : areaOf(run) ? areaOf(run).boss : bossOf(stage));
   const heroMission = id => MISSIONS.find(m => m.hero === id);
   const PIECE_COST = 100, PIECE_CHANCE = 0.06, PIECE_DUP = 50;
   const expOpen = S => S.asc >= 1 || (S.exp && S.exp.done > 0);
@@ -1533,7 +1622,7 @@
   function statsFor(S, mode) {
     const st = stats(S);
     if (mode === 'exp') { const m = MISSION[S.exp.mission] || MISSIONS[0]; st.cap = Infinity; st.startStage = expStage(S, m); st.rules = m.rules || []; return st; }
-    if (mode === 'ahnen') { st.cap = Infinity; return st; }
+    if (mode === 'ahnen' || mode === 'wboss') { st.cap = Infinity; return st; }
     if (mode !== 'weekly') return st;
     const rules = weekRules(dayId());
     for (const h of HEROES) { const T = st[h.id]; if (!T) continue;
@@ -1793,7 +1882,7 @@
     if (rules.includes('trio')) order = order.slice(0, 3);
     const pos = {}; order.forEach((k, i) => (pos[k] = 152 - i * 25));
     const h = {}; for (const k of order) h[k] = { hp: st[k].hp, alive: true, atkT: 0.3 + Math.random() * 0.4, wolfT: 0.5, swing: 0, hurtT: 0, revived: false, shield: 0 };
-    const run = { mode: tower ? 'tower' : weekly ? 'weekly' : exp ? 'exp' : mode === 'ahnen' ? 'ahnen' : 'normal', stage: tower || weekly ? 1 : st.startStage, startStage: tower || weekly ? 1 : st.startStage, rules, losses: 0,
+    const run = { mode: tower ? 'tower' : weekly ? 'weekly' : exp ? 'exp' : mode === 'ahnen' ? 'ahnen' : mode === 'wboss' ? 'wboss' : 'normal', stage: tower || weekly ? 1 : st.startStage, startStage: tower || weekly ? 1 : st.startStage, rules, losses: 0,
       mission: exp ? (MISSION[S.exp.mission] ? S.exp.mission : 'streif') : null, waves: 0, bossKills: 0, minions: [], turretT: 1, extraTurretT: 0, songT: 0, songMul: 0, roarT: 0,
       hard: hardMul(S, false), diff: ascDiff(S), speed: rules.includes('speed') ? 1.5 : 1, hpMul: rules.includes('giant') ? 2 : 1, eliteChance: rules.includes('elite') ? 0.4 : 0.12, noheal: rules.includes('noheal'),
       dragonT: 2, compRevive: false, bannerT: 0, kills: 0, gold: 0, souls: 0, runes: [], phoenixUsed: false, miracleUsed: false,
@@ -1813,7 +1902,9 @@
       // Ausgezahlt wird nach und nach während des Laufs (alle 20 s ein Sechstel), sonst ließe sich durch Starten und Aufgeben endlos sammeln
       if (run.skipSouls || run.skipGold) { run.skipN = SKIP_PARTS; run.skipLeft = SKIP_PARTS; run.floats.push({ x: 150, y: 100, text: 'Abkürzung: Belohnung kommt nach und nach im Lauf', color: '#c9a6ff', size: 12, t: 2.6 }); }
     }
+    run.dust0 = S.dust;
     if (run.mode === 'ahnen') ahnInit(S, run);
+    if (run.mode === 'wboss') { run.stage = run.startStage = WB.lvl; run.wb = { bars: 0, bk: Math.max(0, Math.floor(S.wbBk || 0)) % BOSS_NAMES.length }; }
     spawnWave(run);
     return run;
   }
@@ -1823,6 +1914,7 @@
   function spawnWave(run) {
     run.brother = false; for (const k of run.order || []) if (run.h[k]) run.h[k].protUsed = false;
     if (run.mode === 'ahnen') return ahnSpawn(run);
+    if (run.mode === 'wboss') return wbSpawn(run);
     run.enemies = [];
     if (run.mode === 'tower') {
       const s = towerStage(run.stage), boss = run.stage % 5 === 0;
@@ -1861,7 +1953,10 @@
   function ctxFor(S, st, run) {
     const c = { S, st, run };
     c.float = (k, text, color, size = 14) => run.floats.push({ x: run.pos[k] || 120, y: 110, text, color, size, t: 1 });
-    c.efloat = (e, text, color, size = 13) => run.floats.push({ x: e.x + (e.reach ? 52 : 0) + (Math.random() * 16 - 8), y: e.reach ? 168 + Math.random() * 14 : 150 - (e.boss ? 40 : 0), text, color, size, t: 1 });
+    c.efloat = (e, text, color, size = 13) => {
+      // Bei Bossen unter Dauerbeschuss nicht unendlich viele Zahlen übereinander stapeln
+      run.floats.push({ x: e.x + (e.reach ? 52 : 0) + (Math.random() * (e.boss ? 50 : 16) - (e.boss ? 25 : 8)), y: e.reach ? 168 + Math.random() * 14 : 150 - (e.boss ? 40 + Math.random() * 30 : 0), text, color, size, t: 1, dmg: /^[\d.,×\s]+(Tsd\.|Mio\.|Mrd\.|Bio\.)?/.test(text) && !/^\+/.test(text) });
+    };
     c.burst = (x, y, color, n = 8) => { for (let i = 0; i < n; i++) run.parts.push({ x, y, vx: (Math.random() - 0.5) * 160, vy: -Math.random() * 140 - 20, t: 0.6, c: color }); };
     c.arrow = (k, e, d, kind) => run.arrows.push({ x: (run.pos[k] || 60) + 8, y: 168, tx: e.x, ty: 188 - (e.boss ? 30 : 0), t: 0, d, kind: kind || k });
     c.hit = (k, e, mult, color, wolf, opt) => {
@@ -1882,7 +1977,7 @@
       if (T.vuln && k === 's') { e.mark = Math.max(e.mark || 0, T.vuln); e.markT = 4; }
       if (T.lifesteal) { const h = run.h[k]; if (h && h.alive) h.hp = Math.min(T.hp, h.hp + dmg * T.lifesteal); }
       if (wolf && T.wolfHeal) c.healAllAbs(dmg * T.wolfHeal);
-      c.efloat(e, nCrit > 1 ? `${nCrit}× ${fmt(dmg)}` : fmt(dmg), nCrit > 1 ? '#ff9a3d' : crit ? '#ffd23f' : color || '#ffffff', nCrit > 1 ? 20 : crit ? 18 : 13);
+      if (!(e.boss && run.floats.reduce((n, f) => n + (f.dmg && f.t > 0.6 ? 1 : 0), 0) >= 3)) c.efloat(e, nCrit > 1 ? `${nCrit}× ${fmt(dmg)}` : fmt(dmg), nCrit > 1 ? '#ff9a3d' : crit ? '#ffd23f' : color || '#ffffff', nCrit > 1 ? 20 : crit ? 18 : 13);
       if (crit) c.burst(e.x, 190, '#ffd23f', 5);
       sfx(crit ? 'crit' : 'hit', k);
       return dmg;
@@ -2082,6 +2177,7 @@
       }
     }
     if (run.mode === 'ahnen') ahnStep(S, st, run, c, dt);
+    if (run.mode === 'wboss') { wbBars(run, c); if (run.time >= WB.maxT) { run.victory = true; run.dead = true; return 'dead'; } }
     // Besiegte Gegner
     const g = st.g;
     for (const e of run.enemies) {
@@ -2105,7 +2201,7 @@
       if (e.boss) souls = roundSouls((1 + Math.floor(run.stage / 20)) * g.soulMul) + st.soulBonus;
       else if (e.elite) { const n = procs(g.eliteSoul); if (n) souls = n * Math.max(1, roundSouls(altarMul(S))); }
       if (run.mode === 'tower') souls = e.boss ? 1 : 0;
-      if (run.mode === 'weekly' || run.mode === 'exp' || run.mode === 'ahnen') souls = 0;
+      if (run.mode === 'weekly' || run.mode === 'exp' || run.mode === 'ahnen' || run.mode === 'wboss') souls = 0;
       if (souls) { sfx('soul'); S.tot.souls += souls; S.souls += souls; run.souls += souls; run.floats.push({ x: e.x, y: 95, text: `+${souls} Seele${souls > 1 ? 'n' : ''}`, color: '#c9a6ff', size: 16, t: 1 }); }
       if (feature(S, 'runen') && run.mode === 'normal' && (e.boss || (e.elite && Math.random() < 0.03))) {
         const tier = e.boss ? bossRuneTier(run.stage) : Math.min(10, 1 + Math.floor(run.stage / 40));
@@ -2245,7 +2341,7 @@
     return (n < 10 ? n.toFixed(2) : n < 100 ? n.toFixed(1) : Math.floor(n).toString()).replace('.', ',') + units[i];
   }
 
-  const core = { AHN_MISSIONS, AHN_ABIL, AHN_TRAIT, AHNE, AHN_TUNE, AHN_COUNT, ahnOpen, ahnBossesOf, ahnLevelFor, placeSigil, ahnClaim, unrebirth, transmute, bossRuneTier, resetPerks, buyLager, lagerCost, LAGER_MAX, runeCap, shardOf, mergeCost, ALTAR_MAX, altarCost, altarMul, buyAltar, kSlots, kFree, keyCap, addSock, removeSock, removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, buyPiece, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
+  const core = { TRIPS, TRIP_SHARE, onTrip, tripLeft, rateOf, noteRate, hoursReward, tripReward, startTrip, claimTrip, WB, wbScore, wbBarReward, wbBarSecs, wbGoalHours, wbReward, AHN_MISSIONS, AHN_ABIL, AHN_TRAIT, AHNE, AHN_TUNE, AHN_COUNT, ahnOpen, ahnBossesOf, ahnLevelFor, placeSigil, ahnClaim, unrebirth, transmute, bossRuneTier, resetPerks, buyLager, lagerCost, LAGER_MAX, runeCap, shardOf, mergeCost, ALTAR_MAX, altarCost, altarMul, buyAltar, kSlots, kFree, keyCap, addSock, removeSock, removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, buyPiece, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
     SEASON, rankOf, RANKS, rankBonus, AREAS, areaOf, MISSIONS, extraSocks, XSOCK, sockOk, runeAmp, mastInfo, mastLevel, SKINS, WF_STAGE, WF, wfSpawn,
     sigOn, sigKeysUsed, keyNeed, eqOf, slotLim, SIG, SIG_FLAGS, newRun, step, stats, buy, available, blockReason, NODE, migrate, fresh,
     rebirth, ascend, crownsFor, buyCperk, cperkCost, cperk, CPERKS, levelComp, toggleComp, compCost, compMax, compSlots, COMPS, checkAch, ACH, claimWeekly, weekId, dayId, weekRules, RULE, WEEK_TIERS, statsFor, starsFor, toggleEquip, slotsOf, hired, classOpen, keysUsed, keyLimit, capOf, reqOf, feature, encode, decode, fmt, socket, unsocket, merge, canMerge, dismantle, buyRune, runeVal, addRune };

@@ -14,6 +14,33 @@
   const artTeam = (ks, x0, t, walk, gap = 30) => ks.forEach((k, i) => DRAW[k](x0 - i * gap, null, t, walk));
   const artScene = (env, sc, t) => { env.back(t, sc); env.props(t, sc); };
   const ART_SCENES = {
+    reise1(t) { if (!drawBg('finster', 300, t)) artScene(ENV[1], 300, t); artTeam(['s', 'r'], 260, t, true, 34);
+      ctx.fillStyle = '#5a3d25'; ctx.fillRect(372, GROUND - 74, 6, 74);
+      [['NORDEN', -0.08, -70], ['BERGE', 0.1, -50]].forEach(([tx, rot, y], i) => { ctx.save(); ctx.translate(375, GROUND + y); ctx.rotate(rot); ctx.fillStyle = '#c9a874'; ctx.beginPath(); ctx.moveTo(-8, -9); ctx.lineTo(48, -9); ctx.lineTo(58, 0); ctx.lineTo(48, 9); ctx.lineTo(-8, 9); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#3a2410'; ctx.font = '8px "Bungee","Arial Black",sans-serif'; ctx.textAlign = 'center'; ctx.fillText(tx, 24, 3); ctx.restore(); }); },
+    reise2(t) {
+      ctx.fillStyle = '#2a1d14'; ctx.fillRect(0, 0, W, H);
+      ctx.save(); ctx.translate(W / 2, H / 2); ctx.rotate(-0.03);
+      ctx.fillStyle = '#e8d4a8'; ctx.fillRect(-190, -110, 380, 220); ctx.strokeStyle = '#8a6a40'; ctx.lineWidth = 3; ctx.strokeRect(-190, -110, 380, 220);
+      ctx.fillStyle = 'rgba(120,160,90,.35)'; ctx.beginPath(); ctx.ellipse(-90, -30, 70, 40, 0.3, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(90,120,170,.35)'; ctx.beginPath(); ctx.ellipse(90, 40, 60, 30, -0.2, 0, 7); ctx.fill();
+      ctx.fillStyle = '#7a5a3a'; for (const [x, y] of [[40, -60], [60, -70], [80, -58]]) { ctx.beginPath(); ctx.moveTo(x - 12, y + 10); ctx.lineTo(x, y - 12); ctx.lineTo(x + 12, y + 10); ctx.fill(); }
+      ctx.strokeStyle = '#b3261e'; ctx.lineWidth = 3; ctx.setLineDash([7, 6]); ctx.beginPath(); ctx.moveTo(-150, 70); ctx.bezierCurveTo(-80, 10, -20, 90, 30, 20); ctx.bezierCurveTo(70, -30, 110, 10, 140, -50); ctx.stroke(); ctx.setLineDash([]);
+      ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(130, -60); ctx.lineTo(150, -40); ctx.moveTo(150, -60); ctx.lineTo(130, -40); ctx.stroke();
+      ctx.fillStyle = '#3a2410'; ctx.beginPath(); ctx.arc(-150, 70, 6, 0, 7); ctx.fill();
+      ctx.translate(-140, -70); ctx.strokeStyle = '#5a3a1a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 18, 0, 7); ctx.stroke(); ctx.fillStyle = '#b3261e'; ctx.beginPath(); ctx.moveTo(0, -16); ctx.lineTo(5, 0); ctx.lineTo(-5, 0); ctx.fill(); ctx.fillStyle = '#5a3a1a'; ctx.beginPath(); ctx.moveTo(0, 16); ctx.lineTo(5, 0); ctx.lineTo(-5, 0); ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = '#ffd27a'; ctx.font = '13px "Bungee","Arial Black",sans-serif'; ctx.textAlign = 'center'; ctx.fillText('1 h · 3 h · 9 h', W / 2, H - 12);
+    },
+    wboss1(t) { if (!drawBg('hort', 200, t)) artScene(ENV[13], 200, t);
+      const e = makeEnemy(100, 0, true, false, null); e.x = 330; e.bk = 13; e.type = ENEMY_KINDS[13];
+      ctx.save(); ctx.translate(330, GROUND); ctx.scale(1.5, 1.5); ctx.translate(-330, -GROUND); enemy(e, t); ctx.restore();
+      artTeam(['w', 'r', 'm'], 190, t, false, 34); },
+    wboss2(t) {
+      const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#2a0a12'); g.addColorStop(1, '#5a1420'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#1a0508'; ctx.fillRect(40, 40, W - 80, 30); ctx.fillStyle = '#e5484d'; ctx.fillRect(44, 44, (W - 88) * 0.62, 22); ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.fillRect(44, 44, (W - 88) * 0.62, 7);
+      ctx.fillStyle = '#ffe2a8'; ctx.font = '14px "Bungee","Arial Black",sans-serif'; ctx.textAlign = 'center'; ctx.fillText('GEMEINSAM', W / 2, 62);
+      const ids = ['r', 'w', 's', 'm', 'p', 't', 'a', 'n']; for (let row = 0; row < 2; row++) { ctx.save(); ctx.translate(0, row * -46); ctx.globalAlpha = row ? 0.55 : 1; artTeam(ids, W - 40 - row * 15, t, false, 52); ctx.restore(); }
+    },
     feld1(t) { const env = ENV_CAMP, fx = 250; artScene(env, 0, t);
       lightPool(fx, GROUND - 14, 150, '255,150,60', 0.32); lightPool(fx, GROUND - 8, 60, '255,200,120', 0.25);
       ctx.beginPath(); ctx.moveTo(350, GROUND); ctx.lineTo(400, GROUND - 70); ctx.lineTo(450, GROUND); fillO('#7a6046');
@@ -125,6 +152,10 @@
       { title: 'Ahnenprüfung', art: ['ahnen1', 'ahnen2'], icon: '✦', col: '#ffd27a', rot: 2, desc: '10 Missionen voller Bosse mit je 3 Phasen. Am Ende wartet der Urahn mit einem Ahnensiegel.',
         info: aOpen ? [`Nächste Mission: <b>${S.ahn.m + 1}/10 · ${esc(AHN_MISSIONS[S.ahn.m].name)}</b>`, `Freie Siegel: <b>${S.ahn.sig}</b> · erhalten: ${S.ahn.got}`] : [],
         lock: aOpen ? '' : 'Ab der 6. Wiedergeburt', acts: `<button class="btn" data-m="go" data-go="ahn">Mission ${S.ahn.m + 1} starten</button><button class="btn ghost small" data-m="go" data-go="ahnmap">Zur Karte</button>` },
+      { title: 'Heldenreisen', art: ['reise1', 'reise2'], icon: '🧳', col: '#d9935a', rot: 1, desc: 'Schick Helden für 1, 3 oder 9 Stunden auf Reise. Solange fehlen sie in der Truppe, dafür bringen sie Gold, Seelen und Splitter mit.',
+        info: [`Unterwegs: <b>${HEROES.filter(h => onTrip(S, h.id)).length}</b>${tripsReady().length ? ` · <b style="color:#9be36b">${tripsReady().length} zurück!</b>` : ''}`], acts: '<button class="btn" data-m="go" data-go="trips">Reisen planen</button>' },
+      { title: 'Wochenboss', art: ['wboss1', 'wboss2'], icon: '🐲', col: '#e5484d', rot: -1, desc: 'Alle gegen denselben Boss mit unendlich vielen Lebensleisten. Jede Leiste macht ihn stärker und bringt dir Beute. Mit deiner Gilde schaltet ihr Wochenziele frei.',
+        info: wbInfoLines(), lock: acct && acct.token ? '' : 'Nur mit Konto', acts: '<button class="btn" data-m="go" data-go="wboss">Zum Wochenboss</button>' },
       { title: 'Expedition', art: ['exp1', 'exp2'], icon: '🧭', col: '#9bd14a', rot: -1.5, desc: 'Kurze Aufträge für Heldensplitter. Mit etwas Glück findest du Puzzleteile für neue Helden.',
         info: eOpen ? [`Heldensplitter: <b>${S.exp.spl}</b>`, `Puzzle-Helden fertig: <b>${PUZZLE.filter(id => assembled(S, id)).length}/${PUZZLE.length}</b>`] : [],
         lock: eOpen ? '' : 'Ab dem 1. Aufstieg', acts: '<button class="btn" data-m="go" data-go="exp">Aufträge ansehen</button>' },
@@ -147,6 +178,8 @@
     else if (go === 'exp' && run && run.mission && MISSION[run.mission]) { S.exp.mission = run.mission; startRun('exp'); }
     else if (go === 'exp') toTab('exp');
     else if (go === 'sigil') toTab('ahnen');
+    else if (go === 'trips') showTrips();
+    else if (go === 'wboss') showWboss();
     else if (go.startsWith('hero:')) toTab(go.slice(5));
     if (['normal', 'weekly', 'tower', 'ahn'].includes(go) || (go === 'exp' && run && !run.dead)) $('#soloCanvas').scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
@@ -961,7 +994,7 @@
     },
   });
   function bossDraw(e, t, col) {
-    const hit = e.hitT > 0, ph = t + e.bob;
+    const hit = e.hitT > 0 && t - (e._flT || -9) < 0.07, ph = t + e.bob;
     if (BOSS_ART[e.bk]) return BOSS_ART[e.bk](e, t, col, hit, ph);
     if (e.type === 'schleim') {
       const sq = Math.sin(ph * 3) * 3;
@@ -1092,7 +1125,8 @@
     ctx.save(); ctx.translate(e.x, GROUND); ctx.scale(s, s);
     if (e.elite) { ctx.save(); ctx.scale(1, 0.25); ctx.strokeStyle = `rgba(215,181,255,${0.5 + 0.3 * Math.sin(t * 4 + e.bob)})`; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.arc(0, 0, 22, 0, 7); ctx.stroke(); ctx.restore(); }
     if (e.elite) { const gl = ctx.createRadialGradient(0, -20, 4, 0, -20, 34); gl.addColorStop(0, 'rgba(201,166,255,.45)'); gl.addColorStop(1, 'rgba(201,166,255,0)'); ctx.fillStyle = gl; ctx.fillRect(-34, -54, 68, 60); }
-    const flash = e.hitT > 0, col = c => (flash ? '#ffffff' : c);
+    if (e.hitT > 0 && t - (e._flT || -9) > 0.3) e._flT = t; // höchstens alle 0,3 s kurz aufblitzen, sonst bleibt ein Gegner bei Dauerbeschuss weiß
+    const flash = e.hitT > 0 && t - e._flT < 0.07, col = c => (flash ? '#ffffff' : c);
     const mv = e._px != null && Math.abs(e._px - e.x) > 0.05; e._px = e.x;
     const atk = run && e.atkAt != null ? Math.max(0, 1 - (run.time - e.atkAt) / 0.32) : 0;
     if (e.ahn) ahnBoss(e, t, col);
@@ -2005,6 +2039,7 @@
   function bgKey(R, stage, tower) {
     if (!R) return 'lager';
     if (tower) return 'turm';
+    if (R.mode === 'wboss') return ZONE_BG[R.wb.bk % ZONE_BG.length];
     if (R.mode === 'ahnen') { const M = AHN_MISSIONS[R.ahn.mi]; return M && M.env === 'ahnen' ? 'ahnen' : M ? ZONE_BG[M.env % ZONE_BG.length] : null; }
     if (areaOf(R)) { const a = 'x_' + MISSION[R.mission].area; return BG_META[a] ? a : null; }
     return nightmare(stage) ? 'albtraum' : ZONE_BG[zoneOf(stage) % ZONE_BG.length];
@@ -3512,7 +3547,66 @@
   }
   function sparkle(x, y, s, a) { ctx.fillStyle = `rgba(255,255,255,${a})`; ctx.beginPath(); ctx.moveTo(x, y - s); ctx.lineTo(x + s * 0.25, y); ctx.lineTo(x, y + s); ctx.lineTo(x - s * 0.25, y); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.moveTo(x - s, y); ctx.lineTo(x, y + s * 0.25); ctx.lineTo(x + s, y); ctx.lineTo(x, y - s * 0.25); ctx.closePath(); ctx.fill(); }
 
+  // ---------- Figuren aus Bildteilen (Version 6) ----------
+  // Eine Figur besteht aus einzelnen gemalten Teilen in einem Bild-Atlas (bilder/held_*.webp).
+  // Jedes Teil: r = Ausschnitt im Atlas, p = Drehpunkt, at = Platz am Körper, rot = Grunddrehung,
+  // on = hängt an der Hand dieses Arms (Waffe, Schild). Koordinaten in Pixeln der Originalzeichnung, Boden = 0.
+  // s = Größe im Spiel (Spiel-Einheiten pro Original-Pixel), k = Verkleinerung des Atlas. Fehlt das Bild, kommt die alte Figur.
+  const RIGS = {
+    r: { img: 'held_ritter', v: 1, s: 0.072, k: 0.4, up: ['torso', 'helm', 'armF', 'armB', 'cape'],
+      order: ['cape', 'armB', 'shield', 'legB', 'legF', 'torso', 'helm', 'sword', 'armF'],
+      parts: {
+        cape: { r: [128, 0, 204, 206], p: [320, 25], at: [-70, -775], rot: 0 },
+        armB: { r: [458, 0, 56, 168], p: [63, 57], at: [-150, -700], rot: 0, hand: [53, 367] },
+        shield: { r: [222, 216, 88, 148], p: [109, 186], at: [0, 0], rot: 0, on: 'armB' },
+        legB: { r: [390, 0, 66, 173], p: [78, 38], at: [-70, -390], rot: 0.08 },
+        legF: { r: [586, 0, 86, 164], p: [65, 30], at: [55, -370], rot: -0.05 },
+        torso: { r: [0, 0, 126, 214], p: [222, 265], at: [0, -560], rot: 0 },
+        helm: { r: [0, 216, 220, 158], p: [395, 345], at: [-40, -790], rot: 0 },
+        sword: { r: [334, 0, 54, 184], p: [67, 69], at: [0, 0], rot: -0.95, on: 'armF' },
+        armF: { r: [516, 0, 68, 166], p: [93, 62], at: [78, -698], rot: -0.12, hand: [108, 367] },
+      } },
+  };
+  const rigImg = {};
+  function rigReady(id) {
+    const R = RIGS[id]; if (!R) return false;
+    let im = rigImg[id];
+    if (!im) { im = rigImg[id] = new Image(); im.onerror = () => { im.bad = true; }; im.src = `/bilder/${R.img}.webp?v=${R.v}`; }
+    return !im.bad && im.complete && im.naturalWidth > 0;
+  }
+  // pose: zusätzliche Drehung pro Teil (pose.armF …), Verschiebung (pose.helmX/helmY …), pose.up hebt den Oberkörper
+  function drawRig(id, pose) {
+    const R = RIGS[id], im = rigImg[id], P = R.parts, up = pose.up || 0;
+    const pos = k => { const q = P[k]; return [q.at[0] + (pose[k + 'X'] || 0), q.at[1] + (pose[k + 'Y'] || 0) + (R.up.includes(k) ? up : 0)]; };
+    const rot = k => P[k].rot + (pose[k] || 0);
+    ctx.save(); ctx.scale(R.s, R.s);
+    for (const k of R.order) {
+      const q = P[k]; let [ax, ay] = pos(k);
+      if (q.on) { const par = P[q.on], pa = rot(q.on), [bx, by] = pos(q.on), dx = par.hand[0] - par.p[0], dy = par.hand[1] - par.p[1];
+        ax = bx + dx * Math.cos(pa) - dy * Math.sin(pa); ay = by + dx * Math.sin(pa) + dy * Math.cos(pa); }
+      const [sx, sy, sw, sh] = q.r;
+      ctx.save(); ctx.translate(ax, ay); ctx.rotate(rot(k)); ctx.drawImage(im, sx, sy, sw, sh, -q.p[0], -q.p[1], sw / R.k, sh / R.k); ctx.restore();
+    }
+    ctx.restore();
+  }
+  const easeOut = x => 1 - (1 - Math.max(0, Math.min(1, x))) ** 3;
+  function knightRig(x, h, t, walk) {
+    const { step } = begin(x, h, t, walk, 12, 16), sw = h ? h.swing : 0, spin = run && run.fx && run.fx.wirbel > 0, br = Math.sin(t * 1.7);
+    const pose = { up: br * 7 - (walk ? Math.abs(step) * 10 : 0), helm: br * 0.03, cape: Math.sin(t * 2.3) * 0.06 + (walk ? 0.1 : 0),
+      legF: walk ? step * 0.5 : 0, legB: walk ? -step * 0.5 : 0, armB: walk ? -step * 0.16 : br * 0.03, armF: walk ? step * 0.14 : -br * 0.03, sword: 0 };
+    // Schlag: Arm springt hoch, saust nach vorne unten und geht langsam zurück
+    if (sw > 0) { const p = 1 - sw;
+      pose.armF = p < 0.35 ? -2.5 + 2.2 * easeOut(p / 0.35) : -0.3 + 0.3 * easeOut((p - 0.35) / 0.65);
+      pose.sword = p < 0.35 ? -0.5 + 0.7 * easeOut(p / 0.35) : 0.2 * (1 - easeOut((p - 0.35) / 0.65));
+      pose.torsoX = pose.helmX = pose.armFX = 18 * Math.sin(Math.min(1, p / 0.35) * Math.PI); }
+    if (spin) { pose.armF = -1.45; pose.sword = t * 30; }
+    drawRig('r', pose);
+    if (sw > 0.3 && !spin) { ctx.strokeStyle = `rgba(255,236,170,${sw * 0.55})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(6, -46, 44, -1.1, 0.7); ctx.stroke(); ctx.strokeStyle = `rgba(255,255,255,${sw * 0.5})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(6, -46, 41, -1, 0.6); ctx.stroke(); }
+    if (S.asc > 0 && !(cine && cine.kind === 'asc')) crownIcon(-2, -86, 0.62, 0);
+    ctx.restore();
+  }
   function knight(x, h, t, walk) {
+    if (rigReady('r')) { knightRig(x, h, t, walk); return; }
     const { step } = begin(x, h, t, walk, 12, 16), sw = h ? h.swing : 0;
     cape(t, -50, '#d0384a', '#7a1a24', 46, 22);
     legs(step, '#e9edf3', '#8e96a3', '#4a4e5a');
@@ -3957,10 +4051,10 @@
     const tower = R && R.mode === 'tower';
     const stage = R ? (tower ? 15 + R.stage * 2 : R.stage) : 1;
     const bm = biomeOf(stage), scroll = R ? R.scroll : 0, night = !R;
-    const env = R && R.mode === 'ahnen' ? ahnEnv(R) : R && areaOf(R) ? AREA_ENV[MISSION[R.mission].area] : envOf(stage, night ? 'camp' : tower ? 'tower' : 'run');
+    const env = R && R.mode === 'wboss' ? ENV[R.wb.bk % ENV.length] : R && R.mode === 'ahnen' ? ahnEnv(R) : R && areaOf(R) ? AREA_ENV[MISSION[R.mission].area] : envOf(stage, night ? 'camp' : tower ? 'tower' : 'run');
     const bgk = bgKey(R, stage, tower), painted = !!bgk && drawBg(bgk, scroll, t, night ? 250 : null);
     if (!painted) { env.back(t, scroll); env.props(t, scroll); }
-    if (R && !tower && R.mode !== 'ahnen' && nightmare(stage)) {
+    if (R && !tower && R.mode !== 'ahnen' && R.mode !== 'wboss' && nightmare(stage)) {
       if (painted) { ctx.fillStyle = 'rgba(90,0,30,.18)'; ctx.fillRect(0, 0, W, H); }
       else { ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = 'rgba(170,40,60,.7)'; ctx.fillRect(0, 0, W, H); ctx.restore(); ctx.fillStyle = 'rgba(90,0,20,.22)'; ctx.fillRect(0, 0, W, H); }
     }
@@ -4062,13 +4156,14 @@
       ctx.fillStyle = hg; ctx.fillRect(0, 0, W, 40);
       if (R.mode === 'ahnen') ahnHud(R, t); else {
       ctx.font = '15px "Bungee","Arial Black",sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = '#fff';
-      ctx.fillText(tower ? `Turm · Etage ${R.stage}` : `Stufe ${R.stage}`, 12, 22);
+      ctx.fillText(tower ? `Turm · Etage ${R.stage}` : R.mode === 'wboss' ? 'Wochenboss' : `Stufe ${R.stage}`, 12, 22);
       ctx.font = '12px "Figtree",sans-serif';
-      const bossNow = R.mode === 'exp' ? R.enemies.some(e => e.boss) : tower || (R.rules && R.rules.includes('boss')) ? R.stage % 5 === 0 : R.stage % 10 === 0;
+      const bossNow = R.mode === 'exp' || R.mode === 'wboss' ? R.enemies.some(e => e.boss) : tower || (R.rules && R.rules.includes('boss')) ? R.stage % 5 === 0 : R.stage % 10 === 0;
       ctx.fillStyle = bossNow ? '#c9a6ff' : 'rgba(255,255,255,.8)';
       ctx.fillText(R.wf || R.wfKilled ? 'Der Weltenfresser' : bossNow ? `Boss: ${bossNameOf(R, stage)}` : tower ? `Rekord ${S.towerBest}` : areaOf(R) ? areaOf(R).name : `${zoneName(R.stage)} · Grenze ${st.cap === Infinity ? '∞' : st.cap}`, tower ? 170 : 106, 21);
       ctx.textAlign = 'right'; ctx.fillStyle = '#ffcf4a'; if (R.mode === 'normal') ctx.fillText(`+${fmt(R.gold)} Gold`, W - 12, 21);
       if (R.mode === 'weekly') { ctx.fillStyle = '#ffd23f'; ctx.fillText('Tages-Herausforderung', W - 12, 21); }
+      if (R.mode === 'wboss') { ctx.fillStyle = '#ffb4b4'; ctx.fillText(`Leiste ${wbScore(R) + 1} · ${wbScore(R)} geschafft`, W - 12, 21); }
       if (R.mode === 'exp') { const ms = MISSION[R.mission]; ctx.fillStyle = '#c8f08a'; ctx.fillText(`${ms.name}: ${ms.bosses ? `Bosse ${R.bossKills}/${ms.bosses}` : `Welle ${R.waves}/${ms.waves}`}`, W - 12, 21); }
       }
       if (R.bannerT > 0) {
