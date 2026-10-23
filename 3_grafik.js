@@ -3547,66 +3547,7 @@
   }
   function sparkle(x, y, s, a) { ctx.fillStyle = `rgba(255,255,255,${a})`; ctx.beginPath(); ctx.moveTo(x, y - s); ctx.lineTo(x + s * 0.25, y); ctx.lineTo(x, y + s); ctx.lineTo(x - s * 0.25, y); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.moveTo(x - s, y); ctx.lineTo(x, y + s * 0.25); ctx.lineTo(x + s, y); ctx.lineTo(x, y - s * 0.25); ctx.closePath(); ctx.fill(); }
 
-  // ---------- Figuren aus Bildteilen (Version 6) ----------
-  // Eine Figur besteht aus einzelnen gemalten Teilen in einem Bild-Atlas (bilder/held_*.webp).
-  // Jedes Teil: r = Ausschnitt im Atlas, p = Drehpunkt, at = Platz am Körper, rot = Grunddrehung,
-  // on = hängt an der Hand dieses Arms (Waffe, Schild). Koordinaten in Pixeln der Originalzeichnung, Boden = 0.
-  // s = Größe im Spiel (Spiel-Einheiten pro Original-Pixel), k = Verkleinerung des Atlas. Fehlt das Bild, kommt die alte Figur.
-  const RIGS = {
-    r: { img: 'held_ritter', v: 1, s: 0.072, k: 0.4, up: ['torso', 'helm', 'armF', 'armB', 'cape'],
-      order: ['cape', 'armB', 'shield', 'legB', 'legF', 'torso', 'helm', 'sword', 'armF'],
-      parts: {
-        cape: { r: [128, 0, 204, 206], p: [320, 25], at: [-70, -775], rot: 0 },
-        armB: { r: [458, 0, 56, 168], p: [63, 57], at: [-150, -700], rot: 0, hand: [53, 367] },
-        shield: { r: [222, 216, 88, 148], p: [109, 186], at: [0, 0], rot: 0, on: 'armB' },
-        legB: { r: [390, 0, 66, 173], p: [78, 38], at: [-70, -390], rot: 0.08 },
-        legF: { r: [586, 0, 86, 164], p: [65, 30], at: [55, -370], rot: -0.05 },
-        torso: { r: [0, 0, 126, 214], p: [222, 265], at: [0, -560], rot: 0 },
-        helm: { r: [0, 216, 220, 158], p: [395, 345], at: [-40, -790], rot: 0 },
-        sword: { r: [334, 0, 54, 184], p: [67, 69], at: [0, 0], rot: -0.95, on: 'armF' },
-        armF: { r: [516, 0, 68, 166], p: [93, 62], at: [78, -698], rot: -0.12, hand: [108, 367] },
-      } },
-  };
-  const rigImg = {};
-  function rigReady(id) {
-    const R = RIGS[id]; if (!R) return false;
-    let im = rigImg[id];
-    if (!im) { im = rigImg[id] = new Image(); im.onerror = () => { im.bad = true; }; im.src = `/bilder/${R.img}.webp?v=${R.v}`; }
-    return !im.bad && im.complete && im.naturalWidth > 0;
-  }
-  // pose: zusätzliche Drehung pro Teil (pose.armF …), Verschiebung (pose.helmX/helmY …), pose.up hebt den Oberkörper
-  function drawRig(id, pose) {
-    const R = RIGS[id], im = rigImg[id], P = R.parts, up = pose.up || 0;
-    const pos = k => { const q = P[k]; return [q.at[0] + (pose[k + 'X'] || 0), q.at[1] + (pose[k + 'Y'] || 0) + (R.up.includes(k) ? up : 0)]; };
-    const rot = k => P[k].rot + (pose[k] || 0);
-    ctx.save(); ctx.scale(R.s, R.s);
-    for (const k of R.order) {
-      const q = P[k]; let [ax, ay] = pos(k);
-      if (q.on) { const par = P[q.on], pa = rot(q.on), [bx, by] = pos(q.on), dx = par.hand[0] - par.p[0], dy = par.hand[1] - par.p[1];
-        ax = bx + dx * Math.cos(pa) - dy * Math.sin(pa); ay = by + dx * Math.sin(pa) + dy * Math.cos(pa); }
-      const [sx, sy, sw, sh] = q.r;
-      ctx.save(); ctx.translate(ax, ay); ctx.rotate(rot(k)); ctx.drawImage(im, sx, sy, sw, sh, -q.p[0], -q.p[1], sw / R.k, sh / R.k); ctx.restore();
-    }
-    ctx.restore();
-  }
-  const easeOut = x => 1 - (1 - Math.max(0, Math.min(1, x))) ** 3;
-  function knightRig(x, h, t, walk) {
-    const { step } = begin(x, h, t, walk, 12, 16), sw = h ? h.swing : 0, spin = run && run.fx && run.fx.wirbel > 0, br = Math.sin(t * 1.7);
-    const pose = { up: br * 7 - (walk ? Math.abs(step) * 10 : 0), helm: br * 0.03, cape: Math.sin(t * 2.3) * 0.06 + (walk ? 0.1 : 0),
-      legF: walk ? step * 0.5 : 0, legB: walk ? -step * 0.5 : 0, armB: walk ? -step * 0.16 : br * 0.03, armF: walk ? step * 0.14 : -br * 0.03, sword: 0 };
-    // Schlag: Arm springt hoch, saust nach vorne unten und geht langsam zurück
-    if (sw > 0) { const p = 1 - sw;
-      pose.armF = p < 0.35 ? -2.5 + 2.2 * easeOut(p / 0.35) : -0.3 + 0.3 * easeOut((p - 0.35) / 0.65);
-      pose.sword = p < 0.35 ? -0.5 + 0.7 * easeOut(p / 0.35) : 0.2 * (1 - easeOut((p - 0.35) / 0.65));
-      pose.torsoX = pose.helmX = pose.armFX = 18 * Math.sin(Math.min(1, p / 0.35) * Math.PI); }
-    if (spin) { pose.armF = -1.45; pose.sword = t * 30; }
-    drawRig('r', pose);
-    if (sw > 0.3 && !spin) { ctx.strokeStyle = `rgba(255,236,170,${sw * 0.55})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(6, -46, 44, -1.1, 0.7); ctx.stroke(); ctx.strokeStyle = `rgba(255,255,255,${sw * 0.5})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(6, -46, 41, -1, 0.6); ctx.stroke(); }
-    if (S.asc > 0 && !(cine && cine.kind === 'asc')) crownIcon(-2, -86, 0.62, 0);
-    ctx.restore();
-  }
   function knight(x, h, t, walk) {
-    if (rigReady('r')) { knightRig(x, h, t, walk); return; }
     const { step } = begin(x, h, t, walk, 12, 16), sw = h ? h.swing : 0;
     cape(t, -50, '#d0384a', '#7a1a24', 46, 22);
     legs(step, '#e9edf3', '#8e96a3', '#4a4e5a');
