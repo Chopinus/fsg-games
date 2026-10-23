@@ -1107,3 +1107,60 @@ input{font:inherit;font-size:18px;color:var(--fg);background:var(--bg);border:1p
 .rl-pguild{text-align:center;margin:2px 0 6px}
 .rl-wbrow .rl-on{margin-right:2px}
 @media (max-width:430px){.rl-topr{gap:4px}.rl-topr .rl-newsbtn{padding-left:7px!important;padding-right:7px!important;min-width:0}#soloSpeed{padding-left:7px!important;padding-right:7px!important;font-size:12px}#soloBack{padding-left:8px!important;padding-right:8px!important}}
+/* Alle Werte eines Helden */
+.rl-hhead{position:relative}
+.rl-hsbtn{position:absolute;top:10px;right:10px;padding:5px 10px!important;font-size:12px}
+.rl-hhead > div{padding-right:84px}
+.rl-hstatm{max-width:560px}
+.rl-hshead{display:flex;gap:12px;align-items:center;margin-bottom:6px}
+.rl-hshead .pt{flex:none;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-size:24px;background:color-mix(in srgb,var(--hc) 25%,var(--bg));border:2px solid var(--hc)}
+.rl-hshead h2{margin:0;color:var(--hc)}
+.rl-hsgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px}
+.rl-hsrow{display:flex;justify-content:space-between;gap:8px;padding:5px 9px;border-radius:8px;background:rgba(255,255,255,.04);font-size:12.5px}
+.rl-hsrow span{opacity:.8}
+.rl-hsrow b{text-align:right;white-space:nowrap}
+.rl-hsact{margin:6px 0;padding:9px 10px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:4px}
+.rl-hsact.on{border-color:color-mix(in srgb,var(--hc) 60%,transparent);background:color-mix(in srgb,var(--hc) 9%,transparent)}
+.rl-hsact .hd{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.rl-hsact .hd .ic{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--hc) 30%,transparent);font-size:12px}
+.rl-hsact .hd small{opacity:.7}
+.rl-hsact .hd em{font-style:normal;font-size:11px;padding:1px 7px;border-radius:6px;background:color-mix(in srgb,var(--hc) 30%,transparent)}
+.rl-hsact .hd em.sig{background:rgba(255,210,122,.2);color:#ffd27a}
+.rl-hsact .note{margin:2px 0 0;font-size:11.5px}
+.rl-hspasl{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.rl-hspas{padding:6px 9px;border-radius:9px;background:rgba(255,255,255,.035);font-size:12px}
+.rl-hspas small{margin-left:6px;opacity:.65}
+.rl-hspas .note{margin:2px 0 0;font-size:11px}
+@media (max-width:480px){.rl-hsgrid,.rl-hspasl{grid-template-columns:1fr}.rl-hsbtn .lbl{display:none}}
+/* Ahnenprüfung: Schildwall, Segen */
+.rl-wallbtn{min-width:150px;transition:transform .1s}
+.rl-wallbtn.ready{background:linear-gradient(180deg,#ffe08a,#e0a83a);color:#2a1608;border-color:transparent}
+.rl-wallbtn.warn{animation:rlWallPulse .45s ease-in-out infinite alternate;box-shadow:0 0 0 3px rgba(255,90,74,.6),0 0 18px rgba(255,90,74,.55)}
+.rl-wallbtn.up{background:rgba(159,232,255,.2);border-color:#9fe8ff;color:#dff7ff}
+.rl-wallbtn:disabled{opacity:.6}
+@keyframes rlWallPulse{from{transform:scale(1)}to{transform:scale(1.07)}}
+.ahn-how{display:flex;flex-direction:column;gap:4px;margin:10px 0;padding:10px 12px;border-radius:12px;background:rgba(255,210,122,.07);border:1px solid rgba(255,210,122,.2);font-size:12.5px;line-height:1.45}
+.ahn-how>b{color:#ffd27a}
+.ahn-boons{margin:8px 0}
+.ahn-blist{display:flex;flex-wrap:wrap;gap:5px}
+.ahn-boon{display:inline-flex;flex-direction:column;padding:5px 9px;border-radius:9px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:12px;max-width:220px}
+.ahn-boon small{opacity:.7;font-size:11px}
+.ahn-boon.k-hero{border-color:rgba(255,180,90,.4)}
+.ahn-boon.k-mech{border-color:rgba(160,220,255,.4)}
+.rl-boonm{max-width:620px}
+.ahn-bpick h2{text-align:center;margin-bottom:2px}
+.ahn-bpick>.note{text-align:center}
+.ahn-bcards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+.ahn-bcard{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 10px 12px;border-radius:14px;cursor:pointer;color:inherit;font:inherit;text-align:center;
+  background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.02));border:1.5px solid rgba(255,255,255,.14);transition:transform .15s,border-color .15s,box-shadow .15s}
+.ahn-bcard:hover{transform:translateY(-3px);border-color:#ffd27a;box-shadow:0 8px 22px rgba(255,190,90,.25)}
+.ahn-bcard .ic{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-size:24px;background:rgba(255,210,122,.15);overflow:hidden}
+.ahn-bcard.k-hero .ic{border:2px solid var(--hc,#ffd27a);background:color-mix(in srgb,var(--hc,#ffd27a) 25%,transparent)}
+.ahn-bcard .ic img{width:100%;height:100%;object-fit:cover}
+.ahn-bcard.k-mech .ic{background:rgba(159,232,255,.15)}
+.ahn-bcard b{font-size:14px}
+.ahn-bcard small{font-size:12px;opacity:.85;line-height:1.35}
+.ahn-bcard i{font-style:normal;font-size:10.5px;opacity:.55;margin-top:auto}
+.ahn-bcard.gold{border-color:#ffd23f;background:linear-gradient(180deg,rgba(255,210,63,.18),rgba(255,210,63,.03));box-shadow:0 0 18px rgba(255,210,63,.25)}
+.ahn-bcard em{position:absolute;top:-9px;left:50%;transform:translateX(-50%);font-style:normal;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:999px;background:#ffd23f;color:#2a1608;white-space:nowrap}
+@media (max-width:520px){.ahn-bcards{grid-template-columns:1fr}.ahn-bcard{flex-direction:row;text-align:left;padding:12px}.ahn-bcard .ic{flex:none}.ahn-bcard i{display:none}}

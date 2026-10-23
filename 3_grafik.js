@@ -510,6 +510,9 @@
     let html = `<div class="ahn-head"><div><h3 class="rl-h3">Ahnenprüfung</h3>
       <p class="note">10 Missionen mit je 5 Bossen, jeder mit 3 Phasen. Am Ende der Kette wartet der Urahn, und wer ihn besiegt, bekommt ein <b>Ahnensiegel</b>. Danach beginnt die Prüfung von vorne, so oft du willst.</p></div>
       <div class="ahn-stats"><span class="ahn-sig">✦ <b>${S.ahn.sig}</b> Siegel frei</span><span class="note">insgesamt ${S.ahn.got} erhalten</span></div></div>`;
+    html += `<div class="ahn-how"><b>So kämpfst du</b><span>🛡 <b>Großangriff:</b> Der Boss holt sichtbar aus. Drück rechtzeitig <b>Schildwall</b> (Knopf, Leertaste oder auf die Helden tippen), dann blockst du 90 %. Sonst blockt der Schildwall automatisch nur 25 %.</span><span>🎯 <b>Schwachstelle:</b> Leuchtet am Boss ein Ziel auf, tipp es an. Das macht viel Schaden und betäubt ihn.</span><span>✨ <b>Segen:</b> Nach jedem Boss wählst du einen von drei Segen. Sie gelten für die ganze Prüfung bis zum Siegel, aber nur hier.</span></div>`;
+    const bl = S.ahn.boons || [];
+    html += `<div class="ahn-boons"><h3 class="rl-h3">Segen dieser Prüfung (${bl.length})</h3>${bl.length ? `<div class="ahn-blist">${bl.map(b => { const B = AHN_BOONS[b.id]; return `<span class="ahn-boon k-${B.kind}" title="${esc(ahnBoonText(b))}">${B.icon} <b>${esc(B.name)}</b><small>${esc(ahnBoonText(b))}</small></span>`; }).join('')}</div>` : '<p class="note">Noch keine. Den ersten Segen gibt es nach dem ersten besiegten Boss.</p>'}</div>`;
     html += ahnMap();
     html += `<div class="ahn-mission" style="--mc:${M.col}"><div class="ahn-mhead"><span class="ahn-mnum">${sel + 1}</span><div><b>${esc(M.name)}</b><small>${esc(M.desc)}</small></div>
       <span class="ahn-state ${state}">${state === 'done' ? 'Geschafft' : state === 'cur' ? 'Nächste Mission' : 'Noch gesperrt'}</span></div>
@@ -3690,6 +3693,7 @@
       ctx.font = '30px "Bungee","Arial Black",sans-serif'; ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(20,10,30,.85)'; ctx.strokeText('DER URAHN', W / 2, 92); const tg = ctx.createLinearGradient(0, 70, 0, 96); tg.addColorStop(0, '#fff6d8'); tg.addColorStop(1, '#ffb547'); ctx.fillStyle = tg; ctx.fillText('DER URAHN', W / 2, 92);
       ctx.font = 'italic 12px "Figtree",sans-serif'; ctx.fillStyle = '#f4e8ff'; ctx.fillText('„Zeigt mir, dass ihr meiner würdig seid.“', W / 2, 114); ctx.restore();
     }
+    ahnMechDraw(R, t);
     // Banner bei Boss-Auftritt und Phasenwechsel
     if (A.banner && !(R.introT > 0)) {
       const b = A.banner, dur = b.phase ? 2.4 : b.ahne ? 5 : 3.2, a = Math.max(0, Math.min(1, b.t * 2, (dur - b.t) * 4)), y = b.phase ? 84 : 90;
@@ -3700,6 +3704,51 @@
       ctx.font = `${b.phase ? '600 11px' : 'italic 11px'} "Figtree",sans-serif`; ctx.fillStyle = 'rgba(255,255,255,.88)'; ctx.fillText(b.phase ? b.sub : `„${b.sub}“`, W / 2, y + 12 - 1);
       ctx.restore();
     }
+  }
+  // Großangriff (rote Zone + Countdown), Schildwall (goldene Kuppel) und Schwachstelle (Zielscheibe am Boss)
+  function ahnMechDraw(R, t) {
+    const A = R.ahn, al = R.order.filter(k => R.h[k] && R.h[k].alive), xs = al.map(k => R.pos[k] || R.frontX), x0 = Math.min(...xs, R.frontX) - 26, x1 = Math.max(...xs, R.frontX) + 26;
+    if (A.big && al.length) {
+      const p = 1 - A.big.t / A.big.d, pulse = 0.5 + 0.5 * Math.sin(t * (10 + p * 20));
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createLinearGradient(0, GROUND - 120, 0, GROUND + 8); g.addColorStop(0, 'rgba(255,40,30,0)'); g.addColorStop(1, `rgba(255,50,30,${0.18 + 0.22 * p + 0.1 * pulse})`);
+      ctx.fillStyle = g; ctx.fillRect(x0, GROUND - 120, x1 - x0, 128); ctx.restore();
+      ctx.save(); ctx.scale(1, 0.25); ctx.strokeStyle = `rgba(255,80,60,${0.6 + 0.4 * pulse})`; ctx.lineWidth = 3; ctx.setLineDash([8, 6]); ctx.lineDashOffset = -t * 30;
+      ctx.beginPath(); ctx.ellipse((x0 + x1) / 2, (GROUND + 2) * 4, (x1 - x0) / 2, 40, 0, 0, 7); ctx.stroke(); ctx.setLineDash([]); ctx.restore();
+      // Countdown-Ring über der Gruppe
+      const cx = (x0 + x1) / 2, cy = 58;
+      ctx.fillStyle = 'rgba(20,6,10,.75)'; ctx.beginPath(); ctx.arc(cx, cy, 15, 0, 7); ctx.fill();
+      ctx.strokeStyle = '#ff5a4a'; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.arc(cx, cy, 15, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - p)); ctx.stroke();
+      ctx.textAlign = 'center'; ctx.font = '15px "Bungee","Arial Black",sans-serif'; ctx.fillStyle = '#fff'; ctx.fillText('!', cx, cy + 6);
+      const ready = R.swCd <= 0 || R.swT > 0;
+      ctx.font = '11px "Bungee","Arial Black",sans-serif'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.7)';
+      const msg = R.swT > 0 ? 'Schildwall steht!' : ready ? 'Großangriff – Schildwall!' : 'Großangriff!';
+      ctx.strokeText(msg, cx, cy + 30); ctx.fillStyle = R.swT > 0 ? '#9fe8ff' : '#ff8a6a'; ctx.fillText(msg, cx, cy + 30);
+    }
+    if (A.bigHit && !A.bigHit.manual) { ctx.fillStyle = `rgba(255,40,30,${A.bigHit.t * 0.35})`; ctx.fillRect(0, 0, W, H); }
+    // Schildwall: goldene Kuppel über der Gruppe
+    if (R.swT > 0 && al.length) {
+      const a = Math.min(1, R.swT * 2, (AHN_MECH.wallReal - R.swT) * 6 + 0.2), cx = (x0 + x1) / 2, rx = (x1 - x0) / 2 + 8;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createRadialGradient(cx, GROUND, rx * 0.3, cx, GROUND, rx * 1.1); g.addColorStop(0, 'rgba(255,220,120,0)'); g.addColorStop(0.85, `rgba(255,220,120,${0.22 * a})`); g.addColorStop(1, 'rgba(255,220,120,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(cx, GROUND, rx, 105, 0, Math.PI, 0); ctx.fill();
+      ctx.strokeStyle = `rgba(255,230,150,${0.75 * a})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(cx, GROUND, rx, 105, 0, Math.PI, 0); ctx.stroke();
+      for (let i = 0; i < 6; i++) { const q = ((t * 0.7 + i / 6) % 1), an = Math.PI + q * Math.PI; glowDot(cx + Math.cos(an) * rx, GROUND + Math.sin(an) * 105, 4, '255,230,150', a * 0.8); }
+      ctx.restore();
+    }
+    if (A.wallFx) { const q = 1 - A.wallFx.t / 0.5, cx = (x0 + x1) / 2; ctx.strokeStyle = `rgba(255,230,150,${1 - q})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(cx, GROUND, (x1 - x0) / 2 * (0.6 + q * 0.6), 90 * (0.6 + q * 0.6), 0, Math.PI, 0); ctx.stroke(); }
+    // Schwachstelle am Boss
+    const e = A.boss;
+    if (A.spot && e && e.hp > 0) {
+      const x = e.x + A.spot.dx, y = GROUND + A.spot.dy, life = A.spot.t / A.spot.d, pu = 0.5 + 0.5 * Math.sin(t * 9);
+      ctx.save(); glowDot(x, y, 26 + pu * 6, '255,224,80', 0.55);
+      ctx.strokeStyle = '#ffe066'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(x, y, 10 + pu * 1.5, 0, 7); ctx.stroke();
+      ctx.lineWidth = 1.5; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { ctx.beginPath(); ctx.moveTo(x + dx * 6, y + dy * 6); ctx.lineTo(x + dx * 15, y + dy * 15); ctx.stroke(); }
+      ctx.fillStyle = '#fff6c0'; ctx.beginPath(); ctx.arc(x, y, 3, 0, 7); ctx.fill();
+      ctx.strokeStyle = `rgba(255,224,80,${0.9})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 18, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * life); ctx.stroke();
+      ctx.restore();
+    }
+    if (A.spotFx) { const q = 1 - A.spotFx.t / 0.5; ctx.strokeStyle = `rgba(255,236,120,${1 - q})`; ctx.lineWidth = 4 * (1 - q) + 1; ctx.beginPath(); ctx.arc(A.spotFx.x, A.spotFx.y, 10 + q * 40, 0, 7); ctx.stroke(); glowDot(A.spotFx.x, A.spotFx.y, 40 * (1 - q), '255,236,120', 0.8 * (1 - q)); }
   }
   function ahnHud(R, t) {
     const A = R.ahn, M = AHN_MISSIONS[A.mi], list = ahnBossesOf(A.mi), e = A.boss && A.boss.hp > 0 ? A.boss : null;
@@ -4203,7 +4252,7 @@
     gr.addColorStop(0, `rgba(${rgb},1)`); gr.addColorStop(0.4, `rgba(${rgb},.55)`); gr.addColorStop(1, `rgba(${rgb},0)`); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
     GLOW.set(rgb, c); return c;
   }
-  function glowDot(x, y, r, rgb, a = 1) { if (!(r > 0) || !(a > 0)) return; const pa = ctx.globalAlpha; ctx.globalAlpha = pa * Math.min(1, a); ctx.drawImage(glowSprite(rgb), x - r, y - r, r * 2, r * 2); ctx.globalAlpha = pa; }
+  function glowDot(x, y, r, rgb, a = 1) { if (!(r > 0) || !(a > 0)) return; if (SKIN_MAP) rgb = SKIN_MAP(rgb); const pa = ctx.globalAlpha; ctx.globalAlpha = pa * Math.min(1, a); ctx.drawImage(glowSprite(rgb), x - r, y - r, r * 2, r * 2); ctx.globalAlpha = pa; }
   // ---------- Figuren-Look (Version 7): Umriss, Lichtkante, Schattenseite ----------
   // Jede Figur wird erst auf eine unsichtbare Ebene gezeichnet. Daraus entsteht eine Maske (schwache Leuchteffekte zählen kaum mit),
   // die einen dunklen Umriss, eine helle Lichtkante oben links (Farbe des Gebiets) und eine Schattenseite unten rechts bekommt.
@@ -5064,6 +5113,59 @@
     for (let i = 0; i < 2; i++) { const [ox, oy, back] = orb(i); if (!back) { rr(ox - 3.5, oy - 3.5, 7, 7, 2); fillO(stone(oy - 4, oy + 4)); ctx.fillStyle = `rgba(${RC},.9)`; ctx.fillRect(ox - 0.8, oy - 2.5, 1.6, 5); glowDot(ox, oy, 7, RC, 0.6 * gl); } }
     ctx.restore();
   }
+  // ---------- Meisterschafts-Skins: echtes Umfärben statt Farbfilter ----------
+  // Während ein Held mit Skin gezeichnet wird, läuft jede Farbe (Füllung, Linie, Verlauf, Leuchtpunkt) durch eine Farbtabelle.
+  // Form und Animation bleiben gleich. Haut, Augen, Umrisse und Weiß bleiben unverändert.
+  // h1/h2 = Haupt- und Zweitfarbton, sat/lm/la = Sättigung und Helligkeit, metal = Farbe für Metall und Grau, gold = Farbe für Gold.
+  const SKIN_PAL = {
+    nacht: { h1: 228, h2: 268, spread: 0.35, sat: 0.95, lm: 0.82, la: 0, metal: [220, 0.16, 0.92, 0], gold: [205, 0.55, 1.05] },
+    glut: { h1: 12, h2: 34, spread: 0.3, sat: 1.1, lm: 0.85, la: 0, metal: [250, 0.06, 0.5, 0.03], gold: [30, 0.95, 1.05] },
+    ahnen: { h1: 44, h2: 34, spread: 0.2, sat: 0.9, lm: 0.72, la: 0.24, metal: [42, 0.3, 0.95, 0.08], gold: [46, 0.9, 1.1] },
+  };
+  const rgbHsl = (r, g, b) => { r /= 255; g /= 255; b /= 255; const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2; let h = 0, s = 0;
+    if (mx !== mn) { const d = mx - mn; s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn); h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; }
+    return [h, s, l]; };
+  const hslRgb = (h, s, l) => { h = ((h % 360) + 360) % 360 / 360; s = clamp01(s); l = clamp01(l); if (!s) { const v = Math.round(l * 255); return [v, v, v]; }
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q, f = tt => { tt = (tt + 1) % 1; return tt < 1 / 6 ? p + (q - p) * 6 * tt : tt < 0.5 ? q : tt < 2 / 3 ? p + (q - p) * (2 / 3 - tt) * 6 : p; };
+    return [Math.round(f(h + 1 / 3) * 255), Math.round(f(h) * 255), Math.round(f(h - 1 / 3) * 255)]; };
+  const hueDist = (a, b) => { let d = ((a - b) % 360 + 540) % 360 - 180; return d; };
+  function skinRgb(P, h0, r, g, b) {
+    const [h, s, l] = rgbHsl(r, g, b);
+    if (l < 0.16 || l > 0.96) return [r, g, b];                                           // Umriss, Schwarz, reines Weiß
+    if (s < 0.14) { const [mh, ms, mm, ma] = P.metal; return hslRgb(mh, ms, l * mm + ma); }  // Metall, Grau, Stoffweiß
+    if (h >= 10 && h <= 42 && s >= 0.2 && l >= 0.6 && l <= 0.93) return [r, g, b];        // Haut
+    if (h >= 38 && h <= 60 && s >= 0.55 && l >= 0.45) { const [gh, gs, gm] = P.gold; return hslRgb(gh, gs * s, l * gm); } // Gold
+    const d = hueDist(h, h0), nh = Math.abs(d) > 100 ? P.h2 + d * 0.15 : P.h1 + d * P.spread;
+    return hslRgb(nh, s * P.sat, l * P.lm + P.la);
+  }
+  const SKIN_CACHE = new Map();
+  function skinColor(P, key, h0, c) {
+    if (typeof c !== 'string') return c;
+    const ck = key + '|' + c; let v = SKIN_CACHE.get(ck); if (v !== undefined) return v;
+    let m, out = c;
+    if ((m = /^#([0-9a-f]{3})$/i.exec(c))) { const [r, g, b] = [...m[1]].map(x => parseInt(x + x, 16)); const q = skinRgb(P, h0, r, g, b); out = `rgb(${q.join(',')})`; }
+    else if ((m = /^#([0-9a-f]{6})$/i.exec(c))) { const n = parseInt(m[1], 16); const q = skinRgb(P, h0, (n >> 16) & 255, (n >> 8) & 255, n & 255); out = `rgb(${q.join(',')})`; }
+    else if ((m = /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)$/i.exec(c))) { const q = skinRgb(P, h0, +m[1], +m[2], +m[3]); out = m[4] != null ? `rgba(${q.join(',')},${m[4]})` : `rgb(${q.join(',')})`; }
+    else if ((m = /^\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*$/.exec(c))) { out = skinRgb(P, h0, +m[1], +m[2], +m[3]).join(','); } // "r,g,b" für Leuchtpunkte
+    if (SKIN_CACHE.size > 6000) SKIN_CACHE.clear();
+    SKIN_CACHE.set(ck, out); return out;
+  }
+  let SKIN_MAP = null; // aktive Umfärbung (für glowDot)
+  const SKIN_PROPS = new Set(['fillStyle', 'strokeStyle', 'shadowColor']);
+  function withSkin(id, k, fn) {
+    const P = SKIN_PAL[id], hero = HERO_BY_ID[k]; if (!P || !hero) { fn(); return; }
+    const n = parseInt(hero.color.slice(1), 16), h0 = rgbHsl((n >> 16) & 255, (n >> 8) & 255, n & 255)[0], key = id + k;
+    const map = c => skinColor(P, key, h0, c), real = ctx, bound = new Map();
+    const grad = g => { const add = g.addColorStop; g.addColorStop = (o, c) => add.call(g, o, map(c)); return g; };
+    const px = new Proxy(real, {
+      get(t, p) { const v = t[p]; if (typeof v !== 'function') return v;
+        if (p === 'createLinearGradient' || p === 'createRadialGradient') return (...a) => grad(v.apply(t, a));
+        let b = bound.get(p); if (!b) { b = v.bind(t); bound.set(p, b); } return b; },
+      set(t, p, v) { t[p] = SKIN_PROPS.has(p) ? map(v) : v; return true; },
+    });
+    const prevMap = SKIN_MAP; ctx = px; SKIN_MAP = map;
+    try { fn(); } finally { ctx = real; SKIN_MAP = prevMap; }
+  }
   const DRAW = { r: knight, w: guard, s: archer, m: mage, p: priest, t: tamer, a: assassin, n: necro, b: bard, d: druid, e: tinker, o: golem };
   for (const k of Object.keys(DRAW)) {
     const base = DRAW[k];
@@ -5077,9 +5179,8 @@
         lightPool(x, GROUND - 58, 30, hc, 0.18 + pu * 0.06);
         lightPool(x, GROUND - 1, 34, hc, 0.26 + pu * 0.06);
       }
-      if (!sk || !sk.tint || !main) return base(x, h, t, walk);
-      if (sk.aura) for (let i = 0; i < 5; i++) { const ph = (t * 0.5 + i / 5 + k.charCodeAt(0) * 0.13) % 1; glowDot(x + Math.sin(i * 2.3 + t) * 14, GROUND - 6 - ph * 70, 5 + ph * 3, '255,224,140', 0.55 * (1 - ph)); }
-      ctx.save(); ctx.translate(x, 0); tintDraw(() => base(0, h, t, walk), sk.tint, sk.amt, 60); ctx.restore();
+      if (!sk || !SKIN_PAL[sk.id]) return base(x, h, t, walk);
+      withSkin(sk.id, k, () => base(x, h, t, walk));
     };
     DRAW[k] = (x, h, t, walk) => {
       const hurt = h && h.alive && h.hurtT > 0 ? `rgba(255,40,40,${Math.min(0.6, 0.25 + h.hurtT * 3)})` : null;

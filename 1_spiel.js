@@ -795,7 +795,12 @@
   // 10 Missionen mit je 5 eigenen Bossen (3 Phasen), am Ende von Mission 10 wartet der Urahn. Wer die Kette schafft, bekommt ein Ahnensiegel.
   // len: Bosskämpfe dauern so viel länger. Leben ×len, Fähigkeiten und Wut entsprechend seltener bzw. später, Grundangriff schwächer.
   // So bleibt die Zahl der Fähigkeiten und der Gesamtschaden pro Kampf gleich, nur die Dauer wächst (Ziel: ganze Prüfung ≈ 1 h bei Tempo ×3).
-  const AHN_TUNE = { hp: 22, dmg: 0.14, minHp: 0.55, waves: 2, lvl: 0.8, ahneHp: 1.2, enr: 140, len: 10 };
+  const AHN_TUNE = { hp: 32, dmg: 0.3, atk: 0.5, mHp: 0.3, mDmg: 0.08, minHp: 0.55, waves: 2, lvl: 0.8, ahneHp: 1.2, enr: 140, len: 4 };
+  // Großangriff, Schildwall und Schwachstellen (Zeiten mit *Real* in echten Sekunden, unabhängig vom Spieltempo, sonst Spielsekunden)
+  // big: alle so viele Sekunden ein angekündigter Großangriff, teleReal: Vorwarnzeit, bigDmg: Anteil vom Leben jedes Helden.
+  // wallCd: Abklingzeit Schildwall, wallReal: so lange hält er, wallBlock: blockt beim Großangriff (von Hand), wallAuto: automatisch.
+  // spot: alle so viele Sekunden eine Schwachstelle, spotReal: so lange sichtbar, spotDmg: Anteil vom Boss-Leben, spotStun: Betäubung.
+  const AHN_MECH = { big: 16, teleReal: 2.2, bigDmg: 0.6, wallCd: 14, wallReal: 4, wallBlock: 0.9, wallAuto: 0.25, spot: 7, spotReal: 2.6, spotDmg: 0.025, spotStun: 1.5 };
   // Fähigkeiten der Bosse. dmg-Werte sind Vielfache des Boss-Angriffs.
   const AHN_ABIL = {
     slam: { name: 'Erdstoß', desc: 'holt aus und trifft alle Helden', cd: 9, tele: 1.4 },
@@ -902,13 +907,86 @@
   AHN_MISSIONS.forEach(M => M.bosses.forEach(d => { if (AHN_ART[d.name]) d.art = AHN_ART[d.name]; }));
   const AHNE = { name: 'Der Urahn', ahne: true, bk: -1, tint: null, sz: 1, acc: 'ahne', quote: 'Ihr wollt das Siegel? Dann zeigt mir, dass ihr meiner würdig seid.',
     ph: [{ n: 'Der König erwacht', a: ['slam', 'charge', 'summon'], t: {} }, { n: 'Klingen der Ahnen', a: ['rain', 'mark', 'shield'], t: { armor: 0.1 } }, { n: 'Flamme der Ewigkeit', a: ['quake', 'frenzy', 'chain', 'split'], t: { armor: 0.1, haste: 1.15 } }] };
+  // ---------- Segen der Ahnen ----------
+  // Nach jedem besiegten Boss (einmal pro Boss und Prüfung) wählt man einen von drei Segen. Sie gelten für die ganze Prüfung
+  // (alle 10 Missionen bis zum Siegel), aber nur in der Ahnenprüfung. Mit dem Siegel beginnt die nächste Prüfung ohne Segen.
+  // all: für alle Helden, hero: stark für einen Helden, mech: verbessert Schildwall oder Schwachstellen. v = Wert in Prozent(punkten).
+  const AHN_BOONS = {
+    dmg: { name: 'Ahnenkraft', icon: '⚔', kind: 'all', v: 10, desc: v => `Alle Helden machen +${v} % Schaden.` },
+    hp: { name: 'Ahnenhaut', icon: '❤', kind: 'all', v: 12, desc: v => `Alle Helden haben +${v} % Leben.` },
+    aps: { name: 'Eile der Ahnen', icon: '⏩', kind: 'all', v: 8, desc: v => `Alle Helden greifen ${v} % schneller an.` },
+    crit: { name: 'Scharfe Klingen', icon: '✦', kind: 'all', v: 5, desc: v => `Alle Helden +${v} % Krit-Chance.` },
+    cdr: { name: 'Zeitfluss', icon: '⌛', kind: 'all', v: 6, desc: v => `Abklingzeiten aller Helden −${v} %. Gilt auch über die Grenze von 60 % hinaus.` },
+    dr: { name: 'Steinhaut', icon: '🛡', kind: 'all', v: 5, desc: v => `Alle Helden nehmen ${v} % weniger Schaden. Gilt auch über die normale Grenze hinaus (bis 90 %).` },
+    regen: { name: 'Lebensquelle', icon: '✚', kind: 'all', v: 0.6, desc: v => `Alle Helden heilen ${String(v).replace('.', ',')} % ihres Lebens pro Sekunde.` },
+    act: { name: 'Fähigkeitsmacht', icon: '💥', kind: 'all', v: 15, desc: v => `Fähigkeiten aller Helden +${v} % Schaden.` },
+    h_dmg: { name: 'Erwählter', icon: '⚔', kind: 'hero', v: 40, desc: (v, n) => `${n} macht +${v} % Schaden.` },
+    h_hp: { name: 'Bollwerk', icon: '❤', kind: 'hero', v: 50, desc: (v, n) => `${n} hat +${v} % Leben.` },
+    h_aps: { name: 'Raserei', icon: '⏩', kind: 'hero', v: 25, desc: (v, n) => `${n} greift ${v} % schneller an.` },
+    h_cdr: { name: 'Zeitmeister', icon: '⌛', kind: 'hero', v: 15, desc: (v, n) => `Abklingzeiten von ${n} −${v} %. Gilt auch über die Grenze von 60 % hinaus.` },
+    h_crit: { name: 'Todesblick', icon: '✦', kind: 'hero', v: 15, desc: (v, n) => `${n} +${v} % Krit-Chance und +${v * 2} % Krit-Schaden.` },
+    wall: { name: 'Ahnenschild', icon: '🛡', kind: 'mech', v: 25, desc: v => `Der Schildwall lädt ${v} % schneller.` },
+    wallA: { name: 'Wachsamkeit', icon: '👁', kind: 'mech', v: 20, desc: v => `Der automatische Schildwall blockt ${v} % mehr vom Großangriff.` },
+    spot: { name: 'Ahnenblick', icon: '🎯', kind: 'mech', v: 50, desc: v => `Treffer auf Schwachstellen machen +${v} % Schaden.` },
+    spotF: { name: 'Jägerauge', icon: '🔍', kind: 'mech', v: 20, desc: v => `Schwachstellen erscheinen ${v} % öfter.` },
+  };
+  const AHN_BOON_W = { all: 5, hero: 3, mech: 2 };
+  // Drei verschiedene Segen zur Auswahl; einer kann ein glänzender (doppelter Wert) sein
+  function ahnRollBoons(S, run) {
+    const ids = Object.keys(AHN_BOONS), out = [], field = run.order.filter(k => st0(S)[k]);
+    while (out.length < 3) {
+      const tot = ids.reduce((a, id) => a + (out.some(o => o.id === id) ? 0 : AHN_BOON_W[AHN_BOONS[id].kind]), 0);
+      let r = Math.random() * tot, id = ids[0];
+      for (const x of ids) { if (out.some(o => o.id === x)) continue; r -= AHN_BOON_W[AHN_BOONS[x].kind]; if (r <= 0) { id = x; break; } }
+      const B = AHN_BOONS[id], gold = Math.random() < 0.15, o = { id, v: B.v * (gold ? 2 : 1), gold };
+      if (B.kind === 'hero') o.h = field[Math.floor(Math.random() * field.length)] || run.order[0];
+      out.push(o);
+    }
+    return out;
+  }
+  const st0 = S => Object.fromEntries(HEROES.map(h => [h.id, hired(S, h.tree)]));
+  const ahnBoonText = b => { const B = AHN_BOONS[b.id]; return B ? B.desc(b.v, b.h ? HERO_BY_ID[b.h].name : '') : ''; };
+  function ahnPickBoon(S, run, i) {
+    const o = run.boonOffer && run.boonOffer[i]; if (!o) return null;
+    S.ahn.boons.push({ id: o.id, v: o.v, ...(o.h ? { h: o.h } : {}) });
+    run.boonOffer = null; run.pause = false;
+    return o;
+  }
+  // Segen auf die Werte anwenden (nur in der Ahnenprüfung)
+  function ahnApplyBoons(S, st) {
+    const M = { wallCd: 1, wallA: 0, spotDmg: 1, spotF: 1 }, sum = {};
+    // gleiche Segen werden zusammengezählt (zwei Mal +10 % Schaden = +20 %, nicht ×1,21)
+    for (const b of (S.ahn && S.ahn.boons) || []) { if (!AHN_BOONS[b.id]) continue; const key = b.id + '|' + (b.h || ''); sum[key] = (sum[key] || 0) + b.v / 100; }
+    for (const [key, f] of Object.entries(sum)) {
+      const [id, hid] = key.split('|'), B = AHN_BOONS[id];
+      const ts = B.kind === 'hero' ? [st[hid]].filter(Boolean) : HEROES.map(h => st[h.id]).filter(Boolean);
+      for (const T of ts) switch (id) {
+        case 'dmg': case 'h_dmg': T.atk *= 1 + f; if (T.heal) T.heal *= 1 + f; if (T.wolfAtk) T.wolfAtk *= 1 + f; break;
+        case 'hp': case 'h_hp': T.hp *= 1 + f; break;
+        case 'aps': case 'h_aps': T.aps *= 1 + f; if (T.wolfAps) T.wolfAps *= 1 + f; if (T.turretAps) T.turretAps *= 1 + f; break;
+        case 'crit': T.crit += f; break;
+        case 'h_crit': T.crit += f; T.critD += f * 2; break;
+        case 'cdr': case 'h_cdr': T.cdr = Math.min(0.85, T.cdr + f); break;
+        case 'dr': T.dr = Math.min(0.9, T.dr + f); break;
+        case 'regen': T.regen += f; break;
+        case 'act': T.actMul *= 1 + f; break;
+      }
+      if (id === 'wall') M.wallCd *= Math.max(0.3, 1 - f);
+      if (id === 'wallA') M.wallA += f;
+      if (id === 'spot') M.spotDmg += f;
+      if (id === 'spotF') M.spotF *= 1 + f;
+    }
+    st.ahnB = M;
+  }
   const AHN_COUNT = AHN_MISSIONS.length;
   const ahnOpen = S => feature(S, 'ahnen');
   const ahnBossesOf = mi => (mi === AHN_COUNT - 1 ? [...AHN_MISSIONS[mi].bosses, AHNE] : AHN_MISSIONS[mi].bosses);
   const ahnLevelFor = S => Math.max(10, Math.round(AHN_TUNE.lvl * Math.max(S.ascBest || 0, S.best || 0, 10)));
   function ahnFix(d) {
     const a = d && typeof d === 'object' ? d : {}, n = x => Math.max(0, Math.floor(Number(x) || 0));
-    const out = { m: Math.min(AHN_COUNT - 1, n(a.m)), lvl: n(a.lvl), sig: n(a.sig), got: n(a.got), place: {} };
+    const out = { m: Math.min(AHN_COUNT - 1, n(a.m)), lvl: n(a.lvl), sig: n(a.sig), got: n(a.got), place: {}, boons: [], bgot: [] };
+    for (const b of Array.isArray(a.boons) ? a.boons.slice(0, 80) : []) if (b && AHN_BOONS[b.id] && Number(b.v) > 0) { const o = { id: b.id, v: Math.min(1000, Number(b.v)) }; if (AHN_BOONS[b.id].kind === 'hero') { if (!HERO_BY_ID[b.h]) continue; o.h = b.h; } out.boons.push(o); }
+    for (const k of Array.isArray(a.bgot) ? a.bgot.slice(0, 80) : []) if (/^\d+-\d+$/.test(String(k))) out.bgot.push(String(k));
     for (const h of HEROES) if (a.place && a.place[h.id]) out.place[h.id] = 1;
     return out;
   }
@@ -919,7 +997,8 @@
   function ahnInit(S, run) {
     S.ahn.lvl = ahnLevelFor(S);
     run.stage = run.startStage = S.ahn.lvl;
-    run.ahn = { mi: S.ahn.m, bi: 0, wave: 0, boss: null, fx: [], banner: null };
+    run.ahn = { mi: S.ahn.m, bi: 0, wave: 0, boss: null, fx: [], banner: null, big: null, spot: null, spotFx: null, wallFx: null, bigs: 0, blocked: 0, spots: 0 };
+    run.swT = 0; run.swCd = 0;
   }
   function ahnMinion(run, i, ranged, mul = 1) {
     const e = makeEnemy(run.stage, i, false, false, run, ranged);
@@ -931,9 +1010,11 @@
     run.enemies = [];
     if (A.wave < AHN_TUNE.waves) { for (let i = 0; i < 4; i++) run.enemies.push(ahnMinion(run, i, i === 3)); return; }
     const def = list[A.bi], e = makeEnemy(run.stage, 1.2, true, false, run);
-    const hpMul = AHN_TUNE.hp * AHN_TUNE.len * (def.ahne ? AHN_TUNE.ahneHp : 1);
-    e.hp *= hpMul; e.max = e.hp; e.adm = e.dmg * AHN_TUNE.dmg; e.dmg = e.adm / AHN_TUNE.len; e.lastHp = e.hp;
+    // spätere Missionen sind härter (gleicht die gesammelten Segen aus)
+    const hpMul = AHN_TUNE.hp * AHN_TUNE.len * (def.ahne ? AHN_TUNE.ahneHp : 1) * (1 + AHN_TUNE.mHp * A.mi);
+    e.hp *= hpMul; e.max = e.hp; e.adm = e.dmg * AHN_TUNE.dmg * (1 + AHN_TUNE.mDmg * A.mi); e.dmg = e.adm * AHN_TUNE.atk; e.lastHp = e.hp;
     e.ahn = def; e.bk = def.bk; e.type = def.bk >= 0 && def.bk < 5 ? ENEMY_KINDS[def.bk] : AHN_MISSIONS[A.mi].minion;
+    e.bigT = 6; e.spotT = 3;
     e.reach = def.ahne ? 62 : 30; e.phase = 0; e.phaseT = 0; e.shieldHp = 0; e.invT = 0; e.reflT = 0; e.healT = 0; e.frenzyT = 0; e.x = 600;
     ahnPhase(e, 0);
     A.boss = e; A.banner = { t: def.ahne ? 5 : 3.2, title: def.name, sub: def.quote, ahne: !!def.ahne };
@@ -986,7 +1067,31 @@
       if (h.stunT > 0) h.stunT -= dt; if (h.markT > 0) h.markT -= dt;
       if (h.dotT > 0) { h.dotT -= dt; h.hp -= st[k].hp * h.dotP * dt; if (h.hp <= 0) { h.hp = 1; hurtHero(c, k, 2, null); } }
     }
-    const rdt = dt / Math.max(1, S.speed || 1);
+    const rdt = dt / Math.max(1, S.speed || 1), MB = st.ahnB || { wallCd: 1, wallA: 0, spotDmg: 1, spotF: 1 };
+    // Schildwall: von Hand (Knopf) oder automatisch beim Großangriff
+    run.swCd -= dt; if (run.swT > 0) run.swT -= rdt;
+    if (run.swReq) { run.swReq = false; if (run.swCd <= 0 && aliveHeroes(run).length) { run.swT = AHN_MECH.wallReal; run.swCd = AHN_MECH.wallCd * MB.wallCd; A.wallFx = { t: 0.5 }; c.float(run.order[0], 'Schildwall!', '#ffd27a', 15); } }
+    if (A.wallFx) { A.wallFx.t -= rdt; if (A.wallFx.t <= 0) A.wallFx = null; }
+    if (A.spotFx) { A.spotFx.t -= rdt; if (A.spotFx.t <= 0) A.spotFx = null; }
+    // Großangriff: Vorwarnung in echten Sekunden, dann Treffer auf alle Helden
+    if (A.big) { A.big.t -= rdt; if (A.big.t <= 0) {
+      const manual = run.swT > 0, auto = !manual && run.swCd <= 0;
+      const block = manual ? AHN_MECH.wallBlock : auto ? Math.min(0.9, AHN_MECH.wallAuto + MB.wallA) : 0;
+      if (auto) { run.swCd = AHN_MECH.wallCd * MB.wallCd; A.wallFx = { t: 0.5 }; }
+      A.bigs++; if (manual) A.blocked++;
+      const f = AHN_MECH.bigDmg * (1 - block);
+      for (const k of aliveHeroes(run)) { const T = st[k], raw = T.hp * f / Math.max(0.1, 1 - T.dr); hurtHero(c, k, raw, null); }
+      c.float(run.order[0], manual ? 'Abgewehrt!' : auto ? 'Halb abgewehrt' : 'Volltreffer!', manual ? '#9fe8ff' : auto ? '#ffd27a' : '#ff6a5a', 16);
+      run.shake = manual ? 0.2 : 0.55; c.burst(run.frontX, 200, manual ? '#9fe8ff' : '#ff6a3a', manual ? 14 : 26);
+      A.big = null; A.bigHit = { t: 0.6, manual };
+    } }
+    if (A.bigHit) { A.bigHit.t -= rdt; if (A.bigHit.t <= 0) A.bigHit = null; }
+    // Schwachstelle: antippen (Anfrage aus der Oberfläche) macht viel Schaden und betäubt
+    if (A.spot) { A.spot.t -= rdt; if (A.spot.t <= 0) A.spot = null; }
+    if (run.spotReq) { run.spotReq = false; const b = A.boss; if (A.spot && b && b.hp > 0) {
+      const dmg = b.max * AHN_MECH.spotDmg * MB.spotDmg; b.spotDmg = (b.spotDmg || 0) + dmg; b.stun = Math.max(b.stun || 0, AHN_MECH.spotStun);
+      c.efloat(b, 'Schwachstelle! ' + fmt(dmg), '#ffe066', 18); c.burst(b.x + A.spot.dx, 222 + A.spot.dy, '#ffe066', 22); run.shake = 0.35;
+      A.spotFx = { t: 0.5, x: b.x + A.spot.dx, y: 222 + A.spot.dy }; A.spot = null; A.spots++; sfx('boss'); } }
     run.curseT -= dt; run.slowT -= dt; run.blindT -= dt; run.silT -= dt; if (run.introT > 0) run.introT -= rdt;
     if (A.banner) { A.banner.t -= rdt; if (A.banner.t <= 0) A.banner = null; }
     // Effekte mit Verzögerung
@@ -1015,6 +1120,7 @@
       }
       e.hp += back;
     }
+    if (e.spotDmg) { e.hp -= e.spotDmg; e.spotDmg = 0; }
     // Phasen bei 2/3 und 1/3
     const thr = (2 - e.phase) / 3;
     if (e.phase < 2 && e.hp <= e.max * thr) {
@@ -1035,13 +1141,17 @@
     const enr = AHN_TUNE.enr * AHN_TUNE.len, en = e.phaseT > enr ? 1 + 0.15 * Math.floor((e.phaseT - enr) / 8 + 1) : 1;
     if (en > (e.enrage || 1)) { e.enrage = en; c.efloat(e, `Wut ×${en.toFixed(1).replace('.', ',')}`, '#ff5a5a', 15); }
     for (const ab of e.ab) { ab.t -= dt; if (ab.t <= 0) { ahnCast(S, st, run, c, e, ab.id); ab.t = AHN_ABIL[ab.id].cd * AHN_TUNE.len * (0.85 + Math.random() * 0.3); } }
+    e.bigT -= dt; if (e.bigT <= 0 && !A.big) { e.bigT = AHN_MECH.big * (0.9 + Math.random() * 0.2) * (e.phase >= 2 ? 0.8 : 1); A.big = { t: AHN_MECH.teleReal, d: AHN_MECH.teleReal }; c.efloat(e, 'Großangriff!', '#ff6a5a', 17); e.castT = 0.8; sfx('boss'); }
+    e.spotT -= dt; if (e.spotT <= 0 && !A.spot) { e.spotT = AHN_MECH.spot / MB.spotF * (0.85 + Math.random() * 0.3); const sz = (e.ahn && e.ahn.sz) || 1; A.spot = { t: AHN_MECH.spotReal, d: AHN_MECH.spotReal, dx: (-10 + Math.random() * 30) * sz, dy: -(45 + Math.random() * 60) * sz }; }
   }
   // Welle geschafft: nächste Welle, nächster Boss oder Mission gewonnen
   function ahnNext(S, st, run, c) {
     const A = run.ahn, list = ahnBossesOf(A.mi);
     if (A.wave < AHN_TUNE.waves) A.wave++;
     else {
-      A.bi++; A.wave = 0; A.boss = null; run.bossKills++;
+      const bk = `${A.mi}-${A.bi}`;
+      if (!S.ahn.bgot.includes(bk)) { S.ahn.bgot.push(bk); run.boonOffer = ahnRollBoons(S, run); run.pause = true; }
+      A.bi++; A.wave = 0; A.boss = null; A.big = null; A.spot = null; run.bossKills++;
       if (A.bi >= list.length) { run.victory = true; run.dead = true; return 'dead'; }
       // Die Ahnen stärken die Gruppe zwischen den Bossen
       for (const k of run.order) { const h = run.h[k]; if (!h.alive) { h.alive = true; h.hp = st[k].hp * 0.35; h.revived = false; c.float(k, 'Ahnenkraft', '#ffd27a', 13); } else h.hp = Math.min(st[k].hp, h.hp + st[k].hp * 0.4); h.stunT = 0; h.markT = 0; h.dotT = 0; }
@@ -1054,7 +1164,7 @@
     if (!run.victory || !run.ahn) return null;
     const mi = run.ahn.mi;
     if (mi !== S.ahn.m) return null;
-    if (mi >= AHN_COUNT - 1) { S.ahn.m = 0; S.ahn.lvl = 0; S.ahn.sig++; S.ahn.got++; return { mission: mi, sigil: true }; }
+    if (mi >= AHN_COUNT - 1) { S.ahn.m = 0; S.ahn.lvl = 0; S.ahn.sig++; S.ahn.got++; S.ahn.boons = []; S.ahn.bgot = []; return { mission: mi, sigil: true }; }
     S.ahn.m = mi + 1; return { mission: mi, sigil: false };
   }
 
@@ -1628,7 +1738,8 @@
   function statsFor(S, mode) {
     const st = stats(S);
     if (mode === 'exp') { const m = MISSION[S.exp.mission] || MISSIONS[0]; st.cap = Infinity; st.startStage = expStage(S, m); st.rules = m.rules || []; return st; }
-    if (mode === 'ahnen' || mode === 'wboss') { st.cap = Infinity; return st; }
+    if (mode === 'ahnen') { st.cap = Infinity; ahnApplyBoons(S, st); return st; }
+    if (mode === 'wboss') { st.cap = Infinity; return st; }
     if (mode !== 'weekly') return st;
     const rules = weekRules(dayId());
     for (const h of HEROES) { const T = st[h.id]; if (!T) continue;
@@ -2016,6 +2127,7 @@
     if (T.dodge && Math.random() < T.dodge) { c.float(k, 'Ausgewichen', '#c8f5cf', 12); if (T.dancer) h.nextCrit = true; return; }
     let d = raw * (1 - T.dr * (boss ? 0.6 : 1));
     if (run.roarT > 0) d *= 0.6;
+    if (run.swT > 0) d *= 0.5;
     if (k === 'w' && run.hautT > 0) d *= 0.4;
     if (k === 'w' && run.tauntT > 0) d *= 0.7;
     if (k === 'd' && run.bearT > 0) d *= 0.5;
@@ -2038,6 +2150,7 @@
   }
   function step(S, st, run, dt) {
     if (run.dead) { run.deadT += dt; return; }
+    if (run.pause) return;
     const c = ctxFor(S, st, run);
     run.time += dt; run.bannerT -= dt; run.buffT -= dt; run.hautT -= dt; run.racheT -= dt; run.packT -= dt; run.songT -= dt; run.roarT -= dt; run.extraTurretT -= dt; run.shake = Math.max(0, run.shake - dt);
     for (const k of run.order) {
@@ -2350,7 +2463,7 @@
     return (n < 10 ? n.toFixed(2) : n < 100 ? n.toFixed(1) : Math.floor(n).toString()).replace('.', ',') + units[i];
   }
 
-  const core = { TRIPS, TRIP_SHARE, onTrip, tripLeft, rateOf, noteRate, hoursReward, tripReward, startTrip, claimTrip, WB, WB_BOSS, wbScore, wbBarReward, wbBarSecs, wbGoalHours, wbReward, AHN_MISSIONS, AHN_ABIL, AHN_TRAIT, AHNE, AHN_TUNE, AHN_COUNT, ahnOpen, ahnBossesOf, ahnLevelFor, placeSigil, ahnClaim, unrebirth, transmute, bossRuneTier, resetPerks, buyLager, lagerCost, LAGER_MAX, runeCap, shardOf, mergeCost, ALTAR_MAX, altarCost, altarMul, buyAltar, kSlots, kFree, keyCap, addSock, removeSock, removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, buyPiece, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
+  const core = { TRIPS, TRIP_SHARE, onTrip, tripLeft, rateOf, noteRate, hoursReward, tripReward, startTrip, claimTrip, WB, WB_BOSS, wbScore, wbBarReward, wbBarSecs, wbGoalHours, wbReward, AHN_MISSIONS, AHN_ABIL, AHN_MECH, AHN_BOONS, ahnRollBoons, ahnPickBoon, ahnBoonText, ahnApplyBoons, AHN_TRAIT, AHNE, AHN_TUNE, AHN_COUNT, ahnOpen, ahnBossesOf, ahnLevelFor, placeSigil, ahnClaim, unrebirth, transmute, bossRuneTier, resetPerks, buyLager, lagerCost, LAGER_MAX, runeCap, shardOf, mergeCost, ALTAR_MAX, altarCost, altarMul, buyAltar, kSlots, kFree, keyCap, addSock, removeSock, removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, buyPiece, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
     SEASON, rankOf, RANKS, rankBonus, AREAS, areaOf, MISSIONS, extraSocks, XSOCK, sockOk, runeAmp, mastInfo, mastLevel, SKINS, WF_STAGE, WF, wfSpawn,
     sigOn, sigKeysUsed, keyNeed, eqOf, slotLim, SIG, SIG_FLAGS, newRun, step, stats, buy, available, blockReason, NODE, migrate, fresh,
     rebirth, ascend, crownsFor, buyCperk, cperkCost, cperk, CPERKS, levelComp, toggleComp, compCost, compMax, compSlots, COMPS, checkAch, ACH, claimWeekly, weekId, dayId, weekRules, RULE, WEEK_TIERS, statsFor, starsFor, toggleEquip, slotsOf, hired, classOpen, keysUsed, keyLimit, capOf, reqOf, feature, encode, decode, fmt, socket, unsocket, merge, canMerge, dismantle, buyRune, runeVal, addRune };

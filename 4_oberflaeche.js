@@ -221,6 +221,14 @@
         <div class="rl-tabs" role="tablist"></div>
         <div id="rlPanel"></div>`;
       cv = document.createElement('canvas'); $('#soloCanvas').appendChild(cv); ctx = cv.getContext('2d');
+      // Ahnenprüfung: Schwachstelle antippen, auf die Helden tippen = Schildwall
+      cv.addEventListener('pointerdown', e => {
+        if (!run || run.dead || run.mode !== 'ahnen' || !run.ahn || run.pause) return;
+        const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W, y = (e.clientY - r.top) / r.height * H, A = run.ahn, b = A.boss;
+        if (A.spot && b && Math.hypot(x - (b.x + A.spot.dx), y - (GROUND + A.spot.dy)) < 30) { run.spotReq = true; return; }
+        if (x < (run.frontX || 200) + 40 && y > 40) ahnWallPress();
+      });
+      document.addEventListener('keydown', e => { if (e.code === 'Space' && active && run && !run.dead && run.mode === 'ahnen' && !typing() && !/INPUT|TEXTAREA/.test((document.activeElement || {}).tagName || '')) { e.preventDefault(); ahnWallPress(); } });
       cv.addEventListener('click', e => {
         if (cine) { if (cine.t > 0.4) cine.t = Math.max(cine.t, cine.dur - 0.25); return; }
         if (!inCamp()) return;
@@ -752,7 +760,32 @@
   }
   /* ---------- Leisten ---------- */
   const crown = '<i class="rl-crown" aria-hidden="true"></i>', coin = '<i class="rl-coin" aria-hidden="true"></i>', soul = '<i class="rl-soulic" aria-hidden="true"></i>', star = '<i class="rl-star" aria-hidden="true"></i>', dust = '<i class="rl-dust" aria-hidden="true"></i>';
+  // Ahnenprüfung: Schildwall, Schwachstelle antippen, Segen wählen
+  function ahnWallPress() { if (!run || run.dead || run.mode !== 'ahnen') return; if (run.swCd > 0) { SND.play('tick'); return; } run.swReq = true; SND.play('buy'); }
+  function ahnWallBtn() {
+    const b = $('#rlWall'); if (!b || !run || run.mode !== 'ahnen') return;
+    const cd = Math.max(0, run.swCd || 0), up = run.swT > 0, warn = !!(run.ahn && run.ahn.big);
+    const txt = up ? '🛡 Schildwall steht' : cd > 0 ? `🛡 ${Math.ceil(cd / Math.max(1, S.speed))} s` : '🛡 Schildwall';
+    if (b.textContent !== txt) b.textContent = txt;
+    b.classList.toggle('ready', !up && cd <= 0); b.classList.toggle('up', up); b.classList.toggle('warn', warn && cd <= 0 && !up); b.disabled = cd > 0 && !up;
+  }
+  let boonShown = null;
+  function ahnBoonCheck() {
+    if (!run || !run.boonOffer || boonShown === run.boonOffer) return;
+    boonShown = run.boonOffer; SND.play('victory');
+    const cards = run.boonOffer.map((o, i) => { const B = AHN_BOONS[o.id], hh = o.h && HERO_BY_ID[o.h];
+      return `<button class="ahn-bcard k-${B.kind} ${o.gold ? 'gold' : ''}" data-boon="${i}" ${hh ? `style="--hc:${hh.color}"` : ''}>${o.gold ? '<em>Glanz ×2</em>' : ''}<span class="ic">${hh ? `<img src="${portraitURL(o.h)}" alt="">` : B.icon}</span><b>${esc(B.name)}</b><small>${esc(ahnBoonText(o))}</small><i>${B.kind === 'all' ? 'für alle Helden' : B.kind === 'hero' ? 'starker Segen für einen Helden' : 'Kampfkunst'}</i></button>`; }).join('');
+    modal(`<div class="ahn-bpick"><h2>✨ Segen der Ahnen</h2><p class="note">Wähle einen Segen. Er gilt für die ganze Prüfung bis zum Siegel, aber nur in der Ahnenprüfung.</p><div class="ahn-bcards">${cards}</div></div>`, 'rl-boonm');
+    $('#picker .rl-boonm').addEventListener('click', e => {
+      const b = e.target.closest('[data-boon]'); if (!b || !run || !run.boonOffer) return;
+      const o = ahnPickBoon(S, run, Number(b.dataset.boon)); if (!o) return;
+      st = statsFor(S, run.mode); $('#picker').hidden = true; boonShown = null; SND.play('buy'); toast(`Segen: ${AHN_BOONS[o.id].name}`, true); save();
+    });
+    // Ohne Auswahl darf das Fenster nicht verschwinden
+    $('#picker').onclick = null;
+  }
   function hud() {
+    ahnWallBtn(); ahnBoonCheck();
     { const el = $('#rlStat'); el.innerHTML = ''; el.hidden = true; }
     { const d = $('#soloNews .dot'); if (d) d.hidden = !UPDATES.length || newsSeen() >= UPDATES[0].id; }
     $('#soloSpeed').textContent = `Tempo ×${String(S.speed).replace('.', ',')}`;
@@ -786,7 +819,7 @@
     const a = $('#rlAction');
     const troopBtn = `<button class="btn ghost rl-troopbtn ${S.uiTroop ? 'on' : ''}" data-rl="troop" aria-expanded="${!!S.uiTroop}">Truppe ${S.uiTroop ? '▴' : '▾'}</button>`;
     if (inCamp()) a.innerHTML = `${troopBtn}<button class="btn ghost rl-boardbtn" data-rl="board">📋 Anschlagbrett${boardNew().length || tripsReady().length || wbClaimable() ? '<i class="rl-reddot" aria-label="neu"></i>' : ''}</button>${areaMax(S) >= 1 ? `<button class="btn ghost rl-area" data-rl="area"><small>Startgebiet</small><b>${esc(zoneName(st.startStage))} ▾</b></button>` : ''}<button class="btn rl-go" data-rl="start">Feldzug starten</button>`;
-    else a.innerHTML = `${troopBtn}<button class="btn ${confirm === 'giveup' ? 'danger' : 'ghost'} small" data-rl="giveup">${confirm === 'giveup' ? 'Wirklich aufgeben?' : run.mode === 'tower' ? 'Turm verlassen' : run.mode === 'weekly' ? 'Herausforderung beenden'   : run.mode === 'wboss' ? 'Kampf beenden' : run.mode === 'exp' || run.mode === 'ahnen' ? 'Mission abbrechen' : 'Feldzug aufgeben'}</button>`;
+    else a.innerHTML = `${troopBtn}${run.mode === 'ahnen' ? '<button class="btn rl-wallbtn" data-rl="wall" id="rlWall">🛡 Schildwall</button>' : ''}<button class="btn ${confirm === 'giveup' ? 'danger' : 'ghost'} small" data-rl="giveup">${confirm === 'giveup' ? 'Wirklich aufgeben?' : run.mode === 'tower' ? 'Turm verlassen' : run.mode === 'weekly' ? 'Herausforderung beenden'   : run.mode === 'wboss' ? 'Kampf beenden' : run.mode === 'exp' || run.mode === 'ahnen' ? 'Mission abbrechen' : 'Feldzug aufgeben'}</button>`;
   }
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const costHTML = c => [c.g ? `<span class="rl-cur gold">${coin}${fmt(c.g)}</span>` : '', c.s ? `<span class="rl-cur soul">${soul}${c.s}</span>` : ''].join(' ');
@@ -841,10 +874,141 @@
       <button class="btn ghost small" data-rl="sockdel" ${extra > 0 && inCamp() ? '' : 'disabled'}>− Sockel abnehmen</button>
       <span class="note">frei: <b>${free}</b> von ${kSlots(S)}</span></div>`;
   }
+  /* ---------- Alle Werte eines Helden ---------- */
+  // Zeigt Grundwerte, Sonderwerte der Klasse und für jede gelernte Fähigkeit Abklingzeit, Schaden, Heilung und Dauer.
+  // Die Formeln entsprechen denen in ACT (1_spiel.js): Schaden = Angriff × Faktor × Fähigkeitsschaden.
+  const pc = v => `${(Math.round(v * 1000) / 10).toLocaleString('de-DE')} %`;
+  const sec = v => `${(Math.round(v * 10) / 10).toLocaleString('de-DE')} s`;
+  const AINFO = (() => {
+    const L = (a, b) => [a, b];
+    const D = (T, m, n = 1) => L(n > 1 ? `Schaden (${n}×)` : 'Schaden', `${pc(m)} · je ${fmt(T.atk * m)}`);
+    const DW = (T, m) => L('Schaden (Wolf)', `${pc(m)} · ${fmt(T.wolfAtk * m)}`);
+    const DUR = v => L('Dauer', sec(v)), ST = v => L('Betäubung', sec(v));
+    return {
+      wirbel: (r, T) => [D(T, (2 + 0.5 * (r - 1)) * T.actMul), L('Ziele', 'alle nahen Gegner')],
+      heil: (r, T) => [L('Heilung Ritter', pc(0.4 + 0.08 * (r - 1)) + ' Leben'), L('Heilung andere', pc(0.1 + 0.03 * (r - 1)) + ' Leben')],
+      blitz: (r, T) => [D(T, (4 + 1.5 * (r - 1)) * T.actMul), L('Ziel', 'stärkster Gegner')],
+      schild: (r, T) => [D(T, (2.5 + 0.5 * (r - 1)) * T.actMul, 2), L('Extra', 'Wirbelwind lädt 3 s schneller')],
+      schrei: (r, T) => [L('Schaden der Gruppe', '+' + pc(0.4 + 0.15 * (r - 1))), DUR(T.schwur ? 12 : 6)],
+      w_wall: (r, T) => [D(T, (1.5 + 0.5 * (r - 1)) * T.actMul), ST(1), L('Ziele', 'alle nahen Gegner')],
+      w_haut: (r, T) => [L('Weniger Schaden', '−60 %'), DUR(5 + r + (T.wille ? 3 : 0))],
+      w_rache: (r, T) => [L('Rückwurf', '+60 % des erlittenen Schadens'), DUR(6 + r)],
+      s_hagel: (r, T) => [D(T, (1.2 + 0.4 * (r - 1)) * T.actMul, 6), L('Ziele', 'zufällig')],
+      s_falke: (r, T) => [D(T, (3.5 + 1.2 * (r - 1)) * T.actMul), L('Markiert', '+25 % Schaden für 5 s')],
+      s_gift: (r, T) => [L('Giftschaden gesamt', `${pc((3 + (r - 1)) * T.actMul)} · ${fmt(T.atk * (3 + (r - 1)) * T.actMul)}${T.toxik ? ' (bis 3× stapelbar)' : ''}`), DUR(5)],
+      m_meteor: (r, T) => [D(T, (5 + 1.5 * (r - 1)) * T.actMul * (T.schauer ? 0.5 : 1), T.schauer ? 3 : 1), L('Ziele', 'alle Gegner im Bild')],
+      m_eis: (r, T) => [D(T, (1.5 + 0.5 * (r - 1)) * T.actMul), L('Einfrieren', sec(1.5))],
+      m_kette: (r, T) => [D(T, 2.5 * T.actMul), L('Ziele', String(3 + r))],
+      p_segen: (r, T) => [L('Heilung', pc(0.3 + 0.08 * (r - 1)) + ' Leben, alle Helden')],
+      p_schild: (r, T) => [L('Schild', pc((0.2 + 0.05 * (r - 1)) * (T.hohe ? 2 : 1)) + ' Leben, alle Helden')],
+      p_wieder: (r, T) => [L('Wiederbelebt mit', pc(0.4 + 0.15 * (r - 1)) + ' Leben')],
+      t_rudel: (r, T) => [L('Zusätzliche Wölfe', String(2 + (T.packBonus || 0))), DUR(8 + 2 * (r - 1))],
+      t_wurzel: (r, T) => [D(T, 1.2 * T.actMul), ST(2 + 0.5 * (r - 1))],
+      t_sprung: (r, T) => [DW(T, (6 + 2 * (r - 1)) * T.actMul), L('Ziele', T.leit ? '3' : '1')],
+      a_schatten: (r, T) => [D(T, (6 + 2 * (r - 1)) * T.actMul, 2), L('Gegen Fernkämpfer', '+' + pc(T.rangedDmg))],
+      a_sturm: (r, T) => [D(T, (1.2 + 0.4 * (r - 1)) * T.actMul, 8)],
+      a_mal: (r, T) => [D(T, (3 + (r - 1)) * T.actMul), L('Markiert', '+40 % Schaden für 6 s')],
+      n_heer: (r, T) => [L('Skelette', String(2 + r)), DUR(T.minionLong ? 24 : 12)],
+      n_raub: (r, T) => [D(T, (3 + (r - 1)) * T.actMul), L('Heilung', '15 % des Schadens für alle')],
+      n_fluch: (r, T) => [L('Gegner erleiden', '+' + pc(0.25 + 0.1 * (r - 1)) + ' Schaden'), DUR(6)],
+      b_krieg: (r, T) => [L('Schaden der Gruppe', '+' + pc(0.3 + 0.1 * (r - 1))), DUR(6)],
+      b_wiegen: (r, T) => [L('Schlaf', sec(2 + 0.5 * (r - 1)))],
+      b_schall: (r, T) => [D(T, (2 + 0.6 * (r - 1)) * T.actMul), L('Extra', 'stößt Gegner zurück')],
+      d_ranken: (r, T) => [D(T, 1.5 * T.actMul), L('Wurzeln', sec(2 + 0.5 * (r - 1)))],
+      d_bruell: (r, T) => [L('Weniger Schaden für alle', '−40 %'), DUR((6 + (r - 1)) * (T.rinde ? 2 : 1))],
+      d_adler: (r, T) => [D(T, (3 + (r - 1)) * T.actMul, 3 + (T.eagle || 0))],
+      e_turm2: (r, T) => [L('Zusätzliches Geschütz', '1'), DUR(10 + 2 * (r - 1))],
+      e_streu: (r, T) => [D(T, (1.5 + 0.5 * (r - 1)) * T.actMul, T.splitter ? 10 : 6)],
+      e_mine: (r, T) => [D(T, (2.5 + 0.8 * (r - 1)) * T.actMul), ST(1)],
+      sg_r_schlag: (r, T) => [L('Stärkster Verbündeter', '+' + pc(0.5 + 0.15 * (r - 1)) + ' Schaden'), DUR(8)],
+      sg_r_banner: (r, T) => [L('Effekt', 'Helden fallen nicht unter 1 Leben'), DUR(8 + (r - 1))],
+      sg_r_duell: (r, T) => [L('Ziel erleidet', '+' + pc(1 + 0.25 * (r - 1)) + ' Schaden'), L('Ziel macht', '−30 % Schaden'), DUR(8)],
+      o_wall: (r, T) => [L('Effekt', 'zieht Angriffe auf sich, −40 % Schaden'), DUR(5 + (r - 1))],
+      o_beben: (r, T) => [D(T, (2 + 0.6 * (r - 1)) * T.actMul), ST(1.2)],
+      o_glyphe: (r, T) => [L('Schild für alle', fmt(T.hp * (0.12 + 0.04 * (r - 1))))],
+      sg_o_monolith: (r, T) => [L('Effekt', 'Runenwall + 100 % Rückwurf'), DUR(5 + (r - 1))],
+      sg_o_sturm: (r, T) => [L('Schaden pro Sekunde', `${pc((0.8 + 0.2 * (r - 1)) * T.actMul)} · ${fmt(T.atk * (0.8 + 0.2 * (r - 1)) * T.actMul)}`), DUR(6 * (T.stormX ? 2 : 1))],
+      sg_o_spalt: (r, T) => [D(T, (4 + (r - 1)) * T.actMul), ST(2)],
+      sg_w_spott: (r, T) => [L('Effekt', 'zieht Angriffe auf sich, −30 % Schaden'), DUR(5 + (r - 1))],
+      sg_w_beben: (r, T) => [D(T, (2.5 + 0.6 * (r - 1)) * T.actMul), L('Ziele', 'alle Gegner im Bild')],
+      sg_w_prall: (r, T) => [L('Rückwurf je Geschoss', `${pc((2 + 0.6 * (r - 1)) * T.actMul)} · ${fmt(T.atk * (2 + 0.6 * (r - 1)) * T.actMul)}`), DUR(6)],
+      sg_s_ziel: (r, T) => [D(T, (12 + 4 * (r - 1)) * T.actMul), L('Zielzeit', sec(1.5))],
+      sg_s_sperr: (r, T) => [L('Angriffstempo', '+200 %'), DUR(4 + (r - 1))],
+      sg_s_sprung: (r, T) => [D(T, (2 + 0.6 * (r - 1)) * T.actMul, 2), L('Unverwundbar', sec(2))],
+      sg_m_loch: (r, T) => [L('Schaden alle 0,5 s', `${pc((1.5 + 0.5 * (r - 1)) * T.actMul * 0.5)} · ${fmt(T.atk * (1.5 + 0.5 * (r - 1)) * T.actMul * 0.5)}`), DUR(3)],
+      sg_m_strahl: (r, T) => [L('Schaden je Treffer', `${pc((1 + 0.25 * (r - 1)) * T.actMul)} · ${fmt(T.atk * (1 + 0.25 * (r - 1)) * T.actMul)}`), DUR(3)],
+      sg_m_mana: (r, T) => [L('Effekt', 'normale Gegner verlieren 8 % Leben/s, Bosse 150 % Angriff/s'), DUR(4 + (r - 1))],
+      sg_p_boden: (r, T) => [L('Heilung pro Sekunde', pc(0.03 + 0.01 * (r - 1)) + ' Leben, alle'), DUR(8)],
+      sg_p_eile: (r, T) => [L('Angriffstempo der 2 Stärksten', '+' + pc(0.5 + 0.1 * (r - 1))), DUR(6)],
+      sg_p_gebet: (r, T) => [L('Abklingzeiten der anderen', '−' + sec(4 + (r - 1)))],
+      sg_t_eber: (r, T) => [D(T, (2.5 + 0.8 * (r - 1)) * T.actMul), L('Betäubung', '1 s (Bosse 0,5 s)')],
+      sg_t_geheul: (r, T) => [L('Wölfe', '+80 % Schaden, +50 % Tempo'), DUR(6 + (r - 1))],
+      sg_t_instinkt: (r, T) => [L('Heilung', `${pc(0.35 + 0.1 * (r - 1))} · ${fmt(T.hp * (0.35 + 0.1 * (r - 1)))}`)],
+      sg_a_kehle: (r, T) => [L('Effekt', 'tötet Gegner unter 25 % sofort'), D(T, (5 + 1.5 * (r - 1)) * T.actMul)],
+      sg_a_klon: (r, T) => [L('Klon-Stärke', pc(0.5 + 0.15 * (r - 1))), DUR(8)],
+      sg_a_mal: (r, T) => [L('Detonation je Ziel', `${pc((4 + 1.2 * (r - 1)) * T.actMul)} · ${fmt(T.atk * (4 + 1.2 * (r - 1)) * T.actMul)}`), L('Ziele', '3')],
+      sg_n_wand: (r, T) => [L('Effekt', 'Gegner kommen nicht durch'), DUR(4 + (r - 1))],
+      sg_n_riese: (r, T) => [L('Leben des Riesen', fmt(T.hp * (3 + (r - 1)))), DUR(12)],
+      sg_n_fessel: (r, T) => [L('Effekt', '3 Gegner teilen Schaden'), DUR(6 + (r - 1))],
+      sg_b_diss: (r, T) => [L('Gegner greifen', '50 % langsamer an'), DUR(5 + (r - 1))],
+      sg_b_echo: (r, T) => [L('Effekt', 'wiederholt die zuletzt genutzte Fähigkeit')],
+      sg_b_ahnen: (r, T) => [L('Krit-Chance der Gruppe', '+' + pc(0.25 + 0.05 * (r - 1))), DUR(8)],
+      sg_d_gestalt: (r, T) => [L('Effekt', 'doppelter Schaden, −50 % erlittener Schaden'), DUR(8 + (r - 1))],
+      sg_d_wachs: (r, T) => [L('Schild für alle', pc(0.2 + 0.05 * (r - 1)) + ' Leben'), DUR(10)],
+      sg_d_gewalt: (r, T) => [L('Effekt', 'Schaden heilt die Druidin'), DUR(5 + (r - 1))],
+      sg_e_flamme: (r, T) => [L('Schaden alle 0,5 s', `${pc((2 + 0.5 * (r - 1)) * T.actMul)} · ${fmt(T.atk * (2 + 0.5 * (r - 1)) * T.actMul)}`), DUR(3)],
+      sg_e_rakete: (r, T) => [D(T, (4 + 1.2 * (r - 1)) * T.actMul, 3)],
+      sg_e_druck: (r, T) => [L('Geschütze', 'doppelt so schnell'), DUR(6 + (r - 1))],
+    };
+  })();
+  function showHeroStats(tree) {
+    const h = HERO[tree]; if (!h) return;
+    const ST = run && !run.dead ? st : stats(S), T = ST[h.id];
+    if (!T) { toast('Diesen Helden hast du noch nicht.'); return; }
+    SND.play('tick');
+    const row = (a, b, hint) => `<div class="rl-hsrow"${hint ? ` title="${esc(hint)}"` : ''}><span>${a}</span><b>${b}</b></div>`;
+    const dps = T.atk * T.aps * (1 + Math.min(1, T.crit) * (T.critD - 1)) * (1 + (T.dbl || 0));
+    const base = [
+      row('❤ Leben', fmt(T.hp)), row('⚔ Schaden pro Treffer', fmt(T.atk)), row('⏱ Angriffe pro Sekunde', T.aps.toFixed(2).replace('.', ',')),
+      row('📈 Schaden pro Sekunde (ca.)', fmt(dps), 'Angriff × Tempo × Krit, ohne Fähigkeiten'),
+      row('✦ Krit-Chance', pc(T.crit), 'Über 100 % kann ein Treffer mehrfach kritisch sein'), row('✦ Krit-Schaden', '×' + T.critD.toFixed(2).replace('.', ',')),
+      T.dbl ? row('Doppelschlag', pc(T.dbl)) : '', row('🛡 Schadensreduktion', pc(T.dr)), T.block ? row('Blocken', pc(T.block)) : '', T.dodge ? row('Ausweichen', pc(T.dodge)) : '',
+      T.regen ? row('Regeneration', pc(T.regen) + ' Leben/s') : '', T.lifesteal ? row('Lebensraub', pc(T.lifesteal)) : '', T.thorns ? row('Dornen', pc(T.thorns) + ' zurück') : '',
+      row('⌛ Abklingzeit', '−' + pc(T.cdr)), row('💥 Fähigkeitsschaden', '×' + T.actMul.toFixed(2).replace('.', ',')),
+      T.bossDmg ? row('Gegen Bosse und Elite', '+' + pc(T.bossDmg)) : '', T.splash ? row('Flächenschaden', pc(T.splash)) : '', T.pierce ? row('Durchschlag', pc(T.pierce)) : '',
+      T.shots > 1 || T.extraShot ? row('Schüsse', `${T.shots}${T.extraShot ? ` (+${pc(T.extraShot)} Extra)` : ''}`) : '', T.stunChance ? row('Betäubungschance', pc(T.stunChance)) : '',
+      T.burn ? row('Brand', pc(T.burn) + ' des Treffers') : '', T.vuln ? row('Verwundbar machen', '+' + pc(T.vuln)) : '',
+    ].join('');
+    const special = [
+      T.heal ? row('✚ Heilung pro Treffer', fmt(T.heal)) : '',
+      T.wolves ? row('🐺 Wölfe', String(T.wolves)) + row('Wolf-Schaden', fmt(T.wolfAtk)) + row('Wolf-Angriffe pro Sekunde', T.wolfAps.toFixed(2).replace('.', ',')) + (T.wolfCrit ? row('Wolf-Krit', '+' + pc(T.wolfCrit)) : '') : '',
+      T.minionMax ? row('💀 Skelette gleichzeitig', String(T.minionMax)) + row('Erweckungs-Chance', pc(T.raise)) + row('Skelett-Stärke', pc(T.minionMul)) + row('Skelett-Dauer', sec(T.minionDur)) : '',
+      h.id === 'b' ? row('🎵 Lied: Schaden der Gruppe', '+' + pc(T.songAtk)) + row('🎵 Lied: Tempo der Gruppe', '+' + pc(T.songAps)) : '',
+      T.turrets ? row('⚙ Geschütze', String(T.turrets)) + row('Geschütz-Schaden', `${pc(T.turretMul)} · ${fmt(T.atk * T.turretMul)}`) + row('Geschütz-Schüsse pro Sekunde', T.turretAps.toFixed(2).replace('.', ',')) : '',
+      T.rangedDmg ? row('Gegen Fernkämpfer', '+' + pc(T.rangedDmg)) : '',
+    ].join('');
+    const grp = row('🚶 Laufgeschwindigkeit der Gruppe', '×' + ST.g.walk.toFixed(2).replace('.', ',')) + row('Gold', '×' + ST.g.gold.toFixed(2).replace('.', ',')) + (ST.g.partyDr ? row('Schutz der Gruppe', pc(ST.g.partyDr)) : '');
+    const acts = NODES.filter(n => n.tree === tree && n.active && ACT[n.id] && rank(S, n.id) > 0);
+    const actHTML = acts.length ? acts.map(n => {
+      const r = rank(S, n.id), A = ACT[n.id], cd = A.cd(r, S) * (1 - T.cdr), mc = minCdOf(n.id, S, ST), on = S.equip.includes(n.id);
+      const lines = (AINFO[n.id] ? AINFO[n.id](r, T, ST) : []).map(([a, b]) => row(a, b)).join('');
+      return `<div class="rl-hsact ${on ? 'on' : ''}"><div class="hd"><span class="ic">${n.icon || '◆'}</span><b>${esc(n.name)}</b><small>Stufe ${r}${n.max > 1 && n.max < 99 ? '/' + n.max : ''}</small>${on ? '<em>ausgerüstet</em>' : ''}${n.sig ? '<em class="sig">✦ Siegel</em>' : ''}</div>
+        ${row('⌛ Abklingzeit', sec(Math.max(mc, cd)) + (mc > cd ? ' (Mindestabstand)' : ''))}${lines}<p class="note">${esc(n.desc)}</p></div>`;
+    }).join('') : '<p class="note">Noch keine aktive Fähigkeit gelernt.</p>';
+    const pas = NODES.filter(n => n.tree === tree && !n.active && rank(S, n.id) > 0 && n.id !== h.hire);
+    const pasHTML = pas.length ? pas.map(n => `<div class="rl-hspas"><b>${esc(n.name)}</b>${n.max > 1 ? `<small>${n.max > 99 ? 'Stufe ' + rank(S, n.id) : rank(S, n.id) + '/' + n.max}</small>` : ''}<p class="note">${esc(n.desc)}</p></div>`).join('') : '<p class="note">Noch keine Talente gelernt.</p>';
+    modal(`<div class="rl-hstats" style="--hc:${h.color}"><div class="rl-hshead"><span class="pt">${PORTRAIT[h.id]}</span><div><h2>${esc(h.name)}</h2><p class="note">Meisterschaft ${mastLevel(S, h.id)}/${MAST_MAX}${run && !run.dead ? ' · Werte im laufenden Kampf' : ''}</p></div></div>
+      <h3 class="rl-h3">Grundwerte</h3><div class="rl-hsgrid">${base}</div>
+      ${special ? `<h3 class="rl-h3">Besonderheiten</h3><div class="rl-hsgrid">${special}</div>` : ''}
+      <h3 class="rl-h3">Gruppe</h3><div class="rl-hsgrid">${grp}</div>
+      <h3 class="rl-h3">Aktive Fähigkeiten</h3>${actHTML}
+      <h3 class="rl-h3">Talente</h3><div class="rl-hspasl">${pasHTML}</div>
+      <div class="row" style="justify-content:center;margin-top:10px"><button class="btn ghost" data-m="x">Schließen</button></div></div>`, 'rl-hstatm');
+  }
   function heroTab(tree) {
     const h = HERO[tree], eq = eqOf(S, tree, false), eqS = eqOf(S, tree, true), ok = hired(S, tree), sg = sigOn(S, tree);
     const lockedNote = !classOpen(S, tree) ? `<p class="warn">${h.puzzle ? `Diese Klasse bekommst du mit 6 Puzzleteilen aus den Expeditionen (${pieceCount(S, h.id)}/6).` : `Diese Klasse wird mit der ${h.rebirth}. Wiedergeburt freigeschaltet.`} Du kannst dir den Baum schon ansehen.</p>` : '';
-    return `${lockedNote}<div class="rl-hhead" style="--hc:${h.color}"><span class="pt">${PORTRAIT[h.id]}</span><div><h3>${h.name}</h3><p class="note">${h.desc}</p>
+    return `${lockedNote}<div class="rl-hhead" style="--hc:${h.color}">${ok ? '<button class="btn ghost small rl-hsbtn" data-rl="hstats" aria-label="Alle Werte">📊 Werte</button>' : ''}<span class="pt">${PORTRAIT[h.id]}</span><div><h3>${h.name}</h3><p class="note">${h.desc}</p>
       ${ok ? `<p class="note">Aktive Fähigkeiten ${eq.length}/${slotsOf(S, tree)}: ${eq.length ? esc(eq.map(ACT_NAME).join(', ')) : 'noch keine'}${sg ? ` · <span class="rl-sigslot">✦ Siegel-Platz: ${eqS.length ? esc(eqS.map(ACT_NAME).join(', ')) : 'frei'}</span>` : ''}</p>${mastHTML(h)}${sockRow(tree)}` : ''}</div></div>
       ${acct && acct.tester ? `<div class="rl-test"><b>🧪 Test</b> <button class="btn small ${confirm === 'tbuild' ? 'danger' : ''}" data-rl="tbuild" ${inCamp() && classOpen(S, tree) ? '' : 'disabled'}>${confirm === 'tbuild' ? 'Wirklich den ganzen Baum setzen?' : 'Baum komplett ausbauen'}</button><span class="note">Alles auf voll, beide Endlos-Fertigkeiten auf 42. Kostet nichts. Schlüssel bleiben, wie sie sind.</span>
         <button class="btn small ${S.tKeepTree ? '' : 'ghost'}" data-rl="tkeep">${S.tKeepTree ? '✓ Bäume bleiben bei Wiedergeburt' : 'Bäume bleiben bei Wiedergeburt: aus'}</button><span class="note">Wenn an, behalten alle Helden bei einer Wiedergeburt ihre Fertigkeitenbäume und ausgerüsteten Fähigkeiten. Gilt für alle Helden.</span></div>` : ''}
@@ -1256,6 +1420,8 @@
     else if (a === 'trebirth') { if (acct && acct.tester && inCamp()) { const team = HEROES.filter(h => st[h.id]).map(h => h.id); const g = rebirth(S, true); run = null; achCheck(); afterChange(); SND.play('rebirth'); toast(`Test-Wiedergeburt: +${g} Sterne`, true); playCine('rebirth', team); } }
     else if (a === 'lager') { if (inCamp() && buyLager(S)) { SND.play('forge'); toast(`Runen-Lager erweitert: jetzt ${runeCap(S)} Plätze`); afterChange(); } }
     else if (a === 'altar') { if (inCamp() && buyAltar(S)) { SND.play('soul'); toast(`Seelenaltar Stufe ${S.altar}: Seelen ×${altarMul(S).toFixed(2).replace('.', ',')}`, true); afterChange(); } }
+    else if (a === 'hstats') showHeroStats(tab);
+    else if (a === 'wall') ahnWallPress();
     else if (a === 'sockadd') { if (inCamp() && addSock(S, tab)) { toast('Sockel gesetzt.'); afterChange(); } }
     else if (a === 'sockdel') { if (inCamp()) { const r = removeSock(S, tab); if (r === 'used') toast('Alle Sockel sind belegt. Nimm zuerst eine Schlüssel-Fertigkeit ab.'); else if (r === 'ok') { toast('Sockel abgenommen. Du kannst ihn jetzt woanders setzen.'); afterChange(); } } }
     else if (a === 'unkey') { if (inCamp() && ask('unkey', panel)) { const n = NODE[sel[tab]], c = removeKey(S, n); if (c) { toast(`${n.name} abgenommen. Gold und Seelen sind zurück.`); afterChange(); } } }
