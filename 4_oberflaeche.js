@@ -550,7 +550,7 @@
     return r;
   }
   const wbClaimable = () => !!(acct && acct.token && WBC.info && WBC.info.last);
-  const wbBossName = bk => BOSS_NAMES[bk % BOSS_NAMES.length];
+  const wbBossName = bk => WB_BOSS[(bk || 0) % WB_BOSS.length].name;
   function wbInfoLines() {
     if (!acct || !acct.token) return ['Alle gegen einen Boss mit unendlich vielen Leisten. Jede Leiste bringt Beute.'];
     const I = WBC.info; if (!I) { wbFetch(); return ['Lädt …']; }
@@ -1635,6 +1635,16 @@
     start: () => { if (inCamp()) { $('#picker').hidden = true; startRun(); } },
     speed: () => { const b = $('#soloSpeed'); if (b) b.click(); },
     sound: () => { const b = $('#soloSnd'); if (b) b.click(); },
+  };
+  // Galerie zum Prüfen aller Figuren (nur mit window.RITTER_GALLERY, z. B. auf einer Testseite)
+  if (window.RITTER_GALLERY) window.RitterGallery = {
+    W, H, GROUND, heroes: Object.keys(DRAW), kinds: ENEMY_KINDS, bossNames: BOSS_NAMES, missions: AHN_MISSIONS, ahne: AHNE,
+    use(c, sc) { cv = c; ctx = c.getContext('2d'); scale = sc; ctx.setTransform(sc, 0, 0, sc, 0, 0); },
+    at(x, y, s, fn) { ctx.save(); ctx.translate(x, y); ctx.scale(s, s); try { fn(); } finally { ctx.restore(); } },
+    hero(k, x, t, o = {}) { drawHero(k, x, { alive: true, swing: o.swing || 0, hurtT: o.hurt || 0, hp: 1, fall: 1 }, t, !!o.walk); },
+    enemy(o, x, t) { const e = makeEnemy(o.stage || 5, 0, !!o.boss, !!o.elite, null, !!o.ranged); Object.assign(e, o.set || {}); e.x = x; e._px = x; enemy(e, t); return e; },
+    ahn(def, x, t, ph = 0) { const e = makeEnemy(40, 0, true, false, null, false); e.ahn = def; e.bk = def.bk; e.type = def.bk >= 0 && def.bk < 5 ? ENEMY_KINDS[def.bk] : 'geist'; e.phase = ph; e.x = x; e._px = x; enemy(e, t); },
+    fn: { wolf, minion, boneGiant, shadowClone, boar, turret, dragonC, owlC, golemC, phoenixC, drawDragon },
   };
   window.Ritter = { open, close, isOpen: () => active };
 })();

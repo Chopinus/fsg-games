@@ -176,7 +176,7 @@ function social(action, key, acc, body) {
 // Eine Woche (Montag 0 Uhr UTC bis Sonntag) kämpfen alle gegen denselben Boss. Jeder Spieler hat 3 Versuche pro Tag.
 // Der Server zählt die Versuche und merkt sich pro Spieler die meisten Leisten aus einem Versuch. Die Summe zählt fürs Gemeinschaftsziel.
 const WB_FILE = 'ritter-wochenboss.json', WB_LOCAL = path.join(__dirname, 'wochenboss.local.json');
-const WB_TRIES = 3, WB_MAX_BARS = 2000, WB_BOSSES = 15;
+const WB_TRIES = 3, WB_MAX_BARS = 2000, WB_BOSSES = 3; // drei eigene Wochenbosse, wechseln wöchentlich
 // Gruppenziele: Summe der besten Leistenzahl (ein Versuch) der bis zu 5 Spieler einer Gilde bzw. Zufallsgruppe.
 // Muss zu WB.goals in ritter/1_spiel.js passen.
 const WB_GOALS = [40, 100, 180, 280, 400];

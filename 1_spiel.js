@@ -1108,10 +1108,16 @@
   // Lebensleisten. Mit jeder abgezogenen Leiste werden Leben und Schaden um einen festen Faktor stärker.
   // Jede Leiste bringt sofort Beute. Die beste Leistenzahl pro Spieler (ein Versuch) zählt fürs Gemeinschaftsziel.
   const WB = { lvl: 8, grow: 1.15, hp: 4, tries: 3, maxT: 600, goals: [40, 100, 180, 280, 400] }; // goals: Gruppenziele (Gilde bzw. Zufallsgruppe), müssen zu WB_GOALS in konten.js passen
+  // Die drei Wochenbosse wechseln sich wöchentlich ab (Server: Woche % 3)
+  const WB_BOSS = [
+    { name: 'Tiamat, die Sternenhydra', bg: 'sterne', zone: 10, kind: 'drache' },
+    { name: 'Ferrox, der Uhrwerk-Koloss', bg: 'x_werk', zone: 8, kind: 'golem' },
+    { name: 'Morwen, die Schattenkönigin', bg: 'krypta', zone: 7, kind: 'geist' },
+  ];
   const wbScore = run => (run.wb && run.wb.bars) || 0;
   function wbSpawn(run) {
     const e = makeEnemy(WB.lvl, 1.2, true, false, run);
-    e.hp *= WB.hp; e.max = e.hp; e.wb = true; e.bk = run.wb.bk; e.type = ENEMY_KINDS[run.wb.bk % ENEMY_KINDS.length];
+    e.hp *= WB.hp; e.max = e.hp; e.wb = true; e.wbk = run.wb.bk % WB_BOSS.length; e.bk = WB_BOSS[e.wbk].zone; e.type = WB_BOSS[e.wbk].kind;
     run.enemies = [e]; run.bannerT = 2.2;
   }
   function wbBars(run, c) {
@@ -1591,7 +1597,7 @@
     mine: { name: 'Runenmine', melee: 'grubenwicht', ranged: 'kristallwisp', boss: 'Der Runenwächter', bk: 'x_mine', col: '#46d4ee' },
   };
   const areaOf = run => (run && run.mode === 'exp' && MISSION[run.mission] && AREAS[MISSION[run.mission].area]) || null;
-  const bossNameOf = (run, stage) => (run && run.wb ? BOSS_NAMES[run.wb.bk] : areaOf(run) ? areaOf(run).boss : bossOf(stage));
+  const bossNameOf = (run, stage) => (run && run.wb ? WB_BOSS[run.wb.bk % WB_BOSS.length].name : areaOf(run) ? areaOf(run).boss : bossOf(stage));
   const heroMission = id => MISSIONS.find(m => m.hero === id);
   const PIECE_COST = 100, PIECE_CHANCE = 0.06, PIECE_DUP = 50;
   const expOpen = S => S.asc >= 1 || (S.exp && S.exp.done > 0);
@@ -1904,7 +1910,7 @@
     }
     run.dust0 = S.dust;
     if (run.mode === 'ahnen') ahnInit(S, run);
-    if (run.mode === 'wboss') { run.stage = run.startStage = WB.lvl; run.wb = { bars: 0, bk: Math.max(0, Math.floor(S.wbBk || 0)) % BOSS_NAMES.length }; }
+    if (run.mode === 'wboss') { run.stage = run.startStage = WB.lvl; run.wb = { bars: 0, bk: Math.max(0, Math.floor(S.wbBk || 0)) % WB_BOSS.length }; }
     spawnWave(run);
     return run;
   }
@@ -1977,7 +1983,7 @@
       if (T.vuln && k === 's') { e.mark = Math.max(e.mark || 0, T.vuln); e.markT = 4; }
       if (T.lifesteal) { const h = run.h[k]; if (h && h.alive) h.hp = Math.min(T.hp, h.hp + dmg * T.lifesteal); }
       if (wolf && T.wolfHeal) c.healAllAbs(dmg * T.wolfHeal);
-      if (!(e.boss && run.floats.reduce((n, f) => n + (f.dmg && f.t > 0.6 ? 1 : 0), 0) >= 3)) c.efloat(e, nCrit > 1 ? `${nCrit}× ${fmt(dmg)}` : fmt(dmg), nCrit > 1 ? '#ff9a3d' : crit ? '#ffd23f' : color || '#ffffff', nCrit > 1 ? 20 : crit ? 18 : 13);
+      if (run.floats.reduce((n, f) => n + (f.dmg && f.t > 0.6 && Math.abs(f.x - e.x) < 60 ? 1 : 0), 0) < (e.boss ? 3 : 2)) c.efloat(e, nCrit > 1 ? `${nCrit}× ${fmt(dmg)}` : fmt(dmg), nCrit > 1 ? '#ff9a3d' : crit ? '#ffd23f' : color || '#ffffff', nCrit > 1 ? 20 : crit ? 18 : 13);
       if (crit) c.burst(e.x, 190, '#ffd23f', 5);
       sfx(crit ? 'crit' : 'hit', k);
       return dmg;
@@ -2209,6 +2215,9 @@
         if (r) { sfx('rune'); run.runes.push(r); run.floats.push({ x: e.x, y: 75, text: `Rune: ${RUNE[r.t].name} ${ROMAN[r.tier]}`, color: RUNE[r.t].color, size: 14, t: 1.4 }); }
       }
     }
+    // Besiegte Gegner bleiben kurz als Zerfall-Animation sichtbar (nur Optik)
+    run.corpses = (run.corpses || []).filter(c => (c.t += dt) < 0.5);
+    for (const e of run.enemies) if (e.hp <= 0 && run.corpses.length < 14) { e.dying = true; run.corpses.push({ e, t: 0 }); }
     run.enemies = run.enemies.filter(e => e.hp > 0);
     if (!run.enemies.length) {
       if (run.mode === 'tower') {
@@ -2341,7 +2350,7 @@
     return (n < 10 ? n.toFixed(2) : n < 100 ? n.toFixed(1) : Math.floor(n).toString()).replace('.', ',') + units[i];
   }
 
-  const core = { TRIPS, TRIP_SHARE, onTrip, tripLeft, rateOf, noteRate, hoursReward, tripReward, startTrip, claimTrip, WB, wbScore, wbBarReward, wbBarSecs, wbGoalHours, wbReward, AHN_MISSIONS, AHN_ABIL, AHN_TRAIT, AHNE, AHN_TUNE, AHN_COUNT, ahnOpen, ahnBossesOf, ahnLevelFor, placeSigil, ahnClaim, unrebirth, transmute, bossRuneTier, resetPerks, buyLager, lagerCost, LAGER_MAX, runeCap, shardOf, mergeCost, ALTAR_MAX, altarCost, altarMul, buyAltar, kSlots, kFree, keyCap, addSock, removeSock, removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, buyPiece, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
+  const core = { TRIPS, TRIP_SHARE, onTrip, tripLeft, rateOf, noteRate, hoursReward, tripReward, startTrip, claimTrip, WB, WB_BOSS, wbScore, wbBarReward, wbBarSecs, wbGoalHours, wbReward, AHN_MISSIONS, AHN_ABIL, AHN_TRAIT, AHNE, AHN_TUNE, AHN_COUNT, ahnOpen, ahnBossesOf, ahnLevelFor, placeSigil, ahnClaim, unrebirth, transmute, bossRuneTier, resetPerks, buyLager, lagerCost, LAGER_MAX, runeCap, shardOf, mergeCost, ALTAR_MAX, altarCost, altarMul, buyAltar, kSlots, kFree, keyCap, addSock, removeSock, removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, buyPiece, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
     SEASON, rankOf, RANKS, rankBonus, AREAS, areaOf, MISSIONS, extraSocks, XSOCK, sockOk, runeAmp, mastInfo, mastLevel, SKINS, WF_STAGE, WF, wfSpawn,
     sigOn, sigKeysUsed, keyNeed, eqOf, slotLim, SIG, SIG_FLAGS, newRun, step, stats, buy, available, blockReason, NODE, migrate, fresh,
     rebirth, ascend, crownsFor, buyCperk, cperkCost, cperk, CPERKS, levelComp, toggleComp, compCost, compMax, compSlots, COMPS, checkAch, ACH, claimWeekly, weekId, dayId, weekRules, RULE, WEEK_TIERS, statsFor, starsFor, toggleEquip, slotsOf, hired, classOpen, keysUsed, keyLimit, capOf, reqOf, feature, encode, decode, fmt, socket, unsocket, merge, canMerge, dismantle, buyRune, runeVal, addRune };
