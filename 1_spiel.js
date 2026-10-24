@@ -2920,6 +2920,6 @@
     Promise.all([updUrl(), ...css].filter(Boolean).map(u => fetch(u, { cache: 'reload' }).catch(() => null)))
       .then(() => new Promise(r => setTimeout(r, 900))).finally(() => location.reload());
   }
-  setTimeout(updCheck, 4000); setInterval(updCheck, 120000);
+  setTimeout(updCheck, 4000); setInterval(() => { if (!document.hidden) updCheck(); }, 300000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) updCheck(); });
 

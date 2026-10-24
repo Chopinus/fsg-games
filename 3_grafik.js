@@ -298,6 +298,18 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 8, title: 'Darstellung verbessert', date: '24.10.2026', items: [
+      ['Fix', 'Heldenpfad, Fertigkeitenbaum und Läden werden nicht mehr zusammengedrückt'],
+      ['Fix', 'Am PC füllt das Spielfeld die linke Seite, das Menü ist breiter'],
+      ['Fix', 'Handy quer: Spielfeld und Menü passen besser, Beschreibung verdeckt den Baum nicht mehr'],
+      ['Umstellung', 'Die Startseite heißt jetzt Game Hub'],
+    ] },
+    { id: 7, title: 'Weniger Datenverbrauch', date: '24.10.2026', items: [
+      ['Fix', 'Musik wird nur noch einmal geladen und im Browser gespeichert'],
+      ['Fix', 'Spiel-Datei wird komprimiert geladen (etwa 70 % kleiner)'],
+      ['Umstellung', 'Online-Speichern und Abfragen nur, solange das Spiel im Vordergrund ist'],
+      ['Umstellung', 'Freunde und Gilde werden seltener abgefragt, wenn ihr Fenster zu ist'],
+    ] },
     { id: 6, title: 'Sammlung: Heldenteile, Truhen und Lager-Deko', date: '24.10.2026', items: [
       ['Neu', 'Albtraum-Truhen: Ab Stufe 151 lässt jeder Boss eine Truhe fallen (gewöhnlich, selten, episch, legendär)'],
       ['Neu', 'Gewöhnliche Truhen geben Gold oder Seelen, die anderen Heldenteile und Lager-Deko'],

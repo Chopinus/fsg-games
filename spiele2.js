@@ -1,5 +1,5 @@
 'use strict';
-// FSG Spieleabend – Montagsmaler, Stadt-Land-Fluss, Wer ist der Spion?, Kniffel (Browser-Seite)
+// Game Hub – Montagsmaler, Stadt-Land-Fluss, Wer ist der Spion?, Kniffel (Browser-Seite)
 // Nutzt die Helfer aus app.js (room, act, esc, nameOf, isHost, againHTML, boardHTML, dieHTML, toast).
 (function () {
   const q = s => document.querySelector(s);

@@ -158,7 +158,8 @@
     if (b.dataset.sync === 'load') { adopt(c.data || {}); acct.updated = c.updated; setAcct(acct); cloudDirty = false; cloudMsg = `Geladen – zuletzt gespeichert um ${timeStr(c.updated)}`; toast('Spielstand vom anderen Gerät geladen.'); }
     else { cloudSave(true, false, true).then(() => toast('Dieser Stand wurde gespeichert.')); }
   }, true);
-  setInterval(() => cloudSave(false), 30000);
+  // Online speichern nur, wenn das Spiel sichtbar ist (beim Verlassen wird sowieso gespeichert)
+  setInterval(() => { if (!document.hidden) cloudSave(false); }, 60000);
   setInterval(() => { if (active) save(); }, 5000);
   document.addEventListener('visibilitychange', () => { if (document.hidden) { save(); cloudSave(true, true); } });
 
@@ -285,7 +286,8 @@
     if (before && r.inc.some(n => !before.inc.includes(n))) toast(`👥 Freundschaftsanfrage von ${r.inc.find(n => !before.inc.includes(n))}`);
     if (frOpen() && !FR.chat) frLists();
   }
-  function frStart() { clearInterval(FR.timer); FR.timer = setInterval(frRefresh, 20000); setTimeout(frRefresh, 1500); }
+  // Freunde: alle 20 s, solange das Freunde-Fenster offen ist, sonst alle 2 Minuten (nur im Vordergrund)
+  function frStart() { clearInterval(FR.timer); FR.n = 0; FR.timer = setInterval(() => { if (frOpen() || ++FR.n % 6 === 0) frRefresh(); }, 20000); setTimeout(frRefresh, 1500); }
   function frStop() { clearInterval(GD.timer); clearInterval(FR.timer); clearInterval(FR.poll); FR.chat = null; }
   function showFriends() {
     SND.play('tick');
@@ -403,8 +405,14 @@
   }
   function close() { frStop(); MUS.set(null); SND.ambient(false); closeSquad(); intro = null; const tov = document.querySelector('.rl-title'); if (tov) tov.remove(); active = false; cancelAnimationFrame(raf); save(); cloudSave(true); $('#solo').hidden = true; $('#solo').classList.remove('rl-app'); document.documentElement.classList.remove('rl-appmode'); $('#hub').hidden = false; }
   function sizeCanvas() {
-    const host = $('#soloCanvas'), app = $('#solo').classList.contains('rl-app'), wide = window.innerWidth > 760;
-    const w = Math.max(240, Math.min(host.clientWidth || 360, 960, app ? window.innerHeight * (wide ? 0.66 : 0.36) * W / H : 1e9));
+    const host = $('#soloCanvas'), app = $('#solo').classList.contains('rl-app'), wide = window.innerWidth > 760, flat = window.innerHeight <= 560 && window.innerWidth > window.innerHeight;
+    // App-Ansicht: Spielfeld so groß, wie es neben bzw. über das Menü passt
+    let maxH = 1e9;
+    if (app) {
+      if (wide || flat) { const L = $('.rl-left'), used = ($('#rlHeroes').hidden ? 0 : $('#rlHeroes').offsetHeight) + $('.rl-bar').offsetHeight + 34; maxH = Math.max(140, (L ? L.clientHeight : window.innerHeight) - used); }
+      else maxH = window.innerHeight * 0.36;
+    }
+    const w = Math.max(240, Math.min(host.clientWidth || 360, 1400, maxH * W / H));
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     cv.style.width = w + 'px'; cv.style.height = (w * H / W) + 'px'; cv.width = Math.round(w * dpr); cv.height = Math.round(w * H / W * dpr); scale = cv.width / W;
   }
@@ -422,7 +430,8 @@
     if (before && r.invites.some(i => !before.invites.some(x => x.id === i.id))) toast(`🛡 Einladung in die Gilde „${r.invites[r.invites.length - 1].name}“`);
     if (gdOpen() && GD.view === 'main') gdRender();
   }
-  function gdStart() { clearInterval(GD.timer); GD.timer = setInterval(gdRefresh, 45000); setTimeout(gdRefresh, 2000); }
+  // Gilde: alle 30 s bei offenem Gildenfenster, sonst alle 3 Minuten (nur im Vordergrund)
+  function gdStart() { clearInterval(GD.timer); GD.n = 0; GD.timer = setInterval(() => { if (gdOpen() || ++GD.n % 6 === 0) gdRefresh(); }, 30000); setTimeout(gdRefresh, 2000); }
   function showGuild() {
     SND.play('tick');
     if (!acct || !acct.token) {
@@ -1127,9 +1136,10 @@
     const wl = $('#rlWallet'); if (wl) { const h = wallet(['gold', 'souls', ...(gemOpen(S) ? ['gem'] : [])]); if (wl._h !== h) { wl._h = h; wl.innerHTML = h; } }
   }
   function heroes() {
-    const live = run && !run.dead, box = $('#rlHeroes');
+    const live = run && !run.dead, box = $('#rlHeroes'), h0 = box.offsetHeight;
+    if (cv && $('#solo').classList.contains('rl-app')) requestAnimationFrame(() => { if (box.offsetHeight !== h0 || !box.dataset.sized) { box.dataset.sized = 1; sizeCanvas(); } });
     // Auf breiten Bildschirmen ist links genug Platz: dort ist die Truppe immer sichtbar
-    const show = S.uiTroop || (window.innerWidth > 760 && $('#solo').classList.contains('rl-app'));
+    const show = S.uiTroop || (window.innerWidth > 760 && window.innerHeight > 560 && $('#solo').classList.contains('rl-app'));
     box.hidden = !show;
     if (!show) { box.innerHTML = ''; return; }
     // Nur die Helden, die gerade in der Truppe sind

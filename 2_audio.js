@@ -108,6 +108,20 @@
     const RESUME = { lobby: 1, feldzug: 1, albtraum: 1, tempel: 1 };
     const SILENT = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
     const url = n => `/sounds/${n}.mp3?v=${MUSIC_V}`;
+    // Jedes Musikstück wird nur einmal ganz geladen und im Browser gespeichert (Cache-Speicher).
+    // Vorher wurde bei jedem Wechsel (Lager, Feldzug, Boss) neu gestreamt, das kostete viel Datenverkehr.
+    const BLOB = {}, LOADING = {};
+    function loadTrack(name) {
+      if (BLOB[name]) return Promise.resolve(BLOB[name]);
+      if (LOADING[name]) return LOADING[name];
+      return (LOADING[name] = (async () => {
+        const u = url(name); let r = null;
+        try { const c = await caches.open('ritter-musik-' + MUSIC_V); r = await c.match(u); if (!r) { const f = await fetch(u); if (f.ok) { try { await c.put(u, f.clone()); } catch {} r = f; } } }
+        catch { try { r = await fetch(u); } catch {} }
+        if (!r || !r.ok) { delete LOADING[name]; return null; }
+        try { return (BLOB[name] = URL.createObjectURL(await r.blob())); } catch { delete LOADING[name]; return null; }
+      })());
+    }
     let bus = null, slots = [], want = null, cur = null, pos = {}, primed = false, onEnd = null;
     function build() {
       if (bus) return true; const ac = SND.ctx(); if (!ac) return false;
@@ -131,12 +145,16 @@
     }
     function grab() { return slots.find(x => !x.busy && x.a.paused) || slots.find(x => !x.busy) || slots.reduce((m, x) => (x.since < m.since ? x : m), slots[0]); }
     function startTrack(list, idx, at, tauIn) {
-      const sl = grab(); sl.tok++; sl.busy = true; sl.name = LISTS[list][idx]; sl.since = Date.now();
-      const a = sl.a; sl.g.gain.cancelScheduledValues(0); sl.g.gain.value = 0;
+      const sl = grab(); const tok = ++sl.tok; sl.busy = true; sl.name = LISTS[list][idx]; sl.since = Date.now();
+      const a = sl.a, name = sl.name; sl.g.gain.cancelScheduledValues(0); sl.g.gain.value = 0;
       try { a.pause(); } catch {}
-      a.src = url(sl.name);
-      const go = () => { if (at > 0 && isFinite(a.duration) && at < a.duration - 4) { try { a.currentTime = at; } catch {} } const p = a.play(); if (p && p.catch) p.catch(() => { sl.busy = false; }); fade(sl.g, 1, tauIn); };
-      if (at > 0) { a.addEventListener('loadedmetadata', go, { once: true }); a.load(); } else { go(); }
+      const begin = src => {
+        if (sl.tok !== tok || !sl.busy) return;
+        a.src = src;
+        const go = () => { if (at > 0 && isFinite(a.duration) && at < a.duration - 4) { try { a.currentTime = at; } catch {} } const p = a.play(); if (p && p.catch) p.catch(() => { sl.busy = false; }); fade(sl.g, 1, tauIn); };
+        if (at > 0) { a.addEventListener('loadedmetadata', go, { once: true }); a.load(); } else { go(); }
+      };
+      if (BLOB[name]) begin(BLOB[name]); else loadTrack(name).then(u => begin(u || url(name)));
       cur = { list, idx, slot: sl };
       return sl;
     }

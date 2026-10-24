@@ -1519,3 +1519,29 @@ html.rl-appmode,html.rl-appmode body{overflow:hidden;overscroll-behavior:none}
 .rl-bsel button.locked{opacity:.4;cursor:not-allowed}
 .rl-gift{min-width:260px;background:linear-gradient(180deg,#9be36b,#4fb84a)!important;color:#0e2a10!important;animation:rlGiftP 1.4s ease-in-out infinite}
 @keyframes rlGiftP{50%{transform:scale(1.03)}}
+/* Fix: Inhalte im Menü nicht zusammenquetschen (Heldenpfad, Baum, Läden) */
+#solo.rl-app #rlPanel>*{flex-shrink:0}
+/* PC: Spielfeld füllt die linke Seite, Menü etwas breiter */
+@media (min-width:761px){
+  .rl-left{justify-content:center}
+  .rl-right{width:clamp(420px,32vw,640px)}
+  #solo.rl-app .rl-heroes{justify-content:center}
+}
+/* Handy quer: wenig Höhe */
+@media (max-height:560px) and (orientation:landscape){
+  #solo.rl-app .topbar{min-height:38px;padding:3px 8px}
+  #solo.rl-app .topbar .btn.small{min-height:30px}
+  .rl-left{padding:4px;gap:4px;justify-content:center}
+  #solo.rl-app #rlAction .rl-troopbtn{display:flex}
+  #solo.rl-app #rlAction .btn{min-height:36px}
+  #solo.rl-app .rl-detail{position:static;box-shadow:none}
+  #solo.rl-app .rl-trow button{min-height:44px}
+  #solo.rl-app .rl-trow button .ni{font-size:17px}
+  .rl-subbar{padding:4px 6px 2px}
+}
+/* Handy hoch: die Beschreibung im Baum klebt unten, darf aber nicht den ganzen Baum verdecken */
+@media (max-width:760px) and (min-height:561px){
+  #solo.rl-app .rl-detail{max-height:34vh;overflow-y:auto}
+}
+/* PC mit wenig Höhe: Beschreibung im Baum nicht über den Baum legen */
+@media (min-width:761px) and (max-height:799px){#solo.rl-app .rl-detail{position:static;box-shadow:none}}
