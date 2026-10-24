@@ -1,5 +1,5 @@
 'use strict';
-// FSG Spieleabend – Browser-Seite
+// Game Hub – Browser-Seite
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const store = {
@@ -178,7 +178,7 @@ function renderUno(st, v) {
   st.innerHTML = `
     <div class="opps">${others.map(p => `<div class="opp ${playing && p.id === v.turn ? 'turn' : ''}"><div class="nm">${esc(nameOf(p.id))}</div><div class="cnt ${p.count === 1 ? 'last' : ''}">${p.count}</div></div>`).join('')}</div>
     <div class="piles">
-      <div><button class="cardback ${myTurn && !v.drew ? 'can' : ''}" data-uno="draw" aria-label="Karte ziehen" ${myTurn && !v.drew ? '' : 'disabled'}><span>FSG</span></button><div class="pilecount">${v.deck} im Stapel</div></div>
+      <div><button class="cardback ${myTurn && !v.drew ? 'can' : ''}" data-uno="draw" aria-label="Karte ziehen" ${myTurn && !v.drew ? '' : 'disabled'}><span>UNO</span></button><div class="pilecount">${v.deck} im Stapel</div></div>
       <div class="discard" style="--cur:${COLORVAR[v.color]}">${cardHTML(v.top, 'tabindex="-1" disabled')}<span class="ring"></span></div>
     </div>
     <div class="dir">${v.dir > 0 ? '↻ im Uhrzeigersinn' : '↺ gegen den Uhrzeigersinn'} · ${COLORNAME[v.color]}</div>

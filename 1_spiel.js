@@ -1460,21 +1460,18 @@
     else delete S.camp[slot];
     return true;
   }
-  // Albtraum-Truhen: nach jedem Boss ab Stufe 151 eine sichere Truhe. Die Seltenheit wird beim Fund gewürfelt.
-  const CHEST = { leg: 0.008, legDeep: 0.00005, legDeepMax: 0.025, legPity: 0.001, legHard: 120, epic: 0.08, epicDeep: 0.0004, epicDeepMax: 0.12, rare: 0.3 };
-  function chestRoll(S, stage) {
-    const d = Math.max(0, stage - 150), P = S.pity = S.pity || {}; P.leg = P.leg || 0;
-    const leg = P.leg + 1 >= CHEST.legHard ? 1 : CHEST.leg + Math.min(CHEST.legDeepMax, d * CHEST.legDeep) + P.leg * CHEST.legPity;
-    const epic = CHEST.epic + Math.min(CHEST.epicDeepMax, d * CHEST.epicDeep), r = Math.random();
-    const rar = r < leg ? 4 : r < leg + epic ? 3 : r < leg + epic + CHEST.rare ? 2 : 1;
-    P.leg = rar === 4 ? 0 : P.leg + 1;
-    S.chest = S.chest || {}; S.chest[rar] = (S.chest[rar] || 0) + 1;
-    return rar;
-  }
+  // Albtraum-Truhen: nach jedem Boss ab Stufe 151 eine sichere Truhe. Alle Truhen sind gleich, der Inhalt wird beim Öffnen
+  // mit festen Chancen gewürfelt: 0,1 % legendär, 1 % episch, 25 % selten, sonst Gold oder Seelen. Keine Steigerung mit der Tiefe.
+  // Unter S.chest[1] liegen die neuen Truhen; S.chest[2..4] sind alte, schon gewürfelte Truhen und öffnen mit ihrer Seltenheit.
+  const CHEST = { leg: 0.001, epic: 0.01, rare: 0.25 };
+  function chestRoll(S) { S.chest = S.chest || {}; S.chest[1] = (S.chest[1] || 0) + 1; return 1; }
   const chestCount = S => [1, 2, 3, 4].reduce((a, r) => a + ((S.chest && S.chest[r]) || 0), 0);
-  function openChest(S, rar) {
-    if (!S.chest || !(S.chest[rar] > 0)) return null;
-    S.chest[rar]--;
+  function chestRar() { const r = Math.random(); return r < CHEST.leg ? 4 : r < CHEST.leg + CHEST.epic ? 3 : r < CHEST.leg + CHEST.epic + CHEST.rare ? 2 : 1; }
+  function openChest(S) {
+    if (!S.chest) return null;
+    const old = [4, 3, 2].find(r => S.chest[r] > 0);
+    let rar;
+    if (old) { S.chest[old]--; rar = old; } else if (S.chest[1] > 0) { S.chest[1]--; rar = chestRar(); } else return null;
     if (rar === 1) {
       const R = hoursReward(S, 0.25, 1);
       if (Math.random() < 0.6 || !R.souls) { const g = Math.max(1, R.gold); S.gold = Math.min(1e18, S.gold + g); return { rar, kind: 'gold', n: g }; }
@@ -2270,7 +2267,7 @@
     sg_d_gewalt: { minCd: 14, cd: () => 20, ready: run => engaged(run), cast: (c, r) => { c.run.natureT = 5 + (r - 1); c.float('d', 'Naturgewalt', '#9bd14a'); } },
     sg_e_flamme: { cd: () => 14, ready: run => near(run).length >= 1, cast: (c, r) => { c.run.flameT = 3; c.run.flameTick = 0; c.run.flameV = (2 + 0.5 * (r - 1)) * c.st.e.actMul; } },
     sg_e_rakete: { cd: () => 15, ready: run => !!strongest(run, 420), cast: (c, r) => {
-      const t = strongest(c.run, 420); for (let i = 0; i < 3; i++) { c.arrow('e', t, 0.3 + i * 0.12, 'bomb'); c.hit('e', t, (4 + 1.2 * (r - 1)) * c.st.e.actMul, '#ffc58a'); } c.burst(t.x, 180, '#ff9a3d', 14); c.run.shake = 0.2; } },
+      const t = strongest(c.run, 420); c.run.fx.raketeX = t.x; for (let i = 0; i < 3; i++) { c.arrow('e', t, 0.3 + i * 0.12, 'rakete'); c.hit('e', t, (4 + 1.2 * (r - 1)) * c.st.e.actMul, '#ffc58a'); } c.burst(t.x, 180, '#ff9a3d', 14); c.run.shake = 0.2; } },
     sg_e_druck: { minCd: 16, cd: () => 18, ready: run => engaged(run) || run.enemies.some(e => e.x < 420), cast: (c, r) => { c.run.overT = 6 + (r - 1); c.float('e', 'Überdruck!', '#f28c28'); } },
   });
   // Mindestabstand zwischen zwei Einsätzen: Effekte mit Dauer laufen höchstens die halbe Zeit, egal wie schnell sie laden
@@ -2417,7 +2414,7 @@
       hard: hardMul(S, false), diff: ascDiff(S), speed: rules.includes('speed') ? 1.5 : 1, hpMul: rules.includes('giant') ? 2 : 1, eliteChance: rules.includes('elite') ? 0.4 : 0.12, noheal: rules.includes('noheal'),
       dragonT: 2, compRevive: false, bannerT: 0, kills: 0, gold: 0, souls: 0, runes: [], phoenixUsed: false, miracleUsed: false,
       bestBefore: S.best, towerBefore: S.towerBest, fx: {}, cds: {}, castAt: {}, atkB: {}, apsB: {}, buffT: 0, buffMul: 0, hautT: 0, racheT: 0, packT: 0, order, pos, frontX: pos[order[0]], h,
-      enemies: [], floats: [], arrows: [], eshots: [], parts: [], scroll: 0, dead: false, victory: false, deadT: 0, time: 0, shake: 0 };
+      enemies: [], floats: [], arrows: [], eshots: [], parts: [], vq: [], scroll: 0, dead: false, victory: false, deadT: 0, time: 0, shake: 0 };
     // Abkürzung: übersprungene Bosse geben einen Teil ihrer Seelen
     if (run.mode === 'normal' && run.stage > 10) {
       let skip = 0; for (let b = 10; b < run.stage; b += 10) skip += Math.round((1 + Math.floor(b / 20)) * st.g.soulMul) + st.soulBonus;
@@ -2490,6 +2487,8 @@
       // Bei Bossen unter Dauerbeschuss nicht unendlich viele Zahlen übereinander stapeln
       run.floats.push({ x: e.x + (e.reach ? 52 : 0) + (Math.random() * (e.boss ? 50 : 16) - (e.boss ? 25 : 8)), y: e.reach ? 168 + Math.random() * 14 : 150 - (e.boss ? 40 + Math.random() * 30 : 0), text, color, size, t: 1, dmg: /^[\d.,×\s]+(Tsd\.|Mio\.|Mrd\.|Bio\.)?/.test(text) && !/^\+/.test(text) });
     };
+    // Ereignisse nur für die Anzeige (Treffer, Einschläge, Heilung); die Grafik holt sie jedes Bild ab
+    c.vfx = ev => { if (run.vq && run.vq.length < 60) run.vq.push(ev); };
     c.burst = (x, y, color, n = 8) => { for (let i = 0; i < n; i++) run.parts.push({ x, y, vx: (Math.random() - 0.5) * 160, vy: -Math.random() * 140 - 20, t: 0.6, c: color }); };
     c.arrow = (k, e, d, kind) => run.arrows.push({ x: (run.pos[k] || 60) + 8, y: 168, tx: e.x, ty: 188 - (e.boss ? 30 : 0), t: 0, d, kind: kind || k });
     c.hit = (k, e, mult, color, wolf, opt) => {
@@ -2609,7 +2608,7 @@
       const mc = minCdOf(id, S, st);
       if (mc && run.time - (run.castAt[id] ?? -1e9) < mc) continue;
       if (!ACT[id].ready(run, st, S)) continue;
-      ACT[id].cast(c, rank(S, id));
+      c.inCast = true; try { ACT[id].cast(c, rank(S, id)); } finally { c.inCast = false; }
       // Sternbilder: zweites Auslösen, Heilung bei jeder Fähigkeit, schnellere Abklingzeit
       const T = st[hk], ech = T.cEcho ? T.cEcho[id] || T.cEcho.all || 0 : 0;
       if (ech && Math.random() < ech && run.enemies.length) { ACT[id].cast(c, rank(S, id)); c.float(hk, '✦ Sternenecho', '#ffe6a0', 12); }
@@ -2742,7 +2741,7 @@
       if (e.boss && run.mode === 'normal') {
         const tr = trophyRoll(S, run.stage);
         if (tr) { (run.trophies = run.trophies || []).push(tr.id); run.floats.push({ x: e.x, y: 40, text: `Trophäe: ${ITEMS[tr.id].n}!`, color: '#c98aff', size: 16, t: 2.2 }); sfx('rune'); }
-        if (nightmare(run.stage)) { const r = chestRoll(S, run.stage); (run.chests = run.chests || []).push(r); run.floats.push({ x: e.x, y: 76, text: `${RAR[r]}e Truhe!`, color: RAR_COL[r], size: 15, t: 1.8 }); }
+        if (nightmare(run.stage)) { const r = chestRoll(S); (run.chests = run.chests || []).push(r); run.floats.push({ x: e.x, y: 76, text: 'Albtraum-Truhe!', color: '#c98aff', size: 15, t: 1.8 }); }
       }
       let souls = 0;
       if (e.boss) souls = roundSouls((1 + Math.floor(run.stage / 20)) * g.soulMul) + st.soulBonus;
@@ -2920,6 +2919,6 @@
     Promise.all([updUrl(), ...css].filter(Boolean).map(u => fetch(u, { cache: 'reload' }).catch(() => null)))
       .then(() => new Promise(r => setTimeout(r, 900))).finally(() => location.reload());
   }
-  setTimeout(updCheck, 4000); setInterval(updCheck, 120000);
+  setTimeout(updCheck, 4000); setInterval(() => { if (!document.hidden) updCheck(); }, 300000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) updCheck(); });
 

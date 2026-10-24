@@ -1,4 +1,4 @@
-# FSG Spieleabend
+# Game Hub
 
 Online-Spielehub für Freunde. Jeder spielt auf seinem eigenen iPad, Handy oder Laptop im Browser. Eine Anmeldung ist nicht nötig.
 

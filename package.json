@@ -1,7 +1,7 @@
 {
   "name": "fsg-spiele",
   "version": "1.0.0",
-  "description": "FSG Spielehub: Uno, Schach, Mensch ärgere dich nicht, Vier gewinnt und Minispiel-Party im Browser",
+  "description": "Game Hub: Uno, Schach, Mensch ärgere dich nicht, Vier gewinnt und Minispiel-Party im Browser",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

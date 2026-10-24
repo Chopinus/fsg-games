@@ -4,6 +4,8 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const zlib = require('zlib');
+const GZ = new Map(); // komprimierte Dateien, nach ETag
 const { WebSocketServer } = require('ws');
 
 const GAMES = {
@@ -131,8 +133,14 @@ const server = http.createServer((req, res) => {
     if (err) { console.log('Datei fehlt: ' + file); res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' }); res.end(file === 'ritter.js' ? 'console.error("Ritterlauf fehlt auf dem Server: Ordner ritter/ mit 1_spiel.js, 2_audio.js, 3_grafik.js, 4_oberflaeche.js hochladen.")' : 'Fehler'); return; }
     // ETag: Fingerabdruck der Datei. Damit erkennen offene Spiele ein Update und Browser laden nur Geändertes neu.
     const etag = '"' + crypto.createHash('sha1').update(data).digest('hex').slice(0, 16) + '"';
-    if (req.headers['if-none-match'] === etag) { res.writeHead(304, { ETag: etag, 'Cache-Control': 'no-cache' }); res.end(); return; }
-    res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)], 'Cache-Control': 'no-cache', ETag: etag });
+    if (req.headers['if-none-match'] === etag) { res.writeHead(304, { ETag: etag, 'Cache-Control': 'no-cache', Vary: 'Accept-Encoding' }); res.end(); return; }
+    // Komprimiert ausliefern, wenn der Browser es kann (ritter.js wird so etwa 70 % kleiner)
+    const head = { 'Content-Type': TYPES[path.extname(file)], 'Cache-Control': 'no-cache', ETag: etag, Vary: 'Accept-Encoding' };
+    if (/\bgzip\b/.test(req.headers['accept-encoding'] || '') && data.length > 1024) {
+      let gz = GZ.get(etag); if (!gz) { gz = zlib.gzipSync(data, { level: 9 }); GZ.set(etag, gz); if (GZ.size > 40) GZ.delete(GZ.keys().next().value); }
+      res.writeHead(200, { ...head, 'Content-Encoding': 'gzip', 'Content-Length': gz.length }); res.end(req.method === 'HEAD' ? undefined : gz); return;
+    }
+    res.writeHead(200, head);
     res.end(req.method === 'HEAD' ? undefined : data);
   });
 });
