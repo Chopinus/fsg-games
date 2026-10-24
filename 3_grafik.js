@@ -298,6 +298,10 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 10, title: 'Gold ohne Obergrenze', date: '24.10.2026', items: [
+      ['Fix', 'Gold blieb bei 1 Trillion stehen, obwohl die Kosten weiter stiegen. Jetzt zählt es weiter'],
+      ['Neu', 'Große Zahlen: nach Trd. kommen Quad., Quint., Sext. bis Dez.'],
+    ] },
     { id: 9, title: 'Fähigkeiten, Vollbild, Truhen', date: '24.10.2026', items: [
       ['Neu', 'Fähigkeiten sehen neu aus: Schwarzes Loch mit Strudel, Arkaner Strahl, Flammenwerfer, Raketen mit Rauchspur, Blitz, Meteore, Eisspitzen, Kettenblitz, Knochenwand, Banner der Ehre, Zielschuss mit Fadenkreuz und mehr'],
       ['Neu', 'Beim Wirken einer Fähigkeit leuchtet ein Zauberkreis unter dem Helden'],

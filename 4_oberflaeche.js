@@ -1769,7 +1769,7 @@
         if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.'); else if (/^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, '');
         const v = Number(t);
         if (!(v >= 0) || !isFinite(v)) { toast('Bitte eine Zahl eingeben.'); return; }
-        if (a === 'tgold') S.gold = Math.min(1e18, Math.floor(v)); else S.souls = Math.min(1e15, Math.floor(v));
+        if (a === 'tgold') S.gold = Math.min(GOLD_MAX, Math.floor(v)); else S.souls = Math.min(1e15, Math.floor(v));
         toast(a === 'tgold' ? `Gold: ${fmt(S.gold)}` : `Seelen: ${fmt(S.souls)}`); afterChange(); } }
     else if (a === 'trunepick') { if (acct && acct.tester) testRunePicker(); }
     else if (a === 'trunes') { if (acct && acct.tester) { const got = []; for (let i = 0; i < 3; i++) { const r = addRune(S, RUNES[Math.floor(Math.random() * RUNES.length)].id, 1 + Math.floor(Math.random() * 3)); if (r) got.push(`${RUNE[r.t].name} ${ROMAN[r.tier]}`); }
