@@ -2417,7 +2417,7 @@
       hard: hardMul(S, false), diff: ascDiff(S), speed: rules.includes('speed') ? 1.5 : 1, hpMul: rules.includes('giant') ? 2 : 1, eliteChance: rules.includes('elite') ? 0.4 : 0.12, noheal: rules.includes('noheal'),
       dragonT: 2, compRevive: false, bannerT: 0, kills: 0, gold: 0, souls: 0, runes: [], phoenixUsed: false, miracleUsed: false,
       bestBefore: S.best, towerBefore: S.towerBest, fx: {}, cds: {}, castAt: {}, atkB: {}, apsB: {}, buffT: 0, buffMul: 0, hautT: 0, racheT: 0, packT: 0, order, pos, frontX: pos[order[0]], h,
-      enemies: [], floats: [], arrows: [], eshots: [], parts: [], scroll: 0, dead: false, victory: false, deadT: 0, time: 0, shake: 0 };
+      enemies: [], floats: [], arrows: [], eshots: [], parts: [], vq: [], scroll: 0, dead: false, victory: false, deadT: 0, time: 0, shake: 0 };
     // Abkürzung: übersprungene Bosse geben einen Teil ihrer Seelen
     if (run.mode === 'normal' && run.stage > 10) {
       let skip = 0; for (let b = 10; b < run.stage; b += 10) skip += Math.round((1 + Math.floor(b / 20)) * st.g.soulMul) + st.soulBonus;
@@ -2490,6 +2490,8 @@
       // Bei Bossen unter Dauerbeschuss nicht unendlich viele Zahlen übereinander stapeln
       run.floats.push({ x: e.x + (e.reach ? 52 : 0) + (Math.random() * (e.boss ? 50 : 16) - (e.boss ? 25 : 8)), y: e.reach ? 168 + Math.random() * 14 : 150 - (e.boss ? 40 + Math.random() * 30 : 0), text, color, size, t: 1, dmg: /^[\d.,×\s]+(Tsd\.|Mio\.|Mrd\.|Bio\.)?/.test(text) && !/^\+/.test(text) });
     };
+    // Ereignisse nur für die Anzeige (Treffer, Einschläge, Heilung); die Grafik holt sie jedes Bild ab
+    c.vfx = ev => { if (run.vq && run.vq.length < 60) run.vq.push(ev); };
     c.burst = (x, y, color, n = 8) => { for (let i = 0; i < n; i++) run.parts.push({ x, y, vx: (Math.random() - 0.5) * 160, vy: -Math.random() * 140 - 20, t: 0.6, c: color }); };
     c.arrow = (k, e, d, kind) => run.arrows.push({ x: (run.pos[k] || 60) + 8, y: 168, tx: e.x, ty: 188 - (e.boss ? 30 : 0), t: 0, d, kind: kind || k });
     c.hit = (k, e, mult, color, wolf, opt) => {
@@ -2512,6 +2514,7 @@
       if (wolf && T.wolfHeal) c.healAllAbs(dmg * T.wolfHeal);
       if (run.floats.reduce((n, f) => n + (f.dmg && f.t > 0.6 && Math.abs(f.x - e.x) < 60 ? 1 : 0), 0) < (e.boss ? 3 : 2)) c.efloat(e, nCrit > 1 ? `${nCrit}× ${fmt(dmg)}` : fmt(dmg), nCrit > 1 ? '#ff9a3d' : crit ? '#ffd23f' : color || '#ffffff', nCrit > 1 ? 20 : crit ? 18 : 13);
       if (crit) c.burst(e.x, 190, '#ffd23f', 5);
+      c.vfx({ t: 'hit', h: k, x: e.x, boss: !!e.boss, big: !!e.elite, crit, ab: !!c.inCast, w: !!wolf });
       sfx(crit ? 'crit' : 'hit', k);
       return dmg;
     };
@@ -2522,7 +2525,7 @@
       if (src === 'p' && st.p && st.p.holyFire && st.p.atk > 0 && run.enemies[0]) c.hit('p', run.enemies[0], Math.min(amt * st.p.holyFire, st.p.heal) / st.p.atk, '#fff2b0');
       const over = h.hp + amt - T.hp; h.hp = Math.min(T.hp, h.hp + amt);
       if (over > 0 && st.p && st.p.overShield) h.shield = Math.min(T.hp * 0.5, h.shield + over * st.p.overShield);
-      c.float(k, '+' + fmt(amt), '#7ee08a', 12);
+      c.float(k, '+' + fmt(amt), '#7ee08a', 12); c.vfx({ t: 'heal', h: k });
       // 6. Sternbild der Priesterin: die anderen bekommen einen Teil mit
       if (src === 'p' && st.p && st.p.cHalo) run.order.forEach(x => x !== k && run.h[x].alive && c.healOne(x, amt * st.p.cHalo));
     };
@@ -2609,7 +2612,7 @@
       const mc = minCdOf(id, S, st);
       if (mc && run.time - (run.castAt[id] ?? -1e9) < mc) continue;
       if (!ACT[id].ready(run, st, S)) continue;
-      ACT[id].cast(c, rank(S, id));
+      c.inCast = true; try { ACT[id].cast(c, rank(S, id)); } finally { c.inCast = false; }
       // Sternbilder: zweites Auslösen, Heilung bei jeder Fähigkeit, schnellere Abklingzeit
       const T = st[hk], ech = T.cEcho ? T.cEcho[id] || T.cEcho.all || 0 : 0;
       if (ech && Math.random() < ech && run.enemies.length) { ACT[id].cast(c, rank(S, id)); c.float(hk, '✦ Sternenecho', '#ffe6a0', 12); }
@@ -2787,7 +2790,7 @@
     run.floats = run.floats.filter(x => x.t > 0);
     run.parts.forEach(p => { p.t -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 400 * dt; });
     run.parts = run.parts.filter(p => p.t > 0);
-    run.arrows.forEach(a => (a.t += dt));
+    run.arrows.forEach(a => { a.t += dt; if (a.t >= a.d && run.vq && run.vq.length < 60) run.vq.push({ t: 'imp', kind: a.kind, x: a.tx, y: a.ty }); });
     run.arrows = run.arrows.filter(a => a.t < a.d);
     const alive = run.order.filter(k => run.h[k].alive).length;
     if (st.comp.phoenix >= 10 && !run.compRevive && (alive === 0 || (alive === 1 && run.order.length >= 3))) {
