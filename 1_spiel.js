@@ -980,6 +980,7 @@
   }
   const AHN_COUNT = AHN_MISSIONS.length;
   const ahnOpen = S => feature(S, 'ahnen');
+  const ahnLike = run => !!run && (run.mode === 'ahnen' || run.mode === 'bounty');
   const ahnBossesOf = mi => (mi === AHN_COUNT - 1 ? [...AHN_MISSIONS[mi].bosses, AHNE] : AHN_MISSIONS[mi].bosses);
   const ahnLevelFor = S => Math.max(10, Math.round(AHN_TUNE.lvl * Math.max(S.ascBest || 0, S.best || 0, 10)));
   function ahnFix(d) {
@@ -1006,13 +1007,13 @@
     return e;
   }
   function ahnSpawn(run) {
-    const A = run.ahn, list = ahnBossesOf(A.mi);
+    const A = run.ahn, list = A.list || ahnBossesOf(A.mi);
     run.enemies = [];
     if (A.wave < AHN_TUNE.waves) { for (let i = 0; i < 4; i++) run.enemies.push(ahnMinion(run, i, i === 3)); return; }
     const def = list[A.bi], e = makeEnemy(run.stage, 1.2, true, false, run);
     // spätere Missionen sind härter (gleicht die gesammelten Segen aus)
-    const hpMul = AHN_TUNE.hp * AHN_TUNE.len * (def.ahne ? AHN_TUNE.ahneHp : 1) * (1 + AHN_TUNE.mHp * A.mi);
-    e.hp *= hpMul; e.max = e.hp; e.adm = e.dmg * AHN_TUNE.dmg * (1 + AHN_TUNE.mDmg * A.mi); e.dmg = e.adm * AHN_TUNE.atk; e.lastHp = e.hp;
+    const ms = A.noScale ? 0 : A.mi, hpMul = AHN_TUNE.hp * AHN_TUNE.len * (def.ahne ? AHN_TUNE.ahneHp : 1) * (1 + AHN_TUNE.mHp * ms) * (A.hpMul || 1);
+    e.hp *= hpMul; e.max = e.hp; e.adm = e.dmg * AHN_TUNE.dmg * (1 + AHN_TUNE.mDmg * ms); e.dmg = e.adm * AHN_TUNE.atk; e.lastHp = e.hp;
     e.ahn = def; e.bk = def.bk; e.type = def.bk >= 0 && def.bk < 5 ? ENEMY_KINDS[def.bk] : AHN_MISSIONS[A.mi].minion;
     e.bigT = 6; e.spotT = 3;
     e.reach = def.ahne ? 62 : 30; e.phase = 0; e.phaseT = 0; e.shieldHp = 0; e.invT = 0; e.reflT = 0; e.healT = 0; e.frenzyT = 0; e.x = 600;
@@ -1146,11 +1147,11 @@
   }
   // Welle geschafft: nächste Welle, nächster Boss oder Mission gewonnen
   function ahnNext(S, st, run, c) {
-    const A = run.ahn, list = ahnBossesOf(A.mi);
+    const A = run.ahn, list = A.list || ahnBossesOf(A.mi);
     if (A.wave < AHN_TUNE.waves) A.wave++;
     else {
       const bk = `${A.mi}-${A.bi}`;
-      if (!S.ahn.bgot.includes(bk)) { S.ahn.bgot.push(bk); run.boonOffer = ahnRollBoons(S, run); run.pause = true; }
+      if (run.mode === 'ahnen' && !S.ahn.bgot.includes(bk)) { S.ahn.bgot.push(bk); run.boonOffer = ahnRollBoons(S, run); run.pause = true; }
       A.bi++; A.wave = 0; A.boss = null; A.big = null; A.spot = null; run.bossKills++;
       if (A.bi >= list.length) { run.victory = true; run.dead = true; return 'dead'; }
       // Die Ahnen stärken die Gruppe zwischen den Bossen
@@ -1166,6 +1167,128 @@
     if (mi !== S.ahn.m) return null;
     if (mi >= AHN_COUNT - 1) { S.ahn.m = 0; S.ahn.lvl = 0; S.ahn.sig++; S.ahn.got++; S.ahn.boons = []; S.ahn.bgot = []; return { mission: mi, sigil: true }; }
     S.ahn.m = mi + 1; return { mission: mi, sigil: false };
+  }
+
+  /* ================= Sternenruf (Banner) ab dem 2. Aufstieg ================= */
+  // Währung: Sternkristalle (S.gem). Ein Ruf kostet 100, zehn Rufe 1000.
+  // 5★ = die sechs Puzzle-Helden, 4★ = die sechs Grundhelden, 3★ = Runensplitter oder Heldensplitter.
+  // Wie bei Genshin: 5★ zu 0,6 %, ab Ruf 74 steigt die Chance stark, spätestens bei Ruf 90. 4★ spätestens alle 10 Rufe.
+  // Der hervorgehobene 5★ der Woche kommt mit 50 %; verliert man das, ist der nächste 5★ garantiert der hervorgehobene.
+  // Gezogene Helden geben Sternbilder (bis 6), ein noch fehlender Puzzle-Held wird sofort freigeschaltet. Zu viele Kopien werden zu Kristallen.
+  const GACHA = { cost: 100, base5: 0.006, soft5: 74, step5: 0.06, hard5: 90, base4: 0.051, hard4: 10, refund5: 300, refund4: 40, consMax: 6 };
+  const G_FIVE = ['a', 'n', 'b', 'd', 'e', 'o'], G_FOUR = ['r', 'w', 's', 'm', 'p', 't'];
+  // Sternbilder: Bonus je Stufe (zusammengezählt)
+  const CONS = [
+    { name: 'Erstes Sternbild', desc: '+15 % Schaden', atk: 0.15 },
+    { name: 'Zweites Sternbild', desc: '+15 % Leben', hp: 0.15 },
+    { name: 'Drittes Sternbild', desc: '+10 % Angriffstempo', aps: 0.1 },
+    { name: 'Viertes Sternbild', desc: '+20 % Fähigkeitsschaden', act: 0.2 },
+    { name: 'Fünftes Sternbild', desc: '+15 % Schaden und +15 % Leben', atk: 0.15, hp: 0.15 },
+    { name: 'Sechstes Sternbild', desc: '+30 % Schaden und +10 % Krit-Chance', atk: 0.3, crit: 0.1 },
+  ];
+  const gachaOpen = S => S.asc >= 2;
+  const consOf = (S, id) => Math.max(0, Math.min(GACHA.consMax, Math.floor((S.cons && S.cons[id]) || 0)));
+  function consBonus(n) { const b = { atk: 0, hp: 0, aps: 0, act: 0, crit: 0 }; for (let i = 0; i < n; i++) for (const k in b) b[k] += CONS[i][k] || 0; return b; }
+  const weekNum = id => { const m = /(\d+)-W(\d+)/.exec(id || weekId()); return m ? Number(m[1]) * 53 + Number(m[2]) : 0; };
+  // Banner der Woche: ein hervorgehobener 5★ und drei 4★
+  function bannerOf(id = weekId()) { const n = weekNum(id); return { week: id, five: G_FIVE[n % G_FIVE.length], four: [0, 2, 4].map(i => G_FOUR[(n + i) % G_FOUR.length]) }; }
+  function gFix(d) {
+    const a = d && typeof d === 'object' ? d : {}, n = x => Math.max(0, Math.floor(Number(x) || 0));
+    return { p5: Math.min(GACHA.hard5, n(a.p5)), p4: Math.min(GACHA.hard4, n(a.p4)), g5: !!a.g5, g4: !!a.g4, n: n(a.n),
+      hist: (Array.isArray(a.hist) ? a.hist : []).slice(-60).filter(x => x && [3, 4, 5].includes(x.r)).map(x => ({ r: x.r, id: String(x.id || '').slice(0, 12), t: n(x.t) })) };
+  }
+  // 3★: kleine Gegenstände, die für immer bleiben
+  function gThree(S) {
+    if (feature(S, 'runen') && Math.random() < 0.6) { const d = Math.max(5, shardOf(bossRuneTier(Math.max(S.best || 1, 10))) * 2); S.dust += d; return { kind: 'dust', n: d }; }
+    if (S.exp) { S.exp.spl += 5; return { kind: 'spl', n: 5 }; }
+    S.dust += 10; return { kind: 'dust', n: 10 };
+  }
+  function gHero(S, id, rar) {
+    const h = HERO_BY_ID[id], out = { kind: 'hero', id, r: rar };
+    if (h.puzzle && !assembled(S, id)) { S.exp = S.exp || { spl: 0, done: 0, target: 'a', pieces: {} }; S.exp.pieces[id] = 63; puzzleHire(S, id); out.unlock = true; return out; }
+    S.cons = S.cons || {}; const c = consOf(S, id);
+    if (c >= GACHA.consMax) { const g = rar === 5 ? GACHA.refund5 : GACHA.refund4; S.gem += g; out.refund = g; return out; }
+    S.cons[id] = c + 1; out.cons = c + 1; return out;
+  }
+  function gachaPull(S, count) {
+    if (!gachaOpen(S) || !(count === 1 || count === 10) || S.gem < GACHA.cost * count) return null;
+    S.gem -= GACHA.cost * count; const G = S.gacha, B = bannerOf(), res = [];
+    for (let i = 0; i < count; i++) {
+      G.p5++; G.p4++; G.n++;
+      const r5 = G.p5 >= GACHA.hard5 ? 1 : GACHA.base5 + (G.p5 >= GACHA.soft5 ? (G.p5 - GACHA.soft5 + 1) * GACHA.step5 : 0);
+      let item;
+      if (Math.random() < r5) {
+        const feat = G.g5 || Math.random() < 0.5, id = feat ? B.five : G_FIVE.filter(x => x !== B.five)[Math.floor(Math.random() * (G_FIVE.length - 1))];
+        G.g5 = !feat; G.p5 = 0; item = gHero(S, id, 5); item.feat = feat;
+      } else if (G.p4 >= GACHA.hard4 || Math.random() < GACHA.base4) {
+        const feat = G.g4 || Math.random() < 0.5, id = feat ? B.four[Math.floor(Math.random() * 3)] : G_FOUR.filter(x => !B.four.includes(x))[Math.floor(Math.random() * 3)];
+        G.g4 = !feat; G.p4 = 0; item = gHero(S, id, 4); item.feat = feat;
+      } else item = { r: 3, ...gThree(S) };
+      res.push(item);
+      G.hist.push({ r: item.r, id: item.id || item.kind, t: Date.now() }); if (G.hist.length > 60) G.hist.shift();
+    }
+    return res;
+  }
+  // Quellen für Sternkristalle
+  const GEM_SRC = { boss: 15, tripHour: 3, wbGoal: 50, bounty: [40, 60, 100] };
+  // Erster Sieg über einen Boss (Stufe) seit der letzten Wiedergeburt
+  function gemBossFirst(S, stage) {
+    if (!gachaOpen(S)) return 0;
+    // gemerkt wird nur die höchste belohnte Boss-Stufe (spart Platz im Spielstand)
+    if (stage <= (S.gBoss || 0)) return 0;
+    S.gBoss = stage; S.gem += GEM_SRC.boss; return GEM_SRC.boss;
+  }
+
+  /* ================= Tägliche Anmeldebelohnung ================= */
+  // Einmal pro Tag. 7 Tage im Kreis, kein Gold und keine Seelen, nur Dinge, die bleiben.
+  // Was es genau gibt, hängt davon ab, was schon freigeschaltet ist (Runen, Expedition, Sternenruf).
+  const LOGIN = [
+    { kind: 'dust', n: 3 }, { kind: 'spl', n: 20 }, { kind: 'gem', n: 40 }, { kind: 'rune', n: 0 },
+    { kind: 'spl', n: 30 }, { kind: 'gem', n: 60 }, { kind: 'gem', n: 160, rune: 1 },
+  ];
+  // Konkrete Belohnung für Tag i (0..6) nach Fortschritt
+  function loginItem(S, i) {
+    const L = LOGIN[i], runes = feature(S, 'runen'), tier = bossRuneTier(Math.max(S.best || 1, S.ascBest || 1, 10));
+    const dust = Math.max(10, shardOf(tier) * L.n * 2);
+    if (L.kind === 'dust') return runes ? { kind: 'dust', n: dust } : { kind: 'stars', n: 2 };
+    if (L.kind === 'spl') return expOpen(S) ? { kind: 'spl', n: L.n } : runes ? { kind: 'dust', n: Math.max(10, shardOf(tier) * 4) } : { kind: 'stars', n: 3 };
+    if (L.kind === 'rune') return runes ? { kind: 'rune', tier: Math.min(10, tier + 1) } : { kind: 'stars', n: 3 };
+    return { kind: 'gem', n: L.n, rune: L.rune && runes ? Math.min(10, tier + 1) : 0 };
+  }
+  const loginToday = S => !!(S.login && S.login.day === dayId());
+  function claimLogin(S) {
+    if (loginToday(S)) return null;
+    S.login = S.login || { day: '', n: 0 };
+    const i = S.login.n % 7, it = loginItem(S, i), out = { day: i, ...it, runes: [] };
+    if (it.kind === 'dust') S.dust += it.n;
+    if (it.kind === 'spl') S.exp.spl += it.n;
+    if (it.kind === 'stars') S.stars += it.n;
+    if (it.kind === 'gem') S.gem += it.n;
+    const tiers = [it.kind === 'rune' ? it.tier : 0, it.rune || 0].filter(Boolean);
+    out.runeDust = 0; for (const tr of tiers) { const r = addRune(S, RUNES[Math.floor(Math.random() * RUNES.length)].id, tr); if (r) out.runes.push(r); else out.runeDust += shardOf(tr); }
+    S.login.day = dayId(); S.login.n++;
+    return out;
+  }
+
+  /* ================= Kopfgeldjagd ================= */
+  // Jeden Tag drei Steckbriefe: bekannte Bosse der Ahnenprüfung, mit ihren Phasen, Großangriffen und Schwachstellen.
+  // Leicht / Mittel / Schwer, jeweils einmal pro Tag Belohnung. Ab dem 2. Aufstieg.
+  const BOUNTY = { lvl: [0.75, 0.83, 0.9], name: ['Leicht', 'Mittel', 'Schwer'], hp: 0.5 };
+  const hashStr = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return h >>> 0; };
+  function bountiesOf(S, day = dayId()) {
+    const all = []; AHN_MISSIONS.forEach((M, mi) => M.bosses.forEach(d => all.push({ mi, d })));
+    let h = hashStr('kopfgeld' + day); const pick = [];
+    while (pick.length < 3) { h = Math.imul(h ^ (h >>> 13), 1274126177) >>> 0; const x = all[h % all.length]; if (!pick.includes(x)) pick.push(x); }
+    const base = Math.max(S.ascBest || 0, S.best || 0, 10);
+    return pick.map((x, i) => ({ i, mi: x.mi, def: x.d, lvl: Math.max(10, Math.round(base * BOUNTY.lvl[i])), gem: GEM_SRC.bounty[i], diff: BOUNTY.name[i] }));
+  }
+  const bountyDone = (S, i) => !!(S.bounty && S.bounty.day === dayId() && S.bounty.done.includes(i));
+  function bountyClaim(S, run) {
+    if (!run.victory || run.bountyI == null || bountyDone(S, run.bountyI)) return null;
+    if (!S.bounty || S.bounty.day !== dayId()) S.bounty = { day: dayId(), done: [] };
+    S.bounty.done.push(run.bountyI); const g = GEM_SRC.bounty[run.bountyI] || 0; S.gem += g;
+    const spl = expOpen(S) ? 10 : 0; if (spl) S.exp.spl += spl;
+    return { gem: g, spl };
   }
 
   /* ================= Heldenreisen ================= */
@@ -1194,7 +1317,7 @@
     const out = { gold: Math.floor(R.g * sec), souls: Math.floor(R.s * sec), dust: feature(S, 'runen') ? Math.floor(R.d * sec) : 0, spl: expOpen(S) ? Math.max(1, Math.round(h * eff * 4)) : 0 };
     return out;
   }
-  const tripReward = (S, T) => { const o = TRIPS.find(x => x.h === T.h) || TRIPS[0]; return hoursReward(S, T.h * TRIP_SHARE, o.eff); };
+  const tripReward = (S, T) => { const o = TRIPS.find(x => x.h === T.h) || TRIPS[0]; return { ...hoursReward(S, T.h * TRIP_SHARE, o.eff), gem: gachaOpen(S) ? T.h * GEM_SRC.tripHour : 0 }; };
   function startTrip(S, id, h) {
     const o = TRIPS.find(x => x.h === h);
     if (!o || !HERO_BY_ID[id] || !hired(S, HERO_BY_ID[id].tree) || onTrip(S, id)) return false;
@@ -1207,7 +1330,7 @@
   function claimTrip(S, id, now = Date.now()) {
     const T = S.trips && S.trips[id]; if (!T || tripLeft(S, id, now) > 0) return null;
     const r = tripReward(S, T);
-    S.gold = Math.min(1e18, S.gold + r.gold); S.souls += r.souls; S.tot.souls += r.souls; S.dust += r.dust; if (r.spl) S.exp.spl += r.spl;
+    S.gold = Math.min(1e18, S.gold + r.gold); S.souls += r.souls; S.tot.souls += r.souls; S.dust += r.dust; if (r.spl) S.exp.spl += r.spl; if (r.gem) S.gem += r.gem;
     // Platz für spätere Fundstücke: r.extra
     delete S.trips[id]; S.tripsDone = (S.tripsDone || 0) + 1;
     return { id, h: T.h, ...r };
@@ -1253,15 +1376,16 @@
     const n = Math.max(0, Math.min(WB.goals.length, Math.floor(goals) || 0));
     const r = n ? hoursReward(S, wbGoalHours(n), 0.5) : { gold: 0, souls: 0, dust: 0, spl: 0 };
     S.gold = Math.min(1e18, S.gold + r.gold); S.souls += r.souls; S.tot.souls += r.souls; S.dust += r.dust; if (r.spl) S.exp.spl += r.spl;
+    const gem = gachaOpen(S) ? n * GEM_SRC.wbGoal : 0; S.gem += gem;
     S.wbWeeks = (S.wbWeeks || 0) + 1;
-    return { goals: n, ...r };
+    return { goals: n, ...r, gem };
   }
 
   /* ================= Spielstand ================= */
   function fresh() {
     return { v: SAVE_VERSION, gold: 0, souls: 0, best: 0, bestEver: 0, runs: 0, nodes: { start: 1 }, equip: [], speed: 1, stars: 0, rebirths: 0, perks: {},
       runes: [], sockets: Object.fromEntries(HEROES.map(h => [h.id, [null, null, null, null, null, null]])), dust: 0, runeSeq: 1, towerBest: 0,
-      season: SEASON, asc: 0, ascBest: 0, rankGot: 0, mast: {}, skin: {}, wf: 0, crowns: 0, cperks: {}, ach: {}, tot: { kills: 0, souls: 0 }, weekly: { week: '', best: 0, claimed: 0 }, comps: {}, compActive: [], seenIntro: false, area: 0, tempo: 0, bench: [], altar: 0, seenField: false, exp: { spl: 0, done: 0, target: 'a', pieces: {} }, ahn: ahnFix() };
+      season: SEASON, asc: 0, ascBest: 0, rankGot: 0, mast: {}, skin: {}, wf: 0, crowns: 0, cperks: {}, ach: {}, tot: { kills: 0, souls: 0 }, weekly: { week: '', best: 0, claimed: 0 }, comps: {}, compActive: [], gem: 0, gacha: gFix(), cons: {}, gBoss: 0, login: { day: '', n: 0 }, bounty: { day: '', done: [] }, seenIntro: false, area: 0, tempo: 0, bench: [], altar: 0, seenField: false, exp: { spl: 0, done: 0, target: 'a', pieces: {} }, ahn: ahnFix() };
   }
   function migrate(d) {
     if (!d || typeof d !== 'object') return fresh();
@@ -1301,6 +1425,11 @@
     out.trips = {}; for (const h of HEROES) { const T = d.trips && d.trips[h.id]; if (T && TRIPS.some(o => o.h === T.h) && Number(T.at) > 0) out.trips[h.id] = { at: Number(T.at), h: T.h }; }
     { const r = d.rate || {}, n = x => Math.max(0, Number(x) || 0); out.rate = { g: n(r.g), s: n(r.s), d: n(r.d), t: n(r.t) }; }
     out.tripsDone = Math.max(0, Math.floor(Number(d.tripsDone) || 0));
+    out.gem = Math.max(0, Math.min(1e9, Math.floor(Number(d.gem) || 0))); out.gacha = gFix(d.gacha);
+    out.cons = {}; for (const h of HEROES) { const c = Math.max(0, Math.min(GACHA.consMax, Math.floor(Number(d.cons && d.cons[h.id]) || 0))); if (c) out.cons[h.id] = c; }
+    out.gBoss = Math.max(0, Math.min(1e7, Math.floor(Number(Array.isArray(d.gBoss) ? Math.max(0, ...d.gBoss.map(Number).filter(x => x > 0)) : d.gBoss) || 0)));
+    out.login = { day: String((d.login && d.login.day) || '').slice(0, 12), n: Math.max(0, Math.floor(Number(d.login && d.login.n) || 0)) };
+    out.bounty = { day: String((d.bounty && d.bounty.day) || '').slice(0, 12), done: (Array.isArray(d.bounty && d.bounty.done) ? d.bounty.done : []).filter(x => [0, 1, 2].includes(x)) };
     out.wbBest = Math.max(0, Math.floor(Number(d.wbBest) || 0)); out.wbWeeks = Math.max(0, Math.floor(Number(d.wbWeeks) || 0));
     out.wbBk = Math.max(0, Math.floor(Number(d.wbBk) || 0));
     const ex = d.exp && typeof d.exp === 'object' ? d.exp : {};
@@ -1440,6 +1569,7 @@
     const keep = keepHires(S), keepTree = !!S.tKeepTree;
     if (!keepTree) { S.nodes = { start: 1 }; keep.forEach(id => (S.nodes[id] = 1)); }
     S.gold = 500 * perk(S, 'p_zins') + 5000 * cperk(S, 'k_start'); S.souls = 3 * perk(S, 'p_seelenst') + 10 * cperk(S, 'k_start'); S.best = 0; if (!keepTree) S.equip = []; S.area = 0;
+    S.gBoss = 0;
     S.news = { kind: 'rebirth', n: S.rebirths, stars: st };
     return st;
   }
@@ -1449,6 +1579,7 @@
     let rb = 0; if (S.asc > (S.rankGot || 0)) { rb = rankBonus(S.asc); S.crowns += rb; S.rankGot = S.asc; }
     const keep = cperk(S, 'k_veteran') ? keepHires(S) : [];
     S.nodes = { start: 1 }; keep.forEach(id => (S.nodes[id] = 1));
+    S.gBoss = 0;
     S.rebirths = 0; S.stars = 0; S.perks = {}; S.best = 0; S.ascBest = 0; S.towerBest = 0; S.ahn.lvl = 0; S.equip = []; S.area = 0;
     S.gold = 5000 * cperk(S, 'k_start'); S.souls = 10 * cperk(S, 'k_start');
     for (const c of COMPS) if (S.asc >= c.asc && !S.comps[c.id]) S.comps[c.id] = 1;
@@ -1657,7 +1788,8 @@
     if (bardOn && hs.b.muse) { const mc = hs.b.crit * hs.b.muse; for (const [hid, T] of Object.entries(hs)) if (hid !== 'b') T.crit += mc; }
     let seeleSum = 0;
     for (const [hid, T] of Object.entries(hs)) {
-      const rb = runeBonus(S, hid, runeAmp(S) * (1 + (T.runeSelf || 0))), mb = 1 + 0.02 * mastLevel(S, hid);
+      const rb = runeBonus(S, hid, runeAmp(S) * (1 + (T.runeSelf || 0))), mb = 1 + 0.02 * mastLevel(S, hid), cb = consBonus(consOf(S, hid));
+      T.atk *= 1 + cb.atk; T.hp *= 1 + cb.hp; T.aps *= 1 + cb.aps; T.actMul *= 1 + cb.act; T.crit += cb.crit; if (T.heal) T.heal *= 1 + cb.atk; if (T.wolfAtk) T.wolfAtk *= 1 + cb.atk;
       T.atk *= mb; T.hp *= mb; if (T.heal) T.heal *= mb; if (T.wolfAtk) T.wolfAtk *= mb;
       if (bardOn) T.aps *= 1 + hs.b.songAps;
       if (bardOn && hs.b.ensemble) { if (T.wolfAps) T.wolfAps *= 1 + hs.b.songAps; if (T.turretAps) T.turretAps *= 1 + hs.b.songAps; }
@@ -1739,6 +1871,7 @@
     const st = stats(S);
     if (mode === 'exp') { const m = MISSION[S.exp.mission] || MISSIONS[0]; st.cap = Infinity; st.startStage = expStage(S, m); st.rules = m.rules || []; return st; }
     if (mode === 'ahnen') { st.cap = Infinity; ahnApplyBoons(S, st); return st; }
+    if (mode === 'bounty') { st.cap = Infinity; return st; }
     if (mode === 'wboss') { st.cap = Infinity; return st; }
     if (mode !== 'weekly') return st;
     const rules = weekRules(dayId());
@@ -1999,7 +2132,7 @@
     if (rules.includes('trio')) order = order.slice(0, 3);
     const pos = {}; order.forEach((k, i) => (pos[k] = 152 - i * 25));
     const h = {}; for (const k of order) h[k] = { hp: st[k].hp, alive: true, atkT: 0.3 + Math.random() * 0.4, wolfT: 0.5, swing: 0, hurtT: 0, revived: false, shield: 0 };
-    const run = { mode: tower ? 'tower' : weekly ? 'weekly' : exp ? 'exp' : mode === 'ahnen' ? 'ahnen' : mode === 'wboss' ? 'wboss' : 'normal', stage: tower || weekly ? 1 : st.startStage, startStage: tower || weekly ? 1 : st.startStage, rules, losses: 0,
+    const run = { mode: tower ? 'tower' : weekly ? 'weekly' : exp ? 'exp' : mode === 'ahnen' ? 'ahnen' : mode === 'bounty' ? 'bounty' : mode === 'wboss' ? 'wboss' : 'normal', stage: tower || weekly ? 1 : st.startStage, startStage: tower || weekly ? 1 : st.startStage, rules, losses: 0,
       mission: exp ? (MISSION[S.exp.mission] ? S.exp.mission : 'streif') : null, waves: 0, bossKills: 0, minions: [], turretT: 1, extraTurretT: 0, songT: 0, songMul: 0, roarT: 0,
       hard: hardMul(S, false), diff: ascDiff(S), speed: rules.includes('speed') ? 1.5 : 1, hpMul: rules.includes('giant') ? 2 : 1, eliteChance: rules.includes('elite') ? 0.4 : 0.12, noheal: rules.includes('noheal'),
       dragonT: 2, compRevive: false, bannerT: 0, kills: 0, gold: 0, souls: 0, runes: [], phoenixUsed: false, miracleUsed: false,
@@ -2021,6 +2154,9 @@
     }
     run.dust0 = S.dust;
     if (run.mode === 'ahnen') ahnInit(S, run);
+    if (run.mode === 'bounty') { const B = bountiesOf(S)[Math.max(0, Math.min(2, Math.floor(S.bountySel || 0)))]; run.bountyI = B.i; run.stage = run.startStage = B.lvl;
+      run.ahn = { mi: B.mi, bi: 0, wave: AHN_TUNE.waves, boss: null, fx: [], banner: null, big: null, spot: null, spotFx: null, wallFx: null, bigs: 0, blocked: 0, spots: 0, list: [B.def], hpMul: BOUNTY.hp, noScale: true, bounty: B };
+      run.swT = 0; run.swCd = 0; }
     if (run.mode === 'wboss') { run.stage = run.startStage = WB.lvl; run.wb = { bars: 0, bk: Math.max(0, Math.floor(S.wbBk || 0)) % WB_BOSS.length }; }
     spawnWave(run);
     return run;
@@ -2030,7 +2166,7 @@
   const towerStage = floor => 15 + floor * 2;
   function spawnWave(run) {
     run.brother = false; for (const k of run.order || []) if (run.h[k]) run.h[k].protUsed = false;
-    if (run.mode === 'ahnen') return ahnSpawn(run);
+    if (ahnLike(run)) return ahnSpawn(run);
     if (run.mode === 'wboss') return wbSpawn(run);
     run.enemies = [];
     if (run.mode === 'tower') {
@@ -2295,7 +2431,7 @@
         }
       }
     }
-    if (run.mode === 'ahnen') ahnStep(S, st, run, c, dt);
+    if (ahnLike(run)) ahnStep(S, st, run, c, dt);
     if (run.mode === 'wboss') { wbBars(run, c); if (run.time >= WB.maxT) { run.victory = true; run.dead = true; return 'dead'; } }
     // Besiegte Gegner
     const g = st.g;
@@ -2316,11 +2452,12 @@
         S.gold = Math.min(1e18, S.gold + gold); run.gold += gold; sfx('coin');
         run.floats.push({ x: e.x, y: 130, text: '+' + fmt(gold), color: '#ffcf4a', size: 14, t: 1 });
       }
+      if (e.boss && run.mode === 'normal') { const g = gemBossFirst(S, run.stage); if (g) run.floats.push({ x: e.x, y: 60, text: `+${g} 💠 Sternkristalle`, color: '#8fe3ff', size: 15, t: 1.6 }); }
       let souls = 0;
       if (e.boss) souls = roundSouls((1 + Math.floor(run.stage / 20)) * g.soulMul) + st.soulBonus;
       else if (e.elite) { const n = procs(g.eliteSoul); if (n) souls = n * Math.max(1, roundSouls(altarMul(S))); }
       if (run.mode === 'tower') souls = e.boss ? 1 : 0;
-      if (run.mode === 'weekly' || run.mode === 'exp' || run.mode === 'ahnen' || run.mode === 'wboss') souls = 0;
+      if (run.mode === 'weekly' || run.mode === 'exp' || ahnLike(run) || run.mode === 'wboss') souls = 0;
       if (souls) { sfx('soul'); S.tot.souls += souls; S.souls += souls; run.souls += souls; run.floats.push({ x: e.x, y: 95, text: `+${souls} Seele${souls > 1 ? 'n' : ''}`, color: '#c9a6ff', size: 16, t: 1 }); }
       if (feature(S, 'runen') && run.mode === 'normal' && (e.boss || (e.elite && Math.random() < 0.03))) {
         const tier = e.boss ? bossRuneTier(run.stage) : Math.min(10, 1 + Math.floor(run.stage / 40));
@@ -2338,7 +2475,7 @@
           S.towerBest = run.stage;
           if (run.stage % 5 === 0) { const r = addRune(S, RUNES[Math.floor(Math.random() * RUNES.length)].id, Math.min(10, 1 + Math.floor(run.stage / 15))); if (r) run.runes.push(r); }
         }
-      } else if (run.mode === 'ahnen') { return ahnNext(S, st, run, c);
+      } else if (ahnLike(run)) { return ahnNext(S, st, run, c);
       } else if (run.mode === 'exp') {
         run.waves++;
         const m = MISSION[run.mission];
@@ -2463,7 +2600,7 @@
     return (n < 10 ? n.toFixed(2) : n < 100 ? n.toFixed(1) : Math.floor(n).toString()).replace('.', ',') + units[i];
   }
 
-  const core = { TRIPS, TRIP_SHARE, onTrip, tripLeft, rateOf, noteRate, hoursReward, tripReward, startTrip, claimTrip, WB, WB_BOSS, wbScore, wbBarReward, wbBarSecs, wbGoalHours, wbReward, AHN_MISSIONS, AHN_ABIL, AHN_MECH, AHN_BOONS, ahnRollBoons, ahnPickBoon, ahnBoonText, ahnApplyBoons, AHN_TRAIT, AHNE, AHN_TUNE, AHN_COUNT, ahnOpen, ahnBossesOf, ahnLevelFor, placeSigil, ahnClaim, unrebirth, transmute, bossRuneTier, resetPerks, buyLager, lagerCost, LAGER_MAX, runeCap, shardOf, mergeCost, ALTAR_MAX, altarCost, altarMul, buyAltar, kSlots, kFree, keyCap, addSock, removeSock, removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, buyPiece, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
+  const core = { TRIPS, TRIP_SHARE, onTrip, tripLeft, rateOf, noteRate, hoursReward, tripReward, startTrip, claimTrip, WB, WB_BOSS, wbScore, wbBarReward, wbBarSecs, wbGoalHours, wbReward, GACHA, G_FIVE, G_FOUR, CONS, gachaOpen, consOf, consBonus, bannerOf, gachaPull, GEM_SRC, LOGIN, loginItem, loginToday, claimLogin, BOUNTY, bountiesOf, bountyDone, bountyClaim, ahnLike, AHN_MISSIONS, AHN_ABIL, AHN_MECH, AHN_BOONS, ahnRollBoons, ahnPickBoon, ahnBoonText, ahnApplyBoons, AHN_TRAIT, AHNE, AHN_TUNE, AHN_COUNT, ahnOpen, ahnBossesOf, ahnLevelFor, placeSigil, ahnClaim, unrebirth, transmute, bossRuneTier, resetPerks, buyLager, lagerCost, LAGER_MAX, runeCap, shardOf, mergeCost, ALTAR_MAX, altarCost, altarMul, buyAltar, kSlots, kFree, keyCap, addSock, removeSock, removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, buyPiece, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
     SEASON, rankOf, RANKS, rankBonus, AREAS, areaOf, MISSIONS, extraSocks, XSOCK, sockOk, runeAmp, mastInfo, mastLevel, SKINS, WF_STAGE, WF, wfSpawn,
     sigOn, sigKeysUsed, keyNeed, eqOf, slotLim, SIG, SIG_FLAGS, newRun, step, stats, buy, available, blockReason, NODE, migrate, fresh,
     rebirth, ascend, crownsFor, buyCperk, cperkCost, cperk, CPERKS, levelComp, toggleComp, compCost, compMax, compSlots, COMPS, checkAch, ACH, claimWeekly, weekId, dayId, weekRules, RULE, WEEK_TIERS, statsFor, starsFor, toggleEquip, slotsOf, hired, classOpen, keysUsed, keyLimit, capOf, reqOf, feature, encode, decode, fmt, socket, unsocket, merge, canMerge, dismantle, buyRune, runeVal, addRune };

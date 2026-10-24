@@ -14,6 +14,44 @@
   const artTeam = (ks, x0, t, walk, gap = 30) => ks.forEach((k, i) => DRAW[k](x0 - i * gap, null, t, walk));
   const artScene = (env, sc, t) => { env.back(t, sc); env.props(t, sc); };
   const ART_SCENES = {
+    ruf1(t) { // Sternenruf: Nachthimmel mit fallendem Stern über der Gruppe
+      skyFill(['#070a24', '#1c1a4a', '#4a2a6a']); stars(t, 90, 200, 1, 7);
+      for (let i = 0; i < 3; i++) { const x = 120 + i * 120, y = 40 + i * 18, c = ['143,227,255', '200,150,255', '255,214,90'][i];
+        const g = ctx.createLinearGradient(x - 90, y - 50, x, y); g.addColorStop(0, `rgba(${c},0)`); g.addColorStop(1, `rgba(${c},.9)`); ctx.strokeStyle = g; ctx.lineWidth = 3 + i; ctx.beginPath(); ctx.moveTo(x - 90, y - 50); ctx.lineTo(x, y); ctx.stroke(); glowDot(x, y, 16 + i * 6, c, 0.9); }
+      ctx.fillStyle = '#120a1e'; ctx.fillRect(0, GROUND - 6, W, H); artTeam(['r', 'm', 's', 'w'], 330, t, false, 40); },
+    ruf2(t) { // hervorgehobener Held der Woche im goldenen Lichtkreis
+      const B = bannerOf(), k = B.five;
+      const g = ctx.createRadialGradient(W / 2, H / 2, 10, W / 2, H / 2, 260); g.addColorStop(0, '#5a3a10'); g.addColorStop(1, '#120a1e'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2 + t * 0.1; ctx.fillStyle = `rgba(255,214,90,${i % 2 ? 0.08 : 0.14})`; ctx.beginPath(); ctx.moveTo(W / 2, H / 2 + 20); ctx.lineTo(W / 2 + Math.cos(a) * 400, H / 2 + 20 + Math.sin(a) * 400); ctx.lineTo(W / 2 + Math.cos(a + 0.2) * 400, H / 2 + 20 + Math.sin(a + 0.2) * 400); ctx.fill(); }
+      glowDot(W / 2, GROUND - 60, 110, '255,214,90', 0.45);
+      ctx.save(); ctx.translate(W / 2, GROUND); ctx.scale(1.7, 1.7); ctx.translate(-W / 2, -GROUND); DRAW[k](W / 2, null, t, false); ctx.restore();
+      ctx.fillStyle = '#ffd23f'; ctx.font = '22px "Bungee","Arial Black",sans-serif'; ctx.textAlign = 'center'; ctx.fillText('★★★★★', W / 2, 36); },
+    kopf1(t) { // Steckbrief an der Bretterwand
+      ctx.fillStyle = '#5a3a20'; ctx.fillRect(0, 0, W, H); ctx.strokeStyle = 'rgba(0,0,0,.25)'; for (let y = 0; y < H; y += 30) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+      ctx.save(); ctx.translate(W / 2, H / 2 + 4); ctx.rotate(0.03); ctx.fillStyle = '#e9d6a8'; ctx.fillRect(-120, -120, 240, 240); ctx.strokeStyle = '#8a6a40'; ctx.lineWidth = 3; ctx.strokeRect(-120, -120, 240, 240);
+      ctx.fillStyle = '#3a2410'; ctx.font = '26px "Bungee","Arial Black",sans-serif'; ctx.textAlign = 'center'; ctx.fillText('GESUCHT', 0, -84);
+      ctx.fillStyle = '#c9b48a'; ctx.fillRect(-70, -70, 140, 100);
+      const e = makeEnemy(20, 0, true, false, null); e.x = 0; e._px = 0; ctx.save(); ctx.beginPath(); ctx.rect(-70, -70, 140, 100); ctx.clip(); ctx.translate(0, 30 - GROUND); ctx.scale(0.6, 0.6); ctx.translate(0, GROUND * 0.66); enemy(e, t); ctx.restore();
+      ctx.fillStyle = '#3a2410'; ctx.font = '18px "Bungee","Arial Black",sans-serif'; ctx.fillText('💠 BELOHNUNG', 0, 64); ctx.font = 'bold 13px sans-serif'; ctx.fillText('tot oder lebendig', 0, 86);
+      ctx.restore(); },
+    kopf2(t) { if (!drawBg('x_schatten', 200, t)) artScene(ENV[7], 200, t); const e = makeEnemy(40, 0, true, false, null); e.x = 360; e._px = 360; enemy(e, t); artTeam(['a', 's', 'r'], 210, t, false, 36); },
+    lohn1(t) { // Geschenkkiste mit Glanz
+      skyFill(['#1a1030', '#3a2058', '#6a3a5a']); stars(t, 40, 150, 0.6, 3);
+      glowDot(W / 2, GROUND - 40, 120, '255,214,120', 0.5);
+      ctx.save(); ctx.translate(W / 2, GROUND - 10);
+      rr(-60, -70, 120, 70, 8); fillO(LG(-70, 0, '#c84a4a', '#7a1e24')); rr(-66, -86, 132, 22, 6); fillO(LG(-86, -64, '#e05a5a', '#9a2a30'));
+      ctx.fillStyle = '#ffd23f'; ctx.fillRect(-8, -86, 16, 86); for (const sx of [-1, 1]) { ctx.beginPath(); ctx.ellipse(sx * 18, -94, 18, 10, sx * 0.4, 0, 7); fillO('#ffd23f'); }
+      ctx.restore(); for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + t; sparkle(W / 2 + Math.cos(a) * 90, GROUND - 70 + Math.sin(a) * 50, 6, 0.8); }
+      ctx.fillStyle = '#120a1e'; ctx.fillRect(0, GROUND, W, H); },
+    lohn2(t) { // Kalender mit 7 Tagen
+      ctx.fillStyle = '#2a1d14'; ctx.fillRect(0, 0, W, H);
+      ctx.save(); ctx.translate(W / 2, H / 2); ctx.rotate(-0.02); ctx.fillStyle = '#efdcb4'; ctx.fillRect(-200, -100, 400, 200); ctx.strokeStyle = '#8a6a40'; ctx.lineWidth = 3; ctx.strokeRect(-200, -100, 400, 200);
+      ctx.fillStyle = '#3a2410'; ctx.font = '18px "Bungee","Arial Black",sans-serif'; ctx.textAlign = 'center'; ctx.fillText('7 TAGE', 0, -66);
+      const ic = ['⬢', '◈', '💠', '◆', '◈', '💠', '🎁'];
+      for (let i = 0; i < 7; i++) { const x = -165 + i * 55, y = -44; ctx.fillStyle = i === 6 ? '#ffd27a' : '#f7ecd2'; ctx.fillRect(x - 24, y, 48, 110); ctx.strokeStyle = '#8a6a40'; ctx.lineWidth = 1.5; ctx.strokeRect(x - 24, y, 48, 110);
+        ctx.fillStyle = '#5a3a1a'; ctx.font = 'bold 12px sans-serif'; ctx.fillText(`Tag ${i + 1}`, x, y + 18); ctx.font = '24px sans-serif'; ctx.fillText(ic[i], x, y + 66);
+        if (i < 3) { ctx.strokeStyle = '#2f8a3a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x - 12, y + 84); ctx.lineTo(x - 2, y + 94); ctx.lineTo(x + 14, y + 74); ctx.stroke(); } }
+      ctx.restore(); },
     reise1(t) { if (!drawBg('finster', 300, t)) artScene(ENV[1], 300, t); artTeam(['s', 'r'], 260, t, true, 34);
       ctx.fillStyle = '#5a3d25'; ctx.fillRect(372, GROUND - 74, 6, 74);
       [['NORDEN', -0.08, -70], ['BERGE', 0.1, -50]].forEach(([tx, rot, y], i) => { ctx.save(); ctx.translate(375, GROUND + y); ctx.rotate(rot); ctx.fillStyle = '#c9a874'; ctx.beginPath(); ctx.moveTo(-8, -9); ctx.lineTo(48, -9); ctx.lineTo(58, 0); ctx.lineTo(48, 9); ctx.lineTo(-8, 9); ctx.closePath(); ctx.fill();
@@ -120,9 +158,9 @@
     },
   };
   /* ---------- Anschlagbrett: alle Spielarten als Plakate ---------- */
-  const boardOpenIds = () => ['weekly', ...(feature(S, 'turm') ? ['tower'] : []), ...(ahnOpen(S) ? ['ahn'] : []), ...(expOpen(S) ? ['exp'] : [])];
+  const boardOpenIds = () => ['weekly', 'login', ...(feature(S, 'turm') ? ['tower'] : []), ...(ahnOpen(S) ? ['ahn'] : []), ...(expOpen(S) ? ['exp'] : []), ...(gachaOpen(S) ? ['ruf', 'kopf'] : [])];
   const boardNew = () => { if (!Array.isArray(S.knownBoard)) S.knownBoard = boardOpenIds(); return boardOpenIds().filter(id => !S.knownBoard.includes(id)); };
-  const POSTER_ID = { 'Tages-Herausforderung': 'weekly', Turm: 'tower', Ahnenprüfung: 'ahn', Expedition: 'exp' };
+  const POSTER_ID = { 'Tages-Herausforderung': 'weekly', Turm: 'tower', Ahnenprüfung: 'ahn', Expedition: 'exp', Sternenruf: 'ruf', Kopfgeldjagd: 'kopf', 'Täglicher Lohn': 'login' };
   function poster(o) {
     const lock = o.lock ? `<span class="rl-pstamp">${esc(o.lock)}</span>` : '', fresh = !o.lock && o.isNew;
     return `<article class="rl-poster ${o.lock ? 'locked' : ''}" style="--pc:${o.col};--rot:${o.rot}deg">${fresh ? '<i class="rl-reddot rl-pdot" aria-label="neu"></i>' : ''}
@@ -160,6 +198,12 @@
       { title: 'Expedition', art: ['exp1', 'exp2'], icon: '🧭', col: '#9bd14a', rot: -1.5, desc: 'Kurze Aufträge für Heldensplitter. Mit etwas Glück findest du Puzzleteile für neue Helden.',
         info: eOpen ? [`Heldensplitter: <b>${S.exp.spl}</b>`, `Puzzle-Helden fertig: <b>${PUZZLE.filter(id => assembled(S, id)).length}/${PUZZLE.length}</b>`] : [],
         lock: eOpen ? '' : 'Ab dem 1. Aufstieg', acts: '<button class="btn" data-m="go" data-go="exp">Aufträge ansehen</button>' },
+      { title: 'Täglicher Lohn', art: ['lohn1', 'lohn2'], icon: '🎁', col: '#ff8ac8', rot: 1, desc: 'Jeden Tag ein Geschenk, das für immer bleibt: Runen, Splitter, Heldensplitter und Sternkristalle. Am 7. Tag gibt es am meisten.',
+        info: [loginToday(S) ? 'Heute schon abgeholt. Morgen gibt es mehr.' : '<b style="color:#9be36b">Heute noch nicht abgeholt!</b>', `Tag ${(S.login.n % 7) + (loginToday(S) ? 0 : 1)} von 7`], acts: '<button class="btn" data-m="go" data-go="login">Ansehen</button>' },
+      { title: 'Sternenruf', art: ['ruf2', 'ruf1'], icon: '🌠', col: '#8fe3ff', rot: -2, desc: 'Ruf mit Sternkristallen nach Helden. Fünf-Sterne-Helden sind selten, jede weitere Kopie stärkt sie mit einem Sternbild.',
+        info: gachaOpen(S) ? [`Diese Woche: <b>${esc(HERO_BY_ID[bannerOf().five].name)}</b> ★★★★★`, `Sternkristalle: <b>${fmt(S.gem)}</b> 💠`] : [], lock: gachaOpen(S) ? '' : 'Ab dem 2. Aufstieg', acts: '<button class="btn" data-m="go" data-go="ruf">Zum Sternenruf</button>' },
+      { title: 'Kopfgeldjagd', art: ['kopf1', 'kopf2'], icon: '📜', col: '#d9935a', rot: 1.5, desc: 'Jeden Tag drei Steckbriefe: Bosse der Ahnenprüfung mit Großangriffen und Schwachstellen. Jeder bringt einmal am Tag Sternkristalle.',
+        info: gachaOpen(S) ? [`Heute erledigt: <b>${[0, 1, 2].filter(i => bountyDone(S, i)).length}/3</b>`] : [], lock: gachaOpen(S) ? '' : 'Ab dem 2. Aufstieg', acts: '<button class="btn" data-m="go" data-go="kopf">Steckbriefe ansehen</button>' },
     ];
     const nb = boardNew(); list.forEach(o => (o.isNew = nb.includes(POSTER_ID[o.title])));
     S.knownBoard = [...new Set([...(S.knownBoard || []), ...nb])]; save(); setTimeout(action, 0);
@@ -180,6 +224,10 @@
     else if (go === 'exp') toTab('exp');
     else if (go === 'sigil') toTab('ahnen');
     else if (go === 'trips') showTrips();
+    else if (go === 'ruf' && gachaOpen(S)) showBanner();
+    else if (go === 'kopf' && gachaOpen(S)) showBounty();
+    else if (go === 'login') showLogin();
+    else if (go === 'bountyrun') { $('#soloCanvas').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
     else if (go === 'wboss') showWboss();
     else if (go.startsWith('hero:')) toTab(go.slice(5));
     if (['normal', 'weekly', 'tower', 'ahn'].includes(go) || (go === 'exp' && run && !run.dead)) $('#soloCanvas').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -2200,7 +2248,7 @@
     if (!R) return 'lager';
     if (tower) return 'turm';
     if (R.mode === 'wboss') { const B = WB_BOSS[R.wb.bk % WB_BOSS.length]; return BG_META[B.bg] ? B.bg : ZONE_BG[B.zone % ZONE_BG.length]; }
-    if (R.mode === 'ahnen') { const M = AHN_MISSIONS[R.ahn.mi]; return M && M.env === 'ahnen' ? 'ahnen' : M ? ZONE_BG[M.env % ZONE_BG.length] : null; }
+    if (ahnLike(R)) { const M = AHN_MISSIONS[R.ahn.mi]; return M && M.env === 'ahnen' ? 'ahnen' : M ? ZONE_BG[M.env % ZONE_BG.length] : null; }
     if (areaOf(R)) { const a = 'x_' + MISSION[R.mission].area; return BG_META[a] ? a : null; }
     return nightmare(stage) ? 'albtraum' : ZONE_BG[zoneOf(stage) % ZONE_BG.length];
   }
@@ -3751,13 +3799,13 @@
     if (A.spotFx) { const q = 1 - A.spotFx.t / 0.5; ctx.strokeStyle = `rgba(255,236,120,${1 - q})`; ctx.lineWidth = 4 * (1 - q) + 1; ctx.beginPath(); ctx.arc(A.spotFx.x, A.spotFx.y, 10 + q * 40, 0, 7); ctx.stroke(); glowDot(A.spotFx.x, A.spotFx.y, 40 * (1 - q), '255,236,120', 0.8 * (1 - q)); }
   }
   function ahnHud(R, t) {
-    const A = R.ahn, M = AHN_MISSIONS[A.mi], list = ahnBossesOf(A.mi), e = A.boss && A.boss.hp > 0 ? A.boss : null;
-    ctx.font = '13px "Bungee","Arial Black",sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = '#ffd27a'; ctx.fillText(`Mission ${A.mi + 1}`, 12, 20);
-    ctx.font = '600 11px "Figtree",sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillText(M.name, 98, 19);
+    const A = R.ahn, M = AHN_MISSIONS[A.mi], list = A.list || ahnBossesOf(A.mi), e = A.boss && A.boss.hp > 0 ? A.boss : null;
+    ctx.font = '13px "Bungee","Arial Black",sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = '#ffd27a'; ctx.fillText(A.bounty ? 'Kopfgeld' : `Mission ${A.mi + 1}`, 12, 20);
+    ctx.font = '600 11px "Figtree",sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillText(A.bounty ? `${A.bounty.diff} · Stufe ${A.bounty.lvl}` : M.name, A.bounty ? 92 : 98, 19);
     ctx.textAlign = 'right'; ctx.fillStyle = '#e8dcff';
-    ctx.fillText(`Boss ${Math.min(A.bi + 1, list.length)}/${list.length}${A.wave < AHN_TUNE.waves ? ` · Diener ${A.wave + 1}/${AHN_TUNE.waves}` : ''}`, W - 12, 19);
+    if (!A.bounty) ctx.fillText(`Boss ${Math.min(A.bi + 1, list.length)}/${list.length}${A.wave < AHN_TUNE.waves ? ` · Diener ${A.wave + 1}/${AHN_TUNE.waves}` : ''}`, W - 12, 19);
     // Fortschritts-Punkte der Bosse
-    for (let i = 0; i < list.length; i++) { const x = W - 12 - (list.length - 1 - i) * 11, y = 28; ctx.fillStyle = i < A.bi ? '#4fc3ff' : i === A.bi ? '#ffd27a' : 'rgba(255,255,255,.25)'; ctx.beginPath(); list[i].ahne ? (ctx.moveTo(x - 4, y + 2), ctx.lineTo(x - 4, y - 3), ctx.lineTo(x - 2, y), ctx.lineTo(x, y - 4), ctx.lineTo(x + 2, y), ctx.lineTo(x + 4, y - 3), ctx.lineTo(x + 4, y + 2), ctx.closePath()) : ctx.arc(x, y, 3, 0, 7); ctx.fill(); }
+    if (!A.bounty) for (let i = 0; i < list.length; i++) { const x = W - 12 - (list.length - 1 - i) * 11, y = 28; ctx.fillStyle = i < A.bi ? '#4fc3ff' : i === A.bi ? '#ffd27a' : 'rgba(255,255,255,.25)'; ctx.beginPath(); list[i].ahne ? (ctx.moveTo(x - 4, y + 2), ctx.lineTo(x - 4, y - 3), ctx.lineTo(x - 2, y), ctx.lineTo(x, y - 4), ctx.lineTo(x + 2, y), ctx.lineTo(x + 4, y - 3), ctx.lineTo(x + 4, y + 2), ctx.closePath()) : ctx.arc(x, y, 3, 0, 7); ctx.fill(); }
     if (!e || e.x > 520) return;
     const d = e.ahn, bw = 250, bx = W / 2 - bw / 2, by = H - 26, col = d.ahne ? '#ffd27a' : d.tint || '#c9a6ff';
     const pg = ctx.createLinearGradient(0, by - 22, 0, H); pg.addColorStop(0, 'rgba(10,6,18,0)'); pg.addColorStop(0.5, 'rgba(10,6,18,.55)'); pg.addColorStop(1, 'rgba(10,6,18,.8)'); ctx.fillStyle = pg; ctx.fillRect(0, by - 22, W, H - by + 22);
@@ -5209,11 +5257,11 @@
     const tower = R && R.mode === 'tower';
     const stage = R ? (tower ? 15 + R.stage * 2 : R.stage) : 1;
     const bm = biomeOf(stage), scroll = R ? R.scroll : 0, night = !R;
-    const env = R && R.mode === 'wboss' ? ENV[WB_BOSS[R.wb.bk % WB_BOSS.length].zone % ENV.length] : R && R.mode === 'ahnen' ? ahnEnv(R) : R && areaOf(R) ? AREA_ENV[MISSION[R.mission].area] : envOf(stage, night ? 'camp' : tower ? 'tower' : 'run');
+    const env = R && R.mode === 'wboss' ? ENV[WB_BOSS[R.wb.bk % WB_BOSS.length].zone % ENV.length] : R && ahnLike(R) ? ahnEnv(R) : R && areaOf(R) ? AREA_ENV[MISSION[R.mission].area] : envOf(stage, night ? 'camp' : tower ? 'tower' : 'run');
     const bgk = bgKey(R, stage, tower), painted = !!bgk && drawBg(bgk, scroll, t, night ? 250 : null);
     lookFor(bgk);
     if (!painted) { env.back(t, scroll); env.props(t, scroll); }
-    if (R && !tower && R.mode !== 'ahnen' && R.mode !== 'wboss' && nightmare(stage)) {
+    if (R && !tower && !ahnLike(R) && R.mode !== 'wboss' && nightmare(stage)) {
       if (painted) { ctx.fillStyle = 'rgba(90,0,30,.18)'; ctx.fillRect(0, 0, W, H); }
       else { ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = 'rgba(170,40,60,.7)'; ctx.fillRect(0, 0, W, H); ctx.restore(); ctx.fillStyle = 'rgba(90,0,20,.22)'; ctx.fillRect(0, 0, W, H); }
     }
@@ -5249,7 +5297,7 @@
         if (h.shield > 0) { ctx.fillStyle = 'rgba(255,255,255,.8)'; rr(R.pos[k] - 14, y - 4, 28 * Math.min(1, h.shield / st[k].hp), 3, 1.5); ctx.fill();
           ctx.strokeStyle = 'rgba(255,228,138,.5)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(R.pos[k], GROUND - 40, 20, 46, 0, 0, 7); ctx.stroke(); }
       }
-      if (R.mode === 'ahnen') ahnWorld(R, t);
+      if (ahnLike(R)) ahnWorld(R, t);
       drawComps(t, R);
       // Geschosse
       for (const a of R.arrows) {
@@ -5309,9 +5357,9 @@
       golemFx(R, t); sigFx(R, t);
       if (R.fx.phoenix > 0) { ctx.fillStyle = `rgba(255,154,61,${Math.min(1, R.fx.phoenix) * 0.4})`; ctx.fillRect(0, 0, W, H); }
       env.front(t, scroll);
-      if (R.mode === 'ahnen') ahnScreen(R, t);
+      if (ahnLike(R)) ahnScreen(R, t);
       statusIcons(R, t);
-      if (!tower && R.mode !== 'ahnen' && nightmare(stage)) { parts(t, 14, { type: 'ember', rgb: '255,60,60', vx: 4, vy: -18, size: 1.4, alpha: 0.8, seed: 40 }); vignette(0.45, '60,0,10'); }
+      if (!tower && !ahnLike(R) && nightmare(stage)) { parts(t, 14, { type: 'ember', rgb: '255,60,60', vx: 4, vy: -18, size: 1.4, alpha: 0.8, seed: 40 }); vignette(0.45, '60,0,10'); }
       for (const p of R.parts) { ctx.globalAlpha = Math.min(1, p.t * 2); ctx.fillStyle = p.c; ctx.fillRect(p.x, p.y, 3, 3); }
       ctx.globalAlpha = 1;
       for (const f of R.floats) { ctx.globalAlpha = Math.min(1, f.t * 2); ctx.font = `${f.size}px "Bungee","Arial Black",sans-serif`; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.strokeText(f.text, f.x, f.y); ctx.fillStyle = f.color; ctx.fillText(f.text, f.x, f.y); }
@@ -5320,7 +5368,7 @@
       ctx.globalAlpha = 1;
       const hg = ctx.createLinearGradient(0, 0, 0, 40); hg.addColorStop(0, 'rgba(15,12,22,.75)'); hg.addColorStop(1, 'rgba(15,12,22,0)');
       ctx.fillStyle = hg; ctx.fillRect(0, 0, W, 40);
-      if (R.mode === 'ahnen') ahnHud(R, t); else {
+      if (ahnLike(R)) ahnHud(R, t); else {
       ctx.font = '15px "Bungee","Arial Black",sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = '#fff';
       ctx.fillText(tower ? `Turm · Etage ${R.stage}` : R.mode === 'wboss' ? 'Wochenboss' : `Stufe ${R.stage}`, 12, 22);
       ctx.font = '12px "Figtree",sans-serif';
@@ -5419,6 +5467,25 @@
   }
   // ---------- Truppen-Menü: Porträts und Szene ----------
   const PORT = {};
+  // Ganze Heldenfigur als Bild (für den Sternenruf)
+  const FIG = {};
+  function figureURL(k) {
+    if (FIG[k]) return FIG[k];
+    const Z = 4, c = document.createElement('canvas'); c.width = 110 * Z; c.height = 140 * Z;
+    const main = ctx; ctx = c.getContext('2d');
+    const lb = LOOK.busy; LOOK.busy = true;
+    try { ctx.setTransform(Z, 0, 0, Z, 0, 0); ctx.translate(0, 130 - GROUND); DRAW[k](55, null, 0.6, false); } catch (err) {} finally { ctx = main; LOOK.busy = lb; }
+    return (FIG[k] = c.toDataURL());
+  }
+  // Boss der Ahnenprüfung als Bild (für die Steckbriefe der Kopfgeldjagd)
+  const BPIC = {};
+  function bossPicURL(def) {
+    if (BPIC[def.name]) return BPIC[def.name];
+    const Z = 2, c = document.createElement('canvas'); c.width = 240 * Z; c.height = 240 * Z;
+    const main = ctx, mainCv = cv; ctx = c.getContext('2d');
+    try { ctx.setTransform(Z, 0, 0, Z, 0, 0); ctx.translate(0, 228 - GROUND); const e = makeEnemy(40, 0, true, false, null, false); e.ahn = def; e.bk = def.bk; e.type = def.bk >= 0 && def.bk < 5 ? ENEMY_KINDS[def.bk] : 'geist'; e.phase = 0; e.x = 120; e._px = 120; e.hp = e.max; enemy(e, 0.5); } catch (err) {} finally { ctx = main; }
+    return (BPIC[def.name] = c.toDataURL());
+  }
   function portraitURL(k) {
     if (PORT[k]) return PORT[k];
     const Z = 3, c = document.createElement('canvas'); c.width = 120 * Z; c.height = 130 * Z;
