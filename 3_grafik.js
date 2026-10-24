@@ -201,7 +201,7 @@
       { title: 'Täglicher Lohn', art: ['lohn1', 'lohn2'], icon: '🎁', col: '#ff8ac8', rot: 1, desc: 'Jeden Tag ein Geschenk, das für immer bleibt: Runen, Splitter, Heldensplitter und Sternkristalle. Am 7. Tag gibt es am meisten.',
         info: [loginToday(S) ? 'Heute schon abgeholt. Morgen gibt es mehr.' : '<b style="color:#9be36b">Heute noch nicht abgeholt!</b>', `Tag ${(S.login.n % 7) + (loginToday(S) ? 0 : 1)} von 7`], acts: '<button class="btn" data-m="go" data-go="login">Ansehen</button>' },
       { title: 'Sternenruf', art: ['ruf2', 'ruf1'], icon: '🌠', col: '#8fe3ff', rot: -2, desc: 'Ruf mit Sternkristallen nach Helden. Fünf-Sterne-Helden sind selten, jede weitere Kopie stärkt sie mit einem Sternbild.',
-        info: gachaOpen(S) ? [`Diese Woche: <b>${esc(HERO_BY_ID[bannerOf().five].name)}</b> ★★★★★`, `Sternkristalle: <b>${fmt(S.gem)}</b> 💠`] : [], lock: gachaOpen(S) ? '' : 'Ab dem 2. Aufstieg', acts: '<button class="btn" data-m="go" data-go="ruf">Zum Sternenruf</button>' },
+        info: gachaOpen(S) ? [`Sternenruf: <b>${esc(HERO_BY_ID[bannerOf().five].name)}</b> ★★★★★`, `Sternkristalle: <b>${fmt(S.gem)}</b> 💠`] : [], lock: gachaOpen(S) ? '' : 'Ab dem 2. Aufstieg', acts: '<button class="btn" data-m="go" data-go="ruf">Zum Sternenruf</button>' },
       { title: 'Kopfgeldjagd', art: ['kopf1', 'kopf2'], icon: '📜', col: '#d9935a', rot: 1.5, desc: 'Jeden Tag drei Steckbriefe: Bosse der Ahnenprüfung mit Großangriffen und Schwachstellen. Jeder bringt einmal am Tag Sternkristalle.',
         info: gachaOpen(S) ? [`Heute erledigt: <b>${[0, 1, 2].filter(i => bountyDone(S, i)).length}/3</b>`] : [], lock: gachaOpen(S) ? '' : 'Ab dem 2. Aufstieg', acts: '<button class="btn" data-m="go" data-go="kopf">Steckbriefe ansehen</button>' },
     ];

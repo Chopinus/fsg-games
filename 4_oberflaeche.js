@@ -485,13 +485,19 @@
   const rarStars = n => '★'.repeat(n);
   const heroRar = id => (G_FIVE.includes(id) ? 5 : 4);
   function consStars(id) { const c = consOf(S, id); return `<span class="rl-cons" title="Sternbild ${c} von 6">${Array.from({ length: 6 }, (_, i) => `<i class="${i < c ? 'on' : ''}">✦</i>`).join('')}</span>`; }
-  let bannerTab = 'info';
+  let bannerTab = 'info', bannerSel = 'evt', consSel = null;
+  const untilTxt = end => { const h = Math.max(1, Math.ceil((end - Date.now()) / 3600000)); return h > 48 ? `${Math.ceil(h / 24)} Tagen` : `${h} Stunden`; };
+  // Liste der 6 Sternbilder eines Helden; freigeschaltete leuchten
+  function consHTML(id, compact) {
+    const c = consOf(S, id);
+    return `<div class="rl-consl ${compact ? 'small' : ''}">${consList(id).map((x, i) => `<div class="${i < c ? 'on' : ''} ${i === 5 ? 'six' : ''}"><i>${i + 1}</i><span><b>${esc(x.n)}</b><small>${esc(x.d)}</small></span></div>`).join('')}</div>`;
+  }
   function showBanner() {
     if (!gachaOpen(S)) { toast('Der Sternenruf öffnet sich mit dem 2. Aufstieg.'); return; }
     SND.play('tick');
-    const B = bannerOf(), G = S.gacha, f = HERO_BY_ID[B.five], left = GACHA.hard5 - G.p5, left4 = GACHA.hard4 - G.p4;
-    const wkEnd = (() => { const d = new Date(), day = (d.getDay() + 6) % 7, end = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7 - day); const h = Math.ceil((end - d) / 3600000); return h > 48 ? `${Math.ceil(h / 24)} Tagen` : `${h} Stunden`; })();
-    const card = id => { const h = HERO_BY_ID[id], c = consOf(S, id), own = hired(S, h.tree) || (h.puzzle && assembled(S, h.id)); return `<div class="rl-gcard r${heroRar(id)} ${own ? '' : 'miss'}" style="--hc:${h.color}"><img src="${portraitURL(id)}" alt=""><b>${esc(h.name)}</b><small>${rarStars(heroRar(id))}</small>${consStars(id)}</div>`; };
+    S.gacha = S.gacha && S.gacha.evt ? S.gacha : gFix(S.gacha);
+    const E = evtBanner(), evt = bannerSel === 'evt', G = S.gacha[bannerSel], f = HERO_BY_ID[E.five], left = GACHA.hard5 - G.p5, left4 = GACHA.hard4 - G.p4;
+    const card = id => { const h = HERO_BY_ID[id], own = hired(S, h.tree) || (h.puzzle && assembled(S, h.id)); return `<button class="rl-gcard r${heroRar(id)} ${own ? '' : 'miss'} ${consSel === id ? 'sel' : ''}" data-cs="${id}" style="--hc:${h.color}"><img src="${portraitURL(id)}" alt=""><b>${esc(h.name)}</b><small>${rarStars(heroRar(id))}</small>${consStars(id)}</button>`; };
     const tabs = { info: 'Banner', cons: 'Sternbilder', rates: 'Chancen', hist: 'Verlauf' };
     let body = '';
     if (bannerTab === 'info') body = `<div class="rl-gsrc"><b>Woher bekomme ich Sternkristalle?</b>
@@ -499,51 +505,164 @@
         <span>📜 Kopfgeldjagd: täglich bis zu <b>${GEM_SRC.bounty.reduce((a, b) => a + b, 0)}</b> ${gem}</span>
         <span>🧳 Heldenreisen: <b>${GEM_SRC.tripHour}</b> ${gem} pro Reisestunde</span>
         <span>🎁 Täglicher Lohn: bis zu 160 ${gem}</span>
-        <span>🐲 Wochenboss: <b>${GEM_SRC.wbGoal}</b> ${gem} pro erreichtem Gruppenziel</span></div>`;
-    if (bannerTab === 'cons') body = `<p class="note">Jede Kopie eines Helden schaltet ein Sternbild frei, höchstens 6. Ein noch fehlender Fünf-Sterne-Held wird beim ersten Ruf sofort freigeschaltet. Weitere Kopien nach dem 6. Sternbild werden zu ${GACHA.refund5} ${gem} (5★) bzw. ${GACHA.refund4} ${gem} (4★).</p>
-        <div class="rl-gcons">${CONS.map((c, i) => `<span><b>${i + 1}.</b> ${esc(c.desc)}</span>`).join('')}</div>
-        <h3 class="rl-h3">★★★★★</h3><div class="rl-gcards">${G_FIVE.map(card).join('')}</div><h3 class="rl-h3">★★★★</h3><div class="rl-gcards">${G_FOUR.map(card).join('')}</div>`;
-    if (bannerTab === 'rates') body = `<div class="rl-grates"><span><b class="r5">★★★★★ 0,6 %</b> Ab dem 74. Ruf ohne 5★ steigt die Chance stark, spätestens beim 90. Ruf kommt einer. Mit 50 % ist es der hervorgehobene Held (${esc(f.name)}). Wenn nicht, ist der nächste 5★ garantiert ${esc(f.name)}.</span>
+        <span>🐲 Wochenboss: <b>${GEM_SRC.wbGoal}</b> ${gem} pro erreichtem Gruppenziel</span>
+        <span class="note">Beide Banner kosten dasselbe und nutzen dieselben Sternkristalle. Der Fortschritt zum nächsten 5★ wird pro Banner getrennt gezählt.</span></div>`;
+    if (bannerTab === 'cons') {
+      const sel = consSel && HERO_BY_ID[consSel] ? consSel : evt ? E.five : 'o';
+      body = `<p class="note">Jede Kopie eines Helden schaltet sein nächstes Sternbild frei, höchstens 6. Jeder Held hat eigene Sternbilder. Ein noch fehlender Fünf-Sterne-Held wird beim ersten Ruf sofort freigeschaltet. Weitere Kopien nach dem 6. Sternbild werden zu ${GACHA.refund5} ${gem} (5★) bzw. ${GACHA.refund4} ${gem} (4★). Tippe auf einen Helden.</p>
+        <h3 class="rl-h3">★★★★★</h3><div class="rl-gcards">${G_FIVE.map(card).join('')}</div><h3 class="rl-h3">★★★★</h3><div class="rl-gcards">${G_FOUR.map(card).join('')}</div>
+        <h3 class="rl-h3" style="color:${HERO_BY_ID[sel].color}">Sternbilder: ${esc(HERO_BY_ID[sel].name)}</h3>${consHTML(sel)}`;
+    }
+    if (bannerTab === 'rates') body = evt
+      ? `<div class="rl-grates"><span><b class="r5">★★★★★ 0,6 %</b> Ab dem 74. Ruf ohne 5★ steigt die Chance stark, spätestens beim 90. Ruf kommt einer. Mit 50 % ist es ${esc(f.name)}. Wenn nicht, ist der nächste 5★ auf diesem Banner garantiert ${esc(f.name)}.</span>
         <span><b class="r4">★★★★ 5,1 %</b> Spätestens jeder 10. Ruf. Mit 50 % einer der drei hervorgehobenen Helden.</span><span><b class="r3">★★★ Rest</b> Runensplitter oder Heldensplitter.</span>
-        <span>Der Fortschritt zum nächsten 5★ bleibt erhalten, auch wenn das Banner wechselt.</span></div>`;
-    if (bannerTab === 'hist') body = G.hist.length ? `<div class="rl-ghist">${[...G.hist].reverse().slice(0, 40).map(x => `<span class="r${x.r}">${rarStars(x.r)} ${HERO_BY_ID[x.id] ? esc(HERO_BY_ID[x.id].name) : x.id === 'dust' ? 'Runensplitter' : 'Heldensplitter'}<small>${new Date(x.t).toLocaleDateString('de-DE')}</small></span>`).join('')}</div>` : '<p class="note">Noch keine Rufe.</p>';
-    modal(`<div class="rl-banner">
-        <div class="rl-bhero" style="--hc:${f.color}"><div class="rl-brays"></div><img class="fig" src="${figureURL(B.five)}" alt="">
-          <div class="rl-btxt"><small>Sternenruf · endet in ${wkEnd}</small><h2>${esc(f.name)}</h2><b class="r5">★★★★★</b><p>${esc(f.desc)}</p>${consStars(B.five)}
-            <div class="rl-bfour">${B.four.map(id => `<span style="--hc:${HERO_BY_ID[id].color}"><img src="${portraitURL(id)}" alt=""><small>${esc(HERO_BY_ID[id].name)}</small></span>`).join('')}<em>★★★★ hervorgehoben</em></div></div></div>
-        <div class="rl-bpity"><span>${gem} <b>${fmt(S.gem)}</b> Sternkristalle</span><span>5★ spätestens in <b>${left}</b> Rufen${G.g5 ? ' · <b class="r5">nächster 5★ garantiert ' + esc(f.name) + '</b>' : ' · 50/50'}</span><span>4★ spätestens in <b>${left4}</b></span></div>
+        <span>Alle 2 Wochen kommt ein neuer Held auf den Sternenruf. Fortschritt und Garantie bleiben beim Wechsel erhalten.</span></div>`
+      : `<div class="rl-grates"><span><b class="r5">★★★★★ 0,6 %</b> Ab dem 74. Ruf ohne 5★ steigt die Chance stark, spätestens beim 90. Ruf kommt einer. Alle sechs Fünf-Sterne-Helden haben genau die gleiche Chance.</span>
+        <span><b class="r4">★★★★ 5,1 %</b> Spätestens jeder 10. Ruf. Alle sechs Vier-Sterne-Helden haben die gleiche Chance.</span><span><b class="r3">★★★ Rest</b> Runensplitter oder Heldensplitter.</span>
+        <span>Der Ewige Himmel wechselt nie. Sein Fortschritt zählt getrennt vom Sternenruf.</span></div>`;
+    if (bannerTab === 'hist') { const L = G_HIST(); body = L.length ? `<div class="rl-ghist">${L.map(x => `<span class="r${x.r}">${rarStars(x.r)} ${HERO_BY_ID[x.id] ? esc(HERO_BY_ID[x.id].name) : x.id === 'dust' ? 'Runensplitter' : 'Heldensplitter'}<small>${new Date(x.t).toLocaleDateString('de-DE')}</small></span>`).join('')}</div>` : '<p class="note">Auf diesem Banner noch keine Rufe.</p>'; }
+    const nx = HERO_BY_ID[E.next];
+    const hero = evt
+      ? `<div class="rl-bhero evt" style="--hc:${f.color}"><div class="rl-brays"></div><img class="fig" src="${figureURL(E.five)}" alt="">
+          <div class="rl-btxt"><small>Sternenruf · endet in ${untilTxt(E.end)}</small><h2>${esc(E.name)}</h2><b class="r5">★★★★★ ${esc(f.name)}</b><p>${esc(f.desc)}</p>${consStars(E.five)}
+            <div class="rl-bfour">${E.four.map(id => `<span style="--hc:${HERO_BY_ID[id].color}"><img src="${portraitURL(id)}" alt=""><small>${esc(HERO_BY_ID[id].name)}</small></span>`).join('')}<em>★★★★ hervorgehoben</em></div>
+            <p class="rl-bnext">Danach: <img src="${portraitURL(E.next)}" alt=""> <b>${esc(nx.name)}</b></p></div></div>`
+      : `<div class="rl-bhero std"><div class="rl-bsky"></div>
+          <div class="rl-btxt"><small>Dauerbanner · wechselt nie</small><h2>Ewiger Himmel</h2><p>Alle Helden, alle mit der gleichen Chance. Keiner ist hervorgehoben.</p>
+            <div class="rl-bsix">${G_FIVE.map(id => `<span style="--hc:${HERO_BY_ID[id].color}"><img src="${portraitURL(id)}" alt=""><small>${esc(HERO_BY_ID[id].name)}</small></span>`).join('')}</div>
+            <div class="rl-bfour">${G_FOUR.map(id => `<span style="--hc:${HERO_BY_ID[id].color}"><img src="${portraitURL(id)}" alt=""></span>`).join('')}<em>★★★★</em></div></div></div>`;
+    modal(`<div class="rl-banner ${bannerSel}">
+        <div class="rl-bsel"><button class="${evt ? 'on' : ''}" data-bs="evt" style="--hc:${f.color}"><img src="${portraitURL(E.five)}" alt=""><span><b>Sternenruf</b><small>${esc(f.name)} · ${untilTxt(E.end)}</small></span></button>
+          <button class="${evt ? '' : 'on'}" data-bs="std"><i>✧</i><span><b>Ewiger Himmel</b><small>Dauerbanner</small></span></button></div>
+        ${hero}
+        <div class="rl-bpity"><span>${gem} <b>${fmt(S.gem)}</b> Sternkristalle</span><span>5★ spätestens in <b>${left}</b> Rufen${evt ? (G.g5 ? ' · <b class="r5">nächster 5★ garantiert ' + esc(f.name) + '</b>' : ' · 50/50') : ''}</span><span>4★ spätestens in <b>${left4}</b></span></div>
         <div class="row rl-bbtns"><button class="btn rl-pull" data-g="1" ${S.gem >= GACHA.cost && inCamp() ? '' : 'disabled'}>1× rufen<small>${gem} ${GACHA.cost}</small></button><button class="btn gold rl-pull" data-g="10" ${S.gem >= GACHA.cost * 10 && inCamp() ? '' : 'disabled'}>10× rufen<small>${gem} ${GACHA.cost * 10}</small></button></div>
         ${inCamp() ? '' : '<p class="note" style="text-align:center">Rufen geht nur im Lager.</p>'}
         <div class="rl-btabs">${Object.entries(tabs).map(([k, v]) => `<button class="${bannerTab === k ? 'on' : ''}" data-gt="${k}">${v}</button>`).join('')}</div>
         <div class="rl-bbody">${body}</div>
         <div class="row" style="justify-content:center;margin-top:8px"><button class="btn ghost" data-m="x">Schließen</button></div></div>`, 'rl-bannerm');
     $('#picker .rl-bannerm').addEventListener('click', e => {
+      const s = e.target.closest('[data-bs]'); if (s) { bannerSel = s.dataset.bs; consSel = null; showBanner(); return; }
       const t = e.target.closest('[data-gt]'); if (t) { bannerTab = t.dataset.gt; showBanner(); return; }
+      const cs = e.target.closest('[data-cs]'); if (cs) { consSel = cs.dataset.cs; showBanner(); const el = $('#picker .rl-consl'); if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); return; }
       const b = e.target.closest('[data-g]'); if (b && !b.disabled) doPull(Number(b.dataset.g));
     });
   }
+  const G_HIST = () => [...S.gacha.hist].filter(x => (x.b || 'evt') === bannerSel).reverse().slice(0, 40);
+
+  /* ---------- Ruf-Animation: Sternwarte ----------
+     Ein Astrolabium dreht sich auf, die Rufe leuchten als Sterne auf und werden zu einem Sternbild verbunden.
+     Die Farbe jedes Sterns verrät die Seltenheit. Dann stürzt alles in die Mitte und zerbirst. Danach Karten umdrehen. */
+  const RCOL = { 3: '120,190,255', 4: '201,138,255', 5: '255,210,80' };
+  const GLYPHS = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ';
+  function pullAnim(cv, res, done) {
+    const dpr = Math.min(2, window.devicePixelRatio || 1), Wd = cv.clientWidth || 600, Hd = cv.clientHeight || 330;
+    cv.width = Wd * dpr; cv.height = Hd * dpr; const g = cv.getContext('2d'); g.scale(dpr, dpr);
+    const best = Math.max(...res.map(x => x.r)), gold = best === 5, T_END = gold ? 3.85 : 3.0, cx = Wd / 2, cy = Hd / 2 - 6, R0 = Math.min(Wd, Hd) * 0.36;
+    // Sterne: bei 10 Rufen einer pro Ruf, bei einem Ruf 6 (nur der letzte zählt)
+    const n = res.length === 1 ? 6 : res.length, pts = [];
+    for (let i = 0; i < n; i++) {
+      const a = -Math.PI / 2 + i / n * Math.PI * 2 + (i % 2 ? 0.18 : -0.12), r = R0 * (i % 3 === 0 ? 0.62 : i % 3 === 1 ? 0.9 : 0.76);
+      const rr = res.length === 1 ? (i === n - 1 ? res[0].r : 0) : res[i].r;
+      pts.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r * 0.86, r: rr });
+    }
+    // Reihenfolge des Zeichnens: die besten zuletzt
+    const order = pts.map((p, i) => i).sort((a, b) => (pts[a].r - pts[b].r) || a - b);
+    const bg = Array.from({ length: 140 }, () => ({ x: Math.random() * Wd, y: Math.random() * Hd, s: Math.random() * 1.4 + 0.3, p: Math.random() * 6, v: 0.2 + Math.random() * 0.6 }));
+    const sparks = []; let t0 = null, burst = false, raf = 0, stopped = false;
+    const col = RCOL[best], ease = x => 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), 3);
+    const glow = (x, y, r, c, a) => { const q = g.createRadialGradient(x, y, 0, x, y, r); q.addColorStop(0, `rgba(${c},${a})`); q.addColorStop(1, `rgba(${c},0)`); g.fillStyle = q; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); };
+    const star4 = (x, y, r, c, a) => { g.fillStyle = `rgba(${c},${a})`; g.beginPath(); for (let i = 0; i < 8; i++) { const an = i * Math.PI / 4, rr = i % 2 ? r * 0.28 : r; g.lineTo(x + Math.cos(an) * rr, y + Math.sin(an) * rr); } g.fill(); };
+    function ring(r, rot, a, ticks, glyph) {
+      g.save(); g.translate(cx, cy); g.scale(1, 0.86); g.rotate(rot);
+      g.strokeStyle = `rgba(230,210,160,${0.55 * a})`; g.lineWidth = 1.4; g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.stroke();
+      g.lineWidth = 1; g.beginPath(); g.arc(0, 0, r - 7, 0, Math.PI * 2); g.stroke();
+      for (let i = 0; i < ticks; i++) { const an = i / ticks * Math.PI * 2, l = i % 4 ? 3 : 7; g.beginPath(); g.moveTo(Math.cos(an) * r, Math.sin(an) * r); g.lineTo(Math.cos(an) * (r - l), Math.sin(an) * (r - l)); g.stroke(); }
+      if (glyph) { g.fillStyle = `rgba(255,230,170,${0.75 * a})`; g.font = '12px serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+        for (let i = 0; i < 24; i++) { const an = i / 24 * Math.PI * 2; g.save(); g.rotate(an); g.fillText(GLYPHS[i], 0, -(r + 10)); g.restore(); } }
+      g.restore();
+    }
+    function frame(ts) {
+      if (stopped) return;
+      if (t0 == null) t0 = ts; const t = (ts - t0) / 1000;
+      // Himmel
+      const sky = g.createLinearGradient(0, 0, 0, Hd); sky.addColorStop(0, '#04030f'); sky.addColorStop(0.6, '#0d0a2a'); sky.addColorStop(1, '#1d1238'); g.fillStyle = sky; g.fillRect(0, 0, Wd, Hd);
+      glow(cx, Hd + 40, Wd * 0.6, '90,60,160', 0.25);
+      for (const s of bg) { const a = 0.35 + 0.35 * Math.sin(t * 3 * s.v + s.p); g.fillStyle = `rgba(255,255,255,${a})`; g.fillRect(s.x + Math.sin(t * 0.2 + s.p) * 2, s.y, s.s, s.s); }
+      // Phasen
+      const pIn = ease(t / 0.7), pDraw = Math.min(1, Math.max(0, (t - 0.55) / 1.3)), pPull = Math.max(0, (t - 1.95) / 0.55), pBoom = Math.max(0, t - 2.5);
+      const spin = t * 0.4 + Math.pow(pPull, 2) * 6;
+      if (pBoom <= 0) {
+        const a = pIn * (1 - pPull * 0.6), sc = 0.7 + 0.3 * pIn - 0.35 * ease(pPull);
+        ring(R0 * 1.18 * sc, spin, a, 72, true); ring(R0 * 0.95 * sc, -spin * 1.6, a * 0.8, 48, false); ring(R0 * 0.55 * sc, spin * 2.4, a * 0.7, 24, false);
+        // Zeiger des Astrolabiums
+        g.save(); g.translate(cx, cy); g.rotate(spin * 1.3); g.strokeStyle = `rgba(255,220,150,${0.5 * a})`; g.lineWidth = 2; g.beginPath(); g.moveTo(-R0 * 0.5 * sc, 0); g.lineTo(R0 * 1.05 * sc, 0); g.stroke(); g.restore();
+        // Sternbild
+        const k = pDraw * order.length, pos = i => { const p = pts[i], m = ease(pPull); return { x: p.x + (cx - p.x) * m + Math.cos(spin * 2 + i) * 10 * m, y: p.y + (cy - p.y) * m + Math.sin(spin * 2 + i) * 10 * m }; };
+        g.lineWidth = 1.6;
+        for (let j = 1; j < order.length; j++) {
+          const f2 = Math.min(1, Math.max(0, k - j)); if (f2 <= 0) break;
+          const A = pos(order[j - 1]), B = pos(order[j]), c2 = RCOL[Math.max(3, pts[order[j]].r || 3)];
+          g.strokeStyle = `rgba(${c2},${0.75 * (1 - pPull * 0.5)})`; g.beginPath(); g.moveTo(A.x, A.y); g.lineTo(A.x + (B.x - A.x) * f2, A.y + (B.y - A.y) * f2); g.stroke();
+        }
+        order.forEach((i, j) => {
+          const on = Math.min(1, Math.max(0, k - j + 1)); if (on <= 0) return;
+          const P = pos(i), r = pts[i].r, c2 = r ? RCOL[r] : '230,235,255', big = r === 5 ? 1.7 : r === 4 ? 1.25 : 1;
+          if (on < 1 && !pts[i].sp) { pts[i].sp = 1; for (let q = 0; q < (r === 5 ? 18 : 7); q++) { const an = Math.random() * 6.28, v = 30 + Math.random() * 70; sparks.push({ x: P.x, y: P.y, vx: Math.cos(an) * v, vy: Math.sin(an) * v, l: 0.7, c: c2 }); } }
+          glow(P.x, P.y, 22 * big * on, c2, 0.55); star4(P.x, P.y, 9 * big * on * (1 + 0.15 * Math.sin(t * 9 + i)), c2, 0.95); g.fillStyle = '#fff'; g.beginPath(); g.arc(P.x, P.y, 2 * big, 0, 6.28); g.fill();
+        });
+        // Kern in der Mitte wächst beim Einsaugen
+        if (pPull > 0) { glow(cx, cy, 30 + 70 * ease(pPull), col, 0.5 + 0.4 * pPull); star4(cx, cy, 14 + 26 * ease(pPull), col, 0.9); }
+      } else {
+        if (!burst) { burst = true; SND.play(gold ? 'rebirth' : best === 4 ? 'forge' : 'rune');
+          for (let q = 0; q < (gold ? 120 : 60); q++) { const an = Math.random() * 6.28, v = 80 + Math.random() * (gold ? 380 : 240); sparks.push({ x: cx, y: cy, vx: Math.cos(an) * v, vy: Math.sin(an) * v, l: 1 + Math.random() * 0.8, c: Math.random() < 0.7 ? col : '255,255,255' }); } }
+        // Lichtsäulen bei 5★, Strahlenkranz sonst
+        g.save(); g.translate(cx, cy); g.rotate(pBoom * 0.5);
+        const rays = gold ? 14 : 9;
+        for (let i = 0; i < rays; i++) { const an = i / rays * Math.PI * 2, w = gold ? 0.11 : 0.07; g.fillStyle = `rgba(${col},${Math.max(0, 0.22 - pBoom * 0.08)})`; g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(an - w) * 600, Math.sin(an - w) * 600); g.lineTo(Math.cos(an + w) * 600, Math.sin(an + w) * 600); g.fill(); }
+        g.restore();
+        for (let w = 0; w < (gold ? 3 : 2); w++) { const rr = (pBoom - w * 0.18) * 520; if (rr > 0) { g.strokeStyle = `rgba(${col},${Math.max(0, 0.8 - rr / 520)})`; g.lineWidth = 4 - w; g.beginPath(); g.ellipse(cx, cy, rr, rr * 0.86, 0, 0, 6.28); g.stroke(); } }
+        glow(cx, cy, 90 + pBoom * 120, col, Math.max(0, 0.9 - pBoom * 0.5));
+        if (gold) { const s = 1 + Math.sin(pBoom * 6) * 0.06; star4(cx, cy, 46 * s * Math.min(1, pBoom * 4), '255,236,160', Math.max(0, 1 - pBoom * 0.5)); g.fillStyle = `rgba(255,214,90,${Math.min(1, pBoom * 3) * Math.max(0, 1 - (pBoom - 0.9) * 2)})`; g.font = '28px "Bungee","Arial Black",sans-serif'; g.textAlign = 'center'; g.fillText('★★★★★', cx, cy + 92); }
+        g.fillStyle = `rgba(255,255,255,${Math.max(0, 0.85 - pBoom * 3)})`; g.fillRect(0, 0, Wd, Hd);
+      }
+      for (let i = sparks.length - 1; i >= 0; i--) { const s = sparks[i]; s.l -= 1 / 60; if (s.l <= 0) { sparks.splice(i, 1); continue; } s.x += s.vx / 60; s.y += s.vy / 60; s.vy += 40 / 60; s.vx *= 0.985; g.fillStyle = `rgba(${s.c},${Math.min(1, s.l)})`; g.fillRect(s.x, s.y, 2.2, 2.2); }
+      if (t >= T_END) { stopped = true; done(); return; }
+      raf = requestAnimationFrame(frame);
+    }
+    raf = requestAnimationFrame(frame);
+    return () => { stopped = true; cancelAnimationFrame(raf); };
+  }
   function doPull(n) {
     if (!inCamp()) return;
-    const res = gachaPull(S, n); if (!res) { toast('Nicht genug Sternkristalle.'); return; }
+    const bk = bannerSel, res = gachaPull(S, n, bk); if (!res) { toast('Nicht genug Sternkristalle.'); return; }
     save(); cloudSave(true); refresh();
-    const best = Math.max(...res.map(x => x.r)), col = best === 5 ? 'gold' : best === 4 ? 'purple' : 'blue';
+    const best = Math.max(...res.map(x => x.r));
+    // die 5★ und 4★ drehen sich zuletzt um
+    const rankI = res.map((x, i) => i).sort((a, b) => res[a].r - res[b].r || a - b), delay = {};
+    rankI.forEach((i, j) => { delay[i] = 0.25 + j * 0.13 + (res[i].r === 5 ? 0.55 : res[i].r === 4 ? 0.15 : 0); });
     const item = (x, i) => {
       const h = x.id && HERO_BY_ID[x.id];
       const pic = h ? `<img src="${portraitURL(x.id)}" alt="">` : `<span class="ico">${x.kind === 'dust' ? '⬢' : '◈'}</span>`;
       const name = h ? esc(h.name) : x.kind === 'dust' ? 'Runensplitter' : 'Heldensplitter';
-      const note = x.unlock ? '<em class="new">NEU! Freigeschaltet</em>' : x.cons ? `<em>Sternbild ${x.cons}</em>` : x.refund ? `<em>+${x.refund} 💠</em>` : x.n ? `<em>×${fmt(x.n)}</em>` : '';
-      return `<div class="rl-pcard r${x.r}" style="--d:${0.15 + i * 0.12}s;${h ? `--hc:${h.color}` : ''}">${pic}<b>${name}</b><small>${rarStars(x.r)}</small>${note}</div>`;
+      const note = x.unlock ? '<em class="new">NEU! Freigeschaltet</em>' : x.cons ? `<em title="${esc(x.consName || '')}">✦ Sternbild ${x.cons}</em>` : x.refund ? `<em>+${x.refund} 💠</em>` : x.n ? `<em>×${fmt(x.n)}</em>` : '';
+      return `<div class="rl-pcard r${x.r}" style="--d:${delay[i].toFixed(2)}s;${h ? `--hc:${h.color}` : ''}"><div class="in"><div class="bk"><i>✦</i></div><div class="fr"><div class="glow"></div>${pic}<b>${name}</b><small>${rarStars(x.r)}</small>${x.cons && x.consName ? `<span class="cn">${esc(x.consName)}</span>` : ''}${note}</div></div></div>`;
     };
-    modal(`<div class="rl-pull-anim ${col}" id="pullAnim"><div class="sky"></div><div class="meteor"></div><div class="flash"></div><p class="skip">Tippen zum Überspringen</p></div>
-      <div class="rl-pull-res" id="pullRes" hidden><h2>${n === 10 ? 'Zehnfacher Ruf' : 'Ruf'}</h2><div class="rl-pcards n${n}">${res.map(item).join('')}</div>
+    modal(`<div class="rl-pull-anim" id="pullAnim"><canvas></canvas><p class="skip">Tippen zum Überspringen</p></div>
+      <div class="rl-pull-res" id="pullRes" hidden><h2>${n === 10 ? 'Zehnfacher Ruf' : 'Ruf'} · ${bk === 'evt' ? 'Sternenruf' : 'Ewiger Himmel'}</h2><div class="rl-pcards n${n}">${res.map(item).join('')}</div>
         <div class="row" style="justify-content:center;margin-top:12px"><button class="btn" data-again="${n}" ${S.gem >= GACHA.cost * n ? '' : 'disabled'}>Nochmal ${n}× <small>💠 ${GACHA.cost * n}</small></button><button class="btn ghost" data-back="1">Zurück zum Banner</button></div></div>`, 'rl-pullm');
-    const sheet = $('#picker .rl-pullm'); let shown = false;
-    const reveal = () => { if (shown) return; shown = true; const a = $('#pullAnim'), r = $('#pullRes'); if (a) a.hidden = true; if (r) r.hidden = false; SND.play(best === 5 ? 'victory' : 'buy'); };
-    setTimeout(reveal, best === 5 ? 2600 : 1900); SND.play('tick');
+    const sheet = $('#picker .rl-pullm'); let shown = false, stop = null, flipped = false;
+    const reveal = () => {
+      if (shown) return; shown = true; if (stop) stop();
+      const a = $('#pullAnim'), r = $('#pullRes'); if (a) a.hidden = true; if (r) r.hidden = false;
+      SND.play('tick'); setTimeout(() => SND.play(best === 5 ? 'victory' : 'buy'), (Math.max(...Object.values(delay)) + 0.3) * 1000);
+    };
+    stop = pullAnim($('#pullAnim canvas'), res, reveal);
     sheet.addEventListener('click', e => {
       if (!shown) { reveal(); return; }
       if (e.target.closest('[data-again]')) { const b = e.target.closest('[data-again]'); if (!b.disabled) doPull(Number(b.dataset.again)); }
       else if (e.target.closest('[data-back]')) showBanner();
+      else if (!flipped) { flipped = true; const c = $('#picker .rl-pcards'); if (c) c.classList.add('all'); }
     });
   }
   /* ---------- Kopfgeldjagd ---------- */
@@ -1097,7 +1216,7 @@
     const grp = row('🚶 Laufgeschwindigkeit der Gruppe', '×' + ST.g.walk.toFixed(2).replace('.', ',')) + row('Gold', '×' + ST.g.gold.toFixed(2).replace('.', ',')) + (ST.g.partyDr ? row('Schutz der Gruppe', pc(ST.g.partyDr)) : '');
     const acts = NODES.filter(n => n.tree === tree && n.active && ACT[n.id] && rank(S, n.id) > 0);
     const actHTML = acts.length ? acts.map(n => {
-      const r = rank(S, n.id), A = ACT[n.id], cd = A.cd(r, S) * (1 - T.cdr), mc = minCdOf(n.id, S, ST), on = S.equip.includes(n.id);
+      const r = rank(S, n.id), A = ACT[n.id], cd = A.cd(r, S) * (1 - T.cdr) * ((T.cCd && T.cCd[n.id]) || 1), mc = minCdOf(n.id, S, ST), on = S.equip.includes(n.id);
       const lines = (AINFO[n.id] ? AINFO[n.id](r, T, ST) : []).map(([a, b]) => row(a, b)).join('');
       return `<div class="rl-hsact ${on ? 'on' : ''}"><div class="hd"><span class="ic">${n.icon || '◆'}</span><b>${esc(n.name)}</b><small>Stufe ${r}${n.max > 1 && n.max < 99 ? '/' + n.max : ''}</small>${on ? '<em>ausgerüstet</em>' : ''}${n.sig ? '<em class="sig">✦ Siegel</em>' : ''}</div>
         ${row('⌛ Abklingzeit', sec(Math.max(mc, cd)) + (mc > cd ? ' (Mindestabstand)' : ''))}${lines}<p class="note">${esc(n.desc)}</p></div>`;
@@ -1108,6 +1227,7 @@
       <h3 class="rl-h3">Grundwerte</h3><div class="rl-hsgrid">${base}</div>
       ${special ? `<h3 class="rl-h3">Besonderheiten</h3><div class="rl-hsgrid">${special}</div>` : ''}
       <h3 class="rl-h3">Gruppe</h3><div class="rl-hsgrid">${grp}</div>
+      ${gachaOpen(S) ? `<h3 class="rl-h3">Sternbilder ${consStars(h.id)}</h3>${consHTML(h.id, true)}` : ''}
       <h3 class="rl-h3">Aktive Fähigkeiten</h3>${actHTML}
       <h3 class="rl-h3">Talente</h3><div class="rl-hspasl">${pasHTML}</div>
       <div class="row" style="justify-content:center;margin-top:10px"><button class="btn ghost" data-m="x">Schließen</button></div></div>`, 'rl-hstatm');
@@ -1164,10 +1284,12 @@
     if (selR) html += `<div class="rl-runesel" style="--rc:${RUNE[selR.t].color}"><b>${RUNE[selR.t].name} ${ROMAN[selR.tier]}</b><span>${RUNE[selR.t].desc(runeVal(selR.t, selR.tier))}</span><span class="note">Tippe auf einen Sockel, um sie einzusetzen.</span>
       ${feature(S, 'runen') ? `<div class="row">${feature(S, 'schmiede') ? `<button class="btn small" data-rl="merge" ${canMerge(S, selR) ? '' : 'disabled'}>3 verschmelzen → ${ROMAN[selR.tier + 1] || ''} (${dust}${mergeCost(selR.tier)})</button>` : ''}<button class="btn ghost small" data-rl="dismantle">Zerstören (+${dust}${shardOf(selR.tier)})</button></div>` : ''}</div>`;
     html += '<div class="rl-sockets">' + HEROES.filter(h => st[h.id]).map(h => {
-      const allS = S.sockets[h.id] || [], xs = extraSocks(S), slots = allS.slice(0, 3 + Math.max(xs, allS.slice(3).some(Boolean) ? 3 : 0));
+      const allS = S.sockets[h.id] || [], xs = extraSocks(S), star = starSock(S, h.id) || (h.id === 'o' && allS[6]);
+      const idx = [0, 1, 2, ...(xs || allS.slice(3, 6).some(Boolean) ? [3, 4, 5] : []), ...(star ? [6] : [])], slots = idx.map(i => allS[i] || null);
       const b = Object.entries((() => { const list = slots.map(id => id && S.runes.find(r => r.id === id)).filter(Boolean); const c = {}; list.forEach(r => (c[r.t] = (c[r.t] || 0) + 1)); return c; })()).filter(([, n]) => n >= 3);
-      return `<div class="rl-sockrow" style="--hc:${h.color}"><span class="pt">${PORTRAIT[h.id]}</span><b>${h.name}</b><div class="slots">${slots.map((id, i) => {
-        const r = id && S.runes.find(x => x.id === id);
+      return `<div class="rl-sockrow" style="--hc:${h.color}"><span class="pt">${PORTRAIT[h.id]}</span><b>${h.name}</b><div class="slots">${slots.map((id, j) => {
+        const i = idx[j], r = id && S.runes.find(x => x.id === id);
+        if (i === 6) { const on = starSock(S, 'o'); return r ? `<span class="slotwrap star ${on ? '' : 'off'}" data-sock="o:6" title="Sternsockel (6. Sternbild)">${runeChip(r, 'in')}</span>` : `<button class="rl-slot star ${selR ? 'ready' : ''}" data-sock="o:6" title="Sternsockel aus dem 6. Sternbild: jede Stufe">✦</button>`; }
         const xi = i - 3, lock = i >= 3 && xi >= xs, cap = i >= 3 ? XSOCK[xi].max : 10;
         if (r) return `<span class="slotwrap ${i >= 3 ? 'xs' : ''} ${lock || r.tier > cap ? 'off' : ''}" data-sock="${h.id}:${i}" ${lock ? `title="Wirkt erst wieder ab Runenhort ${XSOCK[xi].at}"` : ''}>${runeChip(r, 'in')}</span>`;
         if (lock) return `<span class="rl-slot xs locked" title="Runenhort ${XSOCK[xi].at}">🔒</span>`;
@@ -1459,7 +1581,7 @@
     const sk = e.target.closest('[data-sock]');
     if (sk) {
       const [hid, i] = sk.dataset.sock.split(':'); const slot = Number(i);
-      if (runeSel) { const rr0 = runeById(S, runeSel); if (socket(S, hid, slot, runeSel)) { runeSel = null; afterChange(); } else toast(slot - 3 >= extraSocks(S) ? 'Dieser Sockel ist noch gesperrt.' : `In diesen Zusatz-Sockel passen nur Runen bis Stufe ${ROMAN[XSOCK[slot - 3].max]}${rr0 ? ` (deine ist ${ROMAN[rr0.tier]})` : ''}.`); }
+      if (runeSel) { const rr0 = runeById(S, runeSel); if (socket(S, hid, slot, runeSel)) { runeSel = null; afterChange(); } else toast(slot === 6 ? 'Der Sternsockel braucht das 6. Sternbild des Golems.' : slot - 3 >= extraSocks(S) ? 'Dieser Sockel ist noch gesperrt.' : `In diesen Zusatz-Sockel passen nur Runen bis Stufe ${ROMAN[XSOCK[slot - 3].max]}${rr0 ? ` (deine ist ${ROMAN[rr0.tier]})` : ''}.`); }
       else if (S.sockets[hid][slot]) { unsocket(S, hid, slot); afterChange(); toast('Rune herausgenommen'); }
       return;
     }

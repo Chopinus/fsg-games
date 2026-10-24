@@ -1172,30 +1172,156 @@
   /* ================= Sternenruf (Banner) ab dem 2. Aufstieg ================= */
   // Währung: Sternkristalle (S.gem). Ein Ruf kostet 100, zehn Rufe 1000.
   // 5★ = die sechs Puzzle-Helden, 4★ = die sechs Grundhelden, 3★ = Runensplitter oder Heldensplitter.
-  // Wie bei Genshin: 5★ zu 0,6 %, ab Ruf 74 steigt die Chance stark, spätestens bei Ruf 90. 4★ spätestens alle 10 Rufe.
-  // Der hervorgehobene 5★ der Woche kommt mit 50 %; verliert man das, ist der nächste 5★ garantiert der hervorgehobene.
-  // Gezogene Helden geben Sternbilder (bis 6), ein noch fehlender Puzzle-Held wird sofort freigeschaltet. Zu viele Kopien werden zu Kristallen.
-  const GACHA = { cost: 100, base5: 0.006, soft5: 74, step5: 0.06, hard5: 90, base4: 0.051, hard4: 10, refund5: 300, refund4: 40, consMax: 6 };
+  // Zwei Banner mit getrenntem Fortschritt:
+  //  - Ewiger Himmel (Standard): alle Helden mit gleicher Chance, keiner ist hervorgehoben.
+  //  - Sternenruf (Sonderbanner): alle 2 Wochen ein neuer hervorgehobener 5★. 50 % Chance auf ihn; verliert man das, ist der nächste 5★ garantiert er.
+  // 5★ zu 0,6 %, ab Ruf 74 steigt die Chance stark, spätestens bei Ruf 90. 4★ spätestens alle 10 Rufe.
+  const GACHA = { cost: 100, base5: 0.006, soft5: 74, step5: 0.06, hard5: 90, base4: 0.051, hard4: 10, refund5: 300, refund4: 40, consMax: 6, evtDays: 14 };
   const G_FIVE = ['a', 'n', 'b', 'd', 'e', 'o'], G_FOUR = ['r', 'w', 's', 'm', 'p', 't'];
-  // Sternbilder: Bonus je Stufe (zusammengezählt)
-  const CONS = [
-    { name: 'Erstes Sternbild', desc: '+15 % Schaden', atk: 0.15 },
-    { name: 'Zweites Sternbild', desc: '+15 % Leben', hp: 0.15 },
-    { name: 'Drittes Sternbild', desc: '+10 % Angriffstempo', aps: 0.1 },
-    { name: 'Viertes Sternbild', desc: '+20 % Fähigkeitsschaden', act: 0.2 },
-    { name: 'Fünftes Sternbild', desc: '+15 % Schaden und +15 % Leben', atk: 0.15, hp: 0.15 },
-    { name: 'Sechstes Sternbild', desc: '+30 % Schaden und +10 % Krit-Chance', atk: 0.3, crit: 0.1 },
-  ];
+  // Sternbilder: jeder Held hat eigene. s = Werte (mal bei MULK, sonst plus), x = besondere Wirkungen im Kampf
+  //  cCd: Abklingzeit einer Fähigkeit mal Wert · cEcho: Chance, dass eine Fähigkeit (oder 'all') ein zweites Mal ausgelöst wird
+  const MULK = new Set(['atk', 'hp', 'aps', 'heal', 'act', 'wolfAtk', 'wolfAps', 'minionMul', 'minionDur', 'turretMul', 'turretAps']);
+  const CONS_H = {
+    r: [
+      { n: 'Klingenmeister', d: '+20 % Schaden', s: { atk: 0.2 } },
+      { n: 'Lauter Schwur', d: 'Kriegsschrei hält 4 s länger', x: { cSchrei: 4 } },
+      { n: 'Gestählt', d: '+25 % Leben und +6 % Schadensreduktion', s: { hp: 0.25, dr: 0.06 } },
+      { n: 'Doppelschlag', d: '25 % Chance, dass ein Angriff zweimal trifft', s: { dbl: 0.25 } },
+      { n: 'Wirbelsturm', d: 'Wirbelwind lädt 30 % schneller', x: { cCd: { wirbel: 0.7 } } },
+      { n: 'Held der Legenden', d: 'Wirbelwind schlägt zweimal zu und jeder 5. Angriff wird zu einem kleinen Wirbel', x: { cEcho: { wirbel: 1 }, wmaster: 1 } },
+    ],
+    w: [
+      { n: 'Fels in der Brandung', d: '+25 % Leben', s: { hp: 0.25 } },
+      { n: 'Dornenpanzer', d: 'Wirft 30 % des erlittenen Schadens zurück', s: { thorns: 0.3 } },
+      { n: 'Bollwerk', d: '+6 % Schadensreduktion und +5 % Blocken', s: { dr: 0.06, block: 0.05 } },
+      { n: 'Erdstoß', d: 'Schildwall lädt 30 % schneller', x: { cCd: { w_wall: 0.7 } } },
+      { n: 'Veteran', d: '+30 % Leben und +20 % Schaden', s: { hp: 0.3, atk: 0.2 } },
+      { n: 'Unerschütterlich', d: 'Eiserne Haut schützt die ganze Gruppe (−30 % Schaden) und Vergeltung wirft doppelt so viel zurück', x: { cHautAll: 1, cRache: 1 } },
+    ],
+    s: [
+      { n: 'Adlerauge', d: '+10 % Krit-Chance', s: { crit: 0.1 } },
+      { n: 'Pfeilregen', d: 'Pfeilhagel schießt 4 Pfeile mehr', x: { cHagel: 4 } },
+      { n: 'Ruhige Hand', d: '+20 % Schaden', s: { atk: 0.2 } },
+      { n: 'Durchschlag', d: 'Pfeile durchbohren und treffen den Gegner dahinter mit 40 %', s: { pierce: 0.4 } },
+      { n: 'Schnelle Sehne', d: '+15 % Angriffstempo', s: { aps: 0.15 } },
+      { n: 'Doppelsehne', d: 'Jeder Angriff verschießt einen Pfeil mehr', s: { shots: 1 } },
+    ],
+    m: [
+      { n: 'Arkane Gabe', d: '+20 % Schaden der Fähigkeiten', s: { act: 0.2 } },
+      { n: 'Glutkern', d: 'Feuerbälle treffen Gegner daneben mit +20 % mehr Schaden', s: { splash: 0.2 } },
+      { n: 'Gabelblitz', d: 'Kettenblitz springt auf 2 Gegner mehr', x: { cKette: 2 } },
+      { n: 'Großmagier', d: '+25 % Schaden', s: { atk: 0.25 } },
+      { n: 'Sternenfall', d: 'Meteor lädt 25 % schneller', x: { cCd: { m_meteor: 0.75 } } },
+      { n: 'Doppelzauber', d: 'Jede Fähigkeit wird zweimal ausgelöst', x: { cEcho: { all: 1 } } },
+    ],
+    p: [
+      { n: 'Sanfte Hände', d: '+20 % Heilung', s: { heal: 0.2 } },
+      { n: 'Heiliger Schild', d: 'Schutzschild ist 30 % stärker', x: { cSchild: 0.3 } },
+      { n: 'Gottvertrauen', d: '+25 % Leben', s: { hp: 0.25 } },
+      { n: 'Auferstehung', d: 'Wiederbelebung lädt 40 % schneller', x: { cCd: { p_wieder: 0.6 } } },
+      { n: 'Gnade', d: '+25 % Heilung und +10 % Chance auf doppelte Heilung', s: { heal: 0.25, crit: 0.1 } },
+      { n: 'Heiligenschein', d: 'Jede Heilung der Priesterin heilt alle anderen Helden um 25 % davon mit', x: { cHalo: 0.25 } },
+    ],
+    t: [
+      { n: 'Scharfe Fänge', d: '+25 % Schaden der Wölfe', s: { wolfAtk: 0.25 } },
+      { n: 'Langer Ruf', d: 'Rudelruf hält 4 s länger', x: { cRudel: 4 } },
+      { n: 'Wildes Blut', d: '+20 % Schaden und +15 % Leben', s: { atk: 0.2, hp: 0.15 } },
+      { n: 'Zweiter Gefährte', d: 'Ein zweiter Wolf kämpft immer mit', s: { wolves: 1 } },
+      { n: 'Großes Rudel', d: 'Rudelruf ruft 2 Wölfe mehr', s: { packBonus: 2 } },
+      { n: 'Herr der Wölfe', d: 'Noch ein Wolf kämpft immer mit und alle Wölfe beißen 30 % schneller', s: { wolves: 1, wolfAps: 0.3 } },
+    ],
+    a: [
+      { n: 'Schattenblick', d: '+10 % Krit-Chance', s: { crit: 0.1 } },
+      { n: 'Giftklinge', d: '+40 % Krit-Schaden', s: { critD: 0.4 } },
+      { n: 'Klingensturm', d: 'Kunaisturm wirft 4 Kunai mehr', x: { cSturm: 4 } },
+      { n: 'Jägerin', d: '+25 % Schaden gegen Fernkämpfer', s: { rangedDmg: 0.25 } },
+      { n: 'Tiefes Mal', d: 'Todesmal lässt das Ziel 15 % mehr Schaden nehmen', x: { cMal: 0.15 } },
+      { n: 'Schattentanz', d: 'Jeder Angriff wirft ein Kunai mehr und Schattenschritt trifft 2 Ziele mehr', s: { shots: 1 }, x: { cSchatten: 2 } },
+    ],
+    n: [
+      { n: 'Offene Gräber', d: '+1 Skelett gleichzeitig', s: { minionMax: 1 } },
+      { n: 'Knochensplitter', d: 'Skelette machen 30 % mehr Schaden', s: { minionMul: 0.3 } },
+      { n: 'Große Armee', d: 'Totenheer ruft 2 Skelette mehr', x: { cHeer: 2 } },
+      { n: 'Ruf des Todes', d: '+10 % Chance, dass Besiegte aufstehen', s: { raise: 0.1 } },
+      { n: 'Ewige Wacht', d: 'Skelette halten 50 % länger', s: { minionDur: 0.5 } },
+      { n: 'Knochenkönig', d: '+2 Skelette gleichzeitig und alle Skelette machen doppelten Schaden', s: { minionMax: 2, minionMul: 1 } },
+    ],
+    b: [
+      { n: 'Klare Stimme', d: 'Das Lied gibt allen +4 % Schaden mehr', s: { songAtk: 0.04 } },
+      { n: 'Schneller Takt', d: 'Das Lied gibt allen +3 % Tempo mehr', s: { songAps: 0.03 } },
+      { n: 'Zugabe', d: 'Kriegslied hält 3 s länger', x: { cKrieg: 3 } },
+      { n: 'Schlaflied', d: 'Wiegenlied schläfert 1,5 s länger ein', x: { cWiegen: 1.5 } },
+      { n: 'Hymne', d: 'Das Lied gibt allen +6 % Schaden mehr', s: { songAtk: 0.06 } },
+      { n: 'Sternenchor', d: 'Kriegslied wirkt doppelt so stark und das Lied gibt allen +5 % Tempo mehr', s: { songAps: 0.05 }, x: { cKriegMul: 1 } },
+    ],
+    d: [
+      { n: 'Borke', d: '+20 % Leben', s: { hp: 0.2 } },
+      { n: 'Würgeranken', d: 'Ranken halten 1 s länger fest', x: { cRanken: 1 } },
+      { n: 'Adlerschwarm', d: 'Adlerruf schickt 2 Adler mehr', x: { cAdler: 2 } },
+      { n: 'Urbär', d: 'Bärengebrüll hält 3 s länger', x: { cBruell: 3 } },
+      { n: 'Wildheit', d: '+20 % Schaden und +5 % Schadensreduktion', s: { atk: 0.2, dr: 0.05 } },
+      { n: 'Mutter Natur', d: 'Jede Fähigkeit der Druidin heilt die ganze Gruppe um 6 %', x: { cNatur: 0.06 } },
+    ],
+    e: [
+      { n: 'Feinmechanik', d: 'Geschütztürme machen 25 % mehr Schaden', s: { turretMul: 0.25 } },
+      { n: 'Mehr Pulver', d: 'Streubomben wirft 3 Bomben mehr', x: { cStreu: 3 } },
+      { n: 'Schnellfeuer', d: 'Geschütztürme feuern 20 % schneller', s: { turretAps: 0.2 } },
+      { n: 'Zweiter Turm', d: 'Ein zweiter Geschützturm baut sich immer mit auf', s: { turrets: 1 } },
+      { n: 'Sprengmeisterin', d: 'Bomben treffen Gegner daneben mit +20 % mehr Schaden', s: { splash: 0.2 } },
+      { n: 'Meisterwerk', d: 'Geschütztürme machen doppelten Schaden und das gebaute Geschütz bleibt doppelt so lange', s: { turretMul: 1 }, x: { cTurm: 1 } },
+    ],
+    o: [
+      { n: 'Granithaut', d: '+25 % Leben', s: { hp: 0.25 } },
+      { n: 'Tiefe Glyphe', d: 'Schutzglyphe ist 30 % stärker', x: { cGlyphe: 0.3 } },
+      { n: 'Bergkraft', d: '+20 % Schaden und +5 % Schadensreduktion', s: { atk: 0.2, dr: 0.05 } },
+      { n: 'Runenkern', d: 'Runen im Golem wirken 15 % stärker', s: { runeSelf: 0.15 } },
+      { n: 'Ewiger Wall', d: 'Runenwall hält 2 s länger', x: { cWall: 2 } },
+      { n: 'Siebter Sockel', d: 'Der Golem kann eine Rune mehr einsetzen (jede Stufe, zählt nicht zum 3er-Set)', x: { cSock: 1 } },
+    ],
+  };
+  const consList = id => CONS_H[id] || [];
   const gachaOpen = S => S.asc >= 2;
   const consOf = (S, id) => Math.max(0, Math.min(GACHA.consMax, Math.floor((S.cons && S.cons[id]) || 0)));
-  function consBonus(n) { const b = { atk: 0, hp: 0, aps: 0, act: 0, crit: 0 }; for (let i = 0; i < n; i++) for (const k in b) b[k] += CONS[i][k] || 0; return b; }
+  // Sternbilder auf die Werte eines Helden legen (in stats())
+  function consApply(T, id, n) {
+    const L = consList(id);
+    for (let i = 0; i < Math.min(n, L.length); i++) {
+      const c = L[i];
+      for (const [k, v] of Object.entries(c.s || {})) {
+        if (k === 'act') T.actMul *= 1 + v; else if (MULK.has(k)) T[k] = (T[k] || 0) * (1 + v); else T[k] = (T[k] || 0) + v;
+      }
+      for (const [k, v] of Object.entries(c.x || {})) {
+        if (v && typeof v === 'object') { T[k] = T[k] || {}; for (const [a, b] of Object.entries(v)) T[k][a] = k === 'cCd' ? (T[k][a] || 1) * b : Math.max(T[k][a] || 0, b); }
+        else T[k] = (T[k] || 0) + v;
+      }
+    }
+  }
   const weekNum = id => { const m = /(\d+)-W(\d+)/.exec(id || weekId()); return m ? Number(m[1]) * 53 + Number(m[2]) : 0; };
-  // Banner der Woche: ein hervorgehobener 5★ und drei 4★
-  function bannerOf(id = weekId()) { const n = weekNum(id); return { week: id, five: G_FIVE[n % G_FIVE.length], four: [0, 2, 4].map(i => G_FOUR[(n + i) % G_FOUR.length]) }; }
-  function gFix(d) {
+  // Sonderbanner: wechselt alle 2 Wochen am Montag. Zählung ab Montag, 5. Januar 1970.
+  function evtPeriod(d = new Date()) {
+    const day = (d.getDay() + 6) % 7, mon = Math.round(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate() - day) / 864e5);
+    const k = mon - 4, p = Math.floor(k / GACHA.evtDays), left = GACHA.evtDays - (k - p * GACHA.evtDays);
+    return { p, end: new Date(d.getFullYear(), d.getMonth(), d.getDate() - day + left) };
+  }
+  const EVT_NAME = { a: 'Klinge im Mondlicht', n: 'Ruf der Gruft', b: 'Ballade der Sterne', d: 'Herz der Wildnis', e: 'Zahnrad und Zunder', o: 'Erwachen der Runen' };
+  function evtBanner(d = new Date()) {
+    const P = evtPeriod(d), p = ((P.p % 6) + 6) % 6, five = G_FIVE[p];
+    return { kind: 'evt', p: P.p, end: P.end, five, name: EVT_NAME[five], four: [0, 2, 4].map(i => G_FOUR[(p + i) % G_FOUR.length]), next: G_FIVE[(p + 1) % 6] };
+  }
+  // alter Name, wird noch von der Grafik benutzt
+  const bannerOf = () => evtBanner();
+  function gPity(d, evt) {
     const a = d && typeof d === 'object' ? d : {}, n = x => Math.max(0, Math.floor(Number(x) || 0));
-    return { p5: Math.min(GACHA.hard5, n(a.p5)), p4: Math.min(GACHA.hard4, n(a.p4)), g5: !!a.g5, g4: !!a.g4, n: n(a.n),
-      hist: (Array.isArray(a.hist) ? a.hist : []).slice(-60).filter(x => x && [3, 4, 5].includes(x.r)).map(x => ({ r: x.r, id: String(x.id || '').slice(0, 12), t: n(x.t) })) };
+    const o = { p5: Math.min(GACHA.hard5, n(a.p5)), p4: Math.min(GACHA.hard4, n(a.p4)), n: n(a.n) };
+    if (evt) { o.g5 = !!a.g5; o.g4 = !!a.g4; }
+    return o;
+  }
+  function gFix(d) {
+    const a = d && typeof d === 'object' ? d : {};
+    // alter Spielstand: es gab nur ein Banner mit Hervorhebung, sein Fortschritt geht an das Sonderbanner
+    const old = !a.evt && !a.std && (a.p5 != null || a.n != null);
+    return { evt: gPity(old ? a : a.evt, true), std: gPity(old ? null : a.std, false),
+      hist: (Array.isArray(a.hist) ? a.hist : []).slice(-60).filter(x => x && [3, 4, 5].includes(x.r)).map(x => ({ r: x.r, id: String(x.id || '').slice(0, 12), t: Math.max(0, Math.floor(Number(x.t) || 0)), b: x.b === 'std' ? 'std' : 'evt' })) };
   }
   // 3★: kleine Gegenstände, die für immer bleiben
   function gThree(S) {
@@ -1208,24 +1334,28 @@
     if (h.puzzle && !assembled(S, id)) { S.exp = S.exp || { spl: 0, done: 0, target: 'a', pieces: {} }; S.exp.pieces[id] = 63; puzzleHire(S, id); out.unlock = true; return out; }
     S.cons = S.cons || {}; const c = consOf(S, id);
     if (c >= GACHA.consMax) { const g = rar === 5 ? GACHA.refund5 : GACHA.refund4; S.gem += g; out.refund = g; return out; }
-    S.cons[id] = c + 1; out.cons = c + 1; return out;
+    S.cons[id] = c + 1; out.cons = c + 1; out.consName = (consList(id)[c] || {}).n; return out;
   }
-  function gachaPull(S, count) {
-    if (!gachaOpen(S) || !(count === 1 || count === 10) || S.gem < GACHA.cost * count) return null;
-    S.gem -= GACHA.cost * count; const G = S.gacha, B = bannerOf(), res = [];
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  function gachaPull(S, count, bk = 'evt') {
+    if (!gachaOpen(S) || !(count === 1 || count === 10) || S.gem < GACHA.cost * count || !['evt', 'std'].includes(bk)) return null;
+    S.gem -= GACHA.cost * count; S.gacha = S.gacha && S.gacha.evt ? S.gacha : gFix(S.gacha);
+    const G = S.gacha[bk], evt = bk === 'evt', B = evtBanner(), res = [];
     for (let i = 0; i < count; i++) {
       G.p5++; G.p4++; G.n++;
       const r5 = G.p5 >= GACHA.hard5 ? 1 : GACHA.base5 + (G.p5 >= GACHA.soft5 ? (G.p5 - GACHA.soft5 + 1) * GACHA.step5 : 0);
       let item;
       if (Math.random() < r5) {
-        const feat = G.g5 || Math.random() < 0.5, id = feat ? B.five : G_FIVE.filter(x => x !== B.five)[Math.floor(Math.random() * (G_FIVE.length - 1))];
-        G.g5 = !feat; G.p5 = 0; item = gHero(S, id, 5); item.feat = feat;
+        if (evt) { const feat = G.g5 || Math.random() < 0.5; G.g5 = !feat; item = gHero(S, feat ? B.five : pick(G_FIVE.filter(x => x !== B.five)), 5); item.feat = feat; }
+        else item = gHero(S, pick(G_FIVE), 5);
+        G.p5 = 0;
       } else if (G.p4 >= GACHA.hard4 || Math.random() < GACHA.base4) {
-        const feat = G.g4 || Math.random() < 0.5, id = feat ? B.four[Math.floor(Math.random() * 3)] : G_FOUR.filter(x => !B.four.includes(x))[Math.floor(Math.random() * 3)];
-        G.g4 = !feat; G.p4 = 0; item = gHero(S, id, 4); item.feat = feat;
+        if (evt) { const feat = G.g4 || Math.random() < 0.5; G.g4 = !feat; item = gHero(S, feat ? pick(B.four) : pick(G_FOUR.filter(x => !B.four.includes(x))), 4); item.feat = feat; }
+        else item = gHero(S, pick(G_FOUR), 4);
+        G.p4 = 0;
       } else item = { r: 3, ...gThree(S) };
       res.push(item);
-      G.hist.push({ r: item.r, id: item.id || item.kind, t: Date.now() }); if (G.hist.length > 60) G.hist.shift();
+      S.gacha.hist.push({ r: item.r, id: item.id || item.kind, t: Date.now(), b: bk }); if (S.gacha.hist.length > 60) S.gacha.hist.shift();
     }
     return res;
   }
@@ -1402,8 +1532,8 @@
     out.runeSeq = Math.max(out.runeSeq, ...out.runes.map(r => r.id + 1));
     const ids = new Set(out.runes.map(r => r.id)), used = new Set();
     for (const h of HEROES) {
-      const arr = (d.sockets && Array.isArray(d.sockets[h.id]) ? d.sockets[h.id] : []).slice(0, 6);
-      out.sockets[h.id] = [0, 1, 2, 3, 4, 5].map(i => (ids.has(arr[i]) && !used.has(arr[i]) ? (used.add(arr[i]), arr[i]) : null));
+      const arr = (d.sockets && Array.isArray(d.sockets[h.id]) ? d.sockets[h.id] : []).slice(0, h.id === 'o' ? 7 : 6);
+      out.sockets[h.id] = (h.id === 'o' && arr.length > 6 ? [0, 1, 2, 3, 4, 5, 6] : [0, 1, 2, 3, 4, 5]).map(i => (ids.has(arr[i]) && !used.has(arr[i]) ? (used.add(arr[i]), arr[i]) : null));
     }
     out.cperks = {}; for (const [id, r] of Object.entries(d.cperks || {})) if (CPERK[id]) out.cperks[id] = Math.max(0, Math.min(CPERK[id].max, Math.floor(Number(r) || 0)));
     for (const k of ['asc', 'crowns']) out[k] = Math.max(0, Math.floor(Number(d[k]) || 0));
@@ -1632,9 +1762,9 @@
   }
   const socketed = S => new Set(Object.values(S.sockets).flat().filter(Boolean));
   function socket(S, hid, slot, runeId) {
-    if (!sockOk(S, slot, runeById(S, runeId))) return false;
+    if (!sockOk(S, slot, runeById(S, runeId), hid)) return false;
     for (const h of HEROES) S.sockets[h.id] = (S.sockets[h.id] || [null, null, null, null, null, null]).map(x => (x === runeId ? null : x));
-    while (S.sockets[hid].length < 6) S.sockets[hid].push(null);
+    while (S.sockets[hid].length < Math.max(6, slot + 1)) S.sockets[hid].push(null);
     S.sockets[hid][slot] = runeId; return true;
   }
   function unsocket(S, hid, slot) { S.sockets[hid][slot] = null; }
@@ -1710,7 +1840,9 @@
   // Runenhort: Zusatz-Sockel ab Stufe 15, 35 und 60, jeweils mit Höchststufe für Runen
   const XSOCK = [{ at: 15, max: 4 }, { at: 35, max: 6 }, { at: 60, max: 8 }];
   const extraSocks = S => XSOCK.filter(x => ((S.nodes && S.nodes.o_inf2) || 0) >= x.at).length;
-  const sockOk = (S, slot, r) => slot < 3 || (slot - 3 < extraSocks(S) && r && r.tier <= XSOCK[slot - 3].max);
+  // Platz 6 (der siebte) ist der Sternsockel des Golems aus dem 6. Sternbild: jede Stufe erlaubt
+  const starSock = (S, hid) => hid === 'o' && consOf(S, 'o') >= 6;
+  const sockOk = (S, slot, r, hid) => slot < 3 || (slot === 6 ? !!r && starSock(S, hid) : slot < 6 && slot - 3 < extraSocks(S) && !!r && r.tier <= XSOCK[slot - 3].max);
   const golemRunes = S => (feature(S, 'runen') ? (S.sockets.o || []).filter(id => id && runeById(S, id)).length : 0);
   function runeBonus(S, hid, amp = 1) {
     const b = {};
@@ -1718,7 +1850,7 @@
     const slots = S.sockets[hid] || [], main = slots.slice(0, 3).map(id => id && runeById(S, id)).filter(Boolean);
     const count = {}; main.forEach(r => (count[r.t] = (count[r.t] || 0) + 1));
     for (const r of main) b[r.t] = (b[r.t] || 0) + runeVal(r.t, r.tier) * (count[r.t] >= 3 ? 1.5 : 1) * amp;
-    for (let i = 3; i < slots.length; i++) { const r = slots[i] && runeById(S, slots[i]); if (r && sockOk(S, i, r)) b[r.t] = (b[r.t] || 0) + runeVal(r.t, r.tier) * amp; }
+    for (let i = 3; i < slots.length; i++) { const r = slots[i] && runeById(S, slots[i]); if (r && sockOk(S, i, r, hid)) b[r.t] = (b[r.t] || 0) + runeVal(r.t, r.tier) * amp; }
     return b;
   }
 
@@ -1788,8 +1920,8 @@
     if (bardOn && hs.b.muse) { const mc = hs.b.crit * hs.b.muse; for (const [hid, T] of Object.entries(hs)) if (hid !== 'b') T.crit += mc; }
     let seeleSum = 0;
     for (const [hid, T] of Object.entries(hs)) {
-      const rb = runeBonus(S, hid, runeAmp(S) * (1 + (T.runeSelf || 0))), mb = 1 + 0.02 * mastLevel(S, hid), cb = consBonus(consOf(S, hid));
-      T.atk *= 1 + cb.atk; T.hp *= 1 + cb.hp; T.aps *= 1 + cb.aps; T.actMul *= 1 + cb.act; T.crit += cb.crit; if (T.heal) T.heal *= 1 + cb.atk; if (T.wolfAtk) T.wolfAtk *= 1 + cb.atk;
+      consApply(T, hid, consOf(S, hid));
+      const rb = runeBonus(S, hid, runeAmp(S) * (1 + (T.runeSelf || 0))), mb = 1 + 0.02 * mastLevel(S, hid);
       T.atk *= mb; T.hp *= mb; if (T.heal) T.heal *= mb; if (T.wolfAtk) T.wolfAtk *= mb;
       if (bardOn) T.aps *= 1 + hs.b.songAps;
       if (bardOn && hs.b.ensemble) { if (T.wolfAps) T.wolfAps *= 1 + hs.b.songAps; if (T.turretAps) T.turretAps *= 1 + hs.b.songAps; }
@@ -1895,41 +2027,41 @@
     heil: { cd: () => 22, ready: (run, st) => anyBelow(run, st, 0.55), cast: (c, r) => c.healSplit('r', 0.4 + 0.08 * (r - 1), 0.1 + 0.03 * (r - 1)) },
     blitz: { cd: () => 14, ready: run => !!strongest(run, 320), cast: (c, r) => { const t = strongest(c.run, 320); c.hit('r', t, (4 + 1.5 * (r - 1)) * c.st.r.actMul, '#cfe6ff'); c.run.fx.blitzX = t.x; c.run.shake = 0.25; } },
     schild: { cd: () => 9, ready: engaged, cast: (c, r) => { const m = (2.5 + 0.5 * (r - 1)) * c.st.r.actMul; for (let i = 0; i < 2; i++) { const e = c.run.enemies.find(x => x.hp > 0); if (e) c.hit('r', e, m, '#ffe0a8'); } if (c.run.cds.wirbel > 0) c.run.cds.wirbel = Math.max(0, c.run.cds.wirbel - 3); } },
-    schrei: { minCd: (S, st) => (st.r && st.r.schwur ? 24 : 0), cd: () => 20, ready: engaged, cast: (c, r) => { c.run.buffT = c.st.r.schwur ? 12 : 6; c.run.buffMul = 0.4 + 0.15 * (r - 1); c.float('r', 'Kriegsschrei!', '#ffb547'); } },
+    schrei: { minCd: (S, st) => (st.r && st.r.schwur ? 24 : 0), cd: () => 20, ready: engaged, cast: (c, r) => { c.run.buffT = (c.st.r.schwur ? 12 : 6) + (c.st.r.cSchrei || 0); c.run.buffMul = 0.4 + 0.15 * (r - 1); c.float('r', 'Kriegsschrei!', '#ffb547'); } },
     w_wall: { cd: () => 12, ready: run => near(run).length >= 2 || near(run).some(e => e.boss), cast: (c, r) => { near(c.run).forEach(e => { c.hit('w', e, (1.5 + 0.5 * (r - 1)) * c.st.w.actMul, '#cfe0ff'); e.stun = Math.max(e.stun, 1); }); c.run.shake = 0.2; } },
     w_haut: { cd: () => 16, ready: (run, st) => run.h.w.hp < st.w.hp * (st.w.wille ? 0.9 : 0.7), cast: (c, r) => { c.run.hautT = 5 + r + (c.st.w.wille ? 3 : 0); c.float('w', 'Eiserne Haut', '#7fb2ff'); } },
     w_rache: { cd: () => 15, ready: engaged, cast: (c, r) => { c.run.racheT = 6 + r; c.float('w', 'Vergeltung', '#7fb2ff'); } },
-    s_hagel: { cd: () => 14, ready: run => run.enemies.some(e => e.x < 380), cast: (c, r) => { const vis = c.run.enemies.filter(e => e.x < 380); for (let i = 0; i < 6; i++) { const e = vis[Math.floor(Math.random() * vis.length)]; c.arrow('s', e, 0.3 + i * 0.06, 'hag'); c.hit('s', e, (1.2 + 0.4 * (r - 1)) * c.st.s.actMul, '#c8f5cf'); } } },
+    s_hagel: { cd: () => 14, ready: run => run.enemies.some(e => e.x < 380), cast: (c, r) => { const vis = c.run.enemies.filter(e => e.x < 380); for (let i = 0, n = 6 + (c.st.s.cHagel || 0); i < n; i++) { const e = vis[Math.floor(Math.random() * vis.length)]; c.arrow('s', e, 0.3 + i * 0.06, 'hag'); c.hit('s', e, (1.2 + 0.4 * (r - 1)) * c.st.s.actMul, '#c8f5cf'); } } },
     s_falke: { cd: () => 12, ready: run => !!strongest(run, 380), cast: (c, r) => { const t = strongest(c.run, 380); c.hit('s', t, (3.5 + 1.2 * (r - 1)) * c.st.s.actMul, '#c8f5cf'); t.mark = Math.max(t.mark || 0, 0.25); t.markT = 5; c.run.fx.falkeX = t.x; } },
     s_gift: { cd: () => 10, ready: run => !!strongest(run, 380), cast: (c, r) => { const t = strongest(c.run, 380); const stack = c.st.s.toxik ? Math.min(3, (t.poisonT > 0 ? t.poisonN || 1 : 0) + 1) : 1; t.poisonN = stack; t.poison = c.st.s.atk * (3 + (r - 1)) * c.st.s.actMul / 5 * stack; t.poisonT = 5; c.arrow('s', t, 0.35, 'gift'); } },
     m_meteor: { cd: () => 18, ready: run => run.enemies.some(e => e.x < 380), cast: (c, r) => { const n = c.st.m.schauer ? 3 : 1; for (let i = 0; i < n; i++) c.run.enemies.filter(e => e.x < 520 && e.hp > 0).forEach(e => c.hit('m', e, (5 + 1.5 * (r - 1)) * c.st.m.actMul * (n > 1 ? 0.5 : 1), '#ffb070')); c.run.shake = 0.3; } },
     m_eis: { cd: () => 14, ready: run => near(run).length >= 1, cast: (c, r) => near(c.run).forEach(e => { c.hit('m', e, (1.5 + 0.5 * (r - 1)) * c.st.m.actMul, '#bfe6ff'); e.stun = Math.max(e.stun, 1.5); e.frozen = 1.5; }) },
-    m_kette: { cd: () => 10, ready: run => run.enemies.some(e => e.x < 380), cast: (c, r) => { const ts = c.run.enemies.filter(e => e.x < 450).slice(0, 3 + r); c.run.fx.chain = ts.map(e => e.x); ts.forEach(e => c.hit('m', e, 2.5 * c.st.m.actMul, '#e2c9ff')); } },
+    m_kette: { cd: () => 10, ready: run => run.enemies.some(e => e.x < 380), cast: (c, r) => { const ts = c.run.enemies.filter(e => e.x < 450).slice(0, 3 + r + (c.st.m.cKette || 0)); c.run.fx.chain = ts.map(e => e.x); ts.forEach(e => c.hit('m', e, 2.5 * c.st.m.actMul, '#e2c9ff')); } },
     p_segen: { cd: () => 18, ready: (run, st) => anyBelow(run, st, 0.6), cast: (c, r) => c.healAll(0.3 + 0.08 * (r - 1), 'p') },
-    p_schild: { cd: () => 16, ready: engaged, cast: (c, r) => c.run.order.forEach(k => { const h = c.run.h[k]; if (h.alive) h.shield = Math.max(h.shield, c.st[k].hp * (0.2 + 0.05 * (r - 1)) * (c.st.p.hohe ? 2 : 1)); }) },
+    p_schild: { cd: () => 16, ready: engaged, cast: (c, r) => c.run.order.forEach(k => { const h = c.run.h[k]; if (h.alive) h.shield = Math.max(h.shield, c.st[k].hp * (0.2 + 0.05 * (r - 1)) * (c.st.p.hohe ? 2 : 1) * (1 + (c.st.p.cSchild || 0))); }) },
     p_wieder: { cd: (r, S) => (rank(S, 'p_k2') ? 20 : 40), ready: run => run.order.some(k => !run.h[k].alive), cast: (c, r) => { const k = c.run.order.find(k => !c.run.h[k].alive); const h = c.run.h[k]; h.alive = true; h.hp = c.st[k].hp * (0.4 + 0.15 * (r - 1)); c.float(k, 'Wiederbelebt!', '#ffe48a'); sigRevive(c, k); } },
-    t_rudel: { cd: () => 20, ready: engaged, cast: (c, r) => { c.run.packT = 8 + 2 * (r - 1); c.float('t', 'Rudelruf!', '#d9935a'); } },
+    t_rudel: { cd: () => 20, ready: engaged, cast: (c, r) => { c.run.packT = 8 + 2 * (r - 1) + (c.st.t.cRudel || 0); c.float('t', 'Rudelruf!', '#d9935a'); } },
     t_wurzel: { cd: () => 15, ready: run => near(run).length >= 1, cast: (c, r) => c.run.enemies.filter(e => e.x < 460).forEach(e => { c.hit('t', e, 1.2 * c.st.t.actMul, '#b5e08a'); e.stun = Math.max(e.stun, 2 + 0.5 * (r - 1)); e.rooted = 2; }) },
     t_sprung: { cd: () => 12, ready: run => !!strongest(run, 360), cast: (c, r) => { const t = strongest(c.run, 360); c.hit('t', t, (6 + 2 * (r - 1)) * c.st.t.actMul, '#ffd2a8', true); c.run.fx.sprungX = t.x;
       if (c.st.t.leit) c.run.enemies.filter(e => e !== t && e.x < 420).sort((a, b) => b.hp - a.hp).slice(0, 2).forEach(e => c.hit('t', e, (6 + 2 * (r - 1)) * c.st.t.actMul, '#ffd2a8', true)); } },
     a_schatten: { cd: () => 14, ready: run => run.enemies.some(e => e.x < 480), cast: (c, r) => {
-      const vis = c.run.enemies.filter(e => e.x < 480), rng = vis.filter(e => e.ranged), ts = (rng.length ? rng : [...vis].sort((a, b) => b.x - a.x)).slice(0, 2);
+      const vis = c.run.enemies.filter(e => e.x < 480), rng = vis.filter(e => e.ranged), ts = (rng.length ? rng : [...vis].sort((a, b) => b.x - a.x)).slice(0, 2 + (c.st.a.cSchatten || 0));
       ts.forEach(e => c.hit('a', e, (6 + 2 * (r - 1)) * c.st.a.actMul * (e.ranged ? 1 + c.st.a.rangedDmg : 1), '#ff6b7a')); c.run.fx.shadowXs = ts.map(e => e.x); } },
-    a_sturm: { cd: () => 12, ready: run => run.enemies.some(e => e.x < 400), cast: (c, r) => { const vis = c.run.enemies.filter(e => e.x < 400); for (let i = 0; i < 8; i++) { const e = vis[Math.floor(Math.random() * vis.length)]; c.arrow('a', e, 0.2 + i * 0.05, 'kunai'); c.hit('a', e, (1.2 + 0.4 * (r - 1)) * c.st.a.actMul, '#ffc2c8'); } } },
-    a_mal: { cd: () => 15, ready: run => !!strongest(run, 400), cast: (c, r) => { const t = strongest(c.run, 400); c.hit('a', t, (3 + (r - 1)) * c.st.a.actMul, '#ff6b7a'); t.mark = Math.max(t.mark || 0, 0.4); t.markT = 6; c.efloat(t, 'Todesmal', '#ff6b7a', 13); } },
-    n_heer: { cd: () => 20, ready: engaged, cast: (c, r) => { for (let i = 0; i < 2 + r; i++) c.run.minions.push({ t: c.st.n.minionLong ? 24 : 12, atkT: 0.3 + i * 0.15, swing: 0 }); c.float('n', 'Totenheer!', '#6be0b8'); } },
+    a_sturm: { cd: () => 12, ready: run => run.enemies.some(e => e.x < 400), cast: (c, r) => { const vis = c.run.enemies.filter(e => e.x < 400); for (let i = 0, n = 8 + (c.st.a.cSturm || 0); i < n; i++) { const e = vis[Math.floor(Math.random() * vis.length)]; c.arrow('a', e, 0.2 + i * 0.05, 'kunai'); c.hit('a', e, (1.2 + 0.4 * (r - 1)) * c.st.a.actMul, '#ffc2c8'); } } },
+    a_mal: { cd: () => 15, ready: run => !!strongest(run, 400), cast: (c, r) => { const t = strongest(c.run, 400); c.hit('a', t, (3 + (r - 1)) * c.st.a.actMul, '#ff6b7a'); t.mark = Math.max(t.mark || 0, 0.4 + (c.st.a.cMal || 0)); t.markT = 6; c.efloat(t, 'Todesmal', '#ff6b7a', 13); } },
+    n_heer: { cd: () => 20, ready: engaged, cast: (c, r) => { for (let i = 0; i < 2 + r + (c.st.n.cHeer || 0); i++) c.run.minions.push({ t: c.st.n.minionLong ? 24 : 12, atkT: 0.3 + i * 0.15, swing: 0 }); c.float('n', 'Totenheer!', '#6be0b8'); } },
     n_raub: { cd: () => 12, ready: run => !!strongest(run, 400), cast: (c, r) => { const t = strongest(c.run, 400); const d = c.hit('n', t, (3 + (r - 1)) * c.st.n.actMul, '#6be0b8'); c.healAllAbs(d * 0.15); c.run.fx.raubX = t.x; } },
     n_fluch: { cd: () => 16, ready: run => run.enemies.some(e => e.x < 420), cast: (c, r) => { c.run.enemies.forEach(e => { e.mark = Math.max(e.mark || 0, 0.25 + 0.1 * (r - 1)); e.markT = 6; e.cursed = 6; }); c.float('n', 'Fluch!', '#6be0b8'); } },
-    b_krieg: { cd: (r, S) => (rank(S, 'sg_b_takt') && sigOn(S, 'barde') ? 18 * 0.6 : 18), ready: engaged, cast: (c, r) => { c.run.songT = 6; c.run.songMul = 0.3 + 0.1 * (r - 1); c.float('b', 'Kriegslied!', '#ff8ac8'); } },
-    b_wiegen: { cd: () => 16, ready: run => near(run).length >= 2 || near(run).some(e => e.boss), cast: (c, r) => near(c.run).forEach(e => { e.stun = Math.max(e.stun, 2 + 0.5 * (r - 1)); e.sleep = 2 + 0.5 * (r - 1); }) },
+    b_krieg: { cd: (r, S) => (rank(S, 'sg_b_takt') && sigOn(S, 'barde') ? 18 * 0.6 : 18), ready: engaged, cast: (c, r) => { c.run.songT = 6 + (c.st.b.cKrieg || 0); c.run.songMul = (0.3 + 0.1 * (r - 1)) * (1 + (c.st.b.cKriegMul || 0)); c.float('b', 'Kriegslied!', '#ff8ac8'); } },
+    b_wiegen: { cd: () => 16, ready: run => near(run).length >= 2 || near(run).some(e => e.boss), cast: (c, r) => near(c.run).forEach(e => { e.stun = Math.max(e.stun, 2 + 0.5 * (r - 1) + (c.st.b.cWiegen || 0)); e.sleep = 2 + 0.5 * (r - 1) + (c.st.b.cWiegen || 0); }) },
     b_schall: { cd: () => 12, ready: run => near(run).length >= 1, cast: (c, r) => { near(c.run).forEach(e => { c.hit('b', e, (2 + 0.6 * (r - 1)) * c.st.b.actMul, '#ffd0ea'); e.x += e.boss ? 15 : 40; }); c.run.fx.schallX = c.run.pos.b || 80; } },
-    d_ranken: { cd: () => 14, ready: run => near(run).length >= 1, cast: (c, r) => c.run.enemies.filter(e => e.x < 460).forEach(e => { c.hit('d', e, 1.5 * c.st.d.actMul, '#c8f08a'); e.stun = Math.max(e.stun, 2 + 0.5 * (r - 1)); e.rooted = 2 + 0.5 * (r - 1); }) },
-    d_bruell: { minCd: (S, st) => (st.d && st.d.rinde ? 32 : 0), cd: () => 18, ready: engaged, cast: (c, r) => { c.run.roarT = (6 + (r - 1)) * (c.st.d.rinde ? 2 : 1); c.float('d', 'Bärengebrüll!', '#9bd14a'); c.run.shake = 0.2; } },
+    d_ranken: { cd: () => 14, ready: run => near(run).length >= 1, cast: (c, r) => c.run.enemies.filter(e => e.x < 460).forEach(e => { c.hit('d', e, 1.5 * c.st.d.actMul, '#c8f08a'); e.stun = Math.max(e.stun, 2 + 0.5 * (r - 1) + (c.st.d.cRanken || 0)); e.rooted = 2 + 0.5 * (r - 1) + (c.st.d.cRanken || 0); }) },
+    d_bruell: { minCd: (S, st) => (st.d && st.d.rinde ? 32 : 0), cd: () => 18, ready: engaged, cast: (c, r) => { c.run.roarT = (6 + (r - 1) + (c.st.d.cBruell || 0)) * (c.st.d.rinde ? 2 : 1); c.float('d', 'Bärengebrüll!', '#9bd14a'); c.run.shake = 0.2; } },
     d_adler: { cd: () => 12, ready: run => run.enemies.some(e => e.x < 480), cast: (c, r) => {
-      const vis = c.run.enemies.filter(e => e.x < 480), rng = vis.filter(e => e.ranged), base = (rng.length ? rng : [...vis].sort((a, b) => b.x - a.x)).slice(0, 3), ts = [...base, ...[...vis].filter(e => !base.includes(e)).sort((a, b) => b.x - a.x)].slice(0, 3 + (c.st.d.eagle || 0));
+      const vis = c.run.enemies.filter(e => e.x < 480), rng = vis.filter(e => e.ranged), base = (rng.length ? rng : [...vis].sort((a, b) => b.x - a.x)).slice(0, 3 + (c.st.d.cAdler || 0)), ts = [...base, ...[...vis].filter(e => !base.includes(e)).sort((a, b) => b.x - a.x)].slice(0, 3 + (c.st.d.eagle || 0) + (c.st.d.cAdler || 0));
       ts.forEach(e => c.hit('d', e, (3 + (r - 1)) * c.st.d.actMul, '#e8f5c8')); c.run.fx.adlerXs = ts.map(e => e.x); } },
-    e_turm2: { cd: () => 20, ready: engaged, cast: (c, r) => { c.run.extraTurretT = 10 + 2 * (r - 1); c.float('e', 'Geschütz gebaut!', '#f28c28'); } },
-    e_streu: { cd: () => 14, ready: run => run.enemies.some(e => e.x < 400), cast: (c, r) => { const vis = c.run.enemies.filter(e => e.x < 400); for (let i = 0, n = c.st.e.splitter ? 10 : 6; i < n; i++) { const e = vis[Math.floor(Math.random() * vis.length)]; c.arrow('e', e, 0.3 + i * 0.07, 'bomb'); c.hit('e', e, (1.5 + 0.5 * (r - 1)) * c.st.e.actMul, '#ffc58a'); c.burst(e.x, 196, '#ff9a3d', 6); } } },
+    e_turm2: { cd: () => 20, ready: engaged, cast: (c, r) => { c.run.extraTurretT = (10 + 2 * (r - 1)) * (1 + (c.st.e.cTurm || 0)); c.float('e', 'Geschütz gebaut!', '#f28c28'); } },
+    e_streu: { cd: () => 14, ready: run => run.enemies.some(e => e.x < 400), cast: (c, r) => { const vis = c.run.enemies.filter(e => e.x < 400); for (let i = 0, n = (c.st.e.splitter ? 10 : 6) + (c.st.e.cStreu || 0); i < n; i++) { const e = vis[Math.floor(Math.random() * vis.length)]; c.arrow('e', e, 0.3 + i * 0.07, 'bomb'); c.hit('e', e, (1.5 + 0.5 * (r - 1)) * c.st.e.actMul, '#ffc58a'); c.burst(e.x, 196, '#ff9a3d', 6); } } },
     e_mine: { cd: () => 15, ready: run => near(run).length >= 2 || near(run).some(e => e.boss), cast: (c, r) => { near(c.run).forEach(e => { c.hit('e', e, (2.5 + 0.8 * (r - 1)) * c.st.e.actMul, '#ffc58a'); e.stun = Math.max(e.stun, 1); c.burst(e.x, 214, '#ffd23f', 10); }); c.run.shake = 0.25; } },
   };
 
@@ -1941,9 +2073,9 @@
       c.run.atkB[k] = { t: 8, v: 0.5 + 0.15 * (r - 1) }; c.float(k, 'Ritterschlag!', '#ffb547', 15); } },
     sg_r_banner: { minCd: 24, cd: () => 35, ready: (run, st) => anyBelow(run, st, 0.35), cast: (c, r) => { c.run.honorT = 8 + (r - 1); c.float('r', 'Banner der Ehre!', '#ffd27a', 15); } },
     sg_r_duell: { minCd: 16, cd: () => 18, ready: run => !!strongest(run, 400), cast: (c, r) => { const t = strongest(c.run, 400); t.duelT = 8; t.duelV = 1 + 0.25 * (r - 1); c.efloat(t, 'Duell!', '#ffb547', 15); } },
-    o_wall: { cd: () => 20, ready: engaged, cast: (c, r) => { c.run.golemT = 5 + (r - 1); c.float('o', 'Runenwall!', '#46d4ee', 15); } },
+    o_wall: { cd: () => 20, ready: engaged, cast: (c, r) => { c.run.golemT = 5 + (r - 1) + (c.st.o.cWall || 0); c.float('o', 'Runenwall!', '#46d4ee', 15); } },
     o_beben: { cd: () => 14, ready: run => near(run).length >= 2 || near(run).some(e => e.boss), cast: (c, r) => { near(c.run).forEach(e => { c.hit('o', e, (2 + 0.6 * (r - 1)) * c.st.o.actMul, '#bff4ff'); e.stun = Math.max(e.stun, 1.2); }); c.run.shake = 0.3; } },
-    o_glyphe: { cd: () => 22, ready: engaged, cast: (c, r) => { const v = c.st.o.hp * (0.12 + 0.04 * (r - 1)); c.run.order.forEach(k => { const h = c.run.h[k]; if (h.alive) h.shield = Math.max(h.shield || 0, v); }); c.float('o', 'Schutzglyphe', '#46d4ee'); } },
+    o_glyphe: { cd: () => 22, ready: engaged, cast: (c, r) => { const v = c.st.o.hp * (0.12 + 0.04 * (r - 1)) * (1 + (c.st.o.cGlyphe || 0)); c.run.order.forEach(k => { const h = c.run.h[k]; if (h.alive) h.shield = Math.max(h.shield || 0, v); }); c.float('o', 'Schutzglyphe', '#46d4ee'); } },
     sg_o_monolith: { minCd: 18, cd: () => 22, ready: engaged, cast: (c, r) => { c.run.golemT = c.run.monoT = 5 + (r - 1); c.float('o', 'Monolith!', '#46d4ee', 15); } },
     sg_o_sturm: { minCd: 16, cd: () => 18, ready: run => run.enemies.some(e => e.x < 400), cast: (c, r) => { c.run.stormT = 6 * (c.st.o.stormX ? 2 : 1); c.run.stormV = (0.8 + 0.2 * (r - 1)) * c.st.o.actMul; c.run.stormTick = 0; c.float('o', 'Runensturm', '#46d4ee'); } },
     sg_o_spalt: { cd: () => 16, ready: run => !!strongest(run, 400), cast: (c, r) => { const t = strongest(c.run, 400); c.hit('o', t, (4 + (r - 1)) * c.st.o.actMul, '#bff4ff'); t.stun = Math.max(t.stun, 2); c.run.fx.spaltX = t.x; c.run.shake = 0.35; } },
@@ -2243,6 +2375,8 @@
       const over = h.hp + amt - T.hp; h.hp = Math.min(T.hp, h.hp + amt);
       if (over > 0 && st.p && st.p.overShield) h.shield = Math.min(T.hp * 0.5, h.shield + over * st.p.overShield);
       c.float(k, '+' + fmt(amt), '#7ee08a', 12);
+      // 6. Sternbild der Priesterin: die anderen bekommen einen Teil mit
+      if (src === 'p' && st.p && st.p.cHalo) run.order.forEach(x => x !== k && run.h[x].alive && c.healOne(x, amt * st.p.cHalo));
     };
     c.healAll = (f, src) => { run.order.forEach(k => run.h[k].alive && c.healOne(k, st[k].hp * f, src)); run.fx.heal = 0.5; };
     c.healSplit = (me, fMe, fOther) => { run.order.forEach(k => run.h[k].alive && c.healOne(k, st[k].hp * (k === me ? fMe : fOther))); run.fx.heal = 0.5; };
@@ -2264,7 +2398,7 @@
     let d = raw * (1 - T.dr * (boss ? 0.6 : 1));
     if (run.roarT > 0) d *= 0.6;
     if (run.swT > 0) d *= 0.5;
-    if (k === 'w' && run.hautT > 0) d *= 0.4;
+    if (run.hautT > 0 && (k === 'w' || (st.w && st.w.cHautAll))) d *= k === 'w' ? 0.4 : 0.7;
     if (k === 'w' && run.tauntT > 0) d *= 0.7;
     if (k === 'd' && run.bearT > 0) d *= 0.5;
     if (k === 'e' && T.plating) d *= 1 - T.plating;
@@ -2274,7 +2408,7 @@
     if (h.shield > 0) { const a = Math.min(h.shield, d); h.shield -= a; d -= a; if (h.growS) h.growS = Math.min(h.growS, h.shield); }
     h.hp -= d; h.hurtT = 0.2; sfx('hurt');
     if (d > 0) { if (k === 'a') run.flowN = 0; if (k === 'b') { run.crescN = 0; run.crescT = 0; } }
-    if (attacker) { let refl = T.thorns; if (k === 'w' && run.racheT > 0) refl += 0.6; if (k === 'o' && run.monoT > 0) refl += 1; if (refl) attacker.hp -= raw * refl * (boss ? 0.4 : 1); }
+    if (attacker) { let refl = T.thorns; if (k === 'w' && run.racheT > 0) refl += 0.6 * (1 + ((st.w && st.w.cRache) || 0)); if (k === 'o' && run.monoT > 0) refl += 1; if (refl) attacker.hp -= raw * refl * (boss ? 0.4 : 1); }
     if (h.hp > 0 && k !== 'w' && st.w && st.w.protector && run.h.w && run.h.w.alive && h.hp < T.hp * 0.25 && !h.protUsed) { h.protUsed = true; h.protT = 3; c.float(k, 'Beschützt!', '#7fb2ff', 13); }
     if (h.hp <= 0 && run.honorT > 0) { h.hp = 1; c.float(k, 'Ehre!', '#ffd27a', 12); }
     if (h.hp <= 0) {
@@ -2328,7 +2462,11 @@
       if (mc && run.time - (run.castAt[id] ?? -1e9) < mc) continue;
       if (!ACT[id].ready(run, st, S)) continue;
       ACT[id].cast(c, rank(S, id));
-      run.cds[id] = Math.max(mc, ACT[id].cd(rank(S, id), S) * (1 - st[hk].cdr)); run.castAt[id] = run.time; run.fx[id] = 0.5; sfx('skill', hk);
+      // Sternbilder: zweites Auslösen, Heilung bei jeder Fähigkeit, schnellere Abklingzeit
+      const T = st[hk], ech = T.cEcho ? T.cEcho[id] || T.cEcho.all || 0 : 0;
+      if (ech && Math.random() < ech && run.enemies.length) { ACT[id].cast(c, rank(S, id)); c.float(hk, '✦ Sternenecho', '#ffe6a0', 12); }
+      if (T.cNatur) c.healAll(T.cNatur);
+      run.cds[id] = Math.max(mc, ACT[id].cd(rank(S, id), S) * (1 - T.cdr) * ((T.cCd && T.cCd[id]) || 1)); run.castAt[id] = run.time; run.fx[id] = 0.5; sfx('skill', hk);
       if (hk !== 'b' && !mc) run.lastAct = id;
       if (hk === 'e' && st.e.tinker) run.tinkT = 4;
     }
@@ -2600,7 +2738,7 @@
     return (n < 10 ? n.toFixed(2) : n < 100 ? n.toFixed(1) : Math.floor(n).toString()).replace('.', ',') + units[i];
   }
 
-  const core = { TRIPS, TRIP_SHARE, onTrip, tripLeft, rateOf, noteRate, hoursReward, tripReward, startTrip, claimTrip, WB, WB_BOSS, wbScore, wbBarReward, wbBarSecs, wbGoalHours, wbReward, GACHA, G_FIVE, G_FOUR, CONS, gachaOpen, consOf, consBonus, bannerOf, gachaPull, GEM_SRC, LOGIN, loginItem, loginToday, claimLogin, BOUNTY, bountiesOf, bountyDone, bountyClaim, ahnLike, AHN_MISSIONS, AHN_ABIL, AHN_MECH, AHN_BOONS, ahnRollBoons, ahnPickBoon, ahnBoonText, ahnApplyBoons, AHN_TRAIT, AHNE, AHN_TUNE, AHN_COUNT, ahnOpen, ahnBossesOf, ahnLevelFor, placeSigil, ahnClaim, unrebirth, transmute, bossRuneTier, resetPerks, buyLager, lagerCost, LAGER_MAX, runeCap, shardOf, mergeCost, ALTAR_MAX, altarCost, altarMul, buyAltar, kSlots, kFree, keyCap, addSock, removeSock, removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, buyPiece, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
+  const core = { TRIPS, TRIP_SHARE, onTrip, tripLeft, rateOf, noteRate, hoursReward, tripReward, startTrip, claimTrip, WB, WB_BOSS, wbScore, wbBarReward, wbBarSecs, wbGoalHours, wbReward, GACHA, G_FIVE, G_FOUR, CONS_H, consList, consApply, evtBanner, evtPeriod, starSock, gachaOpen, consOf, bannerOf, gachaPull, GEM_SRC, LOGIN, loginItem, loginToday, claimLogin, BOUNTY, bountiesOf, bountyDone, bountyClaim, ahnLike, AHN_MISSIONS, AHN_ABIL, AHN_MECH, AHN_BOONS, ahnRollBoons, ahnPickBoon, ahnBoonText, ahnApplyBoons, AHN_TRAIT, AHNE, AHN_TUNE, AHN_COUNT, ahnOpen, ahnBossesOf, ahnLevelFor, placeSigil, ahnClaim, unrebirth, transmute, bossRuneTier, resetPerks, buyLager, lagerCost, LAGER_MAX, runeCap, shardOf, mergeCost, ALTAR_MAX, altarCost, altarMul, buyAltar, kSlots, kFree, keyCap, addSock, removeSock, removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, buyPiece, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
     SEASON, rankOf, RANKS, rankBonus, AREAS, areaOf, MISSIONS, extraSocks, XSOCK, sockOk, runeAmp, mastInfo, mastLevel, SKINS, WF_STAGE, WF, wfSpawn,
     sigOn, sigKeysUsed, keyNeed, eqOf, slotLim, SIG, SIG_FLAGS, newRun, step, stats, buy, available, blockReason, NODE, migrate, fresh,
     rebirth, ascend, crownsFor, buyCperk, cperkCost, cperk, CPERKS, levelComp, toggleComp, compCost, compMax, compSlots, COMPS, checkAch, ACH, claimWeekly, weekId, dayId, weekRules, RULE, WEEK_TIERS, statsFor, starsFor, toggleEquip, slotsOf, hired, classOpen, keysUsed, keyLimit, capOf, reqOf, feature, encode, decode, fmt, socket, unsocket, merge, canMerge, dismantle, buyRune, runeVal, addRune };
