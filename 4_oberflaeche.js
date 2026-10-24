@@ -410,7 +410,7 @@
     let maxH = 1e9;
     if (app) {
       if (wide || flat) { const L = $('.rl-left'), used = ($('#rlHeroes').hidden ? 0 : $('#rlHeroes').offsetHeight) + $('.rl-bar').offsetHeight + 34; maxH = Math.max(140, (L ? L.clientHeight : window.innerHeight) - used); }
-      else maxH = window.innerHeight * 0.36;
+      else maxH = Math.max(150, window.innerHeight * 0.27);
     }
     const w = Math.max(240, Math.min(host.clientWidth || 360, 1400, maxH * W / H));
     const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -1909,12 +1909,12 @@
     for (const r of items) {
       const x = L + r.v * PX;
       let lane = lanes.findIndex(e => e <= x - 92);
-      if (lane < 0) lane = lanes.length < 6 ? lanes.length : lanes.indexOf(Math.min(...lanes));
+      if (lane < 0) lane = lanes.length < 4 ? lanes.length : lanes.indexOf(Math.min(...lanes));
       lanes[lane] = x;
       const badge = r.asc ? ` · A${r.asc}` : r.rebirths ? ` · W${r.rebirths}` : '';
-      pins += `<div class="pin ${r.me ? 'me' : ''}" style="left:${x}px;z-index:${10 - lane}"><span class="flag"><b>${esc(r.name)}</b><small>Stufe ${r.v}${badge}</small></span><i class="pole" style="height:${12 + lane * 38}px"></i></div>`;
+      pins += `<div class="pin ${r.me ? 'me' : ''}" style="left:${x}px;z-index:${10 - lane}"><span class="flag"><b>${esc(r.name)}</b><small>Stufe ${r.v}${badge}</small></span><i class="pole" style="height:${12 + lane * 30}px"></i></div>`;
     }
-    const h = 40 + 12 + Math.max(1, lanes.length) * 38 + 30;
+    const h = 40 + 12 + Math.max(1, lanes.length) * 30 + 34;
     requestAnimationFrame(() => { const p = document.querySelector('.rl-path'), m = p && p.querySelector('.pin.me'); if (p && m && !p.dataset.s) { p.dataset.s = 1; p.scrollLeft = Math.max(0, m.offsetLeft - p.clientWidth / 2); } });
     return `<h3 class="rl-h3">Heldenpfad</h3>
       <div class="rl-btabs"><button class="${pathMode === 'ever' ? 'on' : ''}" data-pathmode="ever">Weiteste Stufe aller Zeiten</button><button class="${pathMode === 'cur' ? 'on' : ''}" data-pathmode="cur">Seit der letzten Wiedergeburt</button></div>

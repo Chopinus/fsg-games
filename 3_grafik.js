@@ -302,6 +302,8 @@
       ['Fix', 'Heldenpfad, Fertigkeitenbaum und Läden werden nicht mehr zusammengedrückt'],
       ['Fix', 'Am PC füllt das Spielfeld die linke Seite, das Menü ist breiter'],
       ['Fix', 'Handy quer: Spielfeld und Menü passen besser, Beschreibung verdeckt den Baum nicht mehr'],
+      ['Fix', 'Handy hochkant: Spielfeld und Truppe kleiner, dadurch viel mehr Platz für Baum, Läden und Runen'],
+      ['Fix', 'Heldenpfad: keine große leere Fläche mehr über dem Weg'],
       ['Umstellung', 'Die Startseite heißt jetzt Game Hub'],
     ] },
     { id: 7, title: 'Weniger Datenverbrauch', date: '24.10.2026', items: [
