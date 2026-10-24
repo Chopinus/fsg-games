@@ -178,6 +178,9 @@
   const TAB_GROUPS = { helden: { label: 'Helden', color: '#ffb547' }, abenteuer: { label: 'Abenteuer', color: '#ffd27a' } };
   const groupOf = id => (HERO[id] ? 'helden' : id === 'ahnen' || id === 'exp' ? 'abenteuer' : null);
   const lastSub = { helden: 'ritter', abenteuer: 'ahnen' };
+  // Untere Leiste wie in einem Handyspiel: Symbol und kurzer Name
+  const NAV_ICON = { helden: '⚔️', laeden: '🛒', abenteuer: '🗺️', exp: '🗺️', ahnen: '🗺️', runen: '🔷', begleiter: '🐉', halle: '🏆', ruhm: '✨', stand: '⚙️' };
+  const NAV_SHORT = { helden: 'Helden', laeden: 'Läden', abenteuer: 'Abenteuer', exp: 'Abenteuer', ahnen: 'Abenteuer', runen: 'Runen', begleiter: 'Begleiter', halle: 'Ruhm', ruhm: 'Aufstieg', stand: 'Konto' };
   function renderTabs() {
     const list = tabsList();
     if (!list.some(t => t.id === tab)) tab = 'ritter';
@@ -196,30 +199,35 @@
     if (!S.knownTabs.includes(tab)) S.knownTabs.push(tab);
     const isNew = id => !S.knownTabs.includes(id), groupNew = gr => list.some(x => groupOf(x.id) === gr && isNew(x.id));
     const dot = on => (on ? '<i class="rl-reddot rl-tdot" aria-label="neu"></i>' : '');
-    let html = `<div class="rl-trow">${top.map(t => `<button data-tab="${t.id}" class="${isOn(t) ? 'on' : ''} ${t.locked ? 'locked' : ''}" style="--tc:${t.color}">${t.label}${dot(t.group ? groupNew(t.group) : isNew(t.id))}</button>`).join('')}</div>`;
+    const navKey = t => t.group || t.id;
+    const html = `<div class="rl-trow">${top.map(t => `<button data-tab="${t.id}" class="${isOn(t) ? 'on' : ''} ${t.locked ? 'locked' : ''}" style="--tc:${t.color}" title="${esc(t.label)}"><i class="ni">${NAV_ICON[navKey(t)] || '•'}</i><span class="nl">${NAV_SHORT[navKey(t)] || t.label}</span>${dot(t.group ? groupNew(t.group) : isNew(t.id))}</button>`).join('')}</div>`;
+    let sub = '';
     if (g) {
       const members = list.filter(x => groupOf(x.id) === g);
-      if (members.length > 1) html += `<div class="rl-sub">${members.map(t => { const h = HERO[t.id];
-        return `<button data-tab="${t.id}" class="${t.id === tab ? 'on' : ''} ${t.locked ? 'locked' : ''}" style="--tc:${t.color}">${h ? `<span class="pt">${PORTRAIT[h.id]}</span>` : ''}${t.label}${h && S.ahn && S.ahn.place[h.id] ? '<i class="sig" title="Ahnensiegel">✦</i>' : ''}${dot(isNew(t.id))}</button>`; }).join('')}</div>`;
+      if (members.length > 1) sub = members.map(t => { const h = HERO[t.id];
+        return `<button data-tab="${t.id}" class="${t.id === tab ? 'on' : ''} ${t.locked ? 'locked' : ''}" style="--tc:${t.color}" title="${esc(t.label)}">${h ? `<span class="pt">${PORTRAIT[h.id]}</span>` : ''}<span class="sl">${t.label}</span>${h && S.ahn && S.ahn.place[h.id] ? '<i class="sig" title="Ahnensiegel">✦</i>' : ''}${dot(isNew(t.id))}</button>`; }).join('');
     }
+    const cur = list.find(x => x.id === tab) || {};
     $('.rl-tabs').innerHTML = html;
-    const on = document.querySelector('.rl-sub .on'); if (on && on.offsetLeft + on.offsetWidth > on.parentNode.clientWidth) on.parentNode.scrollLeft = on.offsetLeft - 24;
+    $('#rlSub').innerHTML = `<div class="rl-sub">${sub || `<b class="rl-subtitle" style="--tc:${cur.color || '#fff'}">${esc(cur.label || '')}</b>`}</div><button class="rl-help ${S.uiHelp ? 'on' : ''}" data-help="1" aria-label="Erklärungen ein- oder ausblenden" title="Erklärungen ein/aus">?</button>`;
+    const on = document.querySelector('.rl-sub .on'); if (on) { const row = on.parentNode, a = on.getBoundingClientRect(), b = row.getBoundingClientRect(); if (a.left < b.left || a.right > b.right) row.scrollLeft += a.left - b.left - 24; }
   }
   function open() {
     if (UPD.pending) { active = true; updApply(true); return; }
     seasonCheck();
     active = true; bgPreload(); frStart(); gdStart(); loginAsked = false; setTimeout(() => wbFetch(true), 2500); clearInterval(WBC.timer); WBC.timer = setInterval(() => { if (active && !document.hidden) wbFetch(); }, 300000);
     $('#hub').hidden = true; $('#room').hidden = true; $('#solo').hidden = false;
+    if (!STRIP.on) { $('#solo').classList.add('rl-app'); document.documentElement.classList.add('rl-appmode'); }
     st = stats(S);
     if (!cv) {
       $('#solo').innerHTML = `
-        <div class="topbar"><button class="btn ghost small" id="soloBack">‹ Spiele</button><div class="title"><b>Ritterlauf</b><small>Solo</small></div>
+        <div class="topbar"><button class="btn ghost small" id="soloBack" aria-label="Zurück zu den Spielen">‹<span class="rl-backtxt"> Spiele</span></button><div class="title"><b>Ritterlauf</b><small>Solo</small></div><div class="rl-topwallet" id="rlWallet"></div>
           <div class="rl-topr"><button class="btn ghost small rl-newsbtn" id="soloSnd" aria-label="Ton an oder aus"></button><button class="btn ghost small rl-newsbtn" id="soloFriends" aria-label="Freunde">👥<span class="dot" hidden></span></button><button class="btn ghost small rl-newsbtn" id="soloGuild" aria-label="Gilde">🛡<span class="dot" hidden></span></button><button class="btn ghost small rl-newsbtn" id="soloNews" aria-label="Neuigkeiten">📰<span class="dot" hidden></span></button><button class="btn ghost small" id="soloSpeed">Tempo ×1</button></div></div>
-        <div class="rl-stage"><div id="soloCanvas" class="rl-canvas"></div></div>
-        <div class="rl-heroes" id="rlHeroes"></div>
-        <div class="rl-bar"><div class="rl-stat" id="rlStat"></div><div id="rlAction" class="row"></div></div>
-        <div class="rl-tabs" role="tablist"></div>
-        <div id="rlPanel"></div>`;
+        <div class="rl-main"><div class="rl-left">
+          <div class="rl-stage"><div id="soloCanvas" class="rl-canvas"></div></div>
+          <div class="rl-heroes" id="rlHeroes"></div>
+          <div class="rl-bar"><div class="rl-stat" id="rlStat"></div><div id="rlAction" class="row"></div></div></div>
+        <div class="rl-right"><div class="rl-subbar" id="rlSub"></div><div id="rlPanel"></div><nav class="rl-tabs" role="tablist"></nav></div></div>`;
       cv = document.createElement('canvas'); $('#soloCanvas').appendChild(cv); ctx = cv.getContext('2d');
       // Ahnenprüfung: Schwachstelle antippen, auf die Helden tippen = Schildwall
       cv.addEventListener('pointerdown', e => {
@@ -234,15 +242,19 @@
         if (!inCamp()) return;
         const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W, y = (e.clientY - r.top) / r.height * H;
         if (x < 84 && y > GROUND - 112 && y < GROUND + 4) { showBoard(); return; }
+        if (x > 380 && y > 120 && y < GROUND + 4) { showCamp(); return; }
         if (x > 90 && x < 400 && y > 80) openSquad();
       });
-      window.addEventListener('resize', () => { sizeCanvas(); if (squad && !squad.el.hidden) sizeSquad(); });
+      window.addEventListener('resize', () => { sizeCanvas(); if (active) heroes(); if (squad && !squad.el.hidden) sizeSquad(); });
       $('#soloBack').onclick = close;
       $('#soloNews').onclick = showUpdates; $('#soloFriends').onclick = showFriends; $('#soloGuild').onclick = showGuild;
       $('#soloSnd').onclick = () => soundMenu();
       $('#soloSnd').textContent = SND.isOn() ? '🔊' : '🔇';
       $('#soloSpeed').onclick = () => { if (acct && acct.tester) { testSpeed(); return; } S.speed = S.speed >= maxSpeed(S) ? 1 : S.speed < 3 ? S.speed + 1 : S.speed + 0.5; save(); hud(); };
-      $('.rl-tabs').onclick = e => { const b = e.target.closest('[data-tab]'); if (b) { tab = b.dataset.tab; confirm = ''; runeSel = null; wRes = null; fRes = null; renderTabs(); panel(); } };
+      const tabClick = e => {
+        if (e.target.closest('[data-help]')) { S.uiHelp = !S.uiHelp; save(); renderTabs(); panel(); return; }
+        const b = e.target.closest('[data-tab]'); if (b) { tab = b.dataset.tab; confirm = ''; runeSel = null; wRes = null; fRes = null; renderTabs(); panel(); $('#rlPanel').scrollTop = 0; } };
+      $('.rl-tabs').onclick = tabClick; $('#rlSub').onclick = tabClick;
       for (const id of ['#rlPanel', '#rlAction', '#rlHeroes']) $(id).addEventListener('click', onClick);
       $('#rlPanel').addEventListener('submit', onSubmit);
     }
@@ -389,9 +401,10 @@
     FR.data = r; frDot(); frLists(); msg(r.msg || ''); SND.play('buy');
     if (a === 'add') { const i = $('#frName'); if (i) i.value = ''; }
   }
-  function close() { frStop(); MUS.set(null); SND.ambient(false); closeSquad(); intro = null; const tov = document.querySelector('.rl-title'); if (tov) tov.remove(); active = false; cancelAnimationFrame(raf); save(); cloudSave(true); $('#solo').hidden = true; $('#hub').hidden = false; }
+  function close() { frStop(); MUS.set(null); SND.ambient(false); closeSquad(); intro = null; const tov = document.querySelector('.rl-title'); if (tov) tov.remove(); active = false; cancelAnimationFrame(raf); save(); cloudSave(true); $('#solo').hidden = true; $('#solo').classList.remove('rl-app'); document.documentElement.classList.remove('rl-appmode'); $('#hub').hidden = false; }
   function sizeCanvas() {
-    const host = $('#soloCanvas'); const w = Math.min(host.clientWidth || 360, 960);
+    const host = $('#soloCanvas'), app = $('#solo').classList.contains('rl-app'), wide = window.innerWidth > 760;
+    const w = Math.max(240, Math.min(host.clientWidth || 360, 960, app ? window.innerHeight * (wide ? 0.66 : 0.36) * W / H : 1e9));
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     cv.style.width = w + 'px'; cv.style.height = (w * H / W) + 'px'; cv.width = Math.round(w * dpr); cv.height = Math.round(w * H / W * dpr); scale = cv.width / W;
   }
@@ -493,7 +506,8 @@
     return `<div class="rl-consl ${compact ? 'small' : ''}">${consList(id).map((x, i) => `<div class="${i < c ? 'on' : ''} ${i === 5 ? 'six' : ''}"><i>${i + 1}</i><span><b>${esc(x.n)}</b><small>${esc(x.d)}</small></span></div>`).join('')}</div>`;
   }
   function showBanner() {
-    if (!gachaOpen(S)) { toast('Der Sternenruf öffnet sich mit dem 2. Aufstieg.'); return; }
+    if (!gachaOpen(S)) { toast('Der Sternenruf öffnet sich mit dem 1. Aufstieg.'); return; }
+    if (!evtOpen(S)) bannerSel = 'std';
     SND.play('tick');
     S.gacha = S.gacha && S.gacha.evt ? S.gacha : gFix(S.gacha);
     const E = evtBanner(), evt = bannerSel === 'evt', G = S.gacha[bannerSel], f = HERO_BY_ID[E.five], left = GACHA.hard5 - G.p5, left4 = GACHA.hard4 - G.p4;
@@ -509,7 +523,7 @@
         <span class="note">Beide Banner kosten dasselbe und nutzen dieselben Sternkristalle. Der Fortschritt zum nächsten 5★ wird pro Banner getrennt gezählt.</span></div>`;
     if (bannerTab === 'cons') {
       const sel = consSel && HERO_BY_ID[consSel] ? consSel : evt ? E.five : 'o';
-      body = `<p class="note">Jede Kopie eines Helden schaltet sein nächstes Sternbild frei, höchstens 6. Jeder Held hat eigene Sternbilder. Ein noch fehlender Fünf-Sterne-Held wird beim ersten Ruf sofort freigeschaltet. Weitere Kopien nach dem 6. Sternbild werden zu ${GACHA.refund5} ${gem} (5★) bzw. ${GACHA.refund4} ${gem} (4★). Tippe auf einen Helden.</p>
+      body = `<p class="note">Jede Kopie eines Helden schaltet sein nächstes Sternbild frei, höchstens 6. Jeder Held hat eigene Sternbilder. Für einen noch fehlenden Fünf-Sterne-Helden gibt jede Kopie 3 seiner 6 Puzzleteile, zwei Kopien schalten ihn also frei. Weitere Kopien nach dem 6. Sternbild werden zu ${GACHA.refund5} ${gem} (5★) bzw. ${GACHA.refund4} ${gem} (4★). Tippe auf einen Helden.</p>
         <h3 class="rl-h3">★★★★★</h3><div class="rl-gcards">${G_FIVE.map(card).join('')}</div><h3 class="rl-h3">★★★★</h3><div class="rl-gcards">${G_FOUR.map(card).join('')}</div>
         <h3 class="rl-h3" style="color:${HERO_BY_ID[sel].color}">Sternbilder: ${esc(HERO_BY_ID[sel].name)}</h3>${consHTML(sel)}`;
     }
@@ -526,16 +540,18 @@
       ? `<div class="rl-bhero evt" style="--hc:${f.color}"><div class="rl-brays"></div><img class="fig" src="${figureURL(E.five)}" alt="">
           <div class="rl-btxt"><small>Sternenruf · endet in ${untilTxt(E.end)}</small><h2>${esc(E.name)}</h2><b class="r5">★★★★★ ${esc(f.name)}</b><p>${esc(f.desc)}</p>${consStars(E.five)}
             <div class="rl-bfour">${E.four.map(id => `<span style="--hc:${HERO_BY_ID[id].color}"><img src="${portraitURL(id)}" alt=""><small>${esc(HERO_BY_ID[id].name)}</small></span>`).join('')}<em>★★★★ hervorgehoben</em></div>
+            <p class="rl-bset" title="Für Rufe auf diesem Banner gibt es Lager-Deko des Helden">🏕️ Lager-Set: <b>${bsetCount(S)}</b> Rufe · ${BSET_AT.map(x => `<span class="${bsetCount(S) >= x.n ? 'on' : ''}">${x.n} ${{ banner: 'Banner', feuer: 'Feuer', zelt: 'Zelt' }[x.slot]}</span>`).join(' · ')}</p>
             <p class="rl-bnext">Danach: <img src="${portraitURL(E.next)}" alt=""> <b>${esc(nx.name)}</b></p></div></div>`
       : `<div class="rl-bhero std"><div class="rl-bsky"></div>
           <div class="rl-btxt"><small>Dauerbanner · wechselt nie</small><h2>Ewiger Himmel</h2><p>Alle Helden, alle mit der gleichen Chance. Keiner ist hervorgehoben.</p>
             <div class="rl-bsix">${G_FIVE.map(id => `<span style="--hc:${HERO_BY_ID[id].color}"><img src="${portraitURL(id)}" alt=""><small>${esc(HERO_BY_ID[id].name)}</small></span>`).join('')}</div>
             <div class="rl-bfour">${G_FOUR.map(id => `<span style="--hc:${HERO_BY_ID[id].color}"><img src="${portraitURL(id)}" alt=""></span>`).join('')}<em>★★★★</em></div></div></div>`;
     modal(`<div class="rl-banner ${bannerSel}">
-        <div class="rl-bsel"><button class="${evt ? 'on' : ''}" data-bs="evt" style="--hc:${f.color}"><img src="${portraitURL(E.five)}" alt=""><span><b>Sternenruf</b><small>${esc(f.name)} · ${untilTxt(E.end)}</small></span></button>
+        <div class="rl-bsel"><button class="${evt ? 'on' : ''} ${evtOpen(S) ? '' : 'locked'}" data-bs="evt" style="--hc:${f.color}" ${evtOpen(S) ? '' : 'disabled'}><img src="${portraitURL(E.five)}" alt=""><span><b>Sternenruf</b><small>${evtOpen(S) ? `${esc(f.name)} · ${untilTxt(E.end)}` : '🔒 ab dem 2. Aufstieg'}</small></span></button>
           <button class="${evt ? '' : 'on'}" data-bs="std"><i>✧</i><span><b>Ewiger Himmel</b><small>Dauerbanner</small></span></button></div>
         ${hero}
         <div class="rl-bpity"><span>${gem} <b>${fmt(S.gem)}</b> Sternkristalle</span><span>5★ spätestens in <b>${left}</b> Rufen${evt ? (G.g5 ? ' · <b class="r5">nächster 5★ garantiert ' + esc(f.name) + '</b>' : ' · 50/50') : ''}</span><span>4★ spätestens in <b>${left4}</b></span></div>
+        ${S.gacha.gift ? '' : `<div class="row rl-bbtns"><button class="btn gold rl-pull rl-gift" data-gift="1" ${inCamp() ? '' : 'disabled'}>🎁 Geschenk: ${GIFT_PULLS} Rufe gratis<small>einmalig · mindestens ein ★★★★ dabei</small></button></div>`}
         <div class="row rl-bbtns"><button class="btn rl-pull" data-g="1" ${S.gem >= GACHA.cost && inCamp() ? '' : 'disabled'}>1× rufen<small>${gem} ${GACHA.cost}</small></button><button class="btn gold rl-pull" data-g="10" ${S.gem >= GACHA.cost * 10 && inCamp() ? '' : 'disabled'}>10× rufen<small>${gem} ${GACHA.cost * 10}</small></button></div>
         ${inCamp() ? '' : '<p class="note" style="text-align:center">Rufen geht nur im Lager.</p>'}
         <div class="rl-btabs">${Object.entries(tabs).map(([k, v]) => `<button class="${bannerTab === k ? 'on' : ''}" data-gt="${k}">${v}</button>`).join('')}</div>
@@ -545,6 +561,7 @@
       const s = e.target.closest('[data-bs]'); if (s) { bannerSel = s.dataset.bs; consSel = null; showBanner(); return; }
       const t = e.target.closest('[data-gt]'); if (t) { bannerTab = t.dataset.gt; showBanner(); return; }
       const cs = e.target.closest('[data-cs]'); if (cs) { consSel = cs.dataset.cs; showBanner(); const el = $('#picker .rl-consl'); if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); return; }
+      const gf = e.target.closest('[data-gift]'); if (gf && !gf.disabled) { doPull(GIFT_PULLS, true); return; }
       const b = e.target.closest('[data-g]'); if (b && !b.disabled) doPull(Number(b.dataset.g));
     });
   }
@@ -633,9 +650,11 @@
     raf = requestAnimationFrame(frame);
     return () => { stopped = true; cancelAnimationFrame(raf); };
   }
-  function doPull(n) {
+  function doPull(n, gift) {
     if (!inCamp()) return;
-    const bk = bannerSel, res = gachaPull(S, n, bk); if (!res) { toast('Nicht genug Sternkristalle.'); return; }
+    if (!evtOpen(S)) bannerSel = 'std';
+    const bk = gift ? 'std' : bannerSel, res = gachaPull(S, n, gift ? 'gift' : bk); if (!res) { toast('Nicht genug Sternkristalle.'); return; }
+    if (res.deco && res.deco.length) setTimeout(() => toast(`Lager-Set: ${res.deco.map(id => ITEMS[id].n).join(', ')}! Richte es am Zelt ein.`, true), 3400);
     save(); cloudSave(true); refresh();
     const best = Math.max(...res.map(x => x.r));
     // die 5★ und 4★ drehen sich zuletzt um
@@ -645,7 +664,7 @@
       const h = x.id && HERO_BY_ID[x.id];
       const pic = h ? `<img src="${portraitURL(x.id)}" alt="">` : `<span class="ico">${x.kind === 'dust' ? '⬢' : '◈'}</span>`;
       const name = h ? esc(h.name) : x.kind === 'dust' ? 'Runensplitter' : 'Heldensplitter';
-      const note = x.unlock ? '<em class="new">NEU! Freigeschaltet</em>' : x.cons ? `<em title="${esc(x.consName || '')}">✦ Sternbild ${x.cons}</em>` : x.refund ? `<em>+${x.refund} 💠</em>` : x.n ? `<em>×${fmt(x.n)}</em>` : '';
+      const note = x.unlock ? '<em class="new">NEU! Freigeschaltet</em>' : x.pieces ? `<em>🧩 +${x.pieces} Teile · ${x.have}/6</em>` : x.cons ? `<em title="${esc(x.consName || '')}">✦ Sternbild ${x.cons}</em>` : x.refund ? `<em>+${x.refund} 💠</em>` : x.n ? `<em>×${fmt(x.n)}</em>` : '';
       return `<div class="rl-pcard r${x.r}" style="--d:${delay[i].toFixed(2)}s;${h ? `--hc:${h.color}` : ''}"><div class="in"><div class="bk"><i>✦</i></div><div class="fr"><div class="glow"></div>${pic}<b>${name}</b><small>${rarStars(x.r)}</small>${x.cons && x.consName ? `<span class="cn">${esc(x.consName)}</span>` : ''}${note}</div></div></div>`;
     };
     modal(`<div class="rl-pull-anim" id="pullAnim"><canvas></canvas><p class="skip">Tippen zum Überspringen</p></div>
@@ -663,6 +682,94 @@
       if (e.target.closest('[data-again]')) { const b = e.target.closest('[data-again]'); if (!b.disabled) doPull(Number(b.dataset.again)); }
       else if (e.target.closest('[data-back]')) showBanner();
       else if (!flipped) { flipped = true; const c = $('#picker .rl-pcards'); if (c) c.classList.add('all'); }
+    });
+  }
+  /* ---------- Sammlung: Aussehen der Helden, Lager einrichten, Truhen ---------- */
+  const rarTag = r => `<small class="rl-rar r${r}" style="--rc:${RAR_COL[r]}">${RAR[r]}</small>`;
+  const cntTag = id => { const n = invN(S, id), f = invFree(S, id); return n > 1 ? `<i class="rl-cnt" title="${n} Stück, ${f} frei">×${n}</i>` : ''; };
+  // Aussehen eines Helden: Kopf, Oberteil, Beine
+  let wardSlot = 'kopf';
+  function showWardrobe(hid) {
+    const h = HERO_BY_ID[hid]; if (!h) return;
+    SND.play('tick');
+    const g = (S.gear && S.gear[hid]) || {}, own = Object.keys(S.inv || {}).filter(id => ITEMS[id] && ITEMS[id].cat === 'gear' && ITEMS[id].hero === hid && ITEMS[id].slot === wardSlot)
+      .sort((a, b) => ITEMS[b].rar - ITEMS[a].rar || ITEMS[a].n.localeCompare(ITEMS[b].n));
+    const fig = heroWithGear(hid, g, 4).toDataURL();
+    const slotBtn = s => { const id = g[s.k], it = id && ITEMS[id]; return `<button class="rl-wslot ${wardSlot === s.k ? 'on' : ''}" data-ws="${s.k}" style="--rc:${it ? RAR_COL[it.rar] : '#5a5070'}"><small>${s.n}</small><b>${it ? esc(it.n) : 'Standard'}</b></button>`; };
+    const set = (() => { const ids = GEAR_SLOTS.map(s => g[s.k] && ITEMS[g[s.k]]); return ids.every(x => x && x.kind === 'set' && x.set === ids[0].set) ? { n: ids[0].setName, rar: ids[0].rar } : null; })();
+    // Übersicht: welche Sets es für diesen Helden gibt und wie viele Teile man hat
+    const sets = (HERO_SETS[hid] || { sets: [] }).sets.map(([k, rar, name]) => { const have = GEAR_SLOTS.filter(s => invN(S, `g_${hid}_${s.k}_${k}`)).length; return `<span class="rl-wsetrow ${have === 3 ? 'full' : ''}" style="--rc:${RAR_COL[rar]}"><b>${esc(name)}</b><small>${RAR[rar]} · ${have}/3</small></span>`; }).join('');
+    modal(`<div class="rl-ward" style="--hc:${h.color}">
+        <div class="rl-wtop"><div class="rl-wfig"><img src="${fig}" alt="">${set ? `<em class="rl-wset" style="--rc:${RAR_COL[set.rar]}">✦ Set: ${esc(set.n)}</em>` : ''}</div>
+          <div class="rl-wside"><h2>${esc(h.name)}</h2><div class="rl-wslots">${GEAR_SLOTS.map(slotBtn).join('')}</div>
+            ${g[wardSlot] ? `<button class="btn ghost small" data-wx="1">${GEAR_SLOTS.find(s => s.k === wardSlot).n} ablegen</button>` : ''}
+            <div class="rl-wsets">${sets}</div></div></div>
+        <div class="rl-witems">${own.length ? own.map(id => { const it = ITEMS[id], on = g[wardSlot] === id, free = invFree(S, id) > 0;
+          return `<button class="rl-witem ${on ? 'on' : ''} ${!on && !free ? 'used' : ''}" data-wi="${id}" style="--rc:${RAR_COL[it.rar]}" ${!on && !free ? 'title="Alle Exemplare sind schon an anderen Helden"' : ''}><img src="${itemIconURL(id, hid)}" alt="">${cntTag(id)}<b>${esc(it.n)}</b>${rarTag(it.rar)}</button>`; }).join('')
+          : `<p class="note rl-wempty">Noch keine Teile für ${GEAR_SLOTS.find(s => s.k === wardSlot).n}. Teile für ${esc(h.name)} gibt es in den Albtraum-Truhen nach jedem Boss ab Stufe 151.</p>`}</div>
+        <div class="row" style="justify-content:center;margin-top:8px"><button class="btn ghost" data-m="x">Fertig</button></div></div>`, 'rl-wardm');
+    $('#picker .rl-wardm').addEventListener('click', e => {
+      const s = e.target.closest('[data-ws]'); if (s) { wardSlot = s.dataset.ws; showWardrobe(hid); return; }
+      const x = e.target.closest('[data-wx]'); if (x) { equipGear(S, hid, wardSlot, null); heroPicReset(hid); save(); showWardrobe(hid); return; }
+      const b = e.target.closest('[data-wi]'); if (!b) return; const id = b.dataset.wi;
+      if (g[wardSlot] === id) equipGear(S, hid, wardSlot, null); else if (!equipGear(S, hid, wardSlot, id)) { toast('Alle Exemplare trägt schon ein anderer Held.'); return; }
+      heroPicReset(hid); SND.play('buy'); save(); showWardrobe(hid);
+    });
+  }
+  // Lager einrichten: Plätze im Lager, Vorschau zeigt das echte Lager
+  let campSlot = 'zelt', campRaf = 0;
+  const CAMP_TABS = [{ k: 'zelt', n: 'Zelt', i: '⛺' }, { k: 'feuer', n: 'Feuer', i: '🔥' }, { k: 'banner', n: 'Banner', i: '🚩' }, { k: 'himmel', n: 'Himmel', i: '🌌' }, { k: 'tier', n: 'Tier', i: '🐈' }, { k: 't1', n: 'Trophäe 1', i: '🏆' }, { k: 't2', n: 'Trophäe 2', i: '🏆' }, { k: 't3', n: 'Trophäe 3', i: '🏆' }];
+  function showCamp() {
+    if (!inCamp()) return;
+    SND.play('tick');
+    const type = /^t\d$/.test(campSlot) ? 'troph' : campSlot, cur = (S.camp || {})[campSlot] || null;
+    const own = Object.keys(S.inv || {}).filter(id => ITEMS[id] && ITEMS[id].cat === 'deco' && ITEMS[id].slot === type).sort((a, b) => ITEMS[b].rar - ITEMS[a].rar || ITEMS[a].n.localeCompare(ITEMS[b].n));
+    const src = { zelt: 'Zelte gibt es in Albtraum-Truhen und als Teil der Banner-Sets im Sternenruf (60 Rufe).', feuer: 'Feuer gibt es in Albtraum-Truhen und als Teil der Banner-Sets im Sternenruf (30 Rufe).', banner: 'Banner gibt es in Albtraum-Truhen und als Teil der Banner-Sets im Sternenruf (10 Rufe).', himmel: 'Himmel und Wetter gibt es in epischen und legendären Albtraum-Truhen.', tier: 'Tiere gibt es in epischen und legendären Albtraum-Truhen.', troph: 'Jeder Boss im Feldzug lässt mit kleiner Chance seine Trophäe fallen. Je länger keine kam, desto höher die Chance.' }[type];
+    const got = TROPHY_N.filter((n, i) => invN(S, `d_tr_${i}`)).length;
+    modal(`<div class="rl-campd"><h2>🏕️ Lager einrichten</h2>
+        <div class="rl-cprev"><canvas width="480" height="270"></canvas></div>
+        <div class="rl-ctabs">${CAMP_TABS.map(c => { const it = (S.camp || {})[c.k] && ITEMS[S.camp[c.k]]; return `<button class="${campSlot === c.k ? 'on' : ''} ${it ? 'set' : ''}" data-cs2="${c.k}" title="${c.n}${it ? ': ' + esc(it.n) : ''}"><i>${c.i}</i><span>${c.n}</span></button>`; }).join('')}</div>
+        <div class="rl-witems">
+          <button class="rl-witem ${cur ? '' : 'on'}" data-ci=""><span class="rl-wnone">—</span><b>${type === 'troph' || type === 'banner' || type === 'himmel' || type === 'tier' ? 'Nichts' : 'Standard'}</b></button>
+          ${own.map(id => { const it = ITEMS[id], on = cur === id, free = invFree(S, id) > 0; return `<button class="rl-witem ${on ? 'on' : ''} ${!on && !free ? 'used' : ''}" data-ci="${id}" style="--rc:${RAR_COL[it.rar]}"><img src="${itemIconURL(id)}" alt="">${cntTag(id)}<b>${esc(it.n)}</b>${rarTag(it.rar)}</button>`; }).join('')}</div>
+        <p class="note">${src}${type === 'troph' ? ` Gesammelt: <b>${got}/${TROPHY_N.length}</b>.` : ''} Deko gibt keine Boni, sie sieht nur gut aus. Doppelte Stücke werden gesammelt.</p>
+        <div class="row" style="justify-content:center;margin-top:6px"><button class="btn ghost" data-m="x">Fertig</button></div></div>`, 'rl-campm');
+    const pc = $('#picker .rl-cprev canvas'), pg = pc.getContext('2d');
+    cancelAnimationFrame(campRaf); const tick = () => { if (!pc.isConnected) return; try { pg.drawImage(cv, 0, 0, pc.width, pc.height); } catch (err) {} campRaf = requestAnimationFrame(tick); }; tick();
+    $('#picker .rl-campm').addEventListener('click', e => {
+      const t2 = e.target.closest('[data-cs2]'); if (t2) { campSlot = t2.dataset.cs2; showCamp(); return; }
+      const b = e.target.closest('[data-ci]'); if (!b) return; const id = b.dataset.ci || null;
+      if (id && (S.camp || {})[campSlot] !== id && invFree(S, id) < 1) { toast('Alle Exemplare stehen schon im Lager.'); return; }
+      setDeco(S, campSlot, id); SND.play(id ? 'buy' : 'tick'); save(); showCamp();
+    });
+  }
+  // Albtraum-Truhen öffnen
+  function showChests(results) {
+    SND.play('tick');
+    const res = results || [];
+    const card = (x, i) => {
+      const it = x.id && ITEMS[x.id], cls = `r${x.rar + 1}`;
+      const pic = it ? `<img class="ic" src="${itemIconURL(x.id)}" alt="">` : `<span class="ico">${x.kind === 'gold' ? coin : soul}</span>`;
+      const name = it ? esc(it.n) + (it.hero ? `<small class="rl-who">${esc(HERO_BY_ID[it.hero].name)}</small>` : '') : x.kind === 'gold' ? `${fmt(x.n)} Gold` : `${fmt(x.n)} Seelen`;
+      const note = it ? (x.n === 1 ? '<em class="new">NEU!</em>' : `<em>×${x.n}</em>`) : '';
+      return `<div class="rl-pcard ${cls}" style="--d:${(0.15 + i * 0.12).toFixed(2)}s"><div class="in"><div class="bk"><img src="${chestIconURL(x.rar)}" alt=""></div><div class="fr"><div class="glow"></div>${pic}<b>${name}</b><small>${RAR[x.rar]}</small>${note}</div></div></div>`;
+    };
+    const any = chestCount(S) > 0;
+    modal(`<div class="rl-chests"><h2>🧰 Albtraum-Truhen</h2>
+        ${res.length ? `<div class="rl-pcards n${Math.min(10, res.length)} rl-cres">${res.map(card).join('')}</div>` : ''}
+        <div class="rl-chrow">${[1, 2, 3, 4].map(r => { const n = (S.chest && S.chest[r]) || 0; return `<div class="rl-chest ${n ? '' : 'empty'}" style="--rc:${RAR_COL[r]}"><img src="${chestIconURL(r)}" alt=""><b>${RAR[r]}</b><span>×${n}</span>
+          <div class="row"><button class="btn small" data-ch="${r}:1" ${n && inCamp() ? '' : 'disabled'}>Öffnen</button>${n > 1 ? `<button class="btn ghost small" data-ch="${r}:10" ${inCamp() ? '' : 'disabled'}>${Math.min(10, n)}×</button>` : ''}</div></div>`; }).join('')}</div>
+        ${any ? `<div class="row" style="justify-content:center"><button class="btn gold" data-ch="all" ${inCamp() ? '' : 'disabled'}>Alle öffnen (bis 10)</button></div>` : '<p class="note" style="text-align:center">Keine Truhen. Im Albtraum (ab Stufe 151) lässt jeder Boss eine Truhe fallen. Je tiefer, desto besser.</p>'}
+        <p class="note">Gewöhnlich: Gold oder Seelen · Selten: Färbungen und Deko · Episch: neue Formen, Tiere und Himmel · Legendär: Albtraumfürst, Sternenkönig und mehr.</p>
+        <div class="row" style="justify-content:center;margin-top:6px"><button class="btn ghost" data-m="x">Schließen</button></div></div>`, 'rl-chestm');
+    if (res.length) { const best = Math.max(...res.map(x => x.rar)); setTimeout(() => SND.play(best >= 4 ? 'victory' : best >= 3 ? 'forge' : 'buy'), 500); }
+    $('#picker .rl-chestm').addEventListener('click', e => {
+      const b = e.target.closest('[data-ch]'); if (!b || b.disabled || !inCamp()) return;
+      const out = [];
+      if (b.dataset.ch === 'all') { for (const r of [4, 3, 2, 1]) while (out.length < 10 && S.chest[r] > 0) out.push(openChest(S, r)); }
+      else { const [r, n] = b.dataset.ch.split(':').map(Number); for (let i = 0; i < n && S.chest[r] > 0; i++) out.push(openChest(S, r)); }
+      const got = out.filter(Boolean); if (!got.length) return;
+      save(); cloudSave(true); refresh(); showChests(got);
     });
   }
   /* ---------- Kopfgeldjagd ---------- */
@@ -955,6 +1062,8 @@
     if (R.expReward && R.expReward.runeDust) add('⬢', `Runenlager voll: Minen-Rune zu <b>${R.expReward.runeDust} Runensplittern</b> zerlegt`, '#e2c9ff');
     if (R.mode === 'tower' && R.stage > (R.towerBefore || 0)) add('🏰', `Neuer Turm-Rekord: <b>Etage ${R.stage}</b> · +${R.stage * 3} % Schaden und Leben bis zum Aufstieg`, '#c9a6ff', 'hot');
     if (R.mode === 'normal' && S.best > (R.bestBefore || 0)) add('★', `Neuer Rekord: <b>Stufe ${S.best}</b>`, '#ffb547', 'hot');
+    if (R.trophies) for (const id of R.trophies) add('🏆', `Trophäe für dein Lager: <b>${esc(ITEMS[id].n)}</b>`, '#c98aff', 'hot');
+    if (R.chests && R.chests.length) { const c = {}; R.chests.forEach(r => (c[r] = (c[r] || 0) + 1)); add('🧰', `Albtraum-Truhen: ${[4, 3, 2, 1].filter(r => c[r]).map(r => `<b style="color:${RAR_COL[r]}">${c[r]}× ${RAR[r]}</b>`).join(', ')} · öffnen am Anschlagbrett`, '#ffd23f', 'hot'); }
     if (res.area) add('⚑', `Neues Startgebiet frei: <b>${esc(res.area)}</b>`, '#7ee08a', 'hot');
     if (R.ahnReward && !R.ahnReward.sigil) add('✦', `Mission ${R.ahnReward.mission + 2} ist frei: <b>${esc(AHN_MISSIONS[R.ahnReward.mission + 1].name)}</b>`, '#ffd27a');
     if (R.wfKilled) add('🐉', `<b>Der Weltenfresser ist gefallen!</b> ${R.wfKilled.first ? 'Du bist jetzt Weltenbezwinger · ' : ''}+${R.wfKilled.crowns} Kronen`, '#ffb070', 'hot');
@@ -1014,12 +1123,15 @@
     ahnWallBtn(); ahnBoonCheck(); loginCheck();
     { const el = $('#rlStat'); el.innerHTML = ''; el.hidden = true; }
     { const d = $('#soloNews .dot'); if (d) d.hidden = !UPDATES.length || newsSeen() >= UPDATES[0].id; }
-    $('#soloSpeed').textContent = `Tempo ×${String(S.speed).replace('.', ',')}`;
+    $('#soloSpeed').innerHTML = `<span class="rl-backtxt">Tempo </span>×${String(S.speed).replace('.', ',')}`;
+    const wl = $('#rlWallet'); if (wl) { const h = wallet(['gold', 'souls', ...(gemOpen(S) ? ['gem'] : [])]); if (wl._h !== h) { wl._h = h; wl.innerHTML = h; } }
   }
   function heroes() {
     const live = run && !run.dead, box = $('#rlHeroes');
-    box.hidden = !S.uiTroop;
-    if (!S.uiTroop) { box.innerHTML = ''; return; }
+    // Auf breiten Bildschirmen ist links genug Platz: dort ist die Truppe immer sichtbar
+    const show = S.uiTroop || (window.innerWidth > 760 && $('#solo').classList.contains('rl-app'));
+    box.hidden = !show;
+    if (!show) { box.innerHTML = ''; return; }
     // Nur die Helden, die gerade in der Truppe sind
     const inTroop = live ? run.order : fieldOf(S);
     const list = HEROES.filter(h => st[h.id] && inTroop.includes(h.id));
@@ -1043,8 +1155,8 @@
   }
   function action() {
     const a = $('#rlAction');
-    const troopBtn = `<button class="btn ghost rl-troopbtn ${S.uiTroop ? 'on' : ''}" data-rl="troop" aria-expanded="${!!S.uiTroop}">Truppe ${S.uiTroop ? '▴' : '▾'}</button>`;
-    if (inCamp()) a.innerHTML = `${troopBtn}<button class="btn ghost rl-boardbtn" data-rl="board">📋 Anschlagbrett${boardNew().length || tripsReady().length || wbClaimable() ? '<i class="rl-reddot" aria-label="neu"></i>' : ''}</button>${areaMax(S) >= 1 ? `<button class="btn ghost rl-area" data-rl="area"><small>Startgebiet</small><b>${esc(zoneName(st.startStage))} ▾</b></button>` : ''}<button class="btn rl-go" data-rl="start">Feldzug starten</button>`;
+    const troopBtn = `<button class="btn ghost rl-troopbtn ${S.uiTroop ? 'on' : ''}" data-rl="troop" aria-expanded="${!!S.uiTroop}" aria-label="Truppe"><i class="bi">👥</i><span class="bl">Truppe ${S.uiTroop ? '▴' : '▾'}</span></button>`;
+    if (inCamp()) a.innerHTML = `${troopBtn}<button class="btn ghost rl-boardbtn" data-rl="board" aria-label="Anschlagbrett"><i class="bi">📋</i><span class="bl">Brett</span>${boardNew().length || tripsReady().length || wbClaimable() || chestCount(S) ? '<i class="rl-reddot" aria-label="neu"></i>' : ''}</button>${areaMax(S) >= 1 ? `<button class="btn ghost rl-area" data-rl="area"><small>Startgebiet</small><b>${esc(zoneName(st.startStage))} ▾</b></button>` : ''}<button class="btn rl-go" data-rl="start">Feldzug starten</button>`;
     else a.innerHTML = `${troopBtn}${ahnLike(run) ? '<button class="btn rl-wallbtn" data-rl="wall" id="rlWall">🛡 Schildwall</button>' : ''}<button class="btn ${confirm === 'giveup' ? 'danger' : 'ghost'} small" data-rl="giveup">${confirm === 'giveup' ? 'Wirklich aufgeben?' : run.mode === 'tower' ? 'Turm verlassen' : run.mode === 'weekly' ? 'Herausforderung beenden'   : run.mode === 'wboss' ? 'Kampf beenden' : run.mode === 'bounty' ? 'Jagd abbrechen' : run.mode === 'exp' || run.mode === 'ahnen' ? 'Mission abbrechen' : 'Feldzug aufgeben'}</button>`;
   }
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -1095,10 +1207,10 @@
     const cap = keyCap(S, tree), used = keyNeed(S, tree), extra = cap - 1, free = kFree(S);
     const dots = Array.from({ length: cap }, (_, i) => `<span class="rl-sock ${i < used ? 'on' : ''} ${i === 0 ? 'fix' : ''}" title="${i === 0 ? 'Fester Sockel' : 'Verteilbarer Sockel'}">⚿</span>`).join('')
       + (sigOn(S, tree) ? `<span class="rl-sock sig ${sigKeysUsed(S, tree) ? 'on' : ''}" title="Siegelsockel: nur für einen Siegel-Schlüssel">✦</span>` : '');
-    return `<div class="rl-keyrow"><span class="note">Schlüsselsockel ${used}/${cap}</span><span class="rl-socks">${dots}</span>
-      <button class="btn ghost small" data-rl="sockadd" ${free > 0 && inCamp() ? '' : 'disabled'}>+ Sockel setzen</button>
-      <button class="btn ghost small" data-rl="sockdel" ${extra > 0 && inCamp() ? '' : 'disabled'}>− Sockel abnehmen</button>
-      <span class="note">frei: <b>${free}</b> von ${kSlots(S)}</span></div>`;
+    return `<div class="rl-keyrow" title="Schlüsselsockel ${used}/${cap} · frei ${free} von ${kSlots(S)}"><span class="rl-socks">${dots}</span>
+      <button class="btn ghost small rl-ib" data-rl="sockadd" ${free > 0 && inCamp() ? '' : 'disabled'} aria-label="Sockel setzen" title="Sockel setzen">+</button>
+      <button class="btn ghost small rl-ib" data-rl="sockdel" ${extra > 0 && inCamp() ? '' : 'disabled'} aria-label="Sockel abnehmen" title="Sockel abnehmen">−</button>
+      <small class="rl-kfree">⚿ frei <b>${free}</b>/${kSlots(S)}</small></div>`;
   }
   /* ---------- Alle Werte eines Helden ---------- */
   // Zeigt Grundwerte, Sonderwerte der Klasse und für jede gelernte Fähigkeit Abklingzeit, Schaden, Heilung und Dauer.
@@ -1235,12 +1347,11 @@
   function heroTab(tree) {
     const h = HERO[tree], eq = eqOf(S, tree, false), eqS = eqOf(S, tree, true), ok = hired(S, tree), sg = sigOn(S, tree);
     const lockedNote = !classOpen(S, tree) ? `<p class="warn">${h.puzzle ? `Diese Klasse bekommst du mit 6 Puzzleteilen aus den Expeditionen (${pieceCount(S, h.id)}/6).` : `Diese Klasse wird mit der ${h.rebirth}. Wiedergeburt freigeschaltet.`} Du kannst dir den Baum schon ansehen.</p>` : '';
-    return `${lockedNote}<div class="rl-hhead" style="--hc:${h.color}">${ok ? '<button class="btn ghost small rl-hsbtn" data-rl="hstats" aria-label="Alle Werte">📊 Werte</button>' : ''}<span class="pt">${PORTRAIT[h.id]}</span><div><h3>${h.name}${gachaOpen(S) ? ` <span class="rl-hrar">${rarStars(heroRar(h.id))}</span>${consStars(h.id)}` : ''}</h3><p class="note">${h.desc}</p>
-      ${ok ? `<p class="note">Aktive Fähigkeiten ${eq.length}/${slotsOf(S, tree)}: ${eq.length ? esc(eq.map(ACT_NAME).join(', ')) : 'noch keine'}${sg ? ` · <span class="rl-sigslot">✦ Siegel-Platz: ${eqS.length ? esc(eqS.map(ACT_NAME).join(', ')) : 'frei'}</span>` : ''}</p>${mastHTML(h)}${sockRow(tree)}` : ''}</div></div>
+    return `${lockedNote}<div class="rl-hhead" style="--hc:${h.color}">${ok ? `<div class="rl-hsbtn"><button class="btn ghost small" data-rl="ward" aria-label="Aussehen" title="Aussehen: Kopf, Oberteil, Beine">👕</button><button class="btn ghost small" data-rl="hstats" aria-label="Alle Werte" title="Alle Werte">📊<span class="rl-backtxt"> Werte</span></button></div>` : ''}<span class="pt">${PORTRAIT[h.id]}</span><div class="rl-hbody"><h3>${h.name}${gachaOpen(S) ? ` <span class="rl-hrar">${rarStars(heroRar(h.id))}</span>${consStars(h.id)}` : ''}</h3><p class="note rl-long">${h.desc}</p>
+      ${ok ? `<div class="rl-actchips" title="Aktive Fähigkeiten ${eq.length}/${slotsOf(S, tree)}">${Array.from({ length: slotsOf(S, tree) }, (_, i) => eq[i] ? `<span class="on">⚡${esc(ACT_NAME(eq[i]))}</span>` : '<span>leer</span>').join('')}${sg ? (eqS.length ? eqS.map(id => `<span class="on sig">✦${esc(ACT_NAME(id))}</span>`).join('') : '<span class="sig">✦ frei</span>') : ''}</div>${mastHTML(h)}${sockRow(tree)}` : ''}</div></div>
       ${acct && acct.tester ? `<div class="rl-test"><b>🧪 Test</b> <button class="btn small ${confirm === 'tbuild' ? 'danger' : ''}" data-rl="tbuild" ${inCamp() && classOpen(S, tree) ? '' : 'disabled'}>${confirm === 'tbuild' ? 'Wirklich den ganzen Baum setzen?' : 'Baum komplett ausbauen'}</button><span class="note">Alles auf voll, beide Endlos-Fertigkeiten auf 42. Kostet nichts. Schlüssel bleiben, wie sie sind.</span>
         <button class="btn small ${S.tKeepTree ? '' : 'ghost'}" data-rl="tkeep">${S.tKeepTree ? '✓ Bäume bleiben bei Wiedergeburt' : 'Bäume bleiben bei Wiedergeburt: aus'}</button><span class="note">Wenn an, behalten alle Helden bei einer Wiedergeburt ihre Fertigkeitenbäume und ausgerüsteten Fähigkeiten. Gilt für alle Helden.</span></div>` : ''}
-      ${wallet(['gold', 'souls'], 'rl-treewallet')}
-      <div class="rl-treewrap"><div class="rl-treebox">${treeSVG(tree)}${!sg && ahnOpen(S) && classOpen(S, tree) ? `<p class="note rl-signote">✦ Mit einem Ahnensiegel wächst dieser Baum nach unten: 5 passive Fähigkeiten, 3 Siegel-Fähigkeiten mit eigenem Platz und 4 Siegel-Schlüssel mit eigenem Sockel. ${S.ahn.sig > 0 ? 'Du hast ein freies Siegel, setze es im Reiter Ahnenprüfung.' : 'Siegel bekommst du in der Ahnenprüfung.'}</p>` : ''}</div>${detailHTML(tree)}</div>`;
+      <div class="rl-treewrap"><div class="rl-treebox">${treeSVG(tree)}${!sg && ahnOpen(S) && classOpen(S, tree) ? `<p class="note rl-signote rl-long">✦ Mit einem Ahnensiegel wächst dieser Baum nach unten: 5 passive Fähigkeiten, 3 Siegel-Fähigkeiten mit eigenem Platz und 4 Siegel-Schlüssel mit eigenem Sockel. ${S.ahn.sig > 0 ? 'Du hast ein freies Siegel, setze es im Reiter Ahnenprüfung.' : 'Siegel bekommst du in der Ahnenprüfung.'}</p>` : ''}</div>${detailHTML(tree)}</div>`;
   }
   function testBuild(tree) {
     const inf = NODES.filter(n => n.tree === tree && n.kind === 'inf');
@@ -1266,9 +1377,9 @@
       if (run.victory) return `<div class="rl-dead win"><b>Stufengrenze ${capOf(S)} erreicht!</b><span>${extra}</span><span class="note">Weitere Stufen schaltest du mit der nächsten Wiedergeburt frei.</span></div>`;
       return `<div class="rl-dead"><b>Lauf vorbei auf Stufe ${run.stage}</b><span>${extra}</span><span class="note">Verbessere deine Helden und starte dann den nächsten Lauf.</span></div>`;
     }
-    if (!run && !acct && S.runs >= 2) return `<div class="rl-hint"><span><b>Tipp:</b> Sichere deinen Fortschritt mit Namen und Passwort, damit er nicht verloren geht.</span><button class="btn small" data-rl="gosave">Jetzt sichern</button></div>`;
-    if (!run) return '<p class="note">Du bist im Lager. Hier verbesserst du deine Helden mit Gold und Seelen. Seelen gibt es von Bossen (alle 10 Stufen) und manchmal von Elite-Gegnern mit lila Schimmer.</p>';
-    return '<p class="note">Der Lauf läuft. Verbessern kannst du erst danach im Lager.</p>';
+    if (!run && !acct && S.runs >= 2 && HERO[tab]) return `<div class="rl-hint"><span>☁ Fortschritt noch nicht gesichert</span><button class="btn small" data-rl="gosave">Sichern</button></div>`;
+    if (!run) return '<p class="note rl-long">Du bist im Lager. Hier verbesserst du deine Helden mit Gold und Seelen. Seelen gibt es von Bossen (alle 10 Stufen) und manchmal von Elite-Gegnern mit lila Schimmer.</p>';
+    return '';
   }
   /* ---------- Runen ---------- */
   function runeChip(r, extra = '') {
@@ -1512,6 +1623,9 @@
     const openDet = p.querySelector('details[open]');
     p.innerHTML = html;
     if (openDet && p.querySelector('details')) p.querySelector('details').open = true;
+    // Lange Erklärtexte nur, wenn der ?-Knopf an ist (kurze Hinweise mit Zahlen bleiben sichtbar)
+    p.querySelectorAll('p.note').forEach(n => { if (!n.querySelector('button,input,select,a') && n.textContent.trim().length > 70) n.classList.add('rl-long'); });
+    p.classList.toggle('rl-showhelp', !!S.uiHelp);
   }
   function standHTML() {
     const code = encode(S);
@@ -1651,6 +1765,7 @@
     else if (a === 'lager') { if (inCamp() && buyLager(S)) { SND.play('forge'); toast(`Runen-Lager erweitert: jetzt ${runeCap(S)} Plätze`); afterChange(); } }
     else if (a === 'altar') { if (inCamp() && buyAltar(S)) { SND.play('soul'); toast(`Seelenaltar Stufe ${S.altar}: Seelen ×${altarMul(S).toFixed(2).replace('.', ',')}`, true); afterChange(); } }
     else if (a === 'hstats') showHeroStats(tab);
+    else if (a === 'ward' && HERO[tab]) showWardrobe(HERO[tab].id);
     else if (a === 'wall') ahnWallPress();
     else if (a === 'sockadd') { if (inCamp() && addSock(S, tab)) { toast('Sockel gesetzt.'); afterChange(); } }
     else if (a === 'sockdel') { if (inCamp()) { const r = removeSock(S, tab); if (r === 'used') toast('Alle Sockel sind belegt. Nimm zuerst eine Schlüssel-Fertigkeit ab.'); else if (r === 'ok') { toast('Sockel abgenommen. Du kannst ihn jetzt woanders setzen.'); afterChange(); } } }
@@ -1719,9 +1834,9 @@
 
   function mastHTML(h) {
     const mi = mastInfo((S.mast || {})[h.id]), cur = (S.skin || {})[h.id] || 'std', pct = mi.L >= MAST_MAX ? 100 : Math.floor(mi.rest / mi.need * 100);
-    return `<div class="rl-mast" style="--hc:${h.color}"><div class="rl-mrow"><b>★ Meisterschaft ${mi.L}/${MAST_MAX}</b><span class="rl-mbar"><i style="width:${pct}%"></i></span><small>${mi.L >= MAST_MAX ? 'Gemeistert' : `${fmt(mi.rest)} / ${fmt(mi.need)} EP`} · +${2 * mi.L} % Schaden und Leben</small></div>
-      <div class="rl-skins">${SKINS.map(k => { const ok = mi.L >= k.L; return `<button class="rl-skin ${cur === k.id ? 'on' : ''} ${ok ? '' : 'locked'}" data-skin="${h.id}:${k.id}" ${ok ? '' : 'disabled'} style="--sc:${k.tint || h.color}"><i></i>${esc(k.name)}${ok ? '' : `<small>ab Stufe ${k.L}</small>`}</button>`; }).join('')}</div>
-      <p class="note">Meisterschaft sammelt jeder Held mit jedem besiegten Gegner, solange er kämpft. Sie bleibt für immer, auch über Wiedergeburt und Aufstieg.</p></div>`;
+    return `<div class="rl-mast" style="--hc:${h.color}" title="Meisterschaft: +${2 * mi.L} % Schaden und Leben"><div class="rl-mrow"><b>★ ${mi.L}/${MAST_MAX}</b><span class="rl-mbar"><i style="width:${pct}%"></i></span><small>${mi.L >= MAST_MAX ? 'Max' : `${fmt(mi.rest)}/${fmt(mi.need)}`} · +${2 * mi.L} %</small>
+      <span class="rl-skins">${SKINS.map(k => { const ok = mi.L >= k.L; return `<button class="rl-skin ${cur === k.id ? 'on' : ''} ${ok ? '' : 'locked'}" data-skin="${h.id}:${k.id}" ${ok ? '' : 'disabled'} style="--sc:${k.tint || h.color}" title="${esc(k.name)}${ok ? '' : ` (ab Meisterschaft ${k.L})`}" aria-label="Aussehen ${esc(k.name)}"><i></i></button>`; }).join('')}</span></div>
+      <p class="note rl-long">Meisterschaft sammelt jeder Held mit jedem besiegten Gegner, solange er kämpft. Sie bleibt für immer, auch über Wiedergeburt und Aufstieg.</p></div>`;
   }
   /* ---------- Aufstiegsränge ---------- */
   const rankBadge = a => { const r = rankOf(a); return `<i class="rl-rkb" style="--rc:${r.col}" title="${esc(r.name)}">${a >= 10 ? '♛' : a >= 8 ? '♚' : a >= 4 ? '⚜' : a >= 1 ? '⚔' : '·'}</i>`; };
@@ -2000,7 +2115,7 @@
   }
 
   // Geldbörse: zeigt nur die Währungen, die an dieser Stelle gebraucht werden
-  const wallet = (list, cls = '') => `<div class="rl-wallet rl-wsmall ${cls}">${list.map(k => ({ gold: `<span class="rl-cur gold" title="Gold">${coin}${fmt(S.gold)}</span>`, souls: `<span class="rl-cur soul" title="Seelen">${soul}${S.souls}</span>`, stars: `<span class="rl-cur star" title="Sterne">${star}${S.stars}</span>`, dust: `<span class="rl-cur dust" title="Runensplitter">${dust}${S.dust}</span>`, crowns: `<span class="rl-cur crown" title="Kronen">${crown}${S.crowns}</span>`, spl: `<span class="rl-cur spl" title="Heldensplitter">◈ ${S.exp.spl}</span>` })[k]).join('')}</div>`;
+  const wallet = (list, cls = '') => `<div class="rl-wallet rl-wsmall ${cls}">${list.map(k => ({ gold: `<span class="rl-cur gold" title="Gold">${coin}${fmt(S.gold)}</span>`, souls: `<span class="rl-cur soul" title="Seelen">${soul}${S.souls}</span>`, stars: `<span class="rl-cur star" title="Sterne">${star}${S.stars}</span>`, dust: `<span class="rl-cur dust" title="Runensplitter">${dust}${S.dust}</span>`, crowns: `<span class="rl-cur crown" title="Kronen">${crown}${S.crowns}</span>`, spl: `<span class="rl-cur spl" title="Heldensplitter">◈ ${S.exp.spl}</span>`, gem: `<span class="rl-cur gem" title="Sternkristalle">💠${fmt(S.gem || 0)}</span>` })[k]).join('')}</div>`;
   /* ---------- Leisten-Modus (eigene Seite strip.html / Taskleisten-Version) ---------- */
   // Nur aktiv, wenn die Seite vor ritter.js window.RITTER_STRIP = true setzt. Dann laufen Feldzüge von allein weiter
   // und die Leiste liest über window.RitterStrip Stand, Bild und Knöpfe aus.

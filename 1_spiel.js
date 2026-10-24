@@ -1169,7 +1169,7 @@
     S.ahn.m = mi + 1; return { mission: mi, sigil: false };
   }
 
-  /* ================= Sternenruf (Banner) ab dem 2. Aufstieg ================= */
+  /* ================= Sternenruf (Banner) ab dem 1. Aufstieg, Sonderbanner ab dem 2. ================= */
   // Währung: Sternkristalle (S.gem). Ein Ruf kostet 100, zehn Rufe 1000.
   // 5★ = die sechs Puzzle-Helden, 4★ = die sechs Grundhelden, 3★ = Runensplitter oder Heldensplitter.
   // Zwei Banner mit getrenntem Fortschritt:
@@ -1280,7 +1280,12 @@
     ],
   };
   const consList = id => CONS_H[id] || [];
-  const gachaOpen = S => S.asc >= 2;
+  // Ewiger Himmel und Kopfgeldjagd ab dem 1. Aufstieg, das Sonderbanner ab dem 2. Aufstieg.
+  // Sternkristalle sammelt man schon ab der 1. Wiedergeburt, damit beim Öffnen gleich gerufen werden kann.
+  const gachaOpen = S => S.asc >= 1;
+  const evtOpen = S => S.asc >= 2;
+  const gemOpen = S => S.rebirths >= 1 || S.asc >= 1;
+  const GIFT_PULLS = 10;
   const consOf = (S, id) => Math.max(0, Math.min(GACHA.consMax, Math.floor((S.cons && S.cons[id]) || 0)));
   // Sternbilder auf die Werte eines Helden legen (in stats())
   function consApply(T, id, n) {
@@ -1321,6 +1326,7 @@
     // alter Spielstand: es gab nur ein Banner mit Hervorhebung, sein Fortschritt geht an das Sonderbanner
     const old = !a.evt && !a.std && (a.p5 != null || a.n != null);
     return { evt: gPity(old ? a : a.evt, true), std: gPity(old ? null : a.std, false),
+      gift: !!a.gift, bs: a.bs && Number.isFinite(Number(a.bs.p)) ? { p: Math.floor(Number(a.bs.p)), n: Math.max(0, Math.floor(Number(a.bs.n) || 0)) } : null,
       hist: (Array.isArray(a.hist) ? a.hist : []).slice(-60).filter(x => x && [3, 4, 5].includes(x.r)).map(x => ({ r: x.r, id: String(x.id || '').slice(0, 12), t: Math.max(0, Math.floor(Number(x.t) || 0)), b: x.b === 'std' ? 'std' : 'evt' })) };
   }
   // 3★: kleine Gegenstände, die für immer bleiben
@@ -1331,15 +1337,25 @@
   }
   function gHero(S, id, rar) {
     const h = HERO_BY_ID[id], out = { kind: 'hero', id, r: rar };
-    if (h.puzzle && !assembled(S, id)) { S.exp = S.exp || { spl: 0, done: 0, target: 'a', pieces: {} }; S.exp.pieces[id] = 63; puzzleHire(S, id); out.unlock = true; return out; }
+    // Noch nicht fertiger Puzzle-Held: jede Kopie bringt 3 fehlende Puzzleteile (2 Kopien = fertig)
+    if (h.puzzle && !assembled(S, id)) {
+      S.exp = S.exp || { spl: 0, done: 0, target: 'a', pieces: {} }; S.exp.pieces = S.exp.pieces || {};
+      const have = pieceMask(S, id), miss = [0, 1, 2, 3, 4, 5].filter(i => !(have & (1 << i))).sort(() => Math.random() - 0.5).slice(0, 3);
+      S.exp.pieces[id] = miss.reduce((m, i) => m | (1 << i), have); out.pieces = miss.length; out.have = pieceCount(S, id);
+      if (assembled(S, id)) { puzzleHire(S, id); out.unlock = true; }
+      return out;
+    }
     S.cons = S.cons || {}; const c = consOf(S, id);
     if (c >= GACHA.consMax) { const g = rar === 5 ? GACHA.refund5 : GACHA.refund4; S.gem += g; out.refund = g; return out; }
     S.cons[id] = c + 1; out.cons = c + 1; out.consName = (consList(id)[c] || {}).n; return out;
   }
   const pick = a => a[Math.floor(Math.random() * a.length)];
   function gachaPull(S, count, bk = 'evt') {
-    if (!gachaOpen(S) || !(count === 1 || count === 10) || S.gem < GACHA.cost * count || !['evt', 'std'].includes(bk)) return null;
-    S.gem -= GACHA.cost * count; S.gacha = S.gacha && S.gacha.evt ? S.gacha : gFix(S.gacha);
+    // Geschenk beim Öffnen: einmal 10 Rufe auf dem Ewigen Himmel gratis (der 10. ist sicher mindestens 4★)
+    const gift = bk === 'gift';
+    if (gift) { if (!gachaOpen(S) || (S.gacha && S.gacha.gift)) return null; bk = 'std'; count = GIFT_PULLS; }
+    if (!gachaOpen(S) || !(count === 1 || count === 10) || (!gift && S.gem < GACHA.cost * count) || !['evt', 'std'].includes(bk) || (bk === 'evt' && !evtOpen(S))) return null;
+    if (!gift) S.gem -= GACHA.cost * count; S.gacha = S.gacha && S.gacha.evt ? S.gacha : gFix(S.gacha); if (gift) S.gacha.gift = true;
     const G = S.gacha[bk], evt = bk === 'evt', B = evtBanner(), res = [];
     for (let i = 0; i < count; i++) {
       G.p5++; G.p4++; G.n++;
@@ -1357,17 +1373,148 @@
       res.push(item);
       S.gacha.hist.push({ r: item.r, id: item.id || item.kind, t: Date.now(), b: bk }); if (S.gacha.hist.length > 60) S.gacha.hist.shift();
     }
+    res.deco = evt ? bsetAdd(S, count) : [];
     return res;
   }
   // Quellen für Sternkristalle
   const GEM_SRC = { boss: 15, tripHour: 3, wbGoal: 50, bounty: [40, 60, 100] };
   // Erster Sieg über einen Boss (Stufe) seit der letzten Wiedergeburt
   function gemBossFirst(S, stage) {
-    if (!gachaOpen(S)) return 0;
+    if (!gemOpen(S)) return 0;
     // gemerkt wird nur die höchste belohnte Boss-Stufe (spart Platz im Spielstand)
     if (stage <= (S.gBoss || 0)) return 0;
     S.gBoss = stage; S.gem += GEM_SRC.boss; return GEM_SRC.boss;
   }
+  /* ================= Sammlung: Lager-Deko und Heldenteile ================= */
+  // Alles hier ist nur Aussehen, ohne Boni. Jeder Gegenstand wird gestapelt (S.inv[id] = Anzahl),
+  // damit man später doppelte Teile handeln oder verkaufen kann. Ein Teil an einem Helden belegt ein Exemplar.
+  const RAR = ['', 'Gewöhnlich', 'Selten', 'Episch', 'Legendär'], RAR_COL = ['', '#b8b0c8', '#5aa8ff', '#c98aff', '#ffd23f'];
+  const GEAR_SLOTS = [{ k: 'kopf', n: 'Kopf' }, { k: 'koerper', n: 'Oberteil' }, { k: 'beine', n: 'Beine' }];
+  const TINTS = [
+    { k: 'rubin', n: 'Rubin', col: '#e0404f' }, { k: 'smaragd', n: 'Smaragd', col: '#3fc46a' }, { k: 'saphir', n: 'Saphir', col: '#3f7fe8' }, { k: 'amethyst', n: 'Amethyst', col: '#9a5ae0' },
+    { k: 'gold', n: 'Gold', col: '#f0b83a' }, { k: 'obsidian', n: 'Obsidian', col: '#3a3448' }, { k: 'frost', n: 'Frost', col: '#bfeaff' }, { k: 'rose', n: 'Rosen', col: '#ff8ac8' },
+  ];
+  const TINT_NOUN = { kopf: 'Kopf', koerper: 'Rüstung', beine: 'Beine' };
+  // Jeder Held hat eigene Teile: 3 Färbungen (selten), ein episches und ein legendäres Set
+  const HERO_SETS = {
+    r: { tints: ['rubin', 'saphir', 'obsidian'], sets: [['drache', 3, 'Drachenritter', ['Drachenhelm', 'Drachenschuppen', 'Drachenklauen']], ['sonne', 4, 'Sonnenpaladin', ['Sonnenhelm', 'Sonnenrüstung', 'Sonnenschienen']]] },
+    w: { tints: ['gold', 'smaragd', 'obsidian'], sets: [['turm', 3, 'Festungswächter', ['Turmhelm', 'Mauerpanzer', 'Steinstiefel']], ['frost', 4, 'Frostbollwerk', ['Eiskrone', 'Frostpanzer', 'Frosttritte']]] },
+    s: { tints: ['rubin', 'saphir', 'gold'], sets: [['wald', 3, 'Waldläuferin', ['Blätterkapuze', 'Blättermantel', 'Wanderstiefel']], ['mond', 4, 'Mondjägerin', ['Mondsichel', 'Sternenumhang', 'Mondschritte']]] },
+    m: { tints: ['smaragd', 'rubin', 'gold'], sets: [['feuer', 3, 'Feuermagier', ['Flammenhut', 'Glutrobe', 'Glutsaum']], ['kosmos', 4, 'Sternenweiser', ['Galaxienhut', 'Sternenrobe', 'Nebelsaum']]] },
+    p: { tints: ['saphir', 'amethyst', 'smaragd'], sets: [['bluete', 3, 'Blütenpriesterin', ['Blütenkranz', 'Blütengewand', 'Blütensaum']], ['engel', 4, 'Erzengel', ['Engelsdiadem', 'Engelsflügel', 'Lichtsaum']]] },
+    t: { tints: ['frost', 'obsidian', 'rubin'], sets: [['baer', 3, 'Bärenfell', ['Bärenkopf', 'Bärenpelz', 'Pelzstiefel']], ['geist', 4, 'Geisterwolf', ['Geisterwolfskopf', 'Geisterpelz', 'Geisterpfoten']]] },
+    a: { tints: ['gold', 'smaragd', 'frost'], sets: [['nacht', 3, 'Nachtklinge', ['Silbermaske', 'Schattengurt', 'Schleichsohlen']], ['blutmond', 4, 'Blutmond', ['Oni-Maske', 'Blutbänder', 'Blutnebel']]] },
+    n: { tints: ['rubin', 'amethyst', 'gold'], sets: [['knochen', 3, 'Knochenfürst', ['Schädelkrone', 'Rippenpanzer', 'Knochensaum']], ['seelen', 4, 'Seelenernter', ['Seelenfeuer', 'Seelenrobe', 'Seelennebel']]] },
+    b: { tints: ['saphir', 'smaragd', 'obsidian'], sets: [['gaukler', 3, 'Gaukler', ['Narrenkappe', 'Rautenwams', 'Schnabelschuhe']], ['phoenix', 4, 'Phönixsänger', ['Phönixkrone', 'Phönixschwingen', 'Glutstiefel']]] },
+    d: { tints: ['saphir', 'amethyst', 'gold'], sets: [['herbst', 3, 'Herbstdruidin', ['Herbstgeweih', 'Herbstgewand', 'Herbstlaub']], ['weltenbaum', 4, 'Weltenbaum', ['Lichtgeweih', 'Rankengewand', 'Wurzelsaum']]] },
+    e: { tints: ['smaragd', 'amethyst', 'obsidian'], sets: [['dampf', 3, 'Dampfpionierin', ['Zahnradzylinder', 'Messingweste', 'Messingstiefel']], ['blitz', 4, 'Blitzschmiedin', ['Teslahelm', 'Spulenpanzer', 'Raketenstiefel']]] },
+    o: { tints: ['saphir', 'rubin', 'gold'], sets: [['lava', 3, 'Lavagolem', ['Magmakrone', 'Lavakern', 'Glutfüße']], ['kristall', 4, 'Kristallkoloss', ['Kristallkrone', 'Kristallpanzer', 'Kristallfüße']]] },
+  };
+  const DECO_SLOTS = [{ k: 'zelt', n: 'Zelt' }, { k: 'feuer', n: 'Feuer' }, { k: 'banner', n: 'Banner' }, { k: 'himmel', n: 'Himmel' }, { k: 'tier', n: 'Tier' }, { k: 't1', n: 'Trophäe 1', type: 'troph' }, { k: 't2', n: 'Trophäe 2', type: 'troph' }, { k: 't3', n: 'Trophäe 3', type: 'troph' }];
+  const decoType = slot => (/^t\d$/.test(slot) ? 'troph' : slot);
+  const ITEMS = {};
+  const addItem = o => (ITEMS[o.id] = o);
+  for (const [h, D] of Object.entries(HERO_SETS)) GEAR_SLOTS.forEach((s, si) => {
+    for (const tk of D.tints) { const t = TINTS.find(x => x.k === tk); addItem({ id: `g_${h}_${s.k}_${t.k}`, cat: 'gear', hero: h, slot: s.k, rar: 2, kind: 'tint', tint: t.k, n: `${t.n}-${TINT_NOUN[s.k]}`, col: t.col, src: 'chest' }); }
+    for (const [k, rar, setName, parts] of D.sets) addItem({ id: `g_${h}_${s.k}_${k}`, cat: 'gear', hero: h, slot: s.k, rar, kind: 'set', set: k, setName, n: parts[si], src: 'chest' });
+  });
+  // Lager-Deko
+  [['rot', 'Rotes Zelt', '#c8323e'], ['blau', 'Blaues Zelt', '#2f62c8'], ['gruen', 'Grünes Zelt', '#3f9a4a'], ['schwarz', 'Schwarzes Zelt', '#3a3448']].forEach(([k, n, col]) => addItem({ id: `d_zelt_${k}`, cat: 'deco', slot: 'zelt', rar: 2, kind: 'tint', col, n, src: 'chest' }));
+  addItem({ id: 'd_zelt_pav', cat: 'deco', slot: 'zelt', rar: 3, kind: 'pav', n: 'Ritterpavillon', col: '#e0404f', src: 'chest' });
+  [['blau', 'Geisterflamme', '#4fb8ff'], ['gruen', 'Giftfeuer', '#5be37d'], ['lila', 'Seelenfeuer', '#b06bff']].forEach(([k, n, col]) => addItem({ id: `d_feuer_${k}`, cat: 'deco', slot: 'feuer', rar: 2, kind: 'tint', col, n, src: 'chest' }));
+  addItem({ id: 'd_feuer_stern', cat: 'deco', slot: 'feuer', rar: 4, kind: 'stern', n: 'Sternenfeuer', col: '#fff2b0', src: 'chest' });
+  [['rot', 'Rotes Banner', '#c8323e'], ['blau', 'Blaues Banner', '#2f62c8']].forEach(([k, n, col]) => addItem({ id: `d_banner_${k}`, cat: 'deco', slot: 'banner', rar: 2, kind: 'plain', col, n, src: 'chest' }));
+  [['gluehw', 'Glühwürmchen', 3], ['schnupp', 'Sternschnuppen', 3], ['schnee', 'Schneefall', 3], ['nordlicht', 'Nordlicht', 4]].forEach(([k, n, rar]) => addItem({ id: `d_himmel_${k}`, cat: 'deco', slot: 'himmel', rar, kind: k, n, src: 'chest' }));
+  [['katze', 'Lagerkatze', 3], ['fuchs', 'Fuchs', 3], ['eule', 'Eule', 3], ['drache', 'Kleiner Drache', 4]].forEach(([k, n, rar]) => addItem({ id: `d_tier_${k}`, cat: 'deco', slot: 'tier', rar, kind: k, n, src: 'chest' }));
+  // Trophäen: eine pro Feldzug-Boss, fallen selten
+  const TROPHY_N = ['Schleimkrone', 'Goblin-Totem', 'Knochenschädel', 'Höllenhorn', 'Frostkristall', 'Hexenkessel', 'Dornenkeule', 'Vampirsarg', 'Magmaherz', 'Spinnenei',
+    'Sternensplitter', 'Hirtenstab', 'Geisterlaterne', 'Drachenschädel', 'Sturmhorn'];
+  TROPHY_N.forEach((n, i) => addItem({ id: `d_tr_${i}`, cat: 'deco', slot: 'troph', rar: 3, kind: 'troph', ti: i, n, src: 'boss', boss: i }));
+  // Banner-Sets: zum Sonderbanner jedes Fünf-Sterne-Helden gibt es Banner, Feuer und Zelt
+  const BSET_AT = [{ n: 10, slot: 'banner' }, { n: 30, slot: 'feuer' }, { n: 60, slot: 'zelt' }];
+  const BSET_NAME = { banner: 'Banner', feuer: 'Feuer', zelt: 'Zelt' };
+  for (const id of ['a', 'n', 'b', 'd', 'e', 'o']) for (const x of BSET_AT) addItem({ id: `d_${x.slot}_h${id}`, cat: 'deco', slot: x.slot, rar: 4, kind: 'hero', hero: id, n: `${BSET_NAME[x.slot]}: ${HERO_BY_ID[id].name}`, src: 'banner' });
+  const itemOf = id => ITEMS[id] || null;
+  const invN = (S, id) => Math.max(0, Math.floor((S.inv && S.inv[id]) || 0));
+  function invAdd(S, id, n = 1) { if (!ITEMS[id]) return 0; S.inv = S.inv || {}; S.inv[id] = invN(S, id) + n; return S.inv[id]; }
+  // Wie oft ein Gegenstand gerade benutzt wird (an Helden oder im Lager)
+  function invUsed(S, id) {
+    let n = 0;
+    for (const g of Object.values(S.gear || {})) for (const v of Object.values(g || {})) if (v === id) n++;
+    for (const v of Object.values(S.camp || {})) if (v === id) n++;
+    return n;
+  }
+  const invFree = (S, id) => invN(S, id) - invUsed(S, id);
+  function equipGear(S, hid, slot, id) {
+    if (!HERO_BY_ID[hid] || !GEAR_SLOTS.some(s => s.k === slot)) return false;
+    S.gear = S.gear || {}; const cur = (S.gear[hid] || {})[slot] || null;
+    if (id) { const it = ITEMS[id]; if (!it || it.cat !== 'gear' || it.slot !== slot || it.hero !== hid) return false; if (cur !== id && invFree(S, id) < 1) return false; }
+    S.gear[hid] = { ...(S.gear[hid] || {}) }; if (id) S.gear[hid][slot] = id; else delete S.gear[hid][slot];
+    if (!Object.keys(S.gear[hid]).length) delete S.gear[hid];
+    return true;
+  }
+  function setDeco(S, slot, id) {
+    if (!DECO_SLOTS.some(s => s.k === slot)) return false;
+    S.camp = S.camp || {}; const cur = S.camp[slot] || null;
+    if (id) { const it = ITEMS[id]; if (!it || it.cat !== 'deco' || it.slot !== decoType(slot)) return false; if (cur !== id && invFree(S, id) < 1) return false; S.camp[slot] = id; }
+    else delete S.camp[slot];
+    return true;
+  }
+  // Albtraum-Truhen: nach jedem Boss ab Stufe 151 eine sichere Truhe. Die Seltenheit wird beim Fund gewürfelt.
+  const CHEST = { leg: 0.008, legDeep: 0.00005, legDeepMax: 0.025, legPity: 0.001, legHard: 120, epic: 0.08, epicDeep: 0.0004, epicDeepMax: 0.12, rare: 0.3 };
+  function chestRoll(S, stage) {
+    const d = Math.max(0, stage - 150), P = S.pity = S.pity || {}; P.leg = P.leg || 0;
+    const leg = P.leg + 1 >= CHEST.legHard ? 1 : CHEST.leg + Math.min(CHEST.legDeepMax, d * CHEST.legDeep) + P.leg * CHEST.legPity;
+    const epic = CHEST.epic + Math.min(CHEST.epicDeepMax, d * CHEST.epicDeep), r = Math.random();
+    const rar = r < leg ? 4 : r < leg + epic ? 3 : r < leg + epic + CHEST.rare ? 2 : 1;
+    P.leg = rar === 4 ? 0 : P.leg + 1;
+    S.chest = S.chest || {}; S.chest[rar] = (S.chest[rar] || 0) + 1;
+    return rar;
+  }
+  const chestCount = S => [1, 2, 3, 4].reduce((a, r) => a + ((S.chest && S.chest[r]) || 0), 0);
+  function openChest(S, rar) {
+    if (!S.chest || !(S.chest[rar] > 0)) return null;
+    S.chest[rar]--;
+    if (rar === 1) {
+      const R = hoursReward(S, 0.25, 1);
+      if (Math.random() < 0.6 || !R.souls) { const g = Math.max(1, R.gold); S.gold = Math.min(1e18, S.gold + g); return { rar, kind: 'gold', n: g }; }
+      const s = Math.max(1, R.souls); S.souls += s; S.tot.souls += s; return { rar, kind: 'souls', n: s };
+    }
+    const deco = Math.random() < (rar === 4 ? 0.25 : 0.35);
+    let pool = Object.values(ITEMS).filter(x => x.rar === rar && x.src === 'chest' && x.cat === (deco ? 'deco' : 'gear') && (!x.hero || hired(S, HERO_BY_ID[x.hero].tree)));
+    if (!pool.length) pool = Object.values(ITEMS).filter(x => x.rar === rar && x.src === 'chest');
+    const it = pool[Math.floor(Math.random() * pool.length)], n = invAdd(S, it.id);
+    return { rar, kind: 'item', id: it.id, dup: n > 1, n };
+  }
+  // Trophäe beim Boss-Sieg: kleine Chance, die mit jedem Boss ohne Trophäe etwas steigt
+  const TROPHY = { base: 0.005, pity: 0.0008 };
+  function trophyRoll(S, stage) {
+    const P = S.pity = S.pity || {}; P.tro = P.tro || 0;
+    if (Math.random() < TROPHY.base + P.tro * TROPHY.pity) { P.tro = 0; const id = `d_tr_${zoneOf(stage) % TROPHY_N.length}`; return { id, n: invAdd(S, id) }; }
+    P.tro++; return null;
+  }
+  // Banner-Set: Rufe auf dem aktuellen Sonderbanner zählen; bei 10, 30 und 60 gibt es Banner, Feuer und Zelt des Helden
+  function bsetCount(S) { const B = evtBanner(), x = S.gacha && S.gacha.bs; return x && x.p === B.p ? x.n : 0; }
+  function bsetAdd(S, n) {
+    const B = evtBanner(), G = S.gacha; if (!G.bs || G.bs.p !== B.p) G.bs = { p: B.p, n: 0 };
+    const before = G.bs.n; G.bs.n += n; const got = [];
+    for (const x of BSET_AT) if (before < x.n && G.bs.n >= x.n) { const id = `d_${x.slot}_h${B.five}`; invAdd(S, id); got.push(id); }
+    return got;
+  }
+  function collFix(out, d) {
+    const n = x => Math.max(0, Math.min(1e6, Math.floor(Number(x) || 0)));
+    out.inv = {}; for (const [k, v] of Object.entries((d.inv && typeof d.inv === 'object') ? d.inv : {})) if (ITEMS[k] && n(v)) out.inv[k] = n(v);
+    out.gear = {}; for (const [h, g] of Object.entries((d.gear && typeof d.gear === 'object') ? d.gear : {})) { if (!HERO_BY_ID[h] || !g || typeof g !== 'object') continue;
+      const o = {}; for (const s of GEAR_SLOTS) { const id = g[s.k]; if (ITEMS[id] && ITEMS[id].slot === s.k && ITEMS[id].hero === h && out.inv[id]) o[s.k] = id; } if (Object.keys(o).length) out.gear[h] = o; }
+    out.camp = {}; for (const s of DECO_SLOTS) { const id = d.camp && d.camp[s.k]; if (ITEMS[id] && ITEMS[id].cat === 'deco' && ITEMS[id].slot === decoType(s.k) && out.inv[id]) out.camp[s.k] = id; }
+    // mehr benutzt als vorhanden: überzählige ablegen
+    for (const id of Object.keys(out.inv)) { let over = invUsed(out, id) - out.inv[id];
+      for (const g of Object.values(out.gear)) for (const k of Object.keys(g)) if (over > 0 && g[k] === id) { delete g[k]; over--; }
+      for (const k of Object.keys(out.camp)) if (over > 0 && out.camp[k] === id) { delete out.camp[k]; over--; } }
+    out.chest = {}; for (const r of [1, 2, 3, 4]) { const v = n(d.chest && d.chest[r]); if (v) out.chest[r] = v; }
+    out.pity = { tro: n(d.pity && d.pity.tro), leg: n(d.pity && d.pity.leg) };
+  }
+
 
   /* ================= Tägliche Anmeldebelohnung ================= */
   // Einmal pro Tag. 7 Tage im Kreis, kein Gold und keine Seelen, nur Dinge, die bleiben.
@@ -1402,7 +1549,7 @@
 
   /* ================= Kopfgeldjagd ================= */
   // Jeden Tag drei Steckbriefe: bekannte Bosse der Ahnenprüfung, mit ihren Phasen, Großangriffen und Schwachstellen.
-  // Leicht / Mittel / Schwer, jeweils einmal pro Tag Belohnung. Ab dem 2. Aufstieg.
+  // Leicht / Mittel / Schwer, jeweils einmal pro Tag Belohnung. Ab dem 1. Aufstieg.
   const BOUNTY = { lvl: [0.75, 0.83, 0.9], name: ['Leicht', 'Mittel', 'Schwer'], hp: 0.5 };
   const hashStr = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return h >>> 0; };
   function bountiesOf(S, day = dayId()) {
@@ -1447,7 +1594,7 @@
     const out = { gold: Math.floor(R.g * sec), souls: Math.floor(R.s * sec), dust: feature(S, 'runen') ? Math.floor(R.d * sec) : 0, spl: expOpen(S) ? Math.max(1, Math.round(h * eff * 4)) : 0 };
     return out;
   }
-  const tripReward = (S, T) => { const o = TRIPS.find(x => x.h === T.h) || TRIPS[0]; return { ...hoursReward(S, T.h * TRIP_SHARE, o.eff), gem: gachaOpen(S) ? T.h * GEM_SRC.tripHour : 0 }; };
+  const tripReward = (S, T) => { const o = TRIPS.find(x => x.h === T.h) || TRIPS[0]; return { ...hoursReward(S, T.h * TRIP_SHARE, o.eff), gem: gemOpen(S) ? T.h * GEM_SRC.tripHour : 0 }; };
   function startTrip(S, id, h) {
     const o = TRIPS.find(x => x.h === h);
     if (!o || !HERO_BY_ID[id] || !hired(S, HERO_BY_ID[id].tree) || onTrip(S, id)) return false;
@@ -1506,7 +1653,7 @@
     const n = Math.max(0, Math.min(WB.goals.length, Math.floor(goals) || 0));
     const r = n ? hoursReward(S, wbGoalHours(n), 0.5) : { gold: 0, souls: 0, dust: 0, spl: 0 };
     S.gold = Math.min(1e18, S.gold + r.gold); S.souls += r.souls; S.tot.souls += r.souls; S.dust += r.dust; if (r.spl) S.exp.spl += r.spl;
-    const gem = gachaOpen(S) ? n * GEM_SRC.wbGoal : 0; S.gem += gem;
+    const gem = gemOpen(S) ? n * GEM_SRC.wbGoal : 0; S.gem += gem;
     S.wbWeeks = (S.wbWeeks || 0) + 1;
     return { goals: n, ...r, gem };
   }
@@ -1515,7 +1662,7 @@
   function fresh() {
     return { v: SAVE_VERSION, gold: 0, souls: 0, best: 0, bestEver: 0, runs: 0, nodes: { start: 1 }, equip: [], speed: 1, stars: 0, rebirths: 0, perks: {},
       runes: [], sockets: Object.fromEntries(HEROES.map(h => [h.id, [null, null, null, null, null, null]])), dust: 0, runeSeq: 1, towerBest: 0,
-      season: SEASON, asc: 0, ascBest: 0, rankGot: 0, mast: {}, skin: {}, wf: 0, crowns: 0, cperks: {}, ach: {}, tot: { kills: 0, souls: 0 }, weekly: { week: '', best: 0, claimed: 0 }, comps: {}, compActive: [], gem: 0, gacha: gFix(), cons: {}, gBoss: 0, login: { day: '', n: 0 }, bounty: { day: '', done: [] }, seenIntro: false, area: 0, tempo: 0, bench: [], altar: 0, seenField: false, exp: { spl: 0, done: 0, target: 'a', pieces: {} }, ahn: ahnFix() };
+      season: SEASON, asc: 0, ascBest: 0, rankGot: 0, mast: {}, skin: {}, wf: 0, crowns: 0, cperks: {}, ach: {}, tot: { kills: 0, souls: 0 }, weekly: { week: '', best: 0, claimed: 0 }, comps: {}, compActive: [], gem: 0, gacha: gFix(), cons: {}, inv: {}, gear: {}, camp: {}, chest: {}, pity: { tro: 0, leg: 0 }, gBoss: 0, login: { day: '', n: 0 }, bounty: { day: '', done: [] }, seenIntro: false, area: 0, tempo: 0, bench: [], altar: 0, seenField: false, exp: { spl: 0, done: 0, target: 'a', pieces: {} }, ahn: ahnFix() };
   }
   function migrate(d) {
     if (!d || typeof d !== 'object') return fresh();
@@ -1555,6 +1702,7 @@
     out.trips = {}; for (const h of HEROES) { const T = d.trips && d.trips[h.id]; if (T && TRIPS.some(o => o.h === T.h) && Number(T.at) > 0) out.trips[h.id] = { at: Number(T.at), h: T.h }; }
     { const r = d.rate || {}, n = x => Math.max(0, Number(x) || 0); out.rate = { g: n(r.g), s: n(r.s), d: n(r.d), t: n(r.t) }; }
     out.tripsDone = Math.max(0, Math.floor(Number(d.tripsDone) || 0));
+    collFix(out, d);
     out.gem = Math.max(0, Math.min(1e9, Math.floor(Number(d.gem) || 0))); out.gacha = gFix(d.gacha);
     out.cons = {}; for (const h of HEROES) { const c = Math.max(0, Math.min(GACHA.consMax, Math.floor(Number(d.cons && d.cons[h.id]) || 0))); if (c) out.cons[h.id] = c; }
     out.gBoss = Math.max(0, Math.min(1e7, Math.floor(Number(Array.isArray(d.gBoss) ? Math.max(0, ...d.gBoss.map(Number).filter(x => x > 0)) : d.gBoss) || 0)));
@@ -2591,6 +2739,11 @@
         run.floats.push({ x: e.x, y: 130, text: '+' + fmt(gold), color: '#ffcf4a', size: 14, t: 1 });
       }
       if (e.boss && run.mode === 'normal') { const g = gemBossFirst(S, run.stage); if (g) run.floats.push({ x: e.x, y: 60, text: `+${g} 💠 Sternkristalle`, color: '#8fe3ff', size: 15, t: 1.6 }); }
+      if (e.boss && run.mode === 'normal') {
+        const tr = trophyRoll(S, run.stage);
+        if (tr) { (run.trophies = run.trophies || []).push(tr.id); run.floats.push({ x: e.x, y: 40, text: `Trophäe: ${ITEMS[tr.id].n}!`, color: '#c98aff', size: 16, t: 2.2 }); sfx('rune'); }
+        if (nightmare(run.stage)) { const r = chestRoll(S, run.stage); (run.chests = run.chests || []).push(r); run.floats.push({ x: e.x, y: 76, text: `${RAR[r]}e Truhe!`, color: RAR_COL[r], size: 15, t: 1.8 }); }
+      }
       let souls = 0;
       if (e.boss) souls = roundSouls((1 + Math.floor(run.stage / 20)) * g.soulMul) + st.soulBonus;
       else if (e.elite) { const n = procs(g.eliteSoul); if (n) souls = n * Math.max(1, roundSouls(altarMul(S))); }
@@ -2738,7 +2891,7 @@
     return (n < 10 ? n.toFixed(2) : n < 100 ? n.toFixed(1) : Math.floor(n).toString()).replace('.', ',') + units[i];
   }
 
-  const core = { TRIPS, TRIP_SHARE, onTrip, tripLeft, rateOf, noteRate, hoursReward, tripReward, startTrip, claimTrip, WB, WB_BOSS, wbScore, wbBarReward, wbBarSecs, wbGoalHours, wbReward, GACHA, G_FIVE, G_FOUR, CONS_H, consList, consApply, evtBanner, evtPeriod, starSock, gachaOpen, consOf, bannerOf, gachaPull, GEM_SRC, LOGIN, loginItem, loginToday, claimLogin, BOUNTY, bountiesOf, bountyDone, bountyClaim, ahnLike, AHN_MISSIONS, AHN_ABIL, AHN_MECH, AHN_BOONS, ahnRollBoons, ahnPickBoon, ahnBoonText, ahnApplyBoons, AHN_TRAIT, AHNE, AHN_TUNE, AHN_COUNT, ahnOpen, ahnBossesOf, ahnLevelFor, placeSigil, ahnClaim, unrebirth, transmute, bossRuneTier, resetPerks, buyLager, lagerCost, LAGER_MAX, runeCap, shardOf, mergeCost, ALTAR_MAX, altarCost, altarMul, buyAltar, kSlots, kFree, keyCap, addSock, removeSock, removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, buyPiece, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
+  const core = { RAR, RAR_COL, GEAR_SLOTS, TINTS, HERO_SETS, DECO_SLOTS, ITEMS, TROPHY_N, BSET_AT, itemOf, invN, invAdd, invUsed, invFree, equipGear, setDeco, chestRoll, chestCount, openChest, trophyRoll, bsetCount, bsetAdd, CHEST, TROPHY, TRIPS, TRIP_SHARE, onTrip, tripLeft, rateOf, noteRate, hoursReward, tripReward, startTrip, claimTrip, WB, WB_BOSS, wbScore, wbBarReward, wbBarSecs, wbGoalHours, wbReward, GACHA, G_FIVE, G_FOUR, CONS_H, consList, consApply, evtBanner, evtPeriod, starSock, gachaOpen, evtOpen, gemOpen, gemBossFirst, GIFT_PULLS, consOf, bannerOf, gachaPull, GEM_SRC, LOGIN, loginItem, loginToday, claimLogin, BOUNTY, bountiesOf, bountyDone, bountyClaim, ahnLike, AHN_MISSIONS, AHN_ABIL, AHN_MECH, AHN_BOONS, ahnRollBoons, ahnPickBoon, ahnBoonText, ahnApplyBoons, AHN_TRAIT, AHNE, AHN_TUNE, AHN_COUNT, ahnOpen, ahnBossesOf, ahnLevelFor, placeSigil, ahnClaim, unrebirth, transmute, bossRuneTier, resetPerks, buyLager, lagerCost, LAGER_MAX, runeCap, shardOf, mergeCost, ALTAR_MAX, altarCost, altarMul, buyAltar, kSlots, kFree, keyCap, addSock, removeSock, removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, buyPiece, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
     SEASON, rankOf, RANKS, rankBonus, AREAS, areaOf, MISSIONS, extraSocks, XSOCK, sockOk, runeAmp, mastInfo, mastLevel, SKINS, WF_STAGE, WF, wfSpawn,
     sigOn, sigKeysUsed, keyNeed, eqOf, slotLim, SIG, SIG_FLAGS, newRun, step, stats, buy, available, blockReason, NODE, migrate, fresh,
     rebirth, ascend, crownsFor, buyCperk, cperkCost, cperk, CPERKS, levelComp, toggleComp, compCost, compMax, compSlots, COMPS, checkAch, ACH, claimWeekly, weekId, dayId, weekRules, RULE, WEEK_TIERS, statsFor, starsFor, toggleEquip, slotsOf, hired, classOpen, keysUsed, keyLimit, capOf, reqOf, feature, encode, decode, fmt, socket, unsocket, merge, canMerge, dismantle, buyRune, runeVal, addRune };
