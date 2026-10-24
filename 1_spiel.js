@@ -1460,21 +1460,18 @@
     else delete S.camp[slot];
     return true;
   }
-  // Albtraum-Truhen: nach jedem Boss ab Stufe 151 eine sichere Truhe. Die Seltenheit wird beim Fund gewürfelt.
-  const CHEST = { leg: 0.008, legDeep: 0.00005, legDeepMax: 0.025, legPity: 0.001, legHard: 120, epic: 0.08, epicDeep: 0.0004, epicDeepMax: 0.12, rare: 0.3 };
-  function chestRoll(S, stage) {
-    const d = Math.max(0, stage - 150), P = S.pity = S.pity || {}; P.leg = P.leg || 0;
-    const leg = P.leg + 1 >= CHEST.legHard ? 1 : CHEST.leg + Math.min(CHEST.legDeepMax, d * CHEST.legDeep) + P.leg * CHEST.legPity;
-    const epic = CHEST.epic + Math.min(CHEST.epicDeepMax, d * CHEST.epicDeep), r = Math.random();
-    const rar = r < leg ? 4 : r < leg + epic ? 3 : r < leg + epic + CHEST.rare ? 2 : 1;
-    P.leg = rar === 4 ? 0 : P.leg + 1;
-    S.chest = S.chest || {}; S.chest[rar] = (S.chest[rar] || 0) + 1;
-    return rar;
-  }
+  // Albtraum-Truhen: nach jedem Boss ab Stufe 151 eine sichere Truhe. Alle Truhen sind gleich, der Inhalt wird beim Öffnen
+  // mit festen Chancen gewürfelt: 0,1 % legendär, 1 % episch, 25 % selten, sonst Gold oder Seelen. Keine Steigerung mit der Tiefe.
+  // Unter S.chest[1] liegen die neuen Truhen; S.chest[2..4] sind alte, schon gewürfelte Truhen und öffnen mit ihrer Seltenheit.
+  const CHEST = { leg: 0.001, epic: 0.01, rare: 0.25 };
+  function chestRoll(S) { S.chest = S.chest || {}; S.chest[1] = (S.chest[1] || 0) + 1; return 1; }
   const chestCount = S => [1, 2, 3, 4].reduce((a, r) => a + ((S.chest && S.chest[r]) || 0), 0);
-  function openChest(S, rar) {
-    if (!S.chest || !(S.chest[rar] > 0)) return null;
-    S.chest[rar]--;
+  function chestRar() { const r = Math.random(); return r < CHEST.leg ? 4 : r < CHEST.leg + CHEST.epic ? 3 : r < CHEST.leg + CHEST.epic + CHEST.rare ? 2 : 1; }
+  function openChest(S) {
+    if (!S.chest) return null;
+    const old = [4, 3, 2].find(r => S.chest[r] > 0);
+    let rar;
+    if (old) { S.chest[old]--; rar = old; } else if (S.chest[1] > 0) { S.chest[1]--; rar = chestRar(); } else return null;
     if (rar === 1) {
       const R = hoursReward(S, 0.25, 1);
       if (Math.random() < 0.6 || !R.souls) { const g = Math.max(1, R.gold); S.gold = Math.min(1e18, S.gold + g); return { rar, kind: 'gold', n: g }; }
@@ -2270,7 +2267,7 @@
     sg_d_gewalt: { minCd: 14, cd: () => 20, ready: run => engaged(run), cast: (c, r) => { c.run.natureT = 5 + (r - 1); c.float('d', 'Naturgewalt', '#9bd14a'); } },
     sg_e_flamme: { cd: () => 14, ready: run => near(run).length >= 1, cast: (c, r) => { c.run.flameT = 3; c.run.flameTick = 0; c.run.flameV = (2 + 0.5 * (r - 1)) * c.st.e.actMul; } },
     sg_e_rakete: { cd: () => 15, ready: run => !!strongest(run, 420), cast: (c, r) => {
-      const t = strongest(c.run, 420); for (let i = 0; i < 3; i++) { c.arrow('e', t, 0.3 + i * 0.12, 'bomb'); c.hit('e', t, (4 + 1.2 * (r - 1)) * c.st.e.actMul, '#ffc58a'); } c.burst(t.x, 180, '#ff9a3d', 14); c.run.shake = 0.2; } },
+      const t = strongest(c.run, 420); c.run.fx.raketeX = t.x; for (let i = 0; i < 3; i++) { c.arrow('e', t, 0.3 + i * 0.12, 'rakete'); c.hit('e', t, (4 + 1.2 * (r - 1)) * c.st.e.actMul, '#ffc58a'); } c.burst(t.x, 180, '#ff9a3d', 14); c.run.shake = 0.2; } },
     sg_e_druck: { minCd: 16, cd: () => 18, ready: run => engaged(run) || run.enemies.some(e => e.x < 420), cast: (c, r) => { c.run.overT = 6 + (r - 1); c.float('e', 'Überdruck!', '#f28c28'); } },
   });
   // Mindestabstand zwischen zwei Einsätzen: Effekte mit Dauer laufen höchstens die halbe Zeit, egal wie schnell sie laden
@@ -2514,7 +2511,6 @@
       if (wolf && T.wolfHeal) c.healAllAbs(dmg * T.wolfHeal);
       if (run.floats.reduce((n, f) => n + (f.dmg && f.t > 0.6 && Math.abs(f.x - e.x) < 60 ? 1 : 0), 0) < (e.boss ? 3 : 2)) c.efloat(e, nCrit > 1 ? `${nCrit}× ${fmt(dmg)}` : fmt(dmg), nCrit > 1 ? '#ff9a3d' : crit ? '#ffd23f' : color || '#ffffff', nCrit > 1 ? 20 : crit ? 18 : 13);
       if (crit) c.burst(e.x, 190, '#ffd23f', 5);
-      c.vfx({ t: 'hit', h: k, x: e.x, boss: !!e.boss, big: !!e.elite, crit, ab: !!c.inCast, w: !!wolf });
       sfx(crit ? 'crit' : 'hit', k);
       return dmg;
     };
@@ -2525,7 +2521,7 @@
       if (src === 'p' && st.p && st.p.holyFire && st.p.atk > 0 && run.enemies[0]) c.hit('p', run.enemies[0], Math.min(amt * st.p.holyFire, st.p.heal) / st.p.atk, '#fff2b0');
       const over = h.hp + amt - T.hp; h.hp = Math.min(T.hp, h.hp + amt);
       if (over > 0 && st.p && st.p.overShield) h.shield = Math.min(T.hp * 0.5, h.shield + over * st.p.overShield);
-      c.float(k, '+' + fmt(amt), '#7ee08a', 12); c.vfx({ t: 'heal', h: k });
+      c.float(k, '+' + fmt(amt), '#7ee08a', 12);
       // 6. Sternbild der Priesterin: die anderen bekommen einen Teil mit
       if (src === 'p' && st.p && st.p.cHalo) run.order.forEach(x => x !== k && run.h[x].alive && c.healOne(x, amt * st.p.cHalo));
     };
@@ -2745,7 +2741,7 @@
       if (e.boss && run.mode === 'normal') {
         const tr = trophyRoll(S, run.stage);
         if (tr) { (run.trophies = run.trophies || []).push(tr.id); run.floats.push({ x: e.x, y: 40, text: `Trophäe: ${ITEMS[tr.id].n}!`, color: '#c98aff', size: 16, t: 2.2 }); sfx('rune'); }
-        if (nightmare(run.stage)) { const r = chestRoll(S, run.stage); (run.chests = run.chests || []).push(r); run.floats.push({ x: e.x, y: 76, text: `${RAR[r]}e Truhe!`, color: RAR_COL[r], size: 15, t: 1.8 }); }
+        if (nightmare(run.stage)) { const r = chestRoll(S); (run.chests = run.chests || []).push(r); run.floats.push({ x: e.x, y: 76, text: 'Albtraum-Truhe!', color: '#c98aff', size: 15, t: 1.8 }); }
       }
       let souls = 0;
       if (e.boss) souls = roundSouls((1 + Math.floor(run.stage / 20)) * g.soulMul) + st.soulBonus;
@@ -2790,7 +2786,7 @@
     run.floats = run.floats.filter(x => x.t > 0);
     run.parts.forEach(p => { p.t -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 400 * dt; });
     run.parts = run.parts.filter(p => p.t > 0);
-    run.arrows.forEach(a => { a.t += dt; if (a.t >= a.d && run.vq && run.vq.length < 60) run.vq.push({ t: 'imp', kind: a.kind, x: a.tx, y: a.ty }); });
+    run.arrows.forEach(a => (a.t += dt));
     run.arrows = run.arrows.filter(a => a.t < a.d);
     const alive = run.order.filter(k => run.h[k].alive).length;
     if (st.comp.phoenix >= 10 && !run.compRevive && (alive === 0 || (alive === 1 && run.order.length >= 3))) {

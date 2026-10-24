@@ -220,8 +220,8 @@
           : gemOpen(S) ? [`Schon gesammelt: <b>${fmt(S.gem)}</b> 💠 (${Math.floor(S.gem / GACHA.cost)} Rufe)`, 'Sternkristalle gibt es für neue Boss-Siege und den täglichen Lohn.'] : [], lock: gachaOpen(S) ? '' : 'Ab dem 1. Aufstieg', acts: '<button class="btn" data-m="go" data-go="ruf">Zum Sternenruf</button>' },
       { title: 'Kopfgeldjagd', art: ['kopf1', 'kopf2'], icon: '📜', col: '#d9935a', rot: 1.5, desc: 'Jeden Tag drei Steckbriefe: Bosse der Ahnenprüfung mit Großangriffen und Schwachstellen. Jeder bringt einmal am Tag Sternkristalle.',
         info: gachaOpen(S) ? [`Heute erledigt: <b>${[0, 1, 2].filter(i => bountyDone(S, i)).length}/3</b>`] : [], lock: gachaOpen(S) ? '' : 'Ab dem 1. Aufstieg', acts: '<button class="btn" data-m="go" data-go="kopf">Steckbriefe ansehen</button>' },
-      { title: 'Albtraum-Truhen', art: ['truhe1', 'truhe2'], icon: '🧰', col: '#b06bff', rot: -1, desc: 'Im Albtraum ab Stufe 151 lässt jeder Boss eine Truhe fallen. Darin: Gold, Seelen, Heldenteile und Lager-Deko. Je tiefer du kommst, desto besser die Truhen.',
-        info: [`Ungeöffnet: <b>${chestCount(S)}</b>${[4, 3, 2].filter(r => S.chest && S.chest[r]).map(r => ` · <b style="color:${RAR_COL[r]}">${S.chest[r]} ${RAR[r]}</b>`).join('')}`], lock: (S.bestEver || 0) > 150 || chestCount(S) ? '' : 'Ab Stufe 151 (Albtraum)', acts: `<button class="btn" data-m="go" data-go="truhen">${chestCount(S) ? 'Truhen öffnen' : 'Ansehen'}</button>` },
+      { title: 'Albtraum-Truhen', art: ['truhe1', 'truhe2'], icon: '🧰', col: '#b06bff', rot: -1, desc: 'Im Albtraum ab Stufe 151 lässt jeder Boss eine Truhe fallen. Darin: Gold, Seelen, Heldenteile und Lager-Deko. Feste Chancen: 1 % episch, 0,1 % legendär.',
+        info: [`Ungeöffnet: <b>${chestCount(S)}</b>`], lock: (S.bestEver || 0) > 150 || chestCount(S) ? '' : 'Ab Stufe 151 (Albtraum)', acts: `<button class="btn" data-m="go" data-go="truhen">${chestCount(S) ? 'Truhen öffnen' : 'Ansehen'}</button>` },
       { title: 'Lager einrichten', art: ['deko1', 'deko2'], icon: '🏕️', col: '#ffb547', rot: 1.5, desc: 'Zelt, Feuer, Banner, Himmel, ein Tier und drei Trophäen. Nur fürs Auge, ohne Boni. Doppelte Stücke werden gesammelt.',
         info: [`Deko-Stücke: <b>${Object.keys(S.inv || {}).filter(id => ITEMS[id] && ITEMS[id].cat === 'deco').length}</b> · Trophäen: <b>${TROPHY_N.filter((n, i) => invN(S, 'd_tr_' + i)).length}/${TROPHY_N.length}</b>`], acts: '<button class="btn" data-m="go" data-go="deko">Einrichten</button>' },
     ];
@@ -298,14 +298,13 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
-    { id: 9, title: 'Neue Kampfeffekte', date: '24.10.2026', items: [
-      ['Neu', 'Jeder Held hat eigene Treffer-Effekte: Schwerthieb, Schildstoß, Krallen, Kreuzschnitt, Blätter, Runensplitter und mehr'],
-      ['Neu', 'Geschosse mit Leuchtspur: Pfeile, Feuerbälle, Seelen, Noten, Bomben mit Lunte, Lichtstrahlen'],
-      ['Neu', 'Einschläge von Geschossen sind zu sehen, kritische Treffer blitzen hell auf'],
+    { id: 9, title: 'Fähigkeiten, Vollbild, Truhen', date: '24.10.2026', items: [
+      ['Neu', 'Fähigkeiten sehen neu aus: Schwarzes Loch mit Strudel, Arkaner Strahl, Flammenwerfer, Raketen mit Rauchspur, Blitz, Meteore, Eisspitzen, Kettenblitz, Knochenwand, Banner der Ehre, Zielschuss mit Fadenkreuz und mehr'],
       ['Neu', 'Beim Wirken einer Fähigkeit leuchtet ein Zauberkreis unter dem Helden'],
-      ['Neu', 'Fähigkeiten überarbeitet: Blitz mit Ästen, Meteore mit Feuerschweif, Eisspitzen, Kettenblitz, Schildwelle, Schattenstoß, Seelenraub, Schallwelle, Lichtstrahlen beim Segen'],
-      ['Neu', 'Heilung zeigt grüne Kreuze, die aufsteigen'],
-      ['Info', 'Bei schwachen Geräten werden automatisch weniger Funken gezeigt'],
+      ['Neu', 'Vollbild: Knopf unten rechts im Spielfeld, nur Spielfeld und Knopfleiste'],
+      ['Umstellung', 'Albtraum-Truhen gibt es nur noch in einer Sorte, mit festen Chancen: 0,1 % legendär, 1 % episch, 25 % selten'],
+      ['Info', 'Schon gefundene seltene, epische und legendäre Truhen behalten ihre Seltenheit'],
+      ['Fix', 'Tablet hochkant: Spielfeld größer und passt sich beim Drehen sofort an'],
     ] },
     { id: 8, title: 'Darstellung verbessert', date: '24.10.2026', items: [
       ['Fix', 'Heldenpfad, Fertigkeitenbaum und Läden werden nicht mehr zusammengedrückt'],
@@ -6047,7 +6046,7 @@
       if (ahnLike(R)) ahnScreen(R, t);
       statusIcons(R, t);
       if (!tower && !ahnLike(R) && nightmare(stage)) { parts(t, 14, { type: 'ember', rgb: '255,60,60', vx: 4, vy: -18, size: 1.4, alpha: 0.8, seed: 40 }); vignette(0.45, '60,0,10'); }
-      ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (const p of R.parts) { const a = Math.min(1, p.t * 2); glowDot(p.x, p.y, 6, rgbOf(p.c), 0.7 * a); ctx.fillStyle = `rgba(255,255,255,${0.8 * a})`; ctx.fillRect(p.x - 1, p.y - 1, 2, 2); } ctx.restore();
+      for (const p of R.parts) { ctx.globalAlpha = Math.min(1, p.t * 2); ctx.fillStyle = p.c; ctx.fillRect(p.x, p.y, 3, 3); }
       ctx.globalAlpha = 1;
       for (const f of R.floats) { ctx.globalAlpha = Math.min(1, f.t * 2); ctx.font = `${f.size}px "Bungee","Arial Black",sans-serif`; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.strokeText(f.text, f.x, f.y); ctx.fillStyle = f.color; ctx.fillText(f.text, f.x, f.y); }
       ctx.globalAlpha = 1; ctx.restore();
@@ -6801,33 +6800,78 @@
     if (R.shatterT > 0) for (let i = 0; i < 10; i++) { const ph = (t * 0.6 + i / 10) % 1, px = (R.order.map(k => R.pos[k]).filter(v => v != null)[i % R.order.length] || x) + Math.sin(i * 3.1) * 12; glowDot(px, GROUND - 10 - ph * 80, 5, RC, 0.7 * (1 - ph)); }
   }
   function sigFx(R, t) {
-    const hy = GROUND - 34, P = k => R.pos[k];
+    const hy = GROUND - 34, P = k => R.pos[k], add = () => (ctx.globalCompositeOperation = 'lighter'), norm = () => (ctx.globalCompositeOperation = 'source-over');
     const ring = (x, y, r, col, w = 3) => { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.stroke(); };
     const sym = (x, y, s, col, size = 13) => { ctx.fillStyle = col; ctx.font = `bold ${size}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText(s, x, y); };
-    if (R.groundT > 0) { ctx.fillStyle = `rgba(255,228,138,${Math.min(1, R.groundT) * 0.22})`; ctx.fillRect(0, GROUND - 6, R.frontX + 30, 14); }
-    if (R.tauntT > 0 && P('w')) ring(P('w'), hy, 26 + Math.sin(t * 9) * 3, 'rgba(255,90,90,.75)');
-    if (R.prallT > 0 && P('w')) { ctx.strokeStyle = 'rgba(127,178,255,.85)'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(P('w') + 6, hy, 34, -1.1, 1.1); ctx.stroke(); }
-    if (R.honorT > 0 && P('r')) { const x = P('r') - 8, y = hy - 52; ctx.fillStyle = '#c9a24a'; ctx.fillRect(x, y, 2, 30); ctx.fillStyle = '#ffd27a'; ctx.beginPath(); ctx.moveTo(x + 2, y); ctx.lineTo(x + 20 + Math.sin(t * 6) * 2, y + 6); ctx.lineTo(x + 2, y + 13); ctx.fill(); }
-    if (R.wallT > 0) { const x = R.frontX + 32; for (let i = 0; i < 5; i++) { ctx.fillStyle = i % 2 ? '#d8d2bf' : '#bfb8a2'; ctx.fillRect(x, GROUND - 14 - i * 12, 12, 11); } }
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    // Heiliger Boden: goldener Schein am Boden, aufsteigende Lichtfunken
+    if (R.groundT > 0) { const A = Math.min(1, R.groundT); const g = ctx.createLinearGradient(0, GROUND - 40, 0, GROUND + 6); g.addColorStop(0, 'rgba(255,228,138,0)'); g.addColorStop(1, `rgba(255,228,138,${0.35 * A})`); ctx.fillStyle = g; ctx.fillRect(0, GROUND - 40, R.frontX + 34, 46);
+      add(); for (let i = 0; i < 12; i++) { const ph = (t * 0.5 + hash(i)) % 1; glowDot(hash(i + 5) * (R.frontX + 20), GROUND - 4 - ph * 60, 4, '255,236,160', A * (1 - ph)); } norm(); }
+    // Spott: rote, pulsierende Ringe um den Wächter
+    if (R.tauntT > 0 && P('w')) { add(); const pu = (t * 1.5) % 1; glowDot(P('w'), hy, 40, '255,70,70', 0.3); for (let i = 0; i < 2; i++) { const q = (pu + i * 0.5) % 1; vArc(P('w'), hy, 20 + q * 26, 0, 7, '255,80,80', 0.8 * (1 - q), 3); } norm(); sym(P('w'), hy - 50 + Math.sin(t * 8) * 2, '!', '#ff5a5a', 16); }
+    // Prallschild: leuchtender Schildbogen mit Wabenmuster
+    if (R.prallT > 0 && P('w')) { const x = P('w') + 8; add(); glowDot(x + 20, hy, 40, '127,178,255', 0.4); vArc(x, hy, 38, -1.15, 1.15, '127,178,255', 0.55, 9); vArc(x, hy, 38, -1.15, 1.15, '225,240,255', 0.95, 2);
+      for (let i = -3; i <= 3; i++) { const a = i * 0.32, px = x + Math.cos(a) * 34, py = hy + Math.sin(a) * 34; ctx.strokeStyle = 'rgba(200,225,255,.6)'; ctx.lineWidth = 1; ctx.beginPath(); for (let k = 0; k < 6; k++) { const b = k * Math.PI / 3; ctx.lineTo(px + Math.cos(b) * 4, py + Math.sin(b) * 4); } ctx.closePath(); ctx.stroke(); } norm(); }
+    // Banner der Ehre: wehendes Banner mit Goldschein
+    if (R.honorT > 0 && P('r')) { const x = P('r') - 10, y = hy - 58; add(); glowDot(x + 10, y + 12, 36, '255,210,122', 0.35 + Math.sin(t * 4) * 0.08); norm();
+      ctx.fillStyle = '#8a6a2a'; ctx.fillRect(x - 1, y - 4, 3, 44); ctx.fillStyle = '#ffd27a'; ctx.beginPath(); ctx.arc(x + 0.5, y - 5, 2.5, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(x + 2, y); for (let k = 0; k <= 8; k++) ctx.lineTo(x + 2 + k * 3, y + Math.sin(t * 6 - k * 0.7) * 2); for (let k = 8; k >= 0; k--) ctx.lineTo(x + 2 + k * 3, y + 18 + Math.sin(t * 6 - k * 0.7) * 2 - (k === 8 ? 4 : 0)); ctx.closePath();
+      const bg = ctx.createLinearGradient(x, y, x + 26, y); bg.addColorStop(0, '#c8202a'); bg.addColorStop(1, '#ff4a50'); ctx.fillStyle = bg; ctx.fill(); ctx.strokeStyle = '#ffd27a'; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = '#ffd27a'; starP(x + 14, y + 9 + Math.sin(t * 6 - 4) * 2, 4, 1.6, 5, 0); ctx.fill(); }
+    // Knochenwand: gestapelte Knochen mit Schädel, grünes Seelenlicht
+    if (R.wallT > 0) { const x = R.frontX + 34, A = Math.min(1, R.wallT * 2); add(); glowDot(x + 6, GROUND - 34, 40, '107,224,184', 0.3 * A); norm(); ctx.globalAlpha = A;
+      for (let i = 0; i < 6; i++) { const y = GROUND - 8 - i * 11, o = (i % 2) * 3; ctx.fillStyle = i % 2 ? '#e6dfca' : '#d4ccb4'; rr(x - 7 + o, y - 3, 22, 6, 3); ctx.fill(); for (const ex of [x - 7 + o, x + 15 + o]) { ctx.beginPath(); ctx.arc(ex, y - 2, 3, 0, 7); ctx.arc(ex, y + 2, 3, 0, 7); ctx.fill(); } }
+      ctx.fillStyle = '#efe9d6'; ctx.beginPath(); ctx.arc(x + 6, GROUND - 80, 8, 0, 7); ctx.fill(); ctx.fillRect(x + 1, GROUND - 76, 10, 6); ctx.fillStyle = '#1d3a30'; ctx.fillRect(x + 1.5, GROUND - 82, 3.5, 3.5); ctx.fillRect(x + 7, GROUND - 82, 3.5, 3.5);
+      add(); glowDot(x + 3, GROUND - 80, 4, '107,224,184', 0.9); glowDot(x + 9, GROUND - 80, 4, '107,224,184', 0.9); norm(); ctx.globalAlpha = 1; }
     if (R.giant) boneGiant(R.frontX + 30, t, Math.max(0, R.giant.hp / R.giant.max));
     if (R.cloneT > 0 && P('a')) shadowClone(P('a') + 16, t);
-    if (R.bearT > 0 && P('d')) ring(P('d'), hy + 6, 24, 'rgba(155,209,74,.8)', 4);
-    R.order.forEach(k => { const h = R.h[k]; if (h.alive && (h.invT > 0 || h.protT > 0)) ring(P(k), hy, 22, h.protT > 0 ? 'rgba(127,178,255,.7)' : 'rgba(255,242,176,.8)', 2.5); });
-    if (R.holeT > 0) { const x = R.holeX, y = GROUND - 40; ctx.fillStyle = 'rgba(20,6,40,.85)'; ctx.beginPath(); ctx.arc(x, y, 18, 0, 7); ctx.fill(); for (let i = 0; i < 3; i++) ring(x, y, 22 + ((t * 30 + i * 9) % 26), `rgba(192,140,255,${0.6 - i * 0.15})`, 2); }
-    if (R.beam && R.beam.tgt && P('m')) { const w = 2 + R.beam.i * 1.2; ctx.strokeStyle = 'rgba(226,201,255,.9)'; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(P('m') + 10, hy - 6); ctx.lineTo(R.beam.tgt.x, GROUND - (R.beam.tgt.boss ? 60 : 30)); ctx.stroke(); glowDot(R.beam.tgt.x, GROUND - (R.beam.tgt.boss ? 60 : 30), 14 + w * 2, '200,150,255', 0.8); }
-    if (R.flameT > 0 && P('e')) { const x = R.frontX + 20; for (let i = 0; i < 10; i++) { const f = (t * 3 + i / 10) % 1; glowDot(x + f * 120, GROUND - 26 + Math.sin(i * 7 + t * 20) * 6 * f, 6 + f * 12, f < 0.5 ? '255,200,90' : '255,110,40', 0.9 - f * 0.6); } }
-    if (R.aimT > 0 && P('s')) sym(P('s') + 18, hy - 20, '⌖', 'rgba(126,224,138,.95)', 16);
-    if (R.fx.sg_t_eber > 0) boar(R.frontX + (0.5 - R.fx.sg_t_eber) * 600, t);
-    if (R.fx.sg_w_beben > 0) { ctx.fillStyle = `rgba(120,90,60,${R.fx.sg_w_beben})`; ctx.fillRect(R.frontX + 20, GROUND - 2, W, 6); }
-    if (R.fx.sg_e_rakete > 0) glowDot(R.frontX + 120, GROUND - 60, 30 * R.fx.sg_e_rakete * 2, '255,150,60', 0.7);
+    if (R.bearT > 0 && P('d')) { add(); glowDot(P('d'), hy + 6, 34, '155,209,74', 0.35); vArc(P('d'), hy + 6, 24 + Math.sin(t * 6) * 2, 0, 7, '155,209,74', 0.8, 3); norm(); }
+    R.order.forEach(k => { const h = R.h[k]; if (h.alive && (h.invT > 0 || h.protT > 0)) { add(); const c = h.protT > 0 ? '127,178,255' : '255,242,176'; glowDot(P(k), hy, 26, c, 0.3); vArc(P(k), hy, 22, 0, 7, c, 0.8, 2.5); norm(); } });
+    // Schwarzes Loch: dunkler Kern, drehende Akkretionsscheibe, Trümmer werden hineingezogen
+    if (R.holeT > 0) { const x = R.holeX, y = GROUND - 44, A = Math.max(0, Math.min(1, R.holeT * 2, (3 - R.holeT) * 5));
+      const vg = ctx.createRadialGradient(x, y, 8, x, y, 130); vg.addColorStop(0, `rgba(12,0,28,${0.6 * A})`); vg.addColorStop(1, 'rgba(12,0,28,0)'); ctx.fillStyle = vg; ctx.beginPath(); ctx.arc(x, y, 130, 0, 7); ctx.fill();
+      const disk = front => { add(); for (let arm = 0; arm < 3; arm++) for (let i = 0; i < 22; i++) { const u = i / 22, ang = -t * 3.2 + arm * 2.094 + u * 5.2, r = 50 * (1 - u) + 14, sy = Math.sin(ang); if ((sy > 0) !== front) continue;
+        glowDot(x + Math.cos(ang) * r, y + sy * r * 0.36, 4 + u * 4, u > 0.65 ? '255,210,255' : '170,90,255', 0.55 * A * (0.3 + u * 0.7)); } norm(); };
+      disk(false);
+      add(); for (let i = 0; i < 16; i++) { const u = (t * 0.7 + hash(i)) % 1, ang = hash(i + 3) * 6.28 + u * 5, r = 100 * (1 - u) + 14; glowDot(x + Math.cos(ang) * r, y + Math.sin(ang) * r * 0.55, 2.5, '230,210,255', A * u); }
+      for (let i = 0; i < 2; i++) { const q = (t * 0.6 + i * 0.5) % 1; vArc(x, y, 70 * (1 - q) + 16, 0, 7, '200,150,255', 0.4 * A * q, 1.5); } glowDot(x, y, 46, '140,60,255', 0.55 * A); norm();
+      ctx.fillStyle = `rgba(4,0,10,${A})`; ctx.beginPath(); ctx.arc(x, y, 13 + Math.sin(t * 9), 0, 7); ctx.fill();
+      add(); vArc(x, y, 14 + Math.sin(t * 9), 0, 7, '220,180,255', 0.9 * A, 2); norm();
+      disk(true); }
+    // Arkaner Strahl: mehrschichtiger Strahl mit Funken, wird mit jedem Treffer dicker
+    if (R.beam && R.beam.tgt && P('m')) { const x0 = P('m') + 12, y0 = hy - 8, x1 = R.beam.tgt.x, y1 = GROUND - (R.beam.tgt.boss ? 60 : 30), w = 3 + R.beam.i * 1.4 + Math.sin(t * 40) * 0.6; add();
+      vLine0(x0, y0, x1, y1, '160,100,255', 0.3, w * 5); vLine0(x0, y0, x1, y1, '200,150,255', 0.7, w * 2.2); vLine0(x0, y0, x1, y1, '255,250,255', 0.95, w * 0.8);
+      for (let i = 0; i < 8; i++) { const u = (t * 2.5 + i / 8) % 1; vStar(x0 + (x1 - x0) * u, y0 + (y1 - y0) * u + Math.sin(i * 5 + t * 20) * w, 2.5, t * 6 + i, '255,235,255', 0.9, 4, 0.2); }
+      glowDot(x0, y0, 16 + w, '200,150,255', 0.9); glowDot(x1, y1, 22 + w * 3, '200,150,255', 0.85); for (let i = 0; i < 6; i++) { const a = t * 5 + i * 1.047; vLine0(x1, y1, x1 + Math.cos(a) * (14 + w * 2), y1 + Math.sin(a) * (14 + w * 2), '230,200,255', 0.6, 1.5); } norm(); }
+    // Flammenwerfer: Feuerkegel nach vorne, vorne weiß-gelb, hinten rot mit Rauch
+    if (R.flameT > 0 && P('e')) { const x0 = R.frontX + 18, A = Math.min(1, R.flameT * 2);
+      for (let i = 0; i < 8; i++) { const f = (t * 2 + i / 8) % 1; if (f < 0.6) continue; ctx.fillStyle = `rgba(70,60,60,${0.3 * (1 - f) * 2.5 * A})`; ctx.beginPath(); ctx.arc(x0 + f * 140, GROUND - 30 - f * 16 + Math.sin(i * 3) * 6, 6 + f * 14, 0, 7); ctx.fill(); }
+      add(); for (let i = 0; i < 22; i++) { const f = (t * 3.2 + i / 22) % 1, x = x0 + f * 130, y = GROUND - 26 + Math.sin(i * 7.3 + t * 18) * 8 * f, r = 4 + f * 15; glowDot(x, y, r, f < 0.25 ? '255,240,180' : f < 0.6 ? '255,160,60' : '255,80,30', (0.95 - f * 0.6) * A); } glowDot(x0, GROUND - 26, 14, '255,230,150', A); norm(); }
+    // Zielschuss: Laserlinie zum stärksten Gegner, Fadenkreuz zieht sich zusammen
+    if (R.aimT > 0 && P('s')) { const tg = [...R.enemies].filter(e => e.x < 480).sort((a, b) => b.hp - a.hp)[0];
+      if (tg) { const tx = tg.x, ty = GROUND - (tg.boss ? 60 : 30), q = Math.max(0, R.aimT / 1.5), r = 10 + q * 22; ctx.setLineDash([6, 5]); ctx.lineDashOffset = -t * 30; vLine0(P('s') + 14, hy - 12, tx, ty, '126,224,138', 0.6, 1.4); ctx.setLineDash([]);
+        add(); vArc(tx, ty, r, 0, 7, '126,224,138', 0.9, 2); for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + q * 2; vLine0(tx + Math.cos(a) * (r - 6), ty + Math.sin(a) * (r - 6), tx + Math.cos(a) * (r + 6), ty + Math.sin(a) * (r + 6), '200,255,210', 1, 2); } glowDot(tx, ty, 6, '126,224,138', 0.9); norm(); } }
+    if (R.fx.sg_t_eber > 0) { boar(R.frontX + (0.5 - R.fx.sg_t_eber) * 600, t); for (let i = 0; i < 5; i++) { ctx.fillStyle = `rgba(150,120,80,${R.fx.sg_t_eber})`; ctx.beginPath(); ctx.arc(R.frontX + (0.5 - R.fx.sg_t_eber) * 600 - 20 - i * 10, GROUND - 4 - i * 2, 5 + i * 2, 0, 7); ctx.fill(); } }
+    // Erdbeben des Wächters: Risse im Boden und hochgeschleuderte Steine
+    if (R.fx.sg_w_beben > 0) { const A = Math.min(1, R.fx.sg_w_beben * 2.2), p = 1 - A; ctx.strokeStyle = `rgba(40,25,15,${A})`; ctx.lineWidth = 3; ctx.beginPath(); let x = R.frontX + 20; ctx.moveTo(x, GROUND + 1); while (x < W) { x += 12; ctx.lineTo(x, GROUND + 1 + (hash(x) - 0.5) * 6); } ctx.stroke();
+      for (let i = 0; i < 8; i++) { const rx = R.frontX + 40 + i * 30, ry = GROUND - 6 - Math.sin(Math.min(1, p * 1.6) * Math.PI) * (12 + hash(i) * 24); ctx.fillStyle = '#7a6250'; ctx.fillRect(rx, ry, 5 + hash(i + 2) * 4, 5); }
+      ctx.fillStyle = `rgba(150,120,90,${0.35 * A})`; ctx.fillRect(R.frontX + 20, GROUND - 10, W, 12); }
+    // Raketensalve: Explosion beim Ziel
+    if (R.fx.sg_e_rakete > 0 && R.fx.raketeX != null && R.fx.sg_e_rakete < 0.3) { const q = 1 - R.fx.sg_e_rakete / 0.3, x = R.fx.raketeX, y = GROUND - 34; add(); glowDot(x, y, 30 + q * 30, '255,140,50', 0.9 * (1 - q)); glowDot(x, y, 16, '255,240,200', 1 - q); vArc(x, y, 10 + q * 40, 0, 7, '255,200,120', 1 - q, 3); norm();
+      for (let i = 0; i < 4; i++) { ctx.fillStyle = `rgba(80,74,80,${0.5 * (1 - q)})`; ctx.beginPath(); ctx.arc(x + (hash(i) - 0.5) * 40, y - q * 20 - i * 4, 8 + q * 10, 0, 7); ctx.fill(); } }
     for (const e of R.enemies) {
-      if (e.manaT > 0) glowDot(e.x, GROUND - (e.boss ? 70 : 30), 16, '192,140,255', 0.5 + Math.sin(t * 12) * 0.2);
-      if (e.quakeT > 0) { ctx.fillStyle = 'rgba(120,90,60,.5)'; ctx.fillRect(e.x - 12, GROUND - 3, 24, 4); }
-      if (e.bleedT > 0) glowDot(e.x, GROUND - 22, 6, '200,30,40', 0.6);
+      const ey = GROUND - (e.boss ? 70 : 30);
+      // Manabrand: lila Flammen am Gegner
+      if (e.manaT > 0) { add(); glowDot(e.x, ey, 20, '192,140,255', 0.45); for (let i = 0; i < 4; i++) { const f = (t * 2 + i / 4) % 1; glowDot(e.x + (hash(i) - 0.5) * 18, ey + 14 - f * 34, 6 * (1 - f) + 2, '200,150,255', 0.8 * (1 - f)); } norm(); }
+      if (e.quakeT > 0) { ctx.strokeStyle = 'rgba(40,25,15,.75)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(e.x - 16, GROUND + 1); ctx.lineTo(e.x - 6, GROUND - 2); ctx.lineTo(e.x + 2, GROUND + 2); ctx.lineTo(e.x + 10, GROUND - 1); ctx.lineTo(e.x + 18, GROUND + 1); ctx.stroke(); }
+      if (e.bleedT > 0) { const f = (t * 1.5) % 1; ctx.fillStyle = 'rgba(190,20,30,.85)'; ctx.beginPath(); ctx.arc(e.x + 4, ey + 4 + f * 20, 2 * (1 - f) + 0.8, 0, 7); ctx.fill(); }
     }
+    // Seelenfessel: leuchtende Kette zwischen den Gegnern
     const linked = R.enemies.filter(e => e.linkT > 0);
-    if (linked.length > 1) { ctx.strokeStyle = 'rgba(107,224,184,.6)'; ctx.lineWidth = 2; ctx.setLineDash([4, 4]); ctx.beginPath(); linked.forEach((e, i) => (i ? ctx.lineTo(e.x, GROUND - 40) : ctx.moveTo(e.x, GROUND - 40))); ctx.stroke(); ctx.setLineDash([]); }
+    if (linked.length > 1) { add(); ctx.setLineDash([5, 4]); ctx.lineDashOffset = -t * 20; ctx.strokeStyle = 'rgba(107,224,184,.85)'; ctx.lineWidth = 2.5; ctx.beginPath(); linked.forEach((e, i) => (i ? ctx.lineTo(e.x, GROUND - 40) : ctx.moveTo(e.x, GROUND - 40))); ctx.stroke(); ctx.setLineDash([]); linked.forEach(e => glowDot(e.x, GROUND - 40, 10, '107,224,184', 0.6)); norm(); }
+    ctx.restore();
   }
+
   /* ---------- Kampfeffekte: Treffer, Einschläge, Fähigkeiten, Heilung ---------- */
   // Reine Anzeige. Die Spiellogik legt kleine Ereignisse in run.vq ab, hier werden daraus kurze Effekte.
   const VFX = [], VP = [], VFX_MAX = 90, VP_MAX = 260;
@@ -7009,26 +7053,27 @@
   // Leuchtspur hinter einem Geschoss (Positionen kurz vorher auf derselben Bahn)
   function projTrail(pos, p, n, step, fn) { for (let i = n; i >= 1; i--) { const pp = p - i * step; if (pp < 0) continue; const [tx, ty] = pos(pp); fn(tx, ty, 1 - i / (n + 1), i); } }
   function drawProj(a, t) {
-    const p = Math.min(1, a.t / a.d), arc = a.kind === 'hag' ? 50 : a.kind === 'feuer' || a.kind === 'licht' ? 6 : a.kind === 'shot' ? 0 : 14;
+    const p = Math.min(1, a.t / a.d), arc = a.kind === 'hag' ? 50 : a.kind === 'rakete' ? 40 : a.kind === 'feuer' || a.kind === 'licht' ? 6 : a.kind === 'shot' ? 0 : 14;
     const pos = pp => [a.x + (a.tx - a.x) * pp, a.y + (a.ty - a.y) * pp - Math.sin(pp * Math.PI) * arc];
     const [x, y] = pos(p), [bx, by] = pos(Math.max(0, p - 0.04)), ang = Math.atan2(y - by, x - bx || 0.001);
     ctx.save(); ctx.lineCap = 'round';
-    if (a.kind === 'feuer') {
+    if (a.kind === 'rakete') {
+      ctx.globalCompositeOperation = 'source-over'; projTrail(pos, p, 6, 0.035, (tx, ty, f) => { ctx.fillStyle = `rgba(110,104,110,${0.45 * f})`; ctx.beginPath(); ctx.arc(tx, ty, 2 + (1 - f) * 4, 0, 7); ctx.fill(); });
+      ctx.translate(x, y); ctx.rotate(ang); ctx.globalCompositeOperation = 'lighter'; glowDot(-9, 0, 7 + Math.sin(t * 40) * 1.5, '255,170,60', 0.9); ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = '#d8dce4'; rr(-7, -2.5, 12, 5, 2); ctx.fill(); ctx.fillStyle = '#e04a3a'; ctx.beginPath(); ctx.moveTo(5, -2.5); ctx.lineTo(9, 0); ctx.lineTo(5, 2.5); ctx.fill(); ctx.fillRect(-8, -4, 3, 2); ctx.fillRect(-8, 2, 3, 2);
+    } else if (a.kind === 'feuer') {
       ctx.globalCompositeOperation = 'lighter';
-      projTrail(pos, p, 6, 0.035, (tx, ty, f, i) => glowDot(tx, ty + Math.sin(t * 30 + i) * 1.5, 4 + f * 7, i < 3 ? '255,150,50' : '255,80,30', 0.55 * f));
-      glowDot(x, y, 16, '255,130,40', 0.8); ctx.globalCompositeOperation = 'source-over'; projTrail(pos, p, 4, 0.03, (tx, ty, f) => { ctx.fillStyle = `rgba(255,${90 + f * 80},30,${0.7 * f})`; ctx.beginPath(); ctx.arc(tx, ty, 2 + f * 3, 0, 7); ctx.fill(); }); ctx.fillStyle = '#ff7a1e'; ctx.beginPath(); ctx.arc(x, y, 5.5, 0, 7); ctx.fill(); ctx.fillStyle = '#ffd36a'; ctx.beginPath(); ctx.arc(x + 0.5, y - 0.5, 3.4, 0, 7); ctx.fill(); ctx.fillStyle = '#fff8dc'; ctx.beginPath(); ctx.arc(x + 1, y - 1, 1.6, 0, 7); ctx.fill();
+      glowDot(x, y, 10, '255,130,40', 0.5); ctx.globalCompositeOperation = 'source-over'; projTrail(pos, p, 4, 0.03, (tx, ty, f) => { ctx.fillStyle = `rgba(255,${90 + f * 80},30,${0.7 * f})`; ctx.beginPath(); ctx.arc(tx, ty, 2 + f * 3, 0, 7); ctx.fill(); }); ctx.fillStyle = '#ff7a1e'; ctx.beginPath(); ctx.arc(x, y, 5.5, 0, 7); ctx.fill(); ctx.fillStyle = '#ffd36a'; ctx.beginPath(); ctx.arc(x + 0.5, y - 0.5, 3.4, 0, 7); ctx.fill(); ctx.fillStyle = '#fff8dc'; ctx.beginPath(); ctx.arc(x + 1, y - 1, 1.6, 0, 7); ctx.fill();
     } else if (a.kind === 'kunai') {
-      ctx.globalCompositeOperation = 'lighter'; projTrail(pos, p, 4, 0.03, (tx, ty, f) => glowDot(tx, ty, 4 * f + 1, '255,90,110', 0.5 * f)); ctx.globalCompositeOperation = 'source-over';
-      ctx.translate(x, y); ctx.rotate(t * 28); ctx.fillStyle = '#e4e8ef'; for (let i = 0; i < 4; i++) { ctx.rotate(Math.PI / 2); ctx.beginPath(); ctx.moveTo(-1.6, 0); ctx.lineTo(0, -8); ctx.lineTo(1.6, 0); ctx.fill(); }
+            ctx.translate(x, y); ctx.rotate(t * 28); ctx.fillStyle = '#e4e8ef'; for (let i = 0; i < 4; i++) { ctx.rotate(Math.PI / 2); ctx.beginPath(); ctx.moveTo(-1.6, 0); ctx.lineTo(0, -8); ctx.lineTo(1.6, 0); ctx.fill(); }
       ctx.fillStyle = '#6a2030'; ctx.beginPath(); ctx.arc(0, 0, 1.8, 0, 7); ctx.fill();
     } else if (a.kind === 'nekro') {
       ctx.globalCompositeOperation = 'lighter';
-      projTrail(pos, p, 6, 0.04, (tx, ty, f, i) => glowDot(tx, ty + Math.sin(t * 14 + i) * 2.5, 2 + f * 6, '90,220,170', 0.5 * f));
-      glowDot(x, y, 12, '100,230,180', 0.85); ctx.globalCompositeOperation = 'source-over';
+      glowDot(x, y, 8, '100,230,180', 0.5); ctx.globalCompositeOperation = 'source-over';
       ctx.fillStyle = '#e8fff6'; ctx.beginPath(); ctx.arc(x, y - 0.5, 3.4, Math.PI, 0); ctx.lineTo(x + 3.4, y + 2.6); ctx.lineTo(x - 3.4, y + 2.6); ctx.closePath(); ctx.fill();
       ctx.fillStyle = '#1d4a3c'; ctx.fillRect(x - 2, y - 0.6, 1.3, 1.4); ctx.fillRect(x + 0.7, y - 0.6, 1.3, 1.4);
     } else if (a.kind === 'note') {
-      ctx.globalCompositeOperation = 'lighter'; projTrail(pos, p, 5, 0.05, (tx, ty, f, i) => vStar(tx, ty + Math.sin(i * 2 + t * 8) * 3, 2.2 * f + 0.6, t * 4 + i, '255,170,220', 0.8 * f)); glowDot(x, y - 3, 12, '255,130,200', 0.7);
+      ctx.globalCompositeOperation = 'lighter'; glowDot(x, y - 3, 8, '255,130,200', 0.4);
       ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = '#ffe6f3'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('♪', x, y + 3 + Math.sin(p * 12) * 3);
     } else if (a.kind === 'bomb') {
       ctx.translate(x, y); ctx.rotate(p * 9); ctx.fillStyle = '#26262e'; ctx.beginPath(); ctx.arc(0, 0, 4.6, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.arc(-1.5, -1.5, 1.4, 0, 7); ctx.fill();
@@ -7042,7 +7087,7 @@
     } else {
       // Pfeil (Schützin, Hagel, Gift)
       const gift = a.kind === 'gift', rgb = gift ? '150,230,90' : '200,255,210';
-      ctx.globalCompositeOperation = 'lighter'; const [sx, sy] = pos(Math.max(0, p - 0.12)); vLine(sx, sy, x, y, rgb, 0.35, 2); if (gift) glowDot(x, y, 8, rgb, 0.6); ctx.globalCompositeOperation = 'source-over';
+      ctx.globalCompositeOperation = 'lighter'; const [sx, sy] = pos(Math.max(0, p - 0.12)); vLine(sx, sy, x, y, rgb, 0.35, 2);  ctx.globalCompositeOperation = 'source-over';
       ctx.translate(x, y); ctx.rotate(ang);
       ctx.fillStyle = '#d8ccae'; ctx.fillRect(-10, -0.9, 15, 1.8); ctx.fillStyle = gift ? '#9be36b' : '#dfe4ea'; ctx.beginPath(); ctx.moveTo(4, -3); ctx.lineTo(10, 0); ctx.lineTo(4, 3); ctx.fill();
       ctx.fillStyle = gift ? '#5fae3c' : '#4caf6a'; ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(-13, -3); ctx.lineTo(-7, 0); ctx.lineTo(-13, 3); ctx.fill();

@@ -225,7 +225,7 @@
         <div class="topbar"><button class="btn ghost small" id="soloBack" aria-label="Zurück zu den Spielen">‹<span class="rl-backtxt"> Spiele</span></button><div class="title"><b>Ritterlauf</b><small>Solo</small></div><div class="rl-topwallet" id="rlWallet"></div>
           <div class="rl-topr"><button class="btn ghost small rl-newsbtn" id="soloSnd" aria-label="Ton an oder aus"></button><button class="btn ghost small rl-newsbtn" id="soloFriends" aria-label="Freunde">👥<span class="dot" hidden></span></button><button class="btn ghost small rl-newsbtn" id="soloGuild" aria-label="Gilde">🛡<span class="dot" hidden></span></button><button class="btn ghost small rl-newsbtn" id="soloNews" aria-label="Neuigkeiten">📰<span class="dot" hidden></span></button><button class="btn ghost small" id="soloSpeed">Tempo ×1</button></div></div>
         <div class="rl-main"><div class="rl-left">
-          <div class="rl-stage"><div id="soloCanvas" class="rl-canvas"></div></div>
+          <div class="rl-stage"><div id="soloCanvas" class="rl-canvas"><button class="rl-fsbtn" id="rlFull" aria-label="Vollbild" title="Vollbild">⛶</button></div></div>
           <div class="rl-heroes" id="rlHeroes"></div>
           <div class="rl-bar"><div class="rl-stat" id="rlStat"></div><div id="rlAction" class="row"></div></div></div>
         <div class="rl-right"><div class="rl-subbar" id="rlSub"></div><div id="rlPanel"></div><nav class="rl-tabs" role="tablist"></nav></div></div>`;
@@ -247,6 +247,10 @@
         if (x > 90 && x < 400 && y > 80) openSquad();
       });
       window.addEventListener('resize', () => { sizeCanvas(); if (active) heroes(); if (squad && !squad.el.hidden) sizeSquad(); });
+      // Spielfeld neu anpassen, sobald sich die Breite ändert (z. B. Tablet drehen, Menü ein- und ausblenden)
+      if (window.ResizeObserver) { let rw = 0; new ResizeObserver(() => { const w = $('#soloCanvas').clientWidth; if (w && Math.abs(w - rw) > 2) { rw = w; sizeCanvas(); } }).observe($('#soloCanvas')); }
+      $('#rlFull').onclick = e => { e.stopPropagation(); setFull(!$('#solo').classList.contains('rl-full')); };
+      document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && $('#solo').classList.contains('rl-full')) setFull(false); });
       $('#soloBack').onclick = close;
       $('#soloNews').onclick = showUpdates; $('#soloFriends').onclick = showFriends; $('#soloGuild').onclick = showGuild;
       $('#soloSnd').onclick = () => soundMenu();
@@ -254,7 +258,7 @@
       $('#soloSpeed').onclick = () => { if (acct && acct.tester) { testSpeed(); return; } S.speed = S.speed >= maxSpeed(S) ? 1 : S.speed < 3 ? S.speed + 1 : S.speed + 0.5; save(); hud(); };
       const tabClick = e => {
         if (e.target.closest('[data-help]')) { S.uiHelp = !S.uiHelp; save(); renderTabs(); panel(); return; }
-        const b = e.target.closest('[data-tab]'); if (b) { tab = b.dataset.tab; confirm = ''; runeSel = null; wRes = null; fRes = null; renderTabs(); panel(); $('#rlPanel').scrollTop = 0; } };
+        const b = e.target.closest('[data-tab]'); if (b) { tab = b.dataset.tab; confirm = ''; runeSel = null; wRes = null; fRes = null; renderTabs(); panel(); $('#rlPanel').scrollTop = 0; const M = $('.rl-main'), R = $('.rl-right'); if (M && R && M.scrollHeight > M.clientHeight) { const top = M.scrollTop + R.getBoundingClientRect().top - M.getBoundingClientRect().top; if (M.scrollTop > top) M.scrollTop = top; } } };
       $('.rl-tabs').onclick = tabClick; $('#rlSub').onclick = tabClick;
       for (const id of ['#rlPanel', '#rlAction', '#rlHeroes']) $(id).addEventListener('click', onClick);
       $('#rlPanel').addEventListener('submit', onSubmit);
@@ -403,18 +407,29 @@
     FR.data = r; frDot(); frLists(); msg(r.msg || ''); SND.play('buy');
     if (a === 'add') { const i = $('#frName'); if (i) i.value = ''; }
   }
-  function close() { frStop(); MUS.set(null); SND.ambient(false); closeSquad(); intro = null; const tov = document.querySelector('.rl-title'); if (tov) tov.remove(); active = false; cancelAnimationFrame(raf); save(); cloudSave(true); $('#solo').hidden = true; $('#solo').classList.remove('rl-app'); document.documentElement.classList.remove('rl-appmode'); $('#hub').hidden = false; }
+  function close() { if ($('#solo').classList.contains('rl-full')) setFull(false); frStop(); MUS.set(null); SND.ambient(false); closeSquad(); intro = null; const tov = document.querySelector('.rl-title'); if (tov) tov.remove(); active = false; cancelAnimationFrame(raf); save(); cloudSave(true); $('#solo').hidden = true; $('#solo').classList.remove('rl-app'); document.documentElement.classList.remove('rl-appmode'); $('#hub').hidden = false; }
+  // Vollbild: nur Spielfeld und Knopfleiste. Echtes Vollbild, wo der Browser es erlaubt, sonst füllt die Seite den Bildschirm.
+  function setFull(on) {
+    const el = $('#solo'); el.classList.toggle('rl-full', on); const b = $('#rlFull'); if (b) { b.textContent = on ? '✕' : '⛶'; b.setAttribute('aria-label', on ? 'Vollbild beenden' : 'Vollbild'); }
+    try {
+      if (on && !document.fullscreenElement && document.documentElement.requestFullscreen) { const p = document.documentElement.requestFullscreen({ navigationUI: 'hide' }); if (p && p.then) p.then(() => { try { const q = screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape'); if (q && q.catch) q.catch(() => {}); } catch {} }).catch(() => {}); }
+      if (!on && document.fullscreenElement && document.exitFullscreen) { const p = document.exitFullscreen(); if (p && p.catch) p.catch(() => {}); }
+    } catch {}
+    sizeCanvas(); requestAnimationFrame(sizeCanvas); setTimeout(sizeCanvas, 300);
+  }
   function sizeCanvas() {
-    const host = $('#soloCanvas'), app = $('#solo').classList.contains('rl-app'), wide = window.innerWidth > 760, flat = window.innerHeight <= 560 && window.innerWidth > window.innerHeight;
+    const host = $('#soloCanvas'), app = $('#solo').classList.contains('rl-app'), wide = window.innerWidth > 760 && window.innerWidth >= window.innerHeight, flat = window.innerHeight <= 560 && window.innerWidth > window.innerHeight;
     // App-Ansicht: Spielfeld so groß, wie es neben bzw. über das Menü passt
     let maxH = 1e9;
-    if (app) {
+    if (app && $('#solo').classList.contains('rl-full')) maxH = window.innerHeight - $('.rl-bar').offsetHeight - 14;
+    else if (app) {
       if (wide || flat) { const L = $('.rl-left'), used = ($('#rlHeroes').hidden ? 0 : $('#rlHeroes').offsetHeight) + $('.rl-bar').offsetHeight + 34; maxH = Math.max(140, (L ? L.clientHeight : window.innerHeight) - used); }
-      else maxH = Math.max(150, window.innerHeight * 0.27);
+      else maxH = Math.max(150, window.innerHeight * (window.innerWidth > 760 ? 0.5 : 0.33));
     }
-    const w = Math.max(240, Math.min(host.clientWidth || 360, 1400, maxH * W / H));
+    const w = Math.max(240, Math.min(host.clientWidth || 360, $('#solo').classList.contains('rl-full') ? 4000 : 1400, maxH * W / H));
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     cv.style.width = w + 'px'; cv.style.height = (w * H / W) + 'px'; cv.width = Math.round(w * dpr); cv.height = Math.round(w * H / W * dpr); scale = cv.width / W;
+    const fb = $('#rlFull'); if (fb) fb.style.right = Math.max(4, (host.clientWidth - w) / 2 + 8) + 'px';
   }
   /* ---------- Gilden ---------- */
   // Bis zu 5 Spieler. Beitreten per Einladung des Gründers oder per Anfrage, die der Gründer bestätigt.
@@ -763,20 +778,20 @@
       const note = it ? (x.n === 1 ? '<em class="new">NEU!</em>' : `<em>×${x.n}</em>`) : '';
       return `<div class="rl-pcard ${cls}" style="--d:${(0.15 + i * 0.12).toFixed(2)}s"><div class="in"><div class="bk"><img src="${chestIconURL(x.rar)}" alt=""></div><div class="fr"><div class="glow"></div>${pic}<b>${name}</b><small>${RAR[x.rar]}</small>${note}</div></div></div>`;
     };
-    const any = chestCount(S) > 0;
+    const n = chestCount(S), pc = v => String(v).replace('.', ',');
     modal(`<div class="rl-chests"><h2>🧰 Albtraum-Truhen</h2>
         ${res.length ? `<div class="rl-pcards n${Math.min(10, res.length)} rl-cres">${res.map(card).join('')}</div>` : ''}
-        <div class="rl-chrow">${[1, 2, 3, 4].map(r => { const n = (S.chest && S.chest[r]) || 0; return `<div class="rl-chest ${n ? '' : 'empty'}" style="--rc:${RAR_COL[r]}"><img src="${chestIconURL(r)}" alt=""><b>${RAR[r]}</b><span>×${n}</span>
-          <div class="row"><button class="btn small" data-ch="${r}:1" ${n && inCamp() ? '' : 'disabled'}>Öffnen</button>${n > 1 ? `<button class="btn ghost small" data-ch="${r}:10" ${inCamp() ? '' : 'disabled'}>${Math.min(10, n)}×</button>` : ''}</div></div>`; }).join('')}</div>
-        ${any ? `<div class="row" style="justify-content:center"><button class="btn gold" data-ch="all" ${inCamp() ? '' : 'disabled'}>Alle öffnen (bis 10)</button></div>` : '<p class="note" style="text-align:center">Keine Truhen. Im Albtraum (ab Stufe 151) lässt jeder Boss eine Truhe fallen. Je tiefer, desto besser.</p>'}
-        <p class="note">Gewöhnlich: Gold oder Seelen · Selten: Färbungen und Deko · Episch: neue Formen, Tiere und Himmel · Legendär: Albtraumfürst, Sternenkönig und mehr.</p>
+        <div class="rl-chone ${n ? '' : 'empty'}"><img src="${chestIconURL(3)}" alt=""><div><b>Albtraum-Truhe</b><span>×${n}</span></div></div>
+        ${n ? `<div class="row" style="justify-content:center"><button class="btn" data-ch="1" ${inCamp() ? '' : 'disabled'}>Eine öffnen</button><button class="btn gold" data-ch="10" ${inCamp() ? '' : 'disabled'}>${Math.min(10, n)} öffnen</button></div>` : '<p class="note" style="text-align:center">Keine Truhen. Im Albtraum (ab Stufe 151) lässt jeder Boss eine Truhe fallen.</p>'}
+        ${inCamp() ? '' : '<p class="note" style="text-align:center">Öffnen geht nur im Lager.</p>'}
+        <div class="rl-chodds"><span style="--rc:${RAR_COL[4]}">Legendär <b>${pc(CHEST.leg * 100)} %</b></span><span style="--rc:${RAR_COL[3]}">Episch <b>${pc(CHEST.epic * 100)} %</b></span><span style="--rc:${RAR_COL[2]}">Selten <b>${pc(CHEST.rare * 100)} %</b></span><span style="--rc:${RAR_COL[1]}">Gold oder Seelen <b>${pc(Math.round((1 - CHEST.leg - CHEST.epic - CHEST.rare) * 1000) / 10)} %</b></span></div>
+        <p class="note">Jede Truhe hat dieselben festen Chancen, egal wie weit du bist. Selten: Färbungen und Deko · Episch: neue Formen, Tiere und Himmel · Legendär: Albtraumfürst, Sternenkönig und mehr.</p>
         <div class="row" style="justify-content:center;margin-top:6px"><button class="btn ghost" data-m="x">Schließen</button></div></div>`, 'rl-chestm');
     if (res.length) { const best = Math.max(...res.map(x => x.rar)); setTimeout(() => SND.play(best >= 4 ? 'victory' : best >= 3 ? 'forge' : 'buy'), 500); }
     $('#picker .rl-chestm').addEventListener('click', e => {
       const b = e.target.closest('[data-ch]'); if (!b || b.disabled || !inCamp()) return;
       const out = [];
-      if (b.dataset.ch === 'all') { for (const r of [4, 3, 2, 1]) while (out.length < 10 && S.chest[r] > 0) out.push(openChest(S, r)); }
-      else { const [r, n] = b.dataset.ch.split(':').map(Number); for (let i = 0; i < n && S.chest[r] > 0; i++) out.push(openChest(S, r)); }
+      for (let i = 0, n = Number(b.dataset.ch) || 1; i < n && chestCount(S) > 0; i++) out.push(openChest(S));
       const got = out.filter(Boolean); if (!got.length) return;
       save(); cloudSave(true); refresh(); showChests(got);
     });
@@ -1072,7 +1087,7 @@
     if (R.mode === 'tower' && R.stage > (R.towerBefore || 0)) add('🏰', `Neuer Turm-Rekord: <b>Etage ${R.stage}</b> · +${R.stage * 3} % Schaden und Leben bis zum Aufstieg`, '#c9a6ff', 'hot');
     if (R.mode === 'normal' && S.best > (R.bestBefore || 0)) add('★', `Neuer Rekord: <b>Stufe ${S.best}</b>`, '#ffb547', 'hot');
     if (R.trophies) for (const id of R.trophies) add('🏆', `Trophäe für dein Lager: <b>${esc(ITEMS[id].n)}</b>`, '#c98aff', 'hot');
-    if (R.chests && R.chests.length) { const c = {}; R.chests.forEach(r => (c[r] = (c[r] || 0) + 1)); add('🧰', `Albtraum-Truhen: ${[4, 3, 2, 1].filter(r => c[r]).map(r => `<b style="color:${RAR_COL[r]}">${c[r]}× ${RAR[r]}</b>`).join(', ')} · öffnen am Anschlagbrett`, '#ffd23f', 'hot'); }
+    if (R.chests && R.chests.length) add('🧰', `<b>${R.chests.length}× Albtraum-Truhe</b> · öffnen am Anschlagbrett`, '#ffd23f', 'hot');
     if (res.area) add('⚑', `Neues Startgebiet frei: <b>${esc(res.area)}</b>`, '#7ee08a', 'hot');
     if (R.ahnReward && !R.ahnReward.sigil) add('✦', `Mission ${R.ahnReward.mission + 2} ist frei: <b>${esc(AHN_MISSIONS[R.ahnReward.mission + 1].name)}</b>`, '#ffd27a');
     if (R.wfKilled) add('🐉', `<b>Der Weltenfresser ist gefallen!</b> ${R.wfKilled.first ? 'Du bist jetzt Weltenbezwinger · ' : ''}+${R.wfKilled.crowns} Kronen`, '#ffb070', 'hot');
@@ -1139,7 +1154,7 @@
     const live = run && !run.dead, box = $('#rlHeroes'), h0 = box.offsetHeight;
     if (cv && $('#solo').classList.contains('rl-app')) requestAnimationFrame(() => { if (box.offsetHeight !== h0 || !box.dataset.sized) { box.dataset.sized = 1; sizeCanvas(); } });
     // Auf breiten Bildschirmen ist links genug Platz: dort ist die Truppe immer sichtbar
-    const show = S.uiTroop || (window.innerWidth > 760 && window.innerHeight > 560 && $('#solo').classList.contains('rl-app'));
+    const show = S.uiTroop || (window.innerWidth > 760 && window.innerHeight > 560 && window.innerWidth >= window.innerHeight && $('#solo').classList.contains('rl-app'));
     box.hidden = !show;
     if (!show) { box.innerHTML = ''; return; }
     // Nur die Helden, die gerade in der Truppe sind
@@ -1634,7 +1649,7 @@
     p.innerHTML = html;
     if (openDet && p.querySelector('details')) p.querySelector('details').open = true;
     // Lange Erklärtexte nur, wenn der ?-Knopf an ist (kurze Hinweise mit Zahlen bleiben sichtbar)
-    p.querySelectorAll('p.note').forEach(n => { if (!n.querySelector('button,input,select,a') && n.textContent.trim().length > 70) n.classList.add('rl-long'); });
+    p.querySelectorAll('p.note').forEach(n => { if (!n.querySelector('button,input,select,a') && !n.closest('.rl-perk') && n.textContent.trim().length > 70) n.classList.add('rl-long'); });
     p.classList.toggle('rl-showhelp', !!S.uiHelp);
   }
   function standHTML() {
@@ -1844,8 +1859,10 @@
 
   function mastHTML(h) {
     const mi = mastInfo((S.mast || {})[h.id]), cur = (S.skin || {})[h.id] || 'std', pct = mi.L >= MAST_MAX ? 100 : Math.floor(mi.rest / mi.need * 100);
-    return `<div class="rl-mast" style="--hc:${h.color}" title="Meisterschaft: +${2 * mi.L} % Schaden und Leben"><div class="rl-mrow"><b>★ ${mi.L}/${MAST_MAX}</b><span class="rl-mbar"><i style="width:${pct}%"></i></span><small>${mi.L >= MAST_MAX ? 'Max' : `${fmt(mi.rest)}/${fmt(mi.need)}`} · +${2 * mi.L} %</small>
-      <span class="rl-skins">${SKINS.map(k => { const ok = mi.L >= k.L; return `<button class="rl-skin ${cur === k.id ? 'on' : ''} ${ok ? '' : 'locked'}" data-skin="${h.id}:${k.id}" ${ok ? '' : 'disabled'} style="--sc:${k.tint || h.color}" title="${esc(k.name)}${ok ? '' : ` (ab Meisterschaft ${k.L})`}" aria-label="Aussehen ${esc(k.name)}"><i></i></button>`; }).join('')}</span></div>
+    const skins = SKINS.map(k => { const ok = mi.L >= k.L;
+      return `<button class="rl-skin ${cur === k.id ? 'on' : ''} ${ok ? '' : 'locked'}" data-skin="${h.id}:${k.id}" ${ok ? '' : 'disabled'} style="--sc:${k.tint || h.color}" title="${esc(k.name)}${ok ? '' : ` (ab Meisterschaft ${k.L})`}" aria-label="Aussehen ${esc(k.name)}"><span class="pic"><img src="${skinPortraitURL(h.id, k.id)}" alt="">${ok ? '' : `<em>🔒 ★${k.L}</em>`}</span><small>${esc(k.name)}</small></button>`; }).join('');
+    return `<div class="rl-mast" style="--hc:${h.color}" title="Meisterschaft: +${2 * mi.L} % Schaden und Leben"><div class="rl-mrow"><b>★ ${mi.L}/${MAST_MAX}</b><span class="rl-mbar"><i style="width:${pct}%"></i></span><small>${mi.L >= MAST_MAX ? 'Max' : `${fmt(mi.rest)}/${fmt(mi.need)}`} · +${2 * mi.L} %</small></div>
+      <div class="rl-skins">${skins}</div>
       <p class="note rl-long">Meisterschaft sammelt jeder Held mit jedem besiegten Gegner, solange er kämpft. Sie bleibt für immer, auch über Wiedergeburt und Aufstieg.</p></div>`;
   }
   /* ---------- Aufstiegsränge ---------- */
