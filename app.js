@@ -28,7 +28,7 @@ const GAMES = [
   { key: 'party', title: 'Minispiel-Party', sub: 'Zufällige Minispiele à 1–2 Minuten, Punkte nach Platzierung · 2–12 Spieler',
     art: ['r', 'g', 'b', 'y'].map((c, i) => `<span class="s-${c}" style="width:28px;height:28px;border-radius:8px;display:inline-block;transform:rotate(${i * 9 - 12}deg)"></span>`).join('') },
 ];
-const gameOf = k => GAMES.find(g => g.key === k) || { title: k };
+const gameOf = k => GAMES.find(g => g.key === k) || (k === 'casino' ? { title: 'Casino' } : { title: k });
 
 let key = store.get('fsg.key');
 if (!key) { const a = new Uint8Array(16); crypto.getRandomValues(a); key = [...a].map(b => b.toString(16).padStart(2, '0')).join(''); store.set('fsg.key', key); }
@@ -47,7 +47,7 @@ function send(m) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(m)); }
 function act(a) { send({ t: 'act', a }); }
 function onMsg(m) {
   if (m.t === 'hi') pid = m.pid;
-  else if (m.t === 'rooms') { rooms = m.rooms; if (!room) renderRooms(); }
+  else if (m.t === 'rooms') { rooms = m.rooms; if (!room) renderRooms(); if (window.Casino && Casino.isLobby()) Casino.refreshLobby(); }
   else if (m.t === 'room') {
     room = m.room; roomId = room.id; store.set('fsg.room', roomId);
     if (room.view && room.view.left != null) deadline = Date.now() + room.view.left; else deadline = null;
@@ -73,7 +73,11 @@ setInterval(() => {
 /* ---------- Hub ---------- */
 function renderTiles() {
   $('#tiles').innerHTML = `<div class="tile wide solo-tile"><div class="art"><span class="rl-art"></span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b>Ritterlauf <span class="pill">Solo</span></b><span class="sub">Deine Heldengruppe kämpft sich von allein durch Gegnerwellen. Sechs Klassen, Fertigkeitenbäume, Runen, Wiedergeburt und Aufstieg – und eine Bestenliste mit deinen Freunden.</span></div>
-      <button class="btn small" data-solo="1">Spielen</button></div>` + GAMES.map(g => g.key === 'party'
+      <button class="btn small" data-solo="1">Spielen</button></div>
+    <div class="tile wide solo-tile ww-tile"><div class="art"><span class="ww-art"></span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b>Würfelwelt <span class="pill">Solo</span></b><span class="sub">Eine unendliche Welt aus Würfeln: Wälder, Wüsten, Schneeberge und Höhlen. Abbauen, bauen, entdecken – im Kreativ- oder Überlebensmodus.</span></div>
+      <button class="btn small" data-welt="1">Spielen</button></div>
+    <div class="tile wide solo-tile cz-tile"><div class="art"><span class="cz-art"></span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b>Casino Aurum <span class="pill">Spielgeld</span></b><span class="sub">Blackjack, Roulette, Texas Hold'em, Pferderennen und Spielautomat – allein gegen Bots oder am Tisch mit Freunden. Nur Spieljetons, kein echtes Geld.</span></div>
+      <button class="btn small" data-casino="1">Spielen</button></div>` + GAMES.map(g => g.key === 'party'
     ? `<div class="tile wide"><div class="art">${g.art}</div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b>${esc(g.title)}</b><span class="sub">${esc(g.sub)}</span></div>
       <button class="btn small" data-create="${g.key}">Party starten</button></div>`
     : `<div class="tile"><div class="art">${g.art}</div><b>${esc(g.title)}</b><span class="sub">${esc(g.sub)}</span>
@@ -96,7 +100,26 @@ function needNick() {
   if (!n) { toast('Gib zuerst deinen Namen ein.'); $('#nick').focus(); return false; }
   store.set('fsg.nick', n); send({ t: 'name', name: n }); return true;
 }
-$('#tiles').addEventListener('click', e => { if (e.target.closest('[data-solo]')) { window.Ritter.open(); return; } const b = e.target.closest('[data-create]'); if (b && needNick()) send({ t: 'create', game: b.dataset.create }); });
+// Casino wird erst geladen, wenn es jemand braucht
+function loadCasino(cb) {
+  if (window.Casino) { cb(); return; }
+  if (loadCasino.busy) { loadCasino.q.push(cb); return; }
+  loadCasino.busy = true; loadCasino.q = [cb];
+  const sc = document.createElement('script'); sc.src = 'casino_ui.js';
+  sc.onload = () => { loadCasino.busy = false; loadCasino.q.forEach(f => f()); };
+  sc.onerror = () => { loadCasino.busy = false; toast('Das Casino konnte nicht geladen werden.'); sc.remove(); };
+  document.body.appendChild(sc);
+}
+// Würfelwelt wird erst geladen, wenn jemand sie startet (spart Datenvolumen)
+function openWelt(btn) {
+  if (window.Welt) { window.Welt.open(); return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Lädt …'; }
+  const sc = document.createElement('script'); sc.src = 'welt.js';
+  sc.onload = () => { if (btn) { btn.disabled = false; btn.textContent = 'Spielen'; } if (window.Welt) window.Welt.open(); };
+  sc.onerror = () => { if (btn) { btn.disabled = false; btn.textContent = 'Spielen'; } toast('Würfelwelt konnte nicht geladen werden.'); sc.remove(); };
+  document.body.appendChild(sc);
+}
+$('#tiles').addEventListener('click', e => { if (e.target.closest('[data-solo]')) { window.Ritter.open(); return; } const ww = e.target.closest('[data-welt]'); if (ww) { openWelt(ww); return; } if (e.target.closest('[data-casino]')) { loadCasino(() => Casino.openLobby()); return; } const b = e.target.closest('[data-create]'); if (b && needNick()) send({ t: 'create', game: b.dataset.create }); });
 $('#rooms').addEventListener('click', e => { const b = e.target.closest('[data-join]'); if (b && needNick()) send({ t: 'join', room: b.dataset.join }); });
 $('#nick').addEventListener('change', () => { const n = nick(); if (n) { store.set('fsg.nick', n); send({ t: 'name', name: n }); } });
 
@@ -121,6 +144,7 @@ function renderRoom() {
   else if (r.game === 'vier') renderVier(st, r.view);
   else if (r.game === 'maedn') renderMaedn(st, r.view);
   else if (r.game === 'party') renderParty(st, r.view);
+  else if (r.game === 'casino') { if (window.Casino) { Casino.closeLobby(); Casino.render(st, r.view); } else loadCasino(() => { if (room && room.game === 'casino') renderRoom(); }); }
   else if (window.Spiele2 && Spiele2[r.game]) Spiele2[r.game](st, r.view);
 }
 function setMode(st, mode) { if (st.dataset.mode !== mode) { st.dataset.mode = mode; st.innerHTML = ''; } }

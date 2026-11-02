@@ -653,8 +653,9 @@
   /* ================= Aufstieg (2. Prestige-Ebene) ================= */
   const ASC_REQ_REBIRTHS = 9, ASC_REQ_STAGE = 150;
   const CPERKS = [
-    { id: 'k_blut', name: 'Königsblut', desc: 'Alle Helden ×1,5 Schaden und Leben je Stufe', max: 999, cost: r => 3 + 2 * r },
-    { id: 'k_schatz', name: 'Schatzkammer', desc: 'Doppeltes Gold je Stufe', max: 999, cost: r => 3 + 2 * r },
+    // Königsblut und Schatzkammer wirken mal-genommen, darum werden sie stark teurer (sonst wird jeder Aufstieg zum Spaziergang)
+    { id: 'k_blut', name: 'Königsblut', desc: 'Alle Helden ×1,5 Schaden und Leben je Stufe', max: 999, cost: r => Math.ceil(3 * Math.pow(1.45, r)) },
+    { id: 'k_schatz', name: 'Schatzkammer', desc: 'Doppeltes Gold je Stufe', max: 999, cost: r => Math.ceil(3 * Math.pow(1.45, r)) },
     { id: 'k_sterne', name: 'Sternenerbe', desc: '+50 % Sterne bei jeder Wiedergeburt je Stufe', max: 10, cost: r => 4 + 2 * r },
     { id: 'k_seele', name: 'Seelenfluss', desc: 'Bosse geben doppelt so viele Seelen je Stufe', max: 5, cost: r => 4 + 3 * r },
     { id: 'k_schnell', name: 'Schneller Weg', desc: 'Jede Wiedergeburt braucht 5 Stufen weniger je Stufe', max: 3, cost: r => 6 + 3 * r },
@@ -664,9 +665,10 @@
     { id: 'k_feld', name: 'Sechster Platz', desc: '+1 Platz auf dem Feld, für immer. Zusammen mit dem Fünften Platz aus dem Sternen-Laden kämpfen alle 6 Helden', max: 1, cost: () => 10 },
   ];
   const CPERK = Object.fromEntries(CPERKS.map(p => [p.id, p]));
-  // Grundwert: 1. Aufstieg 25, 2. Aufstieg 18, danach 10 Kronen. Dazu +1 je 4 Stufen über 150
+  // Grundwert: 1. Aufstieg 25, 2. Aufstieg 18, danach 10 Kronen. Dazu ein Bonus für tiefe Läufe, der langsamer wächst und bei 20 endet
   const ascBase = S => [25, 18][S.asc || 0] ?? 10;
-  const crownsFor = S => (S.rebirths >= ASC_REQ_REBIRTHS && S.best >= ASC_REQ_STAGE ? ascBase(S) + Math.floor((S.best - ASC_REQ_STAGE) / 4) : 0);
+  const ascDeep = best => Math.min(20, Math.floor(Math.sqrt(Math.max(0, best - ASC_REQ_STAGE)) * 1.2));
+  const crownsFor = S => (S.rebirths >= ASC_REQ_REBIRTHS && S.best >= ASC_REQ_STAGE ? ascBase(S) + ascDeep(S.best) : 0);
   const ASC_ROAD = [
     { a: 1, text: 'Kronen-Laden mit dauerhaften Königs-Boni' }, { a: 2, text: 'Begleiter: Drache und Eule' }, { a: 3, text: 'Begleiter: Golem' },
     { a: 4, text: 'Begleiter: Phönix und ein zweiter Begleiter-Platz' }, { a: 5, text: 'Begleiter bis Stufe 100' },
@@ -1474,7 +1476,7 @@
     if (old) { S.chest[old]--; rar = old; } else if (S.chest[1] > 0) { S.chest[1]--; rar = chestRar(); } else return null;
     if (rar === 1) {
       const R = hoursReward(S, 0.25, 1);
-      if (Math.random() < 0.6 || !R.souls) { const g = Math.max(1, R.gold); S.gold = Math.min(1e18, S.gold + g); return { rar, kind: 'gold', n: g }; }
+      if (Math.random() < 0.6 || !R.souls) { const g = Math.max(1, R.gold); S.gold = Math.min(GOLD_MAX, S.gold + g); return { rar, kind: 'gold', n: g }; }
       const s = Math.max(1, R.souls); S.souls += s; S.tot.souls += s; return { rar, kind: 'souls', n: s };
     }
     const deco = Math.random() < (rar === 4 ? 0.25 : 0.35);
@@ -1604,7 +1606,7 @@
   function claimTrip(S, id, now = Date.now()) {
     const T = S.trips && S.trips[id]; if (!T || tripLeft(S, id, now) > 0) return null;
     const r = tripReward(S, T);
-    S.gold = Math.min(1e18, S.gold + r.gold); S.souls += r.souls; S.tot.souls += r.souls; S.dust += r.dust; if (r.spl) S.exp.spl += r.spl; if (r.gem) S.gem += r.gem;
+    S.gold = Math.min(GOLD_MAX, S.gold + r.gold); S.souls += r.souls; S.tot.souls += r.souls; S.dust += r.dust; if (r.spl) S.exp.spl += r.spl; if (r.gem) S.gem += r.gem;
     // Platz für spätere Fundstücke: r.extra
     delete S.trips[id]; S.tripsDone = (S.tripsDone || 0) + 1;
     return { id, h: T.h, ...r };
@@ -1640,7 +1642,7 @@
     if (!bars) return { gold: 0, souls: 0, dust: 0, spl: 0 };
     const R = rateOf(S), sec = wbBarSecs(bars);
     const r = { gold: Math.floor(R.g * sec), souls: Math.floor(R.s * sec), dust: feature(S, 'runen') ? Math.floor(R.d * sec) : 0, spl: expOpen(S) ? Math.floor(bars / 10) : 0 };
-    S.gold = Math.min(1e18, S.gold + r.gold); S.souls += r.souls; S.tot.souls += r.souls; S.dust += r.dust; if (r.spl) S.exp.spl += r.spl;
+    S.gold = Math.min(GOLD_MAX, S.gold + r.gold); S.souls += r.souls; S.tot.souls += r.souls; S.dust += r.dust; if (r.spl) S.exp.spl += r.spl;
     S.wbBest = Math.max(S.wbBest || 0, bars);
     return r;
   }
@@ -1649,7 +1651,7 @@
   function wbReward(S, goals) {
     const n = Math.max(0, Math.min(WB.goals.length, Math.floor(goals) || 0));
     const r = n ? hoursReward(S, wbGoalHours(n), 0.5) : { gold: 0, souls: 0, dust: 0, spl: 0 };
-    S.gold = Math.min(1e18, S.gold + r.gold); S.souls += r.souls; S.tot.souls += r.souls; S.dust += r.dust; if (r.spl) S.exp.spl += r.spl;
+    S.gold = Math.min(GOLD_MAX, S.gold + r.gold); S.souls += r.souls; S.tot.souls += r.souls; S.dust += r.dust; if (r.spl) S.exp.spl += r.spl;
     const gem = gemOpen(S) ? n * GEM_SRC.wbGoal : 0; S.gem += gem;
     S.wbWeeks = (S.wbWeeks || 0) + 1;
     return { goals: n, ...r, gem };
@@ -1733,6 +1735,8 @@
     out.infV = 1;
     if (!d.startV && out.perks.p_start) { const r0 = Math.floor(Number(d.perks && d.perks.p_start) || 0); let back = 0; for (let r = 0; r < r0; r++) back += 2 + r; out.stars += back; delete out.perks.p_start; if (out.runs > 0) out.startNews = back; }
     out.startV = 1;
+    if (!d.cpV) { let back = 0; for (const id of ['k_blut', 'k_schatz']) { const L = out.cperks[id] || 0; for (let r = 0; r < L; r++) back += 3 + 2 * r; delete out.cperks[id]; } if (back) { out.crowns = (out.crowns || 0) + back; out.cpNews = back; } }
+    out.cpV = 1;
     if (!d.shardV) out.dust = Math.ceil(out.dust / 2); // Runenstaub wird zu Runensplittern (neuer Kurs)
     out.shardV = 1;
     if (!d.starV && Object.keys(out.perks).length) { const back = resetPerks(out); if (out.runs > 0 && back) out.starNews = back; }
@@ -2621,7 +2625,7 @@
     if (run.skipLeft > 0 && run.mode === 'normal' && run.time >= (SKIP_PARTS - run.skipLeft + 1) * SKIP_STEP) { run.skipLeft--;
       const ps = Math.floor(run.skipSouls / run.skipN) + (run.skipLeft ? 0 : run.skipSouls % run.skipN), pg = Math.floor(run.skipGold / run.skipN);
       if (ps) { S.souls += ps; S.tot.souls += ps; run.souls += ps; run.floats.push({ x: 150, y: 100, text: `Abkürzung: +${ps} Seelen`, color: '#c9a6ff', size: 13, t: 2 }); }
-      if (pg) { S.gold = Math.min(1e18, S.gold + pg); run.gold += pg; run.floats.push({ x: 150, y: 120, text: `Beutezug: +${fmt(pg)} Gold`, color: '#ffd23f', size: 13, t: 2 }); } }
+      if (pg) { S.gold = Math.min(GOLD_MAX, S.gold + pg); run.gold += pg; run.floats.push({ x: 150, y: 120, text: `Beutezug: +${fmt(pg)} Gold`, color: '#ffd23f', size: 13, t: 2 }); } }
     if (run.wf) wfStep(S, st, run, c, dt);
     const ensF = st.b && st.b.ensemble && run.h.b && run.songT > 0 ? 1 + run.songMul : 1;
     const f = run.enemies[0], eng = f && f.x <= run.frontX + 52 + (f.boss ? 10 : 0) + (f.reach || 0);
@@ -2734,7 +2738,7 @@
         let gold = e.gold * g.gold * (e.boss || e.elite ? g.eliteGold : 1);
         if (Math.random() < g.chest) { gold *= 10; c.efloat(e, 'Truhe!', '#ffd23f', 16); }
         gold = Math.max(1, Math.round(gold));
-        S.gold = Math.min(1e18, S.gold + gold); run.gold += gold; sfx('coin');
+        S.gold = Math.min(GOLD_MAX, S.gold + gold); run.gold += gold; sfx('coin');
         run.floats.push({ x: e.x, y: 130, text: '+' + fmt(gold), color: '#ffcf4a', size: 14, t: 1 });
       }
       if (e.boss && run.mode === 'normal') { const g = gemBossFirst(S, run.stage); if (g) run.floats.push({ x: e.x, y: 60, text: `+${g} 💠 Sternkristalle`, color: '#8fe3ff', size: 15, t: 1.6 }); }
@@ -2830,7 +2834,7 @@
       S.tot.kills, S.tot.souls, COMPS.length, ...COMPS.map(c => S.comps[c.id] || 0), ...[0, 1].map(i => (S.compActive[i] ? COMPS.findIndex(c => c.id === S.compActive[i]) + 1 : 0)), S.tempo || 0,
       S.exp.spl, S.exp.done, Math.max(0, PUZZLE.indexOf(S.exp.target)), PUZZLE.length, ...PUZZLE.map(id => pieceMask(S, id)),
       1, kSlots(S), HEROES.length, ...HEROES.map(h => (S.kplace || {})[h.id] || 0), S.altar || 0, 1, 1, 1, S.rlager || 0, 1,
-      1, S.ahn.sig, S.ahn.got, S.ahn.m, S.ahn.lvl, HEROES.length, ...HEROES.map(h => (S.ahn.place[h.id] ? 1 : 0)), S.ascBest || 0, 1, S.rankGot || 0, S.wf || 0, HEROES.length, ...HEROES.map(h => (S.mast || {})[h.id] || 0), ...HEROES.map(h => Math.max(0, SKINS.findIndex(k => k.id === (S.skin || {})[h.id]))), 1, HEROES.length, ...HEROES.flatMap(h => [3, 4, 5].map(i => rIdx((S.sockets[h.id] || [])[i]))), 1, S.season || 0, 1, S.tst ? 1 : 0]);
+      1, S.ahn.sig, S.ahn.got, S.ahn.m, S.ahn.lvl, HEROES.length, ...HEROES.map(h => (S.ahn.place[h.id] ? 1 : 0)), S.ascBest || 0, 1, S.rankGot || 0, S.wf || 0, HEROES.length, ...HEROES.map(h => (S.mast || {})[h.id] || 0), ...HEROES.map(h => Math.max(0, SKINS.findIndex(k => k.id === (S.skin || {})[h.id]))), 1, HEROES.length, ...HEROES.flatMap(h => [3, 4, 5].map(i => rIdx((S.sockets[h.id] || [])[i]))), 1, S.season || 0, 1, S.tst ? 1 : 0, 1, S.cpV || 0]);
   }
   function decode(code) {
     const nums = unpackNums(code); if (!nums) return null;
@@ -2877,16 +2881,21 @@
           if (i < nums.length) { next(); const hc5 = next(); for (let k = 0; k < hc5; k++) { const a = [next(), next(), next()]; if (HEROES[k] && d.sockets[HEROES[k].id]) d.sockets[HEROES[k].id].push(...a.map(x => (x > 0 ? x : null))); } }
           if (i < nums.length) { next(); d.season = next(); }
           if (i < nums.length) { next(); if (next()) d.tst = 1; }
+          if (i < nums.length) { next(); d.cpV = next(); }
         }
       } else return null;
       return migrate(d);
     } catch { return null; }
   }
 
+  // Obergrenze nur gegen kaputte Zahlen (unendlich); praktisch unbegrenzt
+  const GOLD_MAX = 1e300;
   function fmt(n) {
+    if (!(n < Infinity)) return '∞';
     if (n < 1000) return String(Math.floor(n));
-    const units = ['', ' Tsd.', ' Mio.', ' Mrd.', ' Bio.', ' Brd.', ' Trio.', ' Trd.'];
+    const units = ['', ' Tsd.', ' Mio.', ' Mrd.', ' Bio.', ' Brd.', ' Trio.', ' Trd.', ' Quad.', ' Quadd.', ' Quint.', ' Quintd.', ' Sext.', ' Sextd.', ' Sept.', ' Septd.', ' Okt.', ' Oktd.', ' Non.', ' Nond.', ' Dez.', ' Dezd.'];
     let i = 0; while (n >= 1000 && i < units.length - 1) { n /= 1000; i++; }
+    if (n >= 1000) { const e = Math.floor(Math.log10(n)); return (n / Math.pow(10, e)).toFixed(2).replace('.', ',') + units[i].replace(/^ /, ' ×10^' + e + ' '); }
     return (n < 10 ? n.toFixed(2) : n < 100 ? n.toFixed(1) : Math.floor(n).toString()).replace('.', ',') + units[i];
   }
 
