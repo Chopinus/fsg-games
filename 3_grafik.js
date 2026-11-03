@@ -298,6 +298,12 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 27, title: 'Inselreich: Fähigkeiten und neue Steuerung', date: '03.11.2026', items: [
+      ['Neu', 'Inselreich: Vier Lehrer nördlich vom Dorfplatz – Magierin Selma, Schwertmeister Konrad, Bogenschützin Liv und Heilerin Mara'],
+      ['Neu', 'Inselreich: 12 aktive Fähigkeiten wie Feuerball, Kettenblitz, Frostnova, Sturmangriff, Erdstoß, Pfeilfächer, Giftpfeil, Heilung und Wurzelfalle, jeweils bis Stufe 3'],
+      ['Neu', 'Inselreich: Drei Fähigkeiten-Plätze – am PC Tasten 1 bis 3 (zielen zur Maus), am Handy runde Knöpfe zum Tippen oder Ziehen'],
+      ['Umstellung', 'Inselreich: Handy-Steuerung wie bei Brawl Stars – links irgendwo ziehen zum Laufen, rechts tippen zum Angreifen oder ziehen zum Zielen'],
+    ] },
     { id: 26, title: 'Inselreich: Werkhof und neue Boote', date: '03.11.2026', items: [
       ['Umstellung', 'Inselreich: Fünf eigene Werkbänke – Waffen und Werkzeug, Rüstungen, Küche, Tischlerei und Werft. Sie stehen im neuen Werkhof im Dorf und auf der Startinsel'],
       ['Neu', 'Inselreich: Tischlerei – Möbel, Wände und Deko stellst du hier her und baust sie dann auf deinen Bauplatz'],
