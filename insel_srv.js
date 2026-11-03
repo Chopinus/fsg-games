@@ -62,6 +62,8 @@ module.exports = function (send) {
   const tileKey = (x, y) => { x = Math.floor(num(x, -1)); y = Math.floor(num(y, -1)); return x >= 0 && y >= 0 && x < PLOT_W && y < PLOT_W ? x + ',' + y : null; };
   const own = (c, id) => { const p = plots[id]; return p && p.o === c.pid ? p : null; };
 
+  // Aussehen: Hut, Titel, Haustier, Bootsfarbe
+  const meta = m => (m && typeof m === 'object' ? { hat: clean(m.hat, 12), title: clean(m.title, 20), pet: clean(m.pet, 12), bc: clean(m.bc, 10) } : null);
   function state(s) {
     // [x, y, Richtung, Bewegung, im Boot, Boot x, Boot y, Kurs, Segel, Angriff, Stufe]
     if (!Array.isArray(s)) return null;
@@ -72,7 +74,7 @@ module.exports = function (send) {
   function handle(c, m) {
     if (m.t === 'i_join') {
       const s = state(m.s); if (!s) return;
-      P.set(c, { id: c.pid, name: clean(m.name, 16) || 'Gast', col: Math.floor(num(m.col)) % 8, s, last: Date.now() });
+      P.set(c, { id: c.pid, name: clean(m.name, 16) || 'Gast', col: Math.floor(num(m.col)) % 8, s, last: Date.now(), meta: meta(m.m) });
       send(c, { t: 'i_hi', id: c.pid, n: P.size });
       send(c, { t: 'i_plots', plots, ready: loaded });
       return;
@@ -85,6 +87,7 @@ module.exports = function (send) {
       return;
     }
     if (m.t === 'i_leave') { P.delete(c); return; }
+    if (m.t === 'i_meta') { me.meta = meta(m.m); return; }
     // ---------- Basen ----------
     const id = Math.floor(num(m.id, -1));
     if (m.t === 'i_claim') {
@@ -120,7 +123,7 @@ module.exports = function (send) {
     for (const [c, me] of all) {
       if (Date.now() - me.last > 5 * 60e3) { P.delete(c); continue; }
       const near = [];
-      for (const [o, q] of all) { if (o === c) continue; const bx = q.s[4] ? q.s[0] : q.s[5], by = q.s[4] ? q.s[1] : q.s[6]; if (Math.hypot(q.s[0] - me.s[0], q.s[1] - me.s[1]) < NEAR || Math.hypot(bx - me.s[0], by - me.s[1]) < NEAR) near.push([q.id, q.name, q.col, ...q.s]); }
+      for (const [o, q] of all) { if (o === c) continue; const bx = q.s[4] ? q.s[0] : q.s[5], by = q.s[4] ? q.s[1] : q.s[6]; if (Math.hypot(q.s[0] - me.s[0], q.s[1] - me.s[1]) < NEAR || Math.hypot(bx - me.s[0], by - me.s[1]) < NEAR) near.push([q.id, q.name, q.col, ...q.s, q.meta || 0]); }
       const key = JSON.stringify(near);
       if (key !== me.sent || tick % 10 === 0) { me.sent = key; send(c, { t: 'i_w', p: near, n: P.size }); }
     }

@@ -298,6 +298,12 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 23, title: 'Inselreich: Angeln, Erfolge und Haustiere', date: '03.11.2026', items: [
+      ['Neu', 'Inselreich: Angeln mit Angel von Angler Hein – 14 Fischarten je nach Wasser, Inselart und Tageszeit, dazu ein Fischbuch mit Rekorden'],
+      ['Neu', 'Inselreich: 20 Erfolge mit Titeln fürs Namensschild (Rucksack → Erfolge)'],
+      ['Neu', 'Inselreich: Haustiere bei Bäuerin Frieda: Schleimi, Fuchs, Pinguin, Papagei und Drachenbaby – sie sammeln für dich ein'],
+      ['Neu', 'Inselreich: Bei Schneiderin Mila gibt es Hüte, Bootsfarben und Shirt-Farben. Andere sehen dein Aussehen, deinen Titel und dein Haustier'],
+    ] },
     { id: 22, title: 'Inselreich: Nacht, Bosse und Schätze', date: '03.11.2026', items: [
       ['Neu', 'Inselreich: Tag und Nacht – nachts wird es dunkel, Fackeln und Laternen leuchten, und es kommen mehr und stärkere Gegner'],
       ['Neu', 'Inselreich: Große Inseln jeder Inselart haben eine eigene Höhle mit Boss: Sandwurm, Frostwyrm, Riesenfrosch, Feuerdrache und Sporenkönigin'],
