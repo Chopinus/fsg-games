@@ -298,6 +298,11 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 17, title: 'Inselreich: Stufen und Skilltree', date: '03.11.2026', items: [
+      ['Neu', 'Inselreich: Erfahrungspunkte (EP) für Gegner, Abbauen, Schatztruhen und neue Inseln – mit Stufenaufstieg'],
+      ['Neu', 'Inselreich: Skilltree mit 15 Fähigkeiten in drei Zweigen: Kampf, Sammeln und Seefahrt (🌟 oder Taste K)'],
+      ['Neu', 'Inselreich: Andere Spieler sehen deine Stufe am Namensschild'],
+    ] },
     { id: 16, title: 'Inselreich: Sechs Inselarten', date: '03.11.2026', items: [
       ['Neu', 'Inselreich: Wüsten-, Frost-, Dschungel-, Vulkan- und Pilzinseln, jede mit eigenem Aussehen, eigenen Pflanzen und eigenem Wetter'],
       ['Neu', 'Inselreich: Neue Gegner je Inselart: Skorpione, Eiswölfe, Giftfrösche, Feuerschleime, Lavagolems, Sporlinge und Glühfalter'],

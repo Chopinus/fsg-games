@@ -11,6 +11,32 @@
   const T_NAMES = { 0: 'Tiefsee', 1: 'Offenes Meer', 2: 'Flachwasser' };
   const CW = 96, CHH = 72, COX = -20000, COY = -20000; // Höhle: Größe und Lage im Koordinatenraum (weit weg von der Oberwelt)
   const MAXHP = 6;
+  // Skilltree: drei Zweige, jede Fähigkeit braucht die darüber (mindestens Rang 1)
+  const BRANCHES = [['⚔️', 'Kampf', '#ff7a6a'], ['⛏️', 'Sammeln', '#7ee08a'], ['⛵', 'Seefahrt', '#6ab8ff']];
+  const SKILLS = [
+    { id: 'klinge', b: 0, i: '🗡️', n: 'Scharfe Klinge', max: 2, d: 'Dein Schwert macht +1 Schaden pro Treffer.' },
+    { id: 'zaeh', b: 0, i: '❤️', n: 'Zähigkeit', max: 2, d: 'Du bekommst ein zusätzliches Herz.' },
+    { id: 'flink', b: 0, i: '💨', n: 'Schnelle Hiebe', max: 2, d: 'Du schlägst 20 % schneller zu.' },
+    { id: 'wirbel', b: 0, i: '🌀', n: 'Wirbelschlag', max: 1, d: 'Dein Schlag trifft alle Gegner rund um dich, nicht nur vor dir.' },
+    { id: 'heil', b: 0, i: '✨', n: 'Siegesheilung', max: 1, d: 'Jeder besiegte Gegner heilt dich um ein halbes Herz.' },
+    { id: 'kraft', b: 1, i: '🪓', n: 'Kräftige Schläge', max: 2, d: 'Du brauchst einen Schlag weniger, um etwas abzubauen.' },
+    { id: 'ernte', b: 1, i: '🧺', n: 'Reiche Ernte', max: 2, d: '30 % Chance auf doppelte Rohstoffe.' },
+    { id: 'magnet', b: 1, i: '🧲', n: 'Magnet', max: 1, d: 'Münzen und Rohstoffe fliegen dir von viel weiter weg zu.' },
+    { id: 'glueck', b: 1, i: '🍀', n: 'Glückspilz', max: 1, d: 'Gegner lassen 50 % mehr Münzen fallen.' },
+    { id: 'schatz', b: 1, i: '💰', n: 'Schatzsucher', max: 1, d: 'Beim Abbauen findest du manchmal Münzen.' },
+    { id: 'boot', b: 2, i: '⛵', n: 'Leichtes Boot', max: 3, d: 'Dein Boot segelt 12 % schneller.' },
+    { id: 'paddel', b: 2, i: '🛶', n: 'Starkes Paddel', max: 1, d: 'Du paddelst 50 % schneller.' },
+    { id: 'wind', b: 2, i: '🌬️', n: 'Hart am Wind', max: 1, d: 'Du kommst viel besser gegen den Wind voran.' },
+    { id: 'fuss', b: 2, i: '👟', n: 'Flinke Füße', max: 2, d: 'Du läufst 10 % schneller.' },
+    { id: 'entdecker', b: 2, i: '🧭', n: 'Entdecker', max: 1, d: 'Doppelte EP für neue Inseln und eine größere Minikarte.' },
+  ];
+  const XP_FOE = { slime: 5, bigslime: 10, sandslime: 5, frostslime: 7, fireslime: 8, frog: 5, sporling: 6, bat: 6, moth: 6, scorpion: 8, wolf: 10, golem: 40, troll: 100 };
+  const xpNeed = l => Math.round(20 * Math.pow(l, 1.5));
+  let prog = { xp: 0, lvl: 1, pts: 0, sk: {} };
+  try { const q = JSON.parse(localStorage.getItem('insel.xp') || 'null'); if (q && q.lvl) prog = Object.assign(prog, q); } catch {}
+  const saveProg = () => { try { localStorage.setItem('insel.xp', JSON.stringify(prog)); } catch {} };
+  const sk = id => prog.sk[id] || 0;
+  const maxHp = () => MAXHP + 2 * sk('zaeh');
   const WIESE = 0, WUESTE = 1, SCHNEE = 2, DSCHUNGEL = 3, VULKAN = 4, PILZ = 5, LAVA = 8;
   const BIOMES = [
     { n: 'Wiese', foes: ['slime'], info: 'Schleime · Holz, Steine, Äpfel und Beeren' },
@@ -625,8 +651,10 @@
     return { a, s };
   }
   const POLAR = [[0, 0.6], [0.9, 0.85], [1.6, 1], [2.2, 0.72], [2.55, 0.14], [Math.PI, 0.05]];
-  function polar(rel) {
+  const POLAR2 = [[0, 0.6], [0.9, 0.85], [1.6, 1], [2.2, 0.8], [2.6, 0.5], [Math.PI, 0.25]];
+  function polar(rel, good) {
     rel = Math.abs(rel);
+    if (good) { for (let i = 1; i < POLAR2.length; i++) if (rel <= POLAR2[i][0]) { const [a0, v0] = POLAR2[i - 1], [a1, v1] = POLAR2[i]; return v0 + (v1 - v0) * (rel - a0) / (a1 - a0); } return 0.25; }
     for (let i = 1; i < POLAR.length; i++) if (rel <= POLAR[i][0]) { const [a0, v0] = POLAR[i - 1], [a1, v1] = POLAR[i]; return v0 + (v1 - v0) * (rel - a0) / (a1 - a0); }
     return 0.05;
   }
@@ -662,7 +690,7 @@
     try {
       const s = JSON.parse(localStorage.getItem('insel.save') || 'null');
       if (s && Number.isFinite(s.x)) {
-        Object.assign(me, { x: s.x, y: s.y, inBoat: s.inBoat ? 1 : 0, inCave: s.inCave ? 1 : 0, col: s.col | 0, coins: s.coins | 0, hp: Math.max(1, Math.min(MAXHP, s.hp ?? MAXHP)) });
+        Object.assign(me, { x: s.x, y: s.y, inBoat: s.inBoat ? 1 : 0, inCave: s.inCave ? 1 : 0, col: s.col | 0, coins: s.coins | 0, hp: Math.max(1, Math.min(maxHp(), s.hp ?? maxHp())) });
         Object.assign(boat, s.boat || {}); boat.v = 0;
         return true;
       }
@@ -683,7 +711,7 @@
     if (f) { boat.x = f[0]; boat.y = f[1]; boat.h = f[2]; }
     boat.sail = 0; boat.v = 0; me.inBoat = 0; me.inCave = 0;
   }
-  const stateArr = () => [me.x + (me.inCave ? COX : 0), me.y + (me.inCave ? COY : 0), me.dir, me.moving, me.inBoat, boat.x, boat.y, boat.h, boat.sail, me.atk > 0 ? 1 : 0];
+  const stateArr = () => [me.x + (me.inCave ? COX : 0), me.y + (me.inCave ? COY : 0), me.dir, me.moving, me.inBoat, boat.x, boat.y, boat.h, boat.sail, me.atk > 0 ? 1 : 0, prog.lvl];
 
   /* ---------- Oberfläche ---------- */
   const CSS = `
@@ -705,7 +733,7 @@
 #isl .is-big{position:absolute;inset:0;z-index:5;background:rgba(6,14,30,.82);display:grid;place-items:center}
 #isl .is-big canvas{width:min(92vw,92vh,640px);height:min(92vw,92vh,640px);border-radius:16px;border:3px solid rgba(255,255,255,.7);image-rendering:pixelated}
 #isl .is-big b{position:absolute;top:14px;left:0;right:0;text-align:center;font-size:16px}
-#isl .is-log{position:absolute;left:10px;bottom:10px;z-index:2;max-width:min(420px,60vw);display:flex;flex-direction:column;gap:3px;pointer-events:none}
+#isl .is-log{position:absolute;left:10px;bottom:52px;z-index:2;max-width:min(420px,60vw);display:flex;flex-direction:column;gap:3px;pointer-events:none}
 #isl .is-log div{background:rgba(14,22,40,.62);padding:4px 9px;border-radius:9px;font-size:13.5px;line-height:1.3;width:fit-content;max-width:100%;overflow-wrap:anywhere;transition:opacity 1s}
 #isl .is-log div b{color:#ffd27a}
 #isl .is-chat{position:absolute;left:10px;right:10px;bottom:10px;z-index:4;display:none;gap:6px;max-width:520px}
@@ -716,7 +744,7 @@
 #isl .is-act.on{background:#e3a92b;color:#2a1608}
 #isl .is-act.big{width:72px;height:72px;font-size:30px;background:rgba(150,40,40,.8)}
 #isl .is-act[hidden]{display:none}
-#isl .is-hint{position:absolute;left:50%;transform:translateX(-50%);top:14px;z-index:1;background:rgba(14,22,40,.55);padding:6px 12px;border-radius:10px;font-size:12.5px;white-space:nowrap;pointer-events:none}
+#isl .is-hint{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;z-index:1;background:rgba(14,22,40,.55);padding:6px 12px;border-radius:10px;font-size:12.5px;white-space:nowrap;pointer-events:none}
 #isl .is-joy{position:absolute;z-index:3;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.35);pointer-events:none;display:none}
 #isl .is-joy i{position:absolute;left:50%;top:50%;width:50px;height:50px;margin:-25px 0 0 -25px;border-radius:50%;background:rgba(255,255,255,.55)}
 #isl .is-say{position:absolute;left:50%;top:22%;transform:translateX(-50%);z-index:3;background:rgba(14,22,40,.78);padding:10px 16px;border-radius:14px;font-weight:700;font-size:16px;text-align:center;pointer-events:none;transition:opacity .6s;max-width:86vw}
@@ -731,21 +759,52 @@
 #isl .is-baggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px;margin-bottom:10px}
 #isl .is-baggrid div{background:rgba(255,255,255,.07);border-radius:12px;padding:8px 4px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px}
 #isl .is-baggrid i{font-style:normal;font-size:24px}#isl .is-baggrid b{font-size:16px}#isl .is-baggrid span{font-size:11.5px;color:#c8cde0}
+#isl .is-xp{display:flex;align-items:center;gap:6px;margin-top:5px;cursor:pointer;font-size:12px}
+#isl .is-xp b{color:#e0c8ff;white-space:nowrap}
+#isl .is-xp i{flex:1;min-width:70px;height:7px;border-radius:4px;background:rgba(0,0,0,.45);overflow:hidden;display:block}
+#isl .is-xp u{display:block;height:100%;width:0;background:linear-gradient(90deg,#a66cff,#e0b8ff);transition:width .3s}
+#isl .is-xp em,#isl .is-dot{font-style:normal;background:#ffcf4a;color:#2a1608;border-radius:9px;padding:0 6px;font-weight:800;font-size:11px;animation:isPulse 1s infinite alternate}
+#isl .is-dot{position:absolute;top:-2px;right:-2px;width:14px;height:14px;padding:0;border:2px solid #1c2236}
+#isl .is-dot[hidden],#isl .is-xp em[hidden]{display:none}
+@keyframes isPulse{to{transform:scale(1.15)}}
+#isl .is-skill{position:absolute;inset:0;z-index:6;background:rgba(6,10,24,.66);display:grid;place-items:center;padding:12px}
+#isl .is-skbox{background:#1c2236;border:2px solid rgba(255,255,255,.25);border-radius:16px;padding:14px;width:min(620px,100%);max-height:92vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+#isl .is-skbox h3{margin:0 0 4px;display:flex;justify-content:space-between;align-items:center;font-size:18px;gap:8px}
+#isl .is-sksum{font-size:13px;color:#c8cde0;margin-bottom:10px}#isl .is-sksum b{color:#ffcf4a}
+#isl .is-sktree{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+#isl .is-skcol{display:flex;flex-direction:column;align-items:center;gap:0;background:rgba(255,255,255,.04);border-radius:12px;padding:8px 4px}
+#isl .is-skcol>h4{margin:0 0 6px;font-size:13px;color:var(--bc)}
+#isl .is-sknode{width:100%;max-width:150px;border:2px solid rgba(255,255,255,.15);background:#262d45;color:#fff;border-radius:12px;padding:4px;display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer;font:600 11.5px system-ui;position:relative}
+#isl .is-sknode i{font-style:normal;font-size:20px;line-height:1.1}
+#isl .is-sknode small{font-weight:700;color:#c8cde0;font-size:11px}
+#isl .is-sknode.lock{opacity:.4;filter:grayscale(1)}
+#isl .is-sknode.has{border-color:var(--bc);background:linear-gradient(#2d3656,#262d45)}
+#isl .is-sknode.full{border-color:#ffcf4a;box-shadow:0 0 10px rgba(255,207,74,.35)}
+#isl .is-sknode.can{animation:isGlow 1s infinite alternate}
+@keyframes isGlow{to{box-shadow:0 0 12px var(--bc)}}
+#isl .is-sknode.sel{outline:3px solid #fff;outline-offset:1px}
+#isl .is-sklink{width:3px;height:7px;background:rgba(255,255,255,.18)}#isl .is-sklink.on{background:var(--bc)}
+#isl .is-skinfo{margin-top:10px;background:rgba(255,255,255,.06);border-radius:12px;padding:10px 12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13.5px;line-height:1.35}
+#isl .is-skinfo div{flex:1;min-width:180px}#isl .is-skinfo b{font-size:15px}
+#isl .is-learn{border:0;border-radius:12px;padding:10px 16px;font:800 15px system-ui;background:#ffcf4a;color:#2a1608;cursor:pointer}
+#isl .is-learn:disabled{background:#4a4f66;color:#9aa0b8;cursor:default}
+#isl .is-skreset{border:0;background:none;color:#9aa0b8;font:500 12px system-ui;text-decoration:underline;cursor:pointer;margin-top:8px}
+@media (max-width:480px){#isl .is-sknode{font-size:10.5px;padding:5px 2px}#isl .is-sknode i{font-size:19px}#isl .is-skcol>h4{font-size:12px}}
 #isl .is-fade{position:absolute;inset:0;z-index:8;background:#000;opacity:0;pointer-events:none;transition:opacity .35s}
-@media (pointer:coarse){#isl .is-hint{display:none}}
+@media (pointer:coarse){#isl .is-hint{display:none}#isl .is-log{bottom:10px}}
 @media (max-width:600px){#isl canvas.is-map{width:96px;height:96px}#isl .is-wind{font-size:11.5px}#isl .is-log{bottom:100px;max-width:70vw}#isl .is-boss{top:60px;width:70vw}}
 `;
   function build() {
     if (!document.getElementById('isl-css')) { const st = document.createElement('style'); st.id = 'isl-css'; st.textContent = CSS; document.head.appendChild(st); }
     root = document.createElement('div'); root.id = 'isl';
     root.innerHTML = `<canvas class="is-main"></canvas>
-<div class="is-top"><button class="is-btn" data-x title="Zurück zum Hub">✕</button><div class="is-place"><span data-isle>Heimatinsel</span><small data-on>1 Spieler online</small><div class="is-stats"><span class="is-hearts" data-hp></span><span data-coins>🪙 0</span></div></div></div>
+<div class="is-top"><button class="is-btn" data-x title="Zurück zum Hub">✕</button><div class="is-place"><span data-isle>Heimatinsel</span><small data-on>1 Spieler online</small><div class="is-stats"><span class="is-hearts" data-hp></span><span data-coins>🪙 0</span></div><div class="is-xp" data-xpbox title="Skilltree öffnen (K)"><b data-lvl>St. 1</b><i><u data-xp></u></i><em data-pts hidden>!</em></div></div></div>
 <div class="is-boss"><span>Höhlentroll</span><i><u></u></i></div>
 <div class="is-mapwrap"><canvas class="is-map" width="132" height="132" title="Karte vergrößern (M)"></canvas><div class="is-wind"><i></i><span data-wind></span></div></div>
 <div class="is-log"></div>
 <div class="is-chat"><input maxlength="120" placeholder="Nachricht an alle …" enterkeyhint="send"><button class="is-btn" data-send>Senden</button></div>
-<div class="is-acts"><button class="is-act" data-bag>🎒<span>Rucksack</span></button><button class="is-act" data-chat>💬<span>Chat</span></button><button class="is-act" data-sail hidden>⛵<span>Segel</span></button><button class="is-act" data-boat>⚓<span>Boot</span></button><button class="is-act big" data-atk>⚔️<span>Angriff</span></button></div>
-<div class="is-hint">WASD laufen · Leertaste/Klick: angreifen und abbauen · E Boot · I Rucksack · T Chat · M Karte</div>
+<div class="is-acts"><button class="is-act" data-skill>🌟<span>Skills</span><em class="is-dot" data-dot hidden></em></button><button class="is-act" data-bag>🎒<span>Rucksack</span></button><button class="is-act" data-chat>💬<span>Chat</span></button><button class="is-act" data-sail hidden>⛵<span>Segel</span></button><button class="is-act" data-boat>⚓<span>Boot</span></button><button class="is-act big" data-atk>⚔️<span>Angriff</span></button></div>
+<div class="is-hint">WASD laufen · Leertaste/Klick: angreifen und abbauen · E Boot · I Rucksack · K Skills · T Chat · M Karte</div>
 <div class="is-joy"><i></i></div>
 <div class="is-say" style="opacity:0"></div><div class="is-fade"></div>`;
     document.body.appendChild(root);
@@ -766,6 +825,9 @@
     hud.input.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') sendChat(); else if (e.key === 'Escape') closeChat(); });
     hud.map.onclick = () => toggleMap();
     root.querySelector('[data-bag]').onclick = () => toggleBag();
+    root.querySelector('[data-skill]').onclick = () => toggleSkills();
+    root.querySelector('[data-xpbox]').onclick = () => toggleSkills();
+    Object.assign(hud, { lvl: root.querySelector('[data-lvl]'), xp: root.querySelector('[data-xp]'), pts: root.querySelector('[data-pts]'), dot: root.querySelector('[data-dot]') });
     cv.addEventListener('pointerdown', joyDown);
     window.addEventListener('pointermove', joyMove);
     window.addEventListener('pointerup', joyUp);
@@ -797,11 +859,75 @@
     root.appendChild(d); d.onclick = () => toggleMap();
     if (me.inCave) drawCaveMap(d.querySelector('canvas'), true); else drawMap(d.querySelector('canvas'), 420, true);
   }
+  function gainXP(n, x, y) {
+    prog.xp += n;
+    texts.push({ x, y, s: '+' + n + ' EP', t: 0, col: '#d8b8ff' });
+    while (prog.xp >= xpNeed(prog.lvl)) {
+      prog.xp -= xpNeed(prog.lvl); prog.lvl++; prog.pts++;
+      say(`🌟 Stufe ${prog.lvl}! Du hast einen Skillpunkt bekommen (K)`);
+      addLog(`<b>Stufe ${prog.lvl} erreicht!</b> Öffne mit 🌟 den Skilltree.`);
+      for (let i = 0; i < 30; i++) { const a = Math.random() * Math.PI * 2, s2 = 2 + Math.random() * 4; parts.push({ x: me.x, y: me.y - 0.6, z: 0, vx: Math.cos(a) * s2, vy: Math.sin(a) * s2, t: 0, life: 0.9, col: i % 2 ? '#ffd27a' : '#e0b8ff', sz: 2 }); }
+      me.hp = maxHp();
+    }
+    saveProg();
+    if (skillOpen) renderSkills();
+  }
+  let skillOpen = false, skSel = null;
+  const skReq = s => { const prev = SKILLS.filter(q => q.b === s.b); const i = prev.indexOf(s); return i === 0 ? null : prev[i - 1]; };
+  const skUnlocked = s => { const r = skReq(s); return !r || sk(r.id) > 0; };
+  function toggleSkills() {
+    skillOpen = !skillOpen;
+    const old = root.querySelector('.is-skill'); if (old) old.remove();
+    if (!skillOpen) return;
+    if (bagOpen) toggleBag();
+    const d = document.createElement('div'); d.className = 'is-skill';
+    root.appendChild(d);
+    d.onclick = e => {
+      if (e.target === d || e.target.closest('[data-close]')) { toggleSkills(); return; }
+      const n = e.target.closest('[data-sk]'); if (n) { skSel = n.dataset.sk; renderSkills(); return; }
+      if (e.target.closest('[data-learn]')) {
+        const s = SKILLS.find(q => q.id === skSel);
+        if (s && prog.pts > 0 && skUnlocked(s) && sk(s.id) < s.max) {
+          prog.sk[s.id] = sk(s.id) + 1; prog.pts--; saveProg();
+          if (s.id === 'zaeh') me.hp = Math.min(maxHp(), me.hp + 2);
+          mapDirty = true; say(`${s.i} ${s.n} gelernt!`);
+          renderSkills();
+        }
+        return;
+      }
+      if (e.target.closest('[data-reset]')) {
+        const spent = Object.values(prog.sk).reduce((a, b) => a + b, 0);
+        if (!spent) return;
+        prog.pts += spent; prog.sk = {}; me.hp = Math.min(me.hp, maxHp()); saveProg(); renderSkills(); say('Skillpunkte zurückgesetzt');
+      }
+    };
+    if (!skSel) skSel = (SKILLS.find(s => skUnlocked(s) && sk(s.id) < s.max) || SKILLS[0]).id;
+    renderSkills();
+  }
+  function renderSkills() {
+    const d = root.querySelector('.is-skill'); if (!d) return;
+    const need = xpNeed(prog.lvl), sel = SKILLS.find(q => q.id === skSel) || SKILLS[0];
+    const cols = BRANCHES.map(([ic, name, col], b) => {
+      const list = SKILLS.filter(s => s.b === b);
+      return `<div class="is-skcol" style="--bc:${col}"><h4>${ic} ${name}</h4>${list.map((s, i) => {
+        const r = sk(s.id), un = skUnlocked(s), cls = [!un && 'lock', r && 'has', r >= s.max && 'full', un && r < s.max && prog.pts > 0 && 'can', s.id === sel.id && 'sel'].filter(Boolean).join(' ');
+        return `${i ? `<div class="is-sklink ${un ? 'on' : ''}"></div>` : ''}<button class="is-sknode ${cls}" data-sk="${s.id}"><i>${s.i}</i>${s.n}<small>${r}/${s.max}</small></button>`;
+      }).join('')}</div>`;
+    }).join('');
+    const r = sk(sel.id), un = skUnlocked(sel), req = skReq(sel);
+    const why = r >= sel.max ? 'Voll ausgebaut' : !un ? `Zuerst „${req.n}“ lernen` : !prog.pts ? 'Kein Skillpunkt frei' : 'Lernen (1 Punkt)';
+    d.innerHTML = `<div class="is-skbox"><h3>🌟 Skilltree <button class="is-btn" data-close>✕</button></h3>
+      <div class="is-sksum">Stufe <b>${prog.lvl}</b> · ${prog.xp} / ${need} EP bis zur nächsten Stufe · <b>${prog.pts}</b> Skillpunkt${prog.pts === 1 ? '' : 'e'} frei<br>EP gibt es für Gegner, Abbauen, Schatztruhen und neue Inseln.</div>
+      <div class="is-sktree">${cols}</div>
+      <div class="is-skinfo"><div><b>${sel.i} ${sel.n}</b> <small>(${r}/${sel.max})</small><br>${sel.d}</div><button class="is-learn" data-learn ${r >= sel.max || !un || !prog.pts ? 'disabled' : ''}>${why}</button></div>
+      <div style="text-align:center"><button class="is-skreset" data-reset>Alle Punkte zurücksetzen (kostenlos)</button></div></div>`;
+  }
   let bagOpen = false;
   function toggleBag() {
     bagOpen = !bagOpen;
     const old = root.querySelector('.is-bag'); if (old) old.remove();
     if (!bagOpen) return;
+    if (skillOpen) toggleSkills();
     const d = document.createElement('div'); d.className = 'is-bag';
     root.appendChild(d); d.onclick = e => { if (e.target === d || e.target.closest('[data-close]')) toggleBag(); };
     renderBag();
@@ -850,6 +976,8 @@
       if ((k === 'f' || k === 'j') && !e.repeat) { attack(); return; }
       if (k === 'm' && !e.repeat) { toggleMap(); return; }
       if ((k === 'i' || k === 'b') && !e.repeat) { toggleBag(); return; }
+      if (k === 'k' && !e.repeat) { toggleSkills(); return; }
+      if (k === 'escape' && skillOpen) { toggleSkills(); return; }
       if (k === 'escape') { if (bigMap) toggleMap(); return; }
       if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault();
       keys.add(k);
@@ -887,7 +1015,7 @@
   function attack(aimed) {
     if (me.inBoat || me.atk > 0 || busy || chatOpen) return;
     if (!aimed) { const v = DIRV[me.dir]; me.fx = v[0]; me.fy = v[1]; }
-    me.atk = ATK_T; me.hitDone = false;
+    me.atkT = ATK_T * (1 - 0.2 * sk('flink')); me.atk = me.atkT; me.hitDone = false;
   }
   // Gegnerarten: Verhalten (hüpfen, fliegen, jagen, Keulenschlag), Leben, Schaden, Farben, Beute
   const EDEF = {
@@ -922,8 +1050,8 @@
       if (e.dead) continue;
       const D = e.d, ex = e.x - me.x, ey = (e.y - (D.ai === 'fly' ? 0.4 : D.ai === 'slam' ? 0.6 : 0.15)) - (me.y - 0.4), d = Math.hypot(ex, ey), reach = D.ai === 'slam' ? 2.2 : 1.55;
       if (d > reach) continue;
-      if (d > 0.5 && Math.abs(wrap(Math.atan2(ey, ex) - fa)) > 1.25) continue;
-      hitEnemy(e, 1, ex / (d || 1), ey / (d || 1)); any = true;
+      if (d > 0.5 && !sk('wirbel') && Math.abs(wrap(Math.atan2(ey, ex) - fa)) > 1.25) continue;
+      hitEnemy(e, 1 + sk('klinge'), ex / (d || 1), ey / (d || 1)); any = true;
     }
     if (any || me.inCave) return;
     // Rohstoffe abbauen: nächster Gegenstand in Schlagrichtung
@@ -936,13 +1064,16 @@
       if (d < bd) { bd = d; best = { tx, ty, o, t }; }
     }
     if (!best) return;
-    const { tx, ty, o, t } = best, key = tx + ',' + ty, n = (hits.get(key) || 0) + 1, [need, loot] = HARV[o];
+    const { tx, ty, o, t } = best, key = tx + ',' + ty, n = (hits.get(key) || 0) + 1, need = Math.max(1, HARV[o][0] - sk('kraft')), loot = HARV[o][1];
     const col = TREES.has(o) ? '#a8743f' : o === 12 ? '#d8f0ff' : o === 13 ? '#4a3468' : o === 15 ? '#e04a3a' : o === 8 ? '#5aaa4a' : o >= 16 || o === 6 ? '#7ac05a' : '#9a9790';
     for (let i = 0; i < 6; i++) parts.push({ x: tx + 0.5, y: ty + 0.6, z: 0, vx: (Math.random() - 0.5) * 5, vy: -Math.random() * 3, t: 0, life: 0.45, col, sz: 2 });
     shake = Math.max(shake, 1.5);
     if (n < need) { hits.set(key, n); texts.push({ x: tx + 0.5, y: ty - 0.6, s: '●'.repeat(n) + '○'.repeat(need - n), t: 0, col: '#ffffff' }); return; }
     hits.delete(key); cut.set(key, Date.now() + 5 * 60e3);
-    for (const k of loot(objVar(o, h2(tx, ty, SEED + 90), t))) drop(tx + 0.5, ty + 0.6, k);
+    const got = loot(objVar(o, h2(tx, ty, SEED + 90), t));
+    for (const k of got) { drop(tx + 0.5, ty + 0.6, k); if (Math.random() < 0.3 * sk('ernte')) drop(tx + 0.5, ty + 0.6, k); }
+    if (sk('schatz') && Math.random() < 0.2) for (let i = 0; i < 2 + Math.floor(Math.random() * 3); i++) drop(tx + 0.5, ty + 0.6, 'coin');
+    gainXP(o === 12 || o === 13 ? 4 : o === 6 || o >= 16 ? 1 : 2, tx + 0.5, ty - 0.2);
   }
   function hitEnemy(e, dmg, nx, ny) {
     const D = e.d, heavy = D.ai === 'slam';
@@ -958,7 +1089,9 @@
     const D = e.d;
     e.dead = true;
     for (let i = 0; i < 14; i++) { const a = Math.random() * Math.PI * 2, s = 1 + Math.random() * 3; parts.push({ x: e.x, y: e.y - 0.3, z: 0, vx: Math.cos(a) * s, vy: Math.sin(a) * s, t: 0, life: 0.6, col: i % 3 ? '#e8e8f0' : '#bfbfd0', sz: 3 }); }
-    const n = D.coins[0] + Math.floor(Math.random() * (D.coins[1] - D.coins[0] + 1));
+    const n = Math.round((D.coins[0] + Math.floor(Math.random() * (D.coins[1] - D.coins[0] + 1))) * (sk('glueck') ? 1.5 : 1));
+    gainXP(XP_FOE[e.k] || 5, e.x, e.y - 1.4);
+    if (sk('heil')) me.hp = Math.min(maxHp(), me.hp + 1);
     for (let i = 0; i < n; i++) drop(e.x, e.y, 'coin');
     if (D.loot && Math.random() < 0.7) drop(e.x, e.y, D.loot);
     if (D.ai !== 'slam' && Math.random() < 0.2) drop(e.x, e.y, 'heart');
@@ -979,7 +1112,7 @@
       const inCave = me.inCave;
       setTimeout(() => fade(() => {
         if (inCave) leaveCave(true); else respawnHome();
-        me.hp = MAXHP; say(inCave ? 'Du bist ohnmächtig geworden … und wachst vor der Höhle wieder auf.' : 'Du bist ohnmächtig geworden … und wachst auf der Heimatinsel wieder auf.');
+        me.hp = maxHp(); say(inCave ? 'Du bist ohnmächtig geworden … und wachst vor der Höhle wieder auf.' : 'Du bist ohnmächtig geworden … und wachst auf der Heimatinsel wieder auf.');
       }), 500);
     }
   }
@@ -1114,9 +1247,9 @@
   function step(dt) {
     const [ix, iy] = chatOpen || bigMap || busy || me.hp <= 0 ? [0, 0] : inputDir();
     me.inv = Math.max(0, me.inv - dt); hurtFlash = Math.max(0, hurtFlash - dt); shake = Math.max(0, shake - dt * 30);
-    if (me.atk > 0) { me.atk -= dt; if (!me.hitDone && me.atk < ATK_T * 0.6) doHits(); }
+    if (me.atk > 0) { me.atk -= dt; if (!me.hitDone && me.atk < (me.atkT || ATK_T) * 0.6) doHits(); }
     if (me.inCave) {
-      walkStep(dt, ix, iy, (x, y) => caveFree(x, y), 4.4);
+      walkStep(dt, ix, iy, (x, y) => caveFree(x, y), 4.4 * (1 + 0.1 * sk('fuss')));
       stepEnemies(dt);
       const C = cave;
       for (let j = -6; j <= 6; j++) for (let i = -6; i <= 6; i++) { const x = Math.floor(me.x) + i, y = Math.floor(me.y) + j; if (x >= 0 && y >= 0 && x < CW && y < CHH && i * i + j * j < 40) C.seen[y * CW + x] = 1; }
@@ -1125,18 +1258,18 @@
         if (Math.hypot(me.x - (x + 0.5), me.y - (y + 0.7)) < 0.95) {
           caveSave.chests[k] = Date.now(); saveCave();
           const n = 8 + Math.floor(Math.random() * 8); for (let i = 0; i < n; i++) drop(x + 0.5, y + 0.9, 'coin');
-          say('📦 Schatztruhe geöffnet!'); shake = 3;
+          say('📦 Schatztruhe geöffnet!'); shake = 3; gainXP(15, x + 0.5, y);
         }
       }
       if (me.y > C.EY + 0.35 && !busy) fade(() => leaveCave());
     }
     if (!me.inCave) {
       spawnOver(dt); stepEnemies(dt);
-      regenT += dt; if (regenT > 4) { regenT = 0; if (me.hp < MAXHP && !enemies.some(e => Math.hypot(e.x - me.x, e.y - me.y) < 9)) me.hp++; }
+      regenT += dt; if (regenT > 4) { regenT = 0; if (me.hp < maxHp() && !enemies.some(e => Math.hypot(e.x - me.x, e.y - me.y) < 9)) me.hp++; }
     }
     if (me.inCave) { /* schon erledigt */ } else if (!me.inBoat) {
       const wade = elev(me.x, me.y) < 0;
-      walkStep(dt, ix, iy, walkable, wade ? 2.4 : 4.6);
+      walkStep(dt, ix, iy, walkable, (wade ? 2.4 : 4.6) * (1 + 0.1 * sk('fuss')));
       const E = caveEnt();
       if (Math.abs(me.x - E.x) < 0.42 && me.y < E.y - 0.2 && !busy) enterCave();
     } else {
@@ -1146,8 +1279,8 @@
         boat.h = wrap(boat.h + Math.max(-turn, Math.min(turn, d)));
       }
       let target = 0;
-      if (boat.sail) target = 6.2 * w.s * polar(wrap(boat.h - w.a));
-      else if (ix || iy) target = 1.6;
+      if (boat.sail) target = 6.2 * w.s * polar(wrap(boat.h - w.a), sk('wind')) * (1 + 0.12 * sk('boot'));
+      else if (ix || iy) target = 1.6 * (sk('paddel') ? 1.5 : 1);
       boat.v += (target - boat.v) * Math.min(1, dt * (target > boat.v ? 0.7 : 1.2));
       const nx = boat.x + Math.cos(boat.h) * boat.v * dt, ny = boat.y + Math.sin(boat.h) * boat.v * dt;
       const bx = nx + Math.cos(boat.h) * 0.9, by = ny + Math.sin(boat.h) * 0.9;
@@ -1161,13 +1294,13 @@
       const it = items[i]; it.t += dt;
       it.vz -= 18 * dt; it.z += it.vz * dt; if (it.z < 0) { it.z = 0; it.vz = -it.vz * 0.45; it.vx *= 0.6; it.vy *= 0.6; }
       const dx = me.x - it.x, dy = me.y - it.y, d = Math.hypot(dx, dy);
-      if (it.t > 0.5 && d < 2.2) { it.vx += dx / d * 30 * dt; it.vy += dy / d * 30 * dt; }
+      if (it.t > 0.5 && d < (sk('magnet') ? 5 : 2.2)) { it.vx += dx / d * 30 * dt; it.vy += dy / d * 30 * dt; }
       const nx = it.x + it.vx * dt, ny = it.y + it.vy * dt;
       if (!me.inCave || caveFree(nx, ny, 0.1)) { it.x = nx; it.y = ny; }
       if (it.t > 0.4 && d < 0.5) {
         items.splice(i, 1);
         if (it.k === 'coin') { me.coins++; texts.push({ x: me.x, y: me.y - 1.6, s: '+1', t: 0, col: '#ffd27a' }); }
-        else if (it.k === 'heart') { me.hp = Math.min(MAXHP, me.hp + 2); texts.push({ x: me.x, y: me.y - 1.6, s: '♥', t: 0, col: '#ff6a7a' }); }
+        else if (it.k === 'heart') { me.hp = Math.min(maxHp(), me.hp + 2); texts.push({ x: me.x, y: me.y - 1.6, s: '♥', t: 0, col: '#ff6a7a' }); }
         else if (RES[it.k]) { bag[it.k] = (bag[it.k] || 0) + 1; texts.push({ x: me.x, y: me.y - 1.6, s: '+1 ' + RES[it.k][1], t: 0, col: '#ffffff' }); if (bagOpen) renderBag(); }
       } else if (it.t > 40) items.splice(i, 1);
     }
@@ -1231,7 +1364,7 @@
     ctx.fillStyle = '#1a1a22'; ctx.fillText(t, x, y - 2.2 * S);
   }
   // Figur mit Schatten, Watten im Wasser, Schwerthieb
-  function drawPerson(x, y, col, dir, frame, wade, t, atkP, blink) {
+  function drawPerson(x, y, col, dir, frame, wade, t, atkP, blink, whirl) {
     const sp = charSprite(col, dir, frame), w = 16 * S, h = 24 * S, top = y - 23 * S;
     const fx = DIRV[dir][0], fy = DIRV[dir][1];
     if (!wade) shadow(x, y - S * 0.5, 5.5 * S, 0.28);
@@ -1244,6 +1377,7 @@
     } else ctx.drawImage(sp, x - w / 2, top, w, h);
     ctx.globalAlpha = 1;
     if (atkP != null && dir !== 3) drawSword(x, y, dir, atkP);
+    if (atkP != null && whirl) { ctx.strokeStyle = `rgba(180,230,255,${0.6 * (1 - atkP)})`; ctx.lineWidth = 3 * S; ctx.beginPath(); ctx.ellipse(x, y - 8 * S, (10 + atkP * 14) * S, (6 + atkP * 8) * S, 0, 0, Math.PI * 2 * Math.min(1, atkP * 1.5)); ctx.stroke(); }
     void fx; void fy;
   }
   function drawSword(x, y, dir, p) {
@@ -1440,7 +1574,7 @@
     return [u, Math.round(W / 2 - me.x * u + sx), Math.round(H / 2 - (me.y - 0.5) * u + sy)];
   }
   function drawPeople(ents, ox, oy, u, t, cave_) {
-    if (!me.inBoat) ents.push({ y: me.y, f: () => drawPerson(ox + me.x * u, oy + me.y * u, me.col, me.dir, me.frame, !cave_ && elev(me.x, me.y) < 0, t, me.atk > 0 ? 1 - me.atk / ATK_T : null, me.inv > 0) });
+    if (!me.inBoat) ents.push({ y: me.y, f: () => drawPerson(ox + me.x * u, oy + me.y * u, me.col, me.dir, me.frame, !cave_ && elev(me.x, me.y) < 0, t, me.atk > 0 ? 1 - me.atk / (me.atkT || ATK_T) : null, me.inv > 0, sk('wirbel')) });
     for (const o of others.values()) {
       if (!!o.cave !== !!cave_ || o.inBoat) continue;
       ents.push({ y: o.y, f: () => drawPerson(ox + o.x * u, oy + o.y * u, o.col, o.dir, o.moving ? (Math.floor(o.ft / 0.13) % 4) + 1 : 0, !cave_ && elev(o.x, o.y) < 0, t, o.atk ? Math.min(1, (o.at || 0) / ATK_T) : null) });
@@ -1451,7 +1585,7 @@
     for (const o of others.values()) {
       if (!!o.cave !== !!cave_) continue;
       const hx = ox + o.x * u, hy = oy + o.y * u - (o.inBoat ? 0.6 : 1.6) * u;
-      nameTag(hx, hy, o.name, false);
+      nameTag(hx, hy, `${o.name} · St. ${o.lvl || 1}`, false);
       const b = bubbles.get(o.name); if (b && now - b.t < 6000) bubble(hx, hy - 7 * S, b.m);
     }
     const mb = bubbles.get(me.name); if (mb && now - mb.t < 6000) bubble(ox + me.x * u, oy + me.y * u - (me.inBoat ? 0.6 : 1.6) * u - S, mb.m);
@@ -1589,8 +1723,10 @@
   }
   function hudTick() {
     const w = wind();
-    hud.hp.innerHTML = Array.from({ length: MAXHP / 2 }, (_, i) => (me.hp >= i * 2 + 2 ? '<span class="f">♥</span>' : me.hp === i * 2 + 1 ? '<span class="f" style="opacity:.55">♥</span>' : '<span class="e">♥</span>')).join('');
+    hud.hp.innerHTML = Array.from({ length: maxHp() / 2 }, (_, i) => (me.hp >= i * 2 + 2 ? '<span class="f">♥</span>' : me.hp === i * 2 + 1 ? '<span class="f" style="opacity:.55">♥</span>' : '<span class="e">♥</span>')).join('');
     hud.coins.textContent = '🪙 ' + me.coins;
+    hud.lvl.textContent = 'St. ' + prog.lvl; hud.xp.style.width = Math.min(100, prog.xp / xpNeed(prog.lvl) * 100) + '%';
+    hud.pts.hidden = !prog.pts; hud.dot.hidden = !prog.pts; hud.pts.textContent = prog.pts;
     if (me.inCave) {
       hud.windBox.style.display = 'none';
       if (lastIsle !== 'Kristallhöhle') { lastIsle = 'Kristallhöhle'; hud.isle.textContent = 'Kristallhöhle'; }
@@ -1604,7 +1740,7 @@
       hud.wind.innerHTML = `Wind nach ${dirName(w.a)}, ${str}` + (me.inBoat ? `<br>Fahrt: ${(boat.v * 2).toFixed(1)} Knoten${boat.sail ? '' : ' (Paddeln)'}` : '');
       const isl = nearestIsland(me.x, me.y);
       const place = isl ? isl.name : T_NAMES[cls(elev(me.x, me.y))] || 'Offenes Meer';
-      if (place !== lastIsle) { lastIsle = place; hud.isle.textContent = place; if (isl && discover(isl) && place !== 'Heimatinsel') { say('🏝️ Neue Insel entdeckt: ' + place); addLog(`Entdeckt: <b>${escH(place)}</b> (${found.size} Inseln bisher) – ${escH(BIOMES[isl.b].info)}`); } }
+      if (place !== lastIsle) { lastIsle = place; hud.isle.textContent = place; if (isl && discover(isl) && place !== 'Heimatinsel') { say('🏝️ Neue Insel entdeckt: ' + place); gainXP(sk('entdecker') ? 50 : 25, me.x, me.y - 2); addLog(`Entdeckt: <b>${escH(place)}</b> (${found.size} Inseln bisher) – ${escH(BIOMES[isl.b].info)}`); } }
     }
     hud.on.textContent = online === 1 ? 'nur du bist online' : `${online} Spieler online`;
     hud.sail.hidden = !me.inBoat; hud.sail.classList.toggle('on', !!boat.sail);
@@ -1612,7 +1748,7 @@
     hud.atk.hidden = !!me.inBoat;
     hud.boat.querySelector('span').textContent = me.inBoat ? 'An Land' : 'Boot';
     if (me.inCave) drawCaveMap(hud.map, false);
-    else if (Math.hypot(me.x - mapAt[0], me.y - mapAt[1]) > 6 || mapDirty) { mapAt = [me.x, me.y]; mapDirty = false; drawMap(hud.map, 120, false); }
+    else if (Math.hypot(me.x - mapAt[0], me.y - mapAt[1]) > 6 || mapDirty) { mapAt = [me.x, me.y]; mapDirty = false; drawMap(hud.map, sk('entdecker') ? 180 : 120, false); }
     const now = Date.now(); [...hud.log.children].forEach((el, i) => { const l = log[i]; if (l && now - l.t > 15000) el.style.opacity = 0; });
   }
   let hudT = 0;
@@ -1635,12 +1771,12 @@
       online = m.n || online;
       const seen = new Set();
       for (const p of m.p || []) {
-        let [id, name, col, x, y, dir, moving, inBoat, bx, by, bh, sail, atk] = p; seen.add(id);
+        let [id, name, col, x, y, dir, moving, inBoat, bx, by, bh, sail, atk, lvl] = p; seen.add(id);
         const inCave = x < COX / 2; if (inCave) { x -= COX; y -= COY; }
         const tgt = { x, y, bx: inBoat ? x : bx, by: inBoat ? y : by, bh };
         let o = others.get(id);
         if (!o || o.cave !== inCave || Math.hypot(o.x - x, o.y - y) > 20) { o = { ...tgt, t: tgt, ft: 0 }; others.set(id, o); }
-        Object.assign(o, { name, col, dir, moving, inBoat, sail, atk, cave: inCave, t: tgt });
+        Object.assign(o, { name, col, dir, moving, inBoat, sail, atk, lvl: lvl || 1, cave: inCave, t: tgt });
       }
       for (const id of [...others.keys()]) if (!seen.has(id)) others.delete(id);
       mapDirty = true;
@@ -1679,6 +1815,6 @@
   }
   window.Insel = {
     open: openGame, close, net, isOpen: () => open, rejoin: () => { if (open) join(); },
-    _dbg: { me, boat, others, elev, tileAt, objAt, isCut, get bag() { return bag; }, wind, island, spawn, toggleBoat, toggleSail, caveEnt, enterCave, leaveCave, attack, get enemies() { return enemies; }, get cave() { return cave; } },
+    _dbg: { get prog() { return prog; }, gainXP, toggleSkills, me, boat, others, elev, tileAt, objAt, isCut, get bag() { return bag; }, wind, island, spawn, toggleBoat, toggleSail, caveEnt, enterCave, leaveCave, attack, get enemies() { return enemies; }, get cave() { return cave; } },
   };
 })();
