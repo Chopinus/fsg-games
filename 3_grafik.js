@@ -298,6 +298,12 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 30, title: 'Inselreich: Spielstand online speichern', date: '03.11.2026', items: [
+      ['Neu', 'Inselreich: Spielstand mit Name und Passwort online sichern – dasselbe Konto wie im Ritterlauf. So spielst du auf jedem Gerät weiter'],
+      ['Neu', 'Inselreich: Wer im Ritterlauf angemeldet ist, ist es automatisch auch im Inselreich'],
+      ['Neu', 'Inselreich: Dein Bauplatz gehört jetzt deinem Konto und zieht mit aufs neue Gerät um'],
+      ['Neu', 'Inselreich: Wurde auf einem anderen Gerät weitergespielt, kannst du wählen, welchen Stand du behalten willst'],
+    ] },
     { id: 29, title: 'Inselreich: Stufen-Sperren und Lehrkapitel', date: '03.11.2026', items: [
       ['Neu', 'Inselreich: Fähigkeiten anderer Spieler sind jetzt sichtbar – Feuerbälle, Blitze, Eisringe, Wurzeln und mehr'],
       ['Umstellung', 'Inselreich: Fortgeschrittene Waffen, Rüstungen, Boote und Fähigkeiten brauchen eine bestimmte Stufe (🔒 zeigt, ab wann)'],

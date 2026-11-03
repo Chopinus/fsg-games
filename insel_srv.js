@@ -18,7 +18,7 @@ const gh = (method, body) => fetch(`https://api.github.com/repos/${REPO}/content
   method, headers: { Authorization: `Bearer ${TOKEN}`, Accept: 'application/vnd.github+json', 'User-Agent': 'fsg-spiele', 'X-GitHub-Api-Version': '2022-11-28' }, body: body ? JSON.stringify(body) : undefined,
 });
 
-module.exports = function (send) {
+module.exports = function (send, konten) {
   const P = new Map(); // Verbindung -> Spieler
   let tick = 0;
   // ---------- Bauplätze ----------
@@ -82,6 +82,17 @@ module.exports = function (send) {
     if (m.t === 'i_join') {
       const s = state(m.s); if (!s) return;
       P.set(c, { id: c.pid, name: clean(m.name, 16) || 'Gast', col: Math.floor(num(m.col)) % 8, s, last: Date.now(), meta: meta(m.m) });
+      // Angemeldet (gleiches Konto wie im Ritterlauf)? Dann gehört der Bauplatz dem Konto und zieht mit aufs neue Gerät um.
+      c.acc = null;
+      if (konten && konten.tokenKey && m.acc && typeof m.acc === 'object') {
+        const k = konten.tokenKey(clean(m.acc.n, 20), String(m.acc.tk || '').slice(0, 64));
+        if (k) {
+          c.acc = k;
+          const mine = Object.entries(plots).find(([, p]) => p.acc === k), here = Object.entries(plots).find(([, p]) => p.o === c.pid);
+          if (mine && mine[1].o !== c.pid && !here) { mine[1].o = c.pid; mark(+mine[0]); }
+          else if (!mine && here) { here[1].acc = k; mark(+here[0]); }
+        }
+      }
       send(c, { t: 'i_hi', id: c.pid, n: P.size });
       send(c, { t: 'i_plots', plots, ready: loaded });
       crewState(c); send(c, { t: 'i_top', top });
@@ -111,7 +122,7 @@ module.exports = function (send) {
     const id = Math.floor(num(m.id, -1));
     if (m.t === 'i_claim') {
       if (id < 0 || id >= PLOTS || plots[id] || Object.values(plots).some(p => p.o === c.pid)) return;
-      plots[id] = { o: c.pid, n: me.name, it: {}, c: {}, g: {}, a: {}, t: Date.now() }; mark(id); return;
+      plots[id] = { o: c.pid, n: me.name, it: {}, c: {}, g: {}, a: {}, t: Date.now(), ...(c.acc ? { acc: c.acc } : {}) }; mark(id); return;
     }
     const p = own(c, id); if (!p) return;
     p.n = me.name;

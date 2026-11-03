@@ -152,7 +152,7 @@ function api(req, res, action) {
   const reply = (code, obj) => { res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(obj)); };
   if (req.method !== 'POST') return reply(405, { error: 'Nur POST' });
   let body = '';
-  req.on('data', ch => { body += ch; if (body.length > 65536) { reply(413, { error: 'Zu groß' }); req.destroy(); } });
+  req.on('data', ch => { body += ch; if (body.length > 131072) { reply(413, { error: 'Zu groß' }); req.destroy(); } });
   req.on('end', async () => {
     if (res.writableEnded) return;
     let data = {};
@@ -308,7 +308,7 @@ function handle(c, m) {
   }
 }
 
-const ISL = require('./insel_srv.js')(send); // Inselreich: offene Welt für alle
+const ISL = require('./insel_srv.js')(send, konten); // Inselreich: offene Welt für alle
 
 wss.on('connection', ws => {
   const c = { ws, pid: null, name: '', room: null, alive: true };

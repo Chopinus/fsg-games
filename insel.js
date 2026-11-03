@@ -935,6 +935,117 @@
     return false;
   }
   function save() { saveBag(); try { localStorage.setItem('insel.save', JSON.stringify({ caveKey: me.caveKey, x: me.x, y: me.y, inBoat: me.inBoat, inCave: me.inCave, col: me.col, coins: me.coins, hp: me.hp, boat: { x: boat.x, y: boat.y, h: boat.h, sail: boat.sail } })); } catch {} }
+
+  /* ---------- Spielstand online: gleiches Konto (Name + Passwort) wie im Ritterlauf ---------- */
+  const SKEYS = { xp: 'insel.xp', bag: 'insel.bag', found: 'insel.found', cave: 'insel.cave', save: 'insel.save' };
+  let acct = null, cloudLast = '', cloudBusy = false, cloudAskD = null, cloudMsg = '', cloudForm = false, cloudAt = 0;
+  try {
+    const a = JSON.parse(localStorage.getItem('insel.konto') || 'null');
+    if (a && a.name && a.token) acct = a;
+    else if (!a) { const r = JSON.parse(localStorage.getItem('fsg.ritter.konto') || 'null'); if (r && r.name && r.token) acct = { name: r.name, token: r.token, updated: 0, rl: 1 }; }
+  } catch {}
+  const setAcct = a => { acct = a; try { localStorage.setItem('insel.konto', JSON.stringify(a || { out: 1 })); } catch {} };
+  async function api(action, body, keepalive) {
+    try {
+      const res = await fetch('/api/' + action, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), keepalive: !!keepalive });
+      const j = await res.json().catch(() => ({}));
+      return res.ok ? j : { ...j, error: j.error || 'Der Server antwortet gerade nicht.' };
+    } catch { return { error: 'Keine Verbindung zum Server.' }; }
+  }
+  function snapCore() {
+    if (open) { save(); saveProg(); saveCave(); }
+    const d = { v: 1 };
+    for (const [k, ls] of Object.entries(SKEYS)) { try { d[k] = JSON.parse(localStorage.getItem(ls) || 'null'); } catch { d[k] = null; } }
+    return d;
+  }
+  const coreStr = d => { const c = { ...d }; delete c.t; return JSON.stringify(c); };
+  const standTxt = d => (d && d.xp ? `Stufe ${d.xp.lvl || 1} · ${(d.save && d.save.coins) | 0} 🪙 · ${Array.isArray(d.found) ? d.found.length : 0} Inseln` : 'leer');
+  const localReal = () => hadSave && (prog.lvl > 1 || prog.xp > 0 || me.coins > 0 || Object.keys(bag).length > 0);
+  function enterSavedCave() {
+    caveSpec = START_CAVE;
+    if (me.caveKey && me.caveKey !== 'start') { const [cx, cy] = me.caveKey.slice(1).split(',').map(Number), sp = islandCave(island(cx, cy)); if (sp) caveSpec = sp; }
+    buildCave(caveSpec); spawnEnemies();
+  }
+  function applySnap(d) {
+    for (const [k, ls] of Object.entries(SKEYS)) try { d[k] == null ? localStorage.removeItem(ls) : localStorage.setItem(ls, JSON.stringify(d[k])); } catch {}
+    prog = Object.assign({ xp: 0, lvl: 1, pts: 0, sk: {}, gear: {} }, d.xp && typeof d.xp === 'object' ? d.xp : {});
+    found = new Set(Array.isArray(d.found) ? d.found : []);
+    bag = d.bag && typeof d.bag === 'object' ? d.bag : {};
+    caveSaves = d.cave && typeof d.cave === 'object' ? d.cave : {};
+    for (const k in buff) buff[k] = 0;
+    if (open) {
+      hadSave = load(); if (!hadSave) { spawn(); prog.tut = 0; } else if (prog.tut == null) prog.tut = TUT.length;
+      mapDirty = true; lastIsle = ''; pet.x = me.x; pet.y = me.y;
+      if (me.inCave) enterSavedCave();
+      sendMeta(); try { renderAbil(); } catch {} showTitle(); tutBox();
+    }
+    cloudLast = coreStr(d);
+  }
+  async function cloudSave(force, keepalive) {
+    if (!acct || cloudBusy || cloudAskD || !open) return;
+    const core = snapCore(), str = coreStr(core);
+    if (!force && str === cloudLast) return;
+    cloudBusy = true;
+    const r = await api('insel_save', { name: acct.name, token: acct.token, data: { ...core, t: Date.now() }, base: acct.updated || 0, force: force === 'keep' }, keepalive);
+    cloudBusy = false;
+    if (r.conflict) { cloudAsk(r, 'Auf einem anderen Gerät wurde weitergespielt.'); return; }
+    if (r.error) { if (/anmelden/i.test(r.error)) { setAcct(null); cloudMsg = 'Du wurdest abgemeldet. Bitte melde dich neu an.'; } renderCloud(); return; }
+    cloudLast = str; cloudAt = Date.now(); acct.updated = r.updated; setAcct(acct); renderCloud();
+  }
+  async function cloudSync() {
+    if (!acct) { renderCloud(); return; }
+    const r = await api('insel_load', { name: acct.name, token: acct.token });
+    if (r.error) { if (/anmelden/i.test(r.error)) { setAcct(null); cloudMsg = 'Bitte melde dich neu an.'; } else cloudMsg = r.error; renderCloud(); return; }
+    acct.name = r.name || acct.name; setAcct(acct);
+    if (!r.data) { await cloudSave(true); cloudMsg = 'Dein Spielstand ist jetzt online gesichert.'; renderCloud(); return; }
+    if (r.updated === acct.updated) { cloudAt = r.updated; renderCloud(); return; } // nichts Neues online, hier wird normal weitergespeichert
+    if (coreStr(r.data) === coreStr(snapCore())) { acct.updated = r.updated; setAcct(acct); cloudLast = coreStr(r.data); cloudAt = r.updated; renderCloud(); return; }
+    if (!localReal()) { acct.updated = r.updated; setAcct(acct); cloudAt = r.updated; applySnap(r.data); cloudMsg = '☁️ Online-Spielstand geladen'; renderCloud(); say('☁️ Dein Spielstand wurde geladen'); return; }
+    cloudAsk(r, acct.updated ? 'Auf einem anderen Gerät wurde weitergespielt.' : 'Online gibt es schon einen Spielstand.');
+  }
+  function cloudAsk(r, why) {
+    cloudAskD = r; if (!titleOn) showTitle();
+    const old = root.querySelector('.is-cask'); if (old) old.remove();
+    const d = document.createElement('div'); d.className = 'is-cask'; root.appendChild(d);
+    const when = new Date(r.updated).toLocaleString('de-DE', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' });
+    d.innerHTML = `<div class="is-cbox"><h3>☁️ Welchen Spielstand willst du?</h3><p>${why}</p>
+      <button data-cpick="cloud"><b>☁️ Online-Stand laden</b><small>${standTxt(r.data)} · gespeichert ${when}</small></button>
+      <button data-cpick="here"><b>📱 Diesen Stand hier behalten</b><small>${standTxt(snapCore())} · überschreibt den Online-Stand</small></button></div>`;
+    d.onclick = async e => {
+      const b = e.target.closest('[data-cpick]'); if (!b) return;
+      d.remove(); cloudAskD = null;
+      if (b.dataset.cpick === 'cloud') { acct.updated = r.updated; setAcct(acct); cloudAt = r.updated; applySnap(r.data); cloudMsg = '☁️ Online-Spielstand geladen'; }
+      else { acct.updated = r.updated; setAcct(acct); await cloudSave('keep'); cloudMsg = 'Dieser Stand ist jetzt online gesichert.'; }
+      renderCloud();
+    };
+  }
+  function renderCloud() {
+    const el = root && root.querySelector('.is-tcloud'); if (!el) return;
+    const msg = cloudMsg ? `<div class="is-cmsg">${escH(cloudMsg)}</div>` : '';
+    if (acct) {
+      const t = cloudAt ? new Date(cloudAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : '';
+      el.innerHTML = `<div class="is-con">☁️ Online gesichert als <b>${escH(acct.name)}</b>${t ? ` · zuletzt ${t} Uhr` : ''} <button data-clogout>Abmelden</button></div>${msg}`;
+    } else if (cloudForm) {
+      el.innerHTML = `<form class="is-cform" autocomplete="on"><b>☁️ Spielstand online sichern</b><small>Dasselbe Konto wie im Ritterlauf – oder leg ein neues an.</small>
+        <input name="n" placeholder="Name" maxlength="20" autocomplete="username"><input name="p" type="password" placeholder="Passwort (mind. 4 Zeichen)" maxlength="60" autocomplete="current-password">
+        <div><button type="submit" data-cdo="login">Anmelden</button><button type="button" data-cdo="create">Neu anlegen</button><button type="button" data-cdo="x">✕</button></div>${msg}</form>`;
+      const f = el.querySelector('form'); f.onsubmit = e => { e.preventDefault(); cloudLogin(false); };
+      setTimeout(() => f.n.focus(), 30);
+    } else el.innerHTML = `<button class="is-clog" data-clogin>☁️ Spielstand online sichern</button><small class="is-chint">Mit Name und Passwort auf jedem Gerät weiterspielen – wie im Ritterlauf</small>${msg}`;
+  }
+  async function cloudLogin(create) {
+    const f = root.querySelector('.is-cform'); if (!f) return;
+    const n = f.n.value.trim(), pw = f.p.value;
+    if (!n || !pw) { cloudMsg = 'Gib Name und Passwort ein.'; renderCloud(); return; }
+    f.querySelectorAll('button').forEach(b => (b.disabled = true));
+    const r = await api(create ? 'create' : 'login', create ? { name: n, pass: pw, data: {} } : { name: n, pass: pw });
+    if (r.error) { cloudMsg = r.error; renderCloud(); const g = root.querySelector('.is-cform'); if (g) { g.n.value = n; } return; }
+    setAcct({ name: r.name, token: r.token, updated: 0 }); cloudForm = false; cloudMsg = create ? 'Konto angelegt!' : 'Angemeldet!';
+    join(); renderCloud(); await cloudSync();
+  }
+  setInterval(() => { if (open && !titleOn) cloudSave(); }, 40000);
+  window.addEventListener('pagehide', () => { if (open) cloudSave(false, true); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && open) cloudSave(false, true); });
   function spawn() { // neue Spieler beginnen im Dorf Lindmark auf der Heimatinsel
     const T = town(); me.x = T.V.x - 3.6; me.y = T.V.y - 0.4; me.dir = 1;
     const [x, y, h] = DEST[0].spot(); boat.x = x; boat.y = y; boat.h = h;
@@ -1094,6 +1205,22 @@
 @keyframes isPulse{0%,100%{scale:1}50%{scale:1.05}}
 #isl .is-trow{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}#isl .is-trow button{border:0;border-radius:11px;padding:9px 14px;font:800 14px system-ui;background:rgba(14,22,40,.8);color:#fff;cursor:pointer;border:1px solid rgba(255,255,255,.2)}
 #isl .is-thelp{background:rgba(14,22,40,.88);border-radius:12px;padding:10px 13px;font-size:13.5px;line-height:1.5;text-align:left}
+#isl .is-tcloud{display:flex;flex-direction:column;align-items:center;gap:6px;max-width:100%}
+#isl .is-clog{border:1px solid rgba(140,200,255,.5);border-radius:12px;padding:9px 16px;font:800 15px system-ui;background:rgba(20,60,110,.85);color:#fff;cursor:pointer}
+#isl .is-chint{color:#cfe0ff;font-size:12.5px;text-shadow:0 1px 4px #000}
+#isl .is-con{background:rgba(14,40,30,.85);border:1px solid rgba(120,230,160,.4);border-radius:12px;padding:7px 12px;font-size:13.5px;color:#e6fff0}
+#isl .is-con button{margin-left:6px;border:0;border-radius:8px;padding:3px 8px;font:700 12px system-ui;background:rgba(255,255,255,.15);color:#fff;cursor:pointer}
+#isl .is-cform{display:flex;flex-direction:column;gap:7px;background:rgba(14,22,40,.92);border:1px solid rgba(255,255,255,.2);border-radius:14px;padding:12px 14px;width:min(330px,88vw);text-align:left}
+#isl .is-cform small{color:#aab8d8;font-size:12px;margin-top:-4px}
+#isl .is-cform input{border:1px solid rgba(255,255,255,.25);border-radius:9px;padding:9px 10px;font:600 15px system-ui;background:#0b1222;color:#fff}
+#isl .is-cform div{display:flex;gap:6px}#isl .is-cform div button{flex:1;border:0;border-radius:9px;padding:9px 6px;font:800 14px system-ui;background:#ffcf4a;color:#2a1608;cursor:pointer}
+#isl .is-cform div button[data-cdo=create]{background:#5fc9ff}#isl .is-cform div button[data-cdo=x]{flex:0 0 38px;background:rgba(255,255,255,.15);color:#fff}
+#isl .is-cmsg{color:#ffe28a;font-size:12.5px;font-weight:700;text-shadow:0 1px 4px #000}
+#isl .is-cask{position:absolute;inset:0;z-index:12;display:grid;place-items:center;background:rgba(2,6,18,.7);padding:16px}
+#isl .is-cbox{background:#101a30;border:1px solid rgba(255,255,255,.2);border-radius:16px;padding:16px;max-width:380px;display:flex;flex-direction:column;gap:9px}
+#isl .is-cbox h3{margin:0;font-size:18px}#isl .is-cbox p{margin:0;color:#c8d4f0;font-size:14px}
+#isl .is-cbox button{display:flex;flex-direction:column;gap:3px;text-align:left;border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:10px 12px;background:rgba(255,255,255,.07);color:#fff;font:15px system-ui;cursor:pointer}
+#isl .is-cbox button[data-cpick=cloud]{background:rgba(40,110,200,.35)}#isl .is-cbox small{color:#b8c6e6;font-size:12.5px}
 #isl .is-tbox>small{color:#dfe8ff;text-shadow:0 1px 4px #000}
 #isl .is-fleet{display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:rgba(255,255,255,.05);border-radius:10px;padding:8px;margin:6px 0 10px;font-size:13px}
 #isl .is-fleet button{border:1px solid rgba(255,255,255,.2);background:rgba(14,22,40,.8);color:#fff;border-radius:9px;padding:6px 9px;font:700 13px system-ui;cursor:pointer}#isl .is-fleet button.on{background:#ffcf4a;color:#2a1608}
@@ -1775,10 +1902,16 @@
     const d = document.createElement('div'); d.className = 'is-title'; root.appendChild(d);
     d.innerHTML = `<div class="is-tbox"><div class="is-logo"><span class="is-tboat">⛵</span><h1>Inselreich</h1><p>Segeln · Sammeln · Bauen · Kämpfen</p></div>
       <button class="is-tplay" data-tplay>▶ ${hadSave ? 'Weiterspielen' : 'Abenteuer beginnen'}</button>
+      <div class="is-tcloud"></div>
       <div class="is-trow"><button data-thelp>🎮 Steuerung</button><button data-tback>✕ Zurück zum Hub</button></div>
       <div class="is-thelp" hidden><b>Am PC:</b> WASD laufen · Leertaste oder Klick angreifen · E sprechen, benutzen, Boot · R Schnellreise · G angeln · I Rucksack · K Skills · C Crew · T Chat · M Karte<br><b>Am Handy:</b> Links irgendwo hinziehen = laufen · rechts tippen oder ziehen = angreifen und zielen · Knöpfe unten rechts für alles andere</div>
       <small>Du spielst als <b>${escH(me.name)}</b> · ${online} Spieler online</small></div>`;
-    d.onclick = e => { if (e.target.closest('[data-tplay]')) startPlay(); else if (e.target.closest('[data-thelp]')) { const h = d.querySelector('.is-thelp'); h.hidden = !h.hidden; } else if (e.target.closest('[data-tback]')) close(); };
+    renderCloud();
+    d.onclick = e => { if (e.target.closest('[data-clogin]')) { cloudForm = true; cloudMsg = ''; renderCloud(); return; }
+      const cd = e.target.closest('[data-cdo]'); if (cd) { if (cd.dataset.cdo === 'x') { cloudForm = false; cloudMsg = ''; renderCloud(); } else if (cd.dataset.cdo === 'create') cloudLogin(true); return; }
+      if (e.target.closest('[data-clogout]')) { cloudSave(); setAcct(null); cloudMsg = 'Abgemeldet. Dein Stand bleibt auf diesem Gerät.'; renderCloud(); return; }
+      if (e.target.closest('.is-tcloud')) return;
+      if (e.target.closest('[data-tplay]')) { if (cloudAskD) return; startPlay(); } else if (e.target.closest('[data-thelp]')) { const h = d.querySelector('.is-thelp'); h.hidden = !h.hidden; } else if (e.target.closest('[data-tback]')) close(); };
   }
   function startPlay() {
     const d = root.querySelector('.is-title'); if (d) { d.classList.add('out'); setTimeout(() => d.remove(), 600); }
@@ -1834,6 +1967,7 @@
     ['⛵ Boot, Wind und Schnellreise', 'Dein Boot wartet am Steg. Mit Segel bist du schnell, quer zum Wind am schnellsten. Mit 🧭 Reisen (Taste R) springst du vom Boot oder von einem Steg zwischen dem Hafen Lindmark und dem Steg in der Inselmitte hin und her.'],
     ['🦈 Gefahren auf See', 'Im tiefen Wasser jagen Haie, auf offener See lauern Piratenschiffe, und manchmal zieht ein Sturm auf. Mit der Bootskanone aus der Werft wehrst du dich.'],
     ['🕳️ Höhlen und Bosse', 'Bosse gibt es in der Kristallhöhle auf der Startinsel (Höhlentroll, ab Stufe 5) und in den Höhlen großer Inseln: Sandwurm in der Wüste (ab 9), Frostwyrm im Schnee (ab 11), Riesenfrosch im Dschungel (ab 12), Sporenkönigin im Pilzwald (ab 14) und Feuerdrache auf Vulkaninseln (ab 16). Sie bringen viele Münzen und EP, Herzen, drei seltene Boss-Materialien für die besten Waffen, Rüstungen, Segel und Boote, oft eine Schatzkarte – und beim ersten Sieg einen Skillpunkt extra. Nach 10 Minuten kommen sie wieder.'],
+    ['☁️ Speichern', 'Gespeichert wird automatisch auf diesem Gerät. Melde dich im Titelbildschirm mit Name und Passwort an (dasselbe Konto wie im Ritterlauf), dann wird dein Stand auch online gesichert und du spielst auf jedem Gerät weiter – samt Bauplatz.'],
     ['🔒 Stufen', 'Fortgeschrittene Waffen, Rüstungen, Boote, Fähigkeiten und Bosse brauchen eine bestimmte Stufe. Was gesperrt ist, zeigt ein 🔒 mit der nötigen Stufe. Ab Stufe 5, 8 und 12 gibt es bei Anna neue Lehrkapitel.'],
     ['🌙 Tag und Nacht', 'Nachts wird es dunkel, und es kommen mehr und stärkere Gegner. Fackeln und Laternen machen Licht.'],
     ['🎣 Angeln', 'Mit einer Angel von Hein angelst du am Wasser (G). Jede Inselart und Tageszeit hat andere Fische – sie landen im Fischbuch.'],
@@ -2526,7 +2660,7 @@
     if (e.target && e.target.tagName === 'INPUT') return;
     const k = e.key.toLowerCase();
     if (e.type === 'keydown') {
-      if (titleOn) { if ((k === 'enter' || k === ' ') && !e.repeat) { e.preventDefault(); startPlay(); } return; }
+      if (titleOn) { if ((k === 'enter' || k === ' ') && !e.repeat && !cloudAskD) { e.preventDefault(); startPlay(); } return; }
       if (k === 't' || k === 'enter') { e.preventDefault(); openChat(); return; }
       if (k === 'r' && !e.repeat) { toggleTravel(); return; }
       if (k === 'escape' && travelOpen) { toggleTravel(); return; }
@@ -3814,7 +3948,7 @@
   }
 
   /* ---------- Netz ---------- */
-  function join() { if (typeof send === 'function') send({ t: 'i_join', name: me.name, col: me.col, s: stateArr(), m: meta() }); lastSent = ''; }
+  function join() { if (typeof send === 'function') send({ t: 'i_join', name: me.name, col: me.col, s: stateArr(), m: meta(), ...(acct ? { acc: { n: acct.name, tk: acct.token } } : {}) }); lastSent = ''; }
   function net(m) {
     if (m.t === 'i_hi') { myId = m.id; online = m.n; return; }
     if (m.t === 'i_plots') { PLOTS = m.plots || {}; for (const k in PLOTS) if (!PLOTS[k]) delete PLOTS[k]; return; }
@@ -3864,16 +3998,16 @@
       if (me.caveKey && me.caveKey !== 'start') { const [cx, cy] = me.caveKey.slice(1).split(',').map(Number), sp = islandCave(island(cx, cy)); if (sp) caveSpec = sp; }
       buildCave(caveSpec); spawnEnemies();
     }
-    join();
+    join(); cloudMsg = ''; cloudLast = '';
     addLog('Willkommen im <b>Inselreich</b>!');
     if (tutActive()) addLog('<b>Lotsin Anna</b> am Dorfplatz erklärt dir alles Wichtige.'); else if (!found.has(BIG.name)) addLog('Weit im <b>Westen</b> liegt die große <b>Heimatinsel</b> mit dem Dorf Lindmark. Segle hin – oder nimm 🧭 Reisen vom Boot aus!');
-    showTitle(); tutBox();
+    showTitle(); tutBox(); cloudSync();
     raf = requestAnimationFrame(loop);
   }
   function blur() { keys.clear(); }
   function close() {
     if (!open) return;
-    open = false; cancelAnimationFrame(raf); save();
+    cloudSave(); open = false; cancelAnimationFrame(raf); save();
     if (typeof send === 'function') send({ t: 'i_leave' });
     myId = null;
     window.removeEventListener('keydown', onKey); window.removeEventListener('keyup', onKey); window.removeEventListener('blur', blur);
@@ -3882,6 +4016,6 @@
   }
   window.Insel = {
     open: openGame, close, net, isOpen: () => open, rejoin: () => { if (open) join(); },
-    _dbg: { mkE: (k, x, y) => mkEnemy(k, x, y), get foeShots() { return foeShots; }, cast, get spells() { return spells; }, ABIL, aimStart, aimEnd, get titleOn() { return titleOn; }, startPlay, travelTo, toggleTravel, mid, DEST, TUT, tutNext, zoneKey, get seaFoes() { return seaFoes; }, fireCannon, storm, buoys, get race() { return race; }, set race(v) { race = v; }, get remote() { return remote; }, zoneHost, get crew() { return crew; }, get raceTop() { return raceTop; }, fishAction, get fishing() { return fishing; }, set fishing(v) { fishing = v; }, catchFish, checkAch, sendMeta, islandCave, entsNear, newMap, darkness, get caveSpec() { return caveSpec; }, get PLOTS() { return PLOTS; }, myPlotId, placeAt, toggleBuild, get buildSel() { return buildSel; }, set buildSel(v) { buildSel = v; }, get baseNear() { return baseNear; }, toggleChest, town, BIG, quests, qEvent, toggleNpc, get nearNpc() { return nearNpc; }, interact, stations, toggleCraft, craft, useItem, buff, get nearSt() { return nearSt; }, get prog() { return prog; }, gainXP, toggleSkills, me, boat, others, elev, tileAt, objAt, isCut, get bag() { return bag; }, wind, island, spawn, toggleBoat, toggleSail, caveEnt, enterCave, leaveCave, attack, get enemies() { return enemies; }, get cave() { return cave; } },
+    _dbg: { mkE: (k, x, y) => mkEnemy(k, x, y), get foeShots() { return foeShots; }, cast, get spells() { return spells; }, ABIL, aimStart, aimEnd, get titleOn() { return titleOn; }, startPlay, travelTo, toggleTravel, mid, DEST, TUT, tutNext, zoneKey, get seaFoes() { return seaFoes; }, fireCannon, storm, buoys, get race() { return race; }, set race(v) { race = v; }, get remote() { return remote; }, zoneHost, get crew() { return crew; }, get raceTop() { return raceTop; }, fishAction, get fishing() { return fishing; }, set fishing(v) { fishing = v; }, catchFish, checkAch, sendMeta, islandCave, entsNear, newMap, darkness, get caveSpec() { return caveSpec; }, get PLOTS() { return PLOTS; }, myPlotId, placeAt, toggleBuild, get buildSel() { return buildSel; }, set buildSel(v) { buildSel = v; }, get baseNear() { return baseNear; }, toggleChest, town, BIG, quests, qEvent, toggleNpc, get nearNpc() { return nearNpc; }, interact, stations, toggleCraft, craft, useItem, buff, get nearSt() { return nearSt; }, get prog() { return prog; }, cloudSave, get acct() { return acct; }, gainXP, toggleSkills, me, boat, others, elev, tileAt, objAt, isCut, get bag() { return bag; }, wind, island, spawn, toggleBoat, toggleSail, caveEnt, enterCave, leaveCave, attack, get enemies() { return enemies; }, get cave() { return cave; } },
   };
 })();

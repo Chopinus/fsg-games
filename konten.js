@@ -441,6 +441,57 @@ function cleanData(d) {
   return s.length <= 40000 ? JSON.parse(s) : null;
 }
 
+
+// ---------- Inselreich-Spielstände ----------
+// Gleiches Konto (Name + Passwort) wie im Ritterlauf, aber eigene Datei, damit der Ritterlauf-Speicher klein bleibt.
+const ISL_FILE = 'inselreich-spielstaende.json', ISL_LOCAL = path.join(__dirname, 'inselreich-spielstaende.local.json');
+let isl = {}, islSha = null, islDirty = false, islTimer = null;
+async function islLoad() {
+  try {
+    if (durable) {
+      const res = await gh('GET', null, ISL_FILE);
+      if (res.status === 200) { const j = await res.json(); islSha = j.sha; let text = j.content ? Buffer.from(j.content, 'base64').toString('utf8') : '';
+        if (!text && j.size > 0) { const raw = await fetch(`https://api.github.com/repos/${REPO}/contents/${ISL_FILE}`, { headers: { Authorization: `Bearer ${TOKEN}`, Accept: 'application/vnd.github.raw', 'User-Agent': 'fsg-spiele', 'X-GitHub-Api-Version': '2022-11-28' } }); if (raw.ok) text = await raw.text(); }
+        isl = JSON.parse(text || '{}'); }
+    } else if (fs.existsSync(ISL_LOCAL)) isl = JSON.parse(fs.readFileSync(ISL_LOCAL, 'utf8'));
+  } catch (e) { console.error('Inselreich-Stände laden:', e); }
+}
+async function islFlush() {
+  if (!islDirty) return;
+  islDirty = false;
+  const text = JSON.stringify(isl);
+  try {
+    if (durable) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const res = await gh('PUT', { message: 'Inselreich-Spielstände aktualisiert', content: Buffer.from(text).toString('base64'), ...(islSha ? { sha: islSha } : {}) }, ISL_FILE);
+        if (res.ok) { islSha = (await res.json()).content.sha; return; }
+        if (res.status === 409 || res.status === 422) { const g = await gh('GET', null, ISL_FILE); if (g.ok) islSha = (await g.json()).sha; continue; }
+        console.error('Inselreich-Stände speichern:', res.status); break;
+      }
+      islDirty = true;
+    } else fs.writeFileSync(ISL_LOCAL, text);
+  } catch (e) { islDirty = true; console.error('Inselreich-Stände speichern:', e); }
+}
+function islMark() { islDirty = true; if (!islTimer) islTimer = setTimeout(() => { islTimer = null; islFlush(); }, 20000); }
+function islAction(action, key, acc, body) {
+  const cur = isl[key];
+  if (action === 'insel_load') return [200, { name: acc.name, data: cur ? cur.d : null, updated: cur ? cur.u : 0 }];
+  // insel_save
+  const d = body.data;
+  if (!d || typeof d !== 'object' || Array.isArray(d)) return [400, { error: 'Der Spielstand ist ungültig.' }];
+  const text = JSON.stringify(d);
+  if (text.length > 60000) return [413, { error: 'Der Spielstand ist zu groß.' }];
+  const base = Number(body.base) || 0;
+  if (cur && base && cur.u > base && !body.force) return [409, { conflict: true, data: cur.d, updated: cur.u, error: 'Auf einem anderen Gerät wurde weitergespielt.' }];
+  isl[key] = { d: JSON.parse(text), u: Date.now() }; islMark();
+  return [200, { updated: isl[key].u, durable }];
+}
+// Für Inselreich (Bauplatz gehört dem Konto, egal auf welchem Gerät)
+function tokenKey(name, token) {
+  const key = keyOf(cleanName(name)), acc = accounts[key];
+  return acc && (acc.tokens || []).includes(sha256(String(token || ''))) ? key : null;
+}
+
 // Bremse gegen Passwort-Raten: höchstens 12 falsche Versuche pro Minute und IP
 const fails = new Map();
 const recent = ip => (fails.get(ip) || []).filter(x => Date.now() - x < 60000);
@@ -492,6 +543,10 @@ async function handle(action, body, ip) {
     return [200, { token }];
   }
   if (action === 'board') return [200, board()];
+  if (action === 'insel_load' || action === 'insel_save') {
+    if (!acc || !(acc.tokens || []).includes(sha256(String(body.token || '')))) return [401, { error: 'Bitte melde dich neu an.' }];
+    return islAction(action, key, acc, body);
+  }
   if (GUILD_ACTIONS.includes(action)) {
     if (!acc || !(acc.tokens || []).includes(sha256(String(body.token || '')))) return [401, { error: 'Bitte melde dich neu an.' }];
     return guildAction(action, key, acc, body);
@@ -532,9 +587,9 @@ function board() {
   return boardCache;
 }
 
-load(); chatLoad(); wbLoad(); gLoad();
+load(); chatLoad(); wbLoad(); gLoad(); islLoad();
 // Render beendet den Dienst mit SIGTERM – vorher noch speichern
-process.on('SIGTERM', async () => { await flush(); await chatFlush(); await wbFlush(); await gFlush(); process.exit(0); });
-process.on('SIGINT', async () => { await flush(); await chatFlush(); await wbFlush(); await gFlush(); process.exit(0); });
+process.on('SIGTERM', async () => { await flush(); await chatFlush(); await wbFlush(); await gFlush(); await islFlush(); process.exit(0); });
+process.on('SIGINT', async () => { await flush(); await chatFlush(); await wbFlush(); await gFlush(); await islFlush(); process.exit(0); });
 
-module.exports = { handle, flush, durable };
+module.exports = { handle, flush, durable, tokenKey };
