@@ -23,13 +23,15 @@ module.exports = function (send) {
   let tick = 0;
   // ---------- Bauplätze ----------
   // id -> { o: Spieler-id, n: Name, it: { "x,y": [Boden, Gegenstand] }, c: { Rohstoff: Anzahl }, g: { "x,y": [Samen, gepflanzt] }, a: { "x,y": zuletzt geerntet }, t }
-  let plots = {}, sha = null, dirty = false, timer = null, loaded = false;
+  // gespeichert wird { plots, crews, top } (ältere Dateien enthalten nur die Bauplätze)
+  let plots = {}, crews = {}, top = [], sha = null, dirty = false, timer = null, loaded = false;
+  const unpack = j => { if (j && j.plots) { plots = j.plots || {}; crews = j.crews || {}; top = j.top || []; } else plots = j || {}; };
   (async () => {
     try {
       if (durable) {
         const r = await gh('GET');
-        if (r.status === 200) { const j = await r.json(); sha = j.sha; plots = JSON.parse(Buffer.from(j.content || '', 'base64').toString('utf8') || '{}'); }
-      } else if (fs.existsSync(LOCAL)) plots = JSON.parse(fs.readFileSync(LOCAL, 'utf8'));
+        if (r.status === 200) { const j = await r.json(); sha = j.sha; unpack(JSON.parse(Buffer.from(j.content || '', 'base64').toString('utf8') || '{}')); }
+      } else if (fs.existsSync(LOCAL)) unpack(JSON.parse(fs.readFileSync(LOCAL, 'utf8')));
     } catch (e) { console.error('Inselreich-Basen laden:', e); }
     // verlassene Bauplätze nach 45 Tagen freigeben
     for (const [id, p] of Object.entries(plots)) if (Date.now() - (p.t || 0) > 45 * 864e5) delete plots[id];
@@ -38,7 +40,7 @@ module.exports = function (send) {
   })();
   async function flush() {
     if (!dirty) return; dirty = false;
-    const text = JSON.stringify(plots);
+    const text = JSON.stringify({ plots, crews, top });
     try {
       if (durable) {
         for (let i = 0; i < 2; i++) {
@@ -51,6 +53,7 @@ module.exports = function (send) {
       } else fs.writeFileSync(LOCAL, text);
     } catch (e) { dirty = true; console.error('Inselreich-Basen speichern:', e); }
   }
+  function touch() { dirty = true; if (!timer) timer = setTimeout(() => { timer = null; flush(); }, 20000); }
   function mark(id) {
     if (plots[id]) plots[id].t = Date.now();
     dirty = true; if (!timer) timer = setTimeout(() => { timer = null; flush(); }, 20000);
@@ -59,6 +62,10 @@ module.exports = function (send) {
   }
   const onExit = () => { if (dirty) flush().finally(() => process.exit(0)); else process.exit(0); };
   process.once('SIGTERM', onExit); process.once('SIGINT', onExit);
+  const connOf = pid => { for (const [c, q] of P) if (q.id === pid) return c; return null; };
+  const near = (me, r) => [...P.entries()].filter(([, q]) => q !== me && Math.hypot(q.s[0] - me.s[0], q.s[1] - me.s[1]) < r).map(([c]) => c);
+  const crewOf = pid => Object.entries(crews).find(([, cr]) => cr.m.includes(pid));
+  function crewState(c) { const cc = crewOf(c.pid); send(c, { t: 'i_crew', code: cc ? cc[0] : null, n: cc ? cc[1].n : null, names: cc ? cc[1].m.map(pid => cc[1].names[pid] || '?') : [] }); }
   const tileKey = (x, y) => { x = Math.floor(num(x, -1)); y = Math.floor(num(y, -1)); return x >= 0 && y >= 0 && x < PLOT_W && y < PLOT_W ? x + ',' + y : null; };
   const own = (c, id) => { const p = plots[id]; return p && p.o === c.pid ? p : null; };
 
@@ -77,6 +84,7 @@ module.exports = function (send) {
       P.set(c, { id: c.pid, name: clean(m.name, 16) || 'Gast', col: Math.floor(num(m.col)) % 8, s, last: Date.now(), meta: meta(m.m) });
       send(c, { t: 'i_hi', id: c.pid, n: P.size });
       send(c, { t: 'i_plots', plots, ready: loaded });
+      crewState(c); send(c, { t: 'i_top', top });
       return;
     }
     const me = P.get(c); if (!me) return;
@@ -88,6 +96,16 @@ module.exports = function (send) {
     }
     if (m.t === 'i_leave') { P.delete(c); return; }
     if (m.t === 'i_meta') { me.meta = meta(m.m); return; }
+    // gemeinsame Gegner: der Gastgeber einer Insel schickt ihre Lage, die anderen melden Treffer
+    if (m.t === 'i_fx') { if (!Array.isArray(m.e) || m.e.length > 12) return; const msg = { t: 'i_fx', from: c.pid, z: clean(m.z, 40), e: m.e.map(e => (Array.isArray(e) ? e.slice(0, 8).map(v => (typeof v === 'string' ? clean(v, 16) : Math.round(num(v) * 100) / 100)) : null)).filter(Boolean) }; for (const o of near(me, NEAR)) send(o, msg); return; }
+    if (m.t === 'i_hit' || m.t === 'i_kill') { const o = connOf(clean(m.to, 20)); if (o) send(o, { t: m.t, from: c.pid, id: Math.floor(num(m.id)), dmg: Math.min(20, num(m.dmg, 1)), nx: num(m.nx), ny: num(m.ny), k: clean(m.k, 16), x: num(m.x), y: num(m.y) }); return; }
+    if (m.t === 'i_gift') { const o = connOf(clean(m.to, 20)), n = Math.max(1, Math.min(99, Math.floor(num(m.n, 1)))), k = String(m.k); if (o && KEY.test(k) && Math.hypot(P.get(o).s[0] - me.s[0], P.get(o).s[1] - me.s[1]) < 8) send(o, { t: 'i_gift', from: me.name, k, n }); return; }
+    // Crews: Freunde-Gruppen mit Code, sehen sich auf der Karte überall
+    if (m.t === 'i_crew_new') { const old = crewOf(c.pid); if (old) return; let code; do { code = Array.from({ length: 4 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ'[Math.floor(Math.random() * 24)]).join(''); } while (crews[code]); crews[code] = { n: clean(m.n, 20) || me.name + 's Crew', m: [c.pid], names: { [c.pid]: me.name } }; touch(); crewState(c); return; }
+    if (m.t === 'i_crew_join') { const code = clean(m.code, 4).toUpperCase(), cr = crews[code]; if (!cr || crewOf(c.pid) || cr.m.length >= 8) { send(c, { t: 'i_crew', err: cr ? 'Diese Crew ist voll.' : 'Diesen Crew-Code gibt es nicht.' }); return; } cr.m.push(c.pid); cr.names[c.pid] = me.name; touch(); for (const pid of cr.m) { const o = connOf(pid); if (o) crewState(o); } return; }
+    if (m.t === 'i_crew_leave') { const cc = crewOf(c.pid); if (!cc) return; const [code, cr] = cc; cr.m = cr.m.filter(x => x !== c.pid); delete cr.names[c.pid]; if (!cr.m.length) delete crews[code]; touch(); crewState(c); for (const pid of cr.m) { const o = connOf(pid); if (o) crewState(o); } return; }
+    // Regatta-Bestenliste
+    if (m.t === 'i_race') { const ms = Math.floor(num(m.ms)); if (ms < 20000 || ms > 30 * 60e3) return; const i = top.findIndex(e => e.n === me.name); if (i >= 0 && top[i].ms <= ms) { send(c, { t: 'i_top', top }); return; } if (i >= 0) top.splice(i, 1); top.push({ n: me.name, ms, t: Date.now() }); top.sort((a, b) => a.ms - b.ms); top = top.slice(0, 10); touch(); for (const o of P.keys()) send(o, { t: 'i_top', top }); return; }
     // ---------- Basen ----------
     const id = Math.floor(num(m.id, -1));
     if (m.t === 'i_claim') {
@@ -119,6 +137,10 @@ module.exports = function (send) {
   function drop(c) { P.delete(c); }
   setInterval(() => {
     tick++;
+    if (tick % 10 === 0) for (const cr of Object.values(crews)) {
+      const on = cr.m.map(pid => [pid, connOf(pid)]).filter(([, c]) => c), list = on.map(([pid, c]) => { const q = P.get(c); return [pid, q.name, Math.round(q.s[0]), Math.round(q.s[1])]; });
+      for (const [, c] of on) send(c, { t: 'i_crewpos', m: list });
+    }
     const all = [...P.entries()];
     for (const [c, me] of all) {
       if (Date.now() - me.last > 5 * 60e3) { P.delete(c); continue; }

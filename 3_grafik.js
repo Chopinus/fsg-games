@@ -298,6 +298,14 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 24, title: 'Inselreich: Gefahren auf See und Zusammenspiel', date: '03.11.2026', items: [
+      ['Neu', 'Inselreich: Auf hoher See lauern Haie und Piratenschiffe. Mit der Bootskanone aus der Werft schießt du zurück (F, Klick oder ⚔️) – versenkte Piraten geben Münzen und eine Schatzkarte'],
+      ['Neu', 'Inselreich: Stürme mit Regen, Blitzen und kräftigem Wind, der dein Boot abtreibt'],
+      ['Neu', 'Inselreich: Gegner auf einer Insel sind jetzt für alle Spieler dort gleich – ihr kämpft gemeinsam gegen dieselben Gegner'],
+      ['Neu', 'Inselreich: Geschenke – steht jemand neben dir, kannst du im Rucksack mit 🎁 Gegenstände oder Münzen verschenken'],
+      ['Neu', 'Inselreich: Crews mit Code (Rucksack → Crew oder Taste C). Crew-Mitglieder siehst du überall auf der Karte'],
+      ['Neu', 'Inselreich: Regatta bei Hafenmeisterin Greta – segle durch 6 Bojen vor dem Hafen, mit Bestenliste für alle'],
+    ] },
     { id: 23, title: 'Inselreich: Angeln, Erfolge und Haustiere', date: '03.11.2026', items: [
       ['Neu', 'Inselreich: Angeln mit Angel von Angler Hein – 14 Fischarten je nach Wasser, Inselart und Tageszeit, dazu ein Fischbuch mit Rekorden'],
       ['Neu', 'Inselreich: 20 Erfolge mit Titeln fürs Namensschild (Rucksack → Erfolge)'],
