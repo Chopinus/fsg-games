@@ -298,6 +298,11 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 18, title: 'Inselreich: Neuer Skilltree', date: '03.11.2026', items: [
+      ['Umstellung', 'Inselreich: Der Skilltree wächst jetzt von der Mitte aus – links Kampf, rechts Sammeln, oben Seefahrt'],
+      ['Neu', 'Inselreich: Neue Fähigkeiten erscheinen erst, wenn du die davor gelernt hast. Dazu 10 neue Fähigkeiten, u. a. Volltreffer, Ausweichen, Berserker, Holzfäller, Meistersammler, Goldrausch, Wasserratte, Sturmreiter und Kapitän'],
+      ['Info', 'Inselreich: Punkte, die nicht mehr in den neuen Baum passen, bekommst du zurück'],
+    ] },
     { id: 17, title: 'Inselreich: Stufen und Skilltree', date: '03.11.2026', items: [
       ['Neu', 'Inselreich: Erfahrungspunkte (EP) für Gegner, Abbauen, Schatztruhen und neue Inseln – mit Stufenaufstieg'],
       ['Neu', 'Inselreich: Skilltree mit 15 Fähigkeiten in drei Zweigen: Kampf, Sammeln und Seefahrt (🌟 oder Taste K)'],
