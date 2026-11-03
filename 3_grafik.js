@@ -298,6 +298,12 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 28, title: 'Inselreich: Neue Gegner und stärkere Bosse', date: '03.11.2026', items: [
+      ['Neu', 'Inselreich: Sechs neue Gegner mit eigenem Verhalten – Wildschweine stürmen los, Kaktuswächter schießen Dornen, Eisgeister teleportieren sich, Dschungelschlangen schlängeln, Feuerkobolde werfen Feuerbälle und Sporenboviste explodieren'],
+      ['Neu', 'Inselreich: Jeder Boss hat jetzt einen Spezialangriff: Felswurf, Eingraben, Eisatem, Riesensprung, Feuersalve oder Brut'],
+      ['Neu', 'Inselreich: Unter halbem Leben werden Bosse wütend – schneller, mit roter Glut und häufigeren Angriffen'],
+      ['Grafik', 'Inselreich: Neue Animationen für Gegner und Bosse, sichtbare Geschosse und Warnzeichen vor Angriffen'],
+    ] },
     { id: 27, title: 'Inselreich: Fähigkeiten und neue Steuerung', date: '03.11.2026', items: [
       ['Neu', 'Inselreich: Vier Lehrer nördlich vom Dorfplatz – Magierin Selma, Schwertmeister Konrad, Bogenschützin Liv und Heilerin Mara'],
       ['Neu', 'Inselreich: 12 aktive Fähigkeiten wie Feuerball, Kettenblitz, Frostnova, Sturmangriff, Erdstoß, Pfeilfächer, Giftpfeil, Heilung und Wurzelfalle, jeweils bis Stufe 3'],
