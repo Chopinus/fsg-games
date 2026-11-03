@@ -10,9 +10,9 @@ module.exports = function (send) {
   const P = new Map(); // Verbindung -> Spieler
   let tick = 0;
   function state(s) {
-    // [x, y, Richtung, Bewegung, im Boot, Boot x, Boot y, Kurs, Segel]
+    // [x, y, Richtung, Bewegung, im Boot, Boot x, Boot y, Kurs, Segel, Angriff]
     if (!Array.isArray(s)) return null;
-    const v = s.slice(0, 9).map(x => Math.round(num(x) * 100) / 100);
+    const v = s.slice(0, 10).map(x => Math.round(num(x) * 100) / 100);
     if (Math.abs(v[0]) > 1e6 || Math.abs(v[1]) > 1e6) return null;
     return v;
   }

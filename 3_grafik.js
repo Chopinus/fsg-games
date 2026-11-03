@@ -298,6 +298,13 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 15, title: 'Inselreich: Höhle und neue Grafik', date: '03.11.2026', items: [
+      ['Neu', 'Inselreich: Kristallhöhle auf der Heimatinsel mit Schleimen, Fledermäusen, Schatztruhen und dem Höhlentroll als Boss'],
+      ['Neu', 'Inselreich: Kämpfen mit dem Schwert (Leertaste, Klick oder ⚔️), Herzen und Münzen'],
+      ['Grafik', 'Inselreich: Neue Bäume, Tannen, Palmen, Büsche und Felsen, Baumkronen wiegen im Wind, Wolkenschatten'],
+      ['Grafik', 'Inselreich: Figuren mit flüssiger Laufanimation in alle Richtungen und Staub beim Laufen'],
+      ['Fix', 'Inselreich: Baumkronen schweben nicht mehr über den Stämmen'],
+    ] },
     { id: 14, title: 'Inselreich (Prototyp)', date: '03.11.2026', items: [
       ['Neu', 'Inselreich: Eine offene Pixelwelt aus Inseln für alle zusammen. Laufen, ins Boot steigen und mit dem Wind segeln'],
       ['Neu', 'Inselreich: Andere Spieler in der Nähe sehen, Chat mit Sprechblasen, Karte mit entdeckten Inseln, Steuerung fürs Handy'],
@@ -397,7 +404,7 @@
   ];
   const GAME_VERSION = '1.0';
   const newsSeen = () => { try { return Number(localStorage.getItem('fsg.ritter.news')) || 0; } catch { return 0; } };
-  const TAGC = { Neu: '#7ee08a', Balance: '#ffcf4a', Fix: '#7fb2ff', Info: '#c9a6ff', Umstellung: '#ff9a8a' };
+  const TAGC = { Neu: '#7ee08a', Balance: '#ffcf4a', Fix: '#7fb2ff', Info: '#c9a6ff', Umstellung: '#ff9a8a', Grafik: '#ffb4e6' };
   function showUpdates() {
     try { if (UPDATES.length) localStorage.setItem('fsg.ritter.news', String(UPDATES[0].id)); } catch {}
     hud();
