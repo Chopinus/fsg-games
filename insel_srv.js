@@ -70,7 +70,7 @@ module.exports = function (send) {
   const own = (c, id) => { const p = plots[id]; return p && p.o === c.pid ? p : null; };
 
   // Aussehen: Hut, Titel, Haustier, Bootsfarbe
-  const meta = m => (m && typeof m === 'object' ? { hat: clean(m.hat, 12), title: clean(m.title, 20), pet: clean(m.pet, 12), bc: clean(m.bc, 10) } : null);
+  const meta = m => (m && typeof m === 'object' ? { hat: clean(m.hat, 12), title: clean(m.title, 20), pet: clean(m.pet, 12), bc: clean(m.bc, 10), bs: clean(m.bs, 10), ab: clean(m.ab, 12) } : null);
   function state(s) {
     // [x, y, Richtung, Bewegung, im Boot, Boot x, Boot y, Kurs, Segel, Angriff, Stufe]
     if (!Array.isArray(s)) return null;

@@ -46,18 +46,30 @@
   const XP_FOE = { slime: 5, bigslime: 10, sandslime: 5, frostslime: 7, fireslime: 8, frog: 5, sporling: 6, bat: 6, moth: 6, scorpion: 8, wolf: 10, golem: 40, troll: 100 };
   const xpNeed = l => Math.round(20 * Math.pow(l, 1.5));
   // Werkstationen auf der Heimatinsel und was man dort herstellen kann
-  const STATIONS = { werk: ['🪚', 'Werkbank', 'Werkzeuge, Waffen und Rüstung aus Holz, Stein und Fell'], schmiede: ['⚒️', 'Schmiede', 'Starke Waffen und Rüstungen aus seltenen Rohstoffen'], werft: ['⚓', 'Werft', 'Segel und Ausbauten für dein Boot'], koch: ['🍲', 'Kochstelle', 'Essen und Tränke, die heilen oder dich stärker machen'] };
+  const STATIONS = { werk: ['🗡️', 'Waffen- und Werkzeugbank', 'Werkzeuge und Waffen – vom Steinschwert bis zur Drachenklinge'], schmiede: ['🛡️', 'Rüstungsschmiede', 'Rüstungen, Helme und Schilde'], koch: ['🍲', 'Küche', 'Essen und Trinken, das heilt oder dich stärker macht'], werft: ['⚓', 'Werft', 'Bootsteile wie Segel, Rumpf und Kanone – und ganz neue Boote'], tischler: ['🪑', 'Tischlerei', 'Möbel, Wände und Deko für deine Base. Was du hier baust, stellst du mit 🔨 Bauen auf deinen Bauplatz.'] };
   const RECIPES = [
     { id: 'steinschwert', st: 'werk', i: '🗡️', n: 'Steinschwert', d: '+1 Schaden', cost: { holz: 3, stein: 5 }, gear: 'schwert', tier: 1 },
     { id: 'steinaxt', st: 'werk', i: '🪓', n: 'Steinaxt', d: 'Abbauen braucht einen Schlag weniger', cost: { holz: 3, stein: 3 }, gear: 'axt', tier: 1 },
-    { id: 'fellruestung', st: 'werk', i: '🧥', n: 'Fellrüstung', d: '+1 Herz', cost: { fell: 5, faser: 4 }, gear: 'ruestung', tier: 1 },
+    { id: 'fellruestung', st: 'schmiede', i: '🧥', n: 'Fellrüstung', d: '+1 Herz', cost: { fell: 5, faser: 4 }, gear: 'ruestung', tier: 1 },
     { id: 'schaufel', st: 'werk', i: '🪏', n: 'Schaufel', d: 'Damit gräbst du Schätze von Schatzkarten aus', cost: { holz: 4, stein: 4 }, gear: 'schaufel', tier: 1 },
     { id: 'fernrohr', st: 'werk', i: '🔭', n: 'Fernrohr', d: 'Größere Minikarte und Weltkarte', cost: { eiskristall: 1, holz: 4, stein: 2 }, gear: 'fernrohr', tier: 1 },
-    { id: 'eisschwert', st: 'schmiede', i: '❄️', n: 'Eisschwert', d: '+2 Schaden, getroffene Gegner werden langsamer', cost: { eis: 6, eiskristall: 2, holz: 2 }, gear: 'schwert', tier: 2 },
-    { id: 'obsidianklinge', st: 'schmiede', i: '🔮', n: 'Obsidianklinge', d: '+3 Schaden', cost: { obsidian: 6, glut: 3, holz: 2 }, gear: 'schwert', tier: 3 },
-    { id: 'drachenklinge', st: 'schmiede', i: '🔥', n: 'Drachenklinge', d: '+4 Schaden – aus den Schuppen des Feuerdrachen', cost: { drachenschuppe: 3, obsidian: 4, glut: 4 }, gear: 'schwert', tier: 4 },
+    { id: 'eisschwert', st: 'werk', i: '❄️', n: 'Eisschwert', d: '+2 Schaden, getroffene Gegner werden langsamer', cost: { eis: 6, eiskristall: 2, holz: 2 }, gear: 'schwert', tier: 2 },
+    { id: 'obsidianklinge', st: 'werk', i: '🔮', n: 'Obsidianklinge', d: '+3 Schaden', cost: { obsidian: 6, glut: 3, holz: 2 }, gear: 'schwert', tier: 3 },
+    { id: 'drachenklinge', st: 'werk', i: '🔥', n: 'Drachenklinge', d: '+4 Schaden – aus den Schuppen des Feuerdrachen', cost: { drachenschuppe: 3, obsidian: 4, glut: 4 }, gear: 'schwert', tier: 4 },
     { id: 'drachenpanzer', st: 'schmiede', i: '🐲', n: 'Drachenpanzer', d: '+3 Herzen, Stacheln – aus drei Boss-Beuten', cost: { drachenschuppe: 2, frostherz: 2, wuestenperle: 2 }, gear: 'ruestung', tier: 3 },
-    { id: 'obsidianaxt', st: 'schmiede', i: '⛏️', n: 'Obsidianaxt', d: 'Abbauen braucht zwei Schläge weniger', cost: { obsidian: 4, holz: 3, stein: 2 }, gear: 'axt', tier: 2 },
+    { id: 'obsidianaxt', st: 'werk', i: '⛏️', n: 'Obsidianaxt', d: 'Abbauen braucht zwei Schläge weniger', cost: { obsidian: 4, holz: 3, stein: 2 }, gear: 'axt', tier: 2 },
+    { id: 'lederkappe', st: 'schmiede', i: '🧢', n: 'Lederkappe', d: '+1 Herz', cost: { fell: 3, faser: 3 }, gear: 'helm', tier: 1 },
+    { id: 'eishelm', st: 'schmiede', i: '⛑️', n: 'Eishelm', d: '+2 Herzen', cost: { eis: 6, eiskristall: 1, fell: 2 }, gear: 'helm', tier: 2 },
+    { id: 'holzschild', st: 'schmiede', i: '🪵', n: 'Holzschild', d: '20 % Chance, einen Treffer abzublocken', cost: { holz: 8, faser: 3 }, gear: 'schild', tier: 1 },
+    { id: 'obsidianschild', st: 'schmiede', i: '🛡️', n: 'Obsidianschild', d: '35 % Chance, einen Treffer abzublocken', cost: { obsidian: 5, stein: 4, fell: 2 }, gear: 'schild', tier: 2 },
+    { id: 'kraeutertee', st: 'koch', i: '🍵', n: 'Kräutertee', d: 'Heilt ein Herz und macht 60 Sekunden schneller', cost: { faser: 2, beere: 1 }, item: 'kraeutertee' },
+    { id: 'kokosmilch', st: 'koch', i: '🥛', n: 'Kokosmilch', d: 'Heilt zwei Herzen', cost: { kokos: 2 }, item: 'kokosmilch' },
+    { id: 'feuertrank', st: 'koch', i: '🔥', n: 'Feuertrank', d: '2 Minuten +1 Schaden', cost: { glut: 1, beere: 2 }, item: 'feuertrank' },
+    { id: 'b_floss', st: 'werft', i: '🪵', n: 'Floß', d: 'Neues Boot zum Aussehen – einfach und gemütlich', cost: { holz: 12, faser: 6 }, boat: 'floss' },
+    { id: 'b_schwan', st: 'werft', i: '🦢', n: 'Schwanenboot', d: 'Neues Boot zum Aussehen – mit Schwanenhals', cost: { holz: 10, wolle: 6, faser: 4 }, boat: 'schwan' },
+    { id: 'b_wikinger', st: 'werft', i: '🛡️', n: 'Wikingerschiff', d: 'Neues Boot zum Aussehen – lang, mit Schilden und Drachenkopf', cost: { holz: 25, fell: 6, stein: 6 }, boat: 'wikinger' },
+    { id: 'b_pirat', st: 'werft', i: '🏴‍☠️', n: 'Piratenschiff', d: 'Neues Boot zum Aussehen – schwarze Segel und Kanonenluken', cost: { holz: 30, stein: 10, glut: 4, fell: 4 }, boat: 'pirat' },
+    { id: 'b_koenig', st: 'werft', i: '👑', n: 'Königsjacht', d: 'Neues Boot zum Aussehen – mit Gold verziert', cost: { holz: 20, wuestenperle: 2, eiskristall: 3 }, boat: 'koenig' },
     { id: 'stachelpanzer', st: 'schmiede', i: '🛡️', n: 'Stachelpanzer', d: '+2 Herzen, und wer dich berührt, bekommt Schaden', cost: { stachel: 6, stein: 6, fell: 2 }, gear: 'ruestung', tier: 2 },
     { id: 'fasersegel', st: 'werft', i: '⛵', n: 'Fasersegel', d: 'Dein Boot segelt 10 % schneller', cost: { faser: 8, holz: 4 }, gear: 'segel', tier: 1 },
     { id: 'wollsegel', st: 'werft', i: '🧶', n: 'Wollsegel', d: 'Dein Boot segelt 20 % schneller', cost: { wolle: 8, faser: 4 }, gear: 'segel', tier: 2 },
@@ -75,9 +87,9 @@
     { id: 'kuerbiskuchen', st: 'koch', i: '🥮', n: 'Kürbiskuchen', d: '3 Minuten zwei Herzen mehr', cost: { kuerbis: 1, ei: 2, weizen: 2 }, item: 'kuerbiskuchen' },
     { id: 'elixier', st: 'koch', i: '🧪', n: 'Kaktus-Elixier', d: '90 Sekunden Stachelhaut: wer dich berührt, bekommt Schaden', cost: { kaktus: 3, sporen: 1 }, item: 'elixier' },
   ];
-  const ITEM_USE = { brot: 'Heilt zwei Herzen', ruehrei: 'Heilt dich ganz', karottensuppe: '+1 Schaden und schneller für 2 Min.', kuerbiskuchen: '+2 Herzen für 3 Min.', saft: 'Heilt ein Herz', kuchen: 'Heilt dich ganz', suppe: '+1 Schaden für 90 Sek.', shake: 'Schneller für 90 Sek.', elixier: 'Stachelhaut für 90 Sek.' };
+  const ITEM_USE = { kraeutertee: 'Heilt ein Herz, 60 Sek. schneller', kokosmilch: 'Heilt zwei Herzen', feuertrank: '+1 Schaden für 2 Min.', brot: 'Heilt zwei Herzen', ruehrei: 'Heilt dich ganz', karottensuppe: '+1 Schaden und schneller für 2 Min.', kuerbiskuchen: '+2 Herzen für 3 Min.', saft: 'Heilt ein Herz', kuchen: 'Heilt dich ganz', suppe: '+1 Schaden für 90 Sek.', shake: 'Schneller für 90 Sek.', elixier: 'Stachelhaut für 90 Sek.' };
   const buff = { kraft: 0, tempo: 0, dorn: 0, herz: 0 };
-  const GEAR_NAME = { schwert: ['Holzschwert', 'Steinschwert', 'Eisschwert', 'Obsidianklinge', 'Drachenklinge'], axt: ['', 'Steinaxt', 'Obsidianaxt'], ruestung: ['', 'Fellrüstung', 'Stachelpanzer', 'Drachenpanzer'], segel: ['', 'Fasersegel', 'Wollsegel', 'Sporenseide-Segel', 'Sturmsegel'], schaufel: ['', 'Schaufel'], kanone: ['', 'Bootskanone'], rumpf: ['', 'Verstärkter Rumpf'], fernrohr: ['', 'Fernrohr'] };
+  const GEAR_NAME = { schwert: ['Holzschwert', 'Steinschwert', 'Eisschwert', 'Obsidianklinge', 'Drachenklinge'], axt: ['', 'Steinaxt', 'Obsidianaxt'], ruestung: ['', 'Fellrüstung', 'Stachelpanzer', 'Drachenpanzer'], segel: ['', 'Fasersegel', 'Wollsegel', 'Sporenseide-Segel', 'Sturmsegel'], schaufel: ['', 'Schaufel'], kanone: ['', 'Bootskanone'], helm: ['', 'Lederkappe', 'Eishelm'], schild: ['', 'Holzschild', 'Obsidianschild'], rumpf: ['', 'Verstärkter Rumpf'], fernrohr: ['', 'Fernrohr'] };
   let prog = { xp: 0, lvl: 1, pts: 0, sk: {}, gear: {} };
   try { const q = JSON.parse(localStorage.getItem('insel.xp') || 'null'); if (q && q.lvl) prog = Object.assign(prog, q); } catch {}
   const saveProg = () => { try { localStorage.setItem('insel.xp', JSON.stringify(prog)); } catch {} };
@@ -87,7 +99,7 @@
     while (changed) { changed = false; for (const [id, r] of Object.entries(prog.sk)) { const s = SKILL[id]; if (!s || !s.p || !s.p.some(q => sk(q) > 0) || r > s.max) { const keep = s && s.p && s.p.some(q => sk(q) > 0) ? s.max : 0; prog.pts += r - keep; if (keep) prog.sk[id] = keep; else delete prog.sk[id]; changed = true; } } }
   }
   const gear = g => (prog.gear && prog.gear[g]) || 0;
-  const maxHp = () => MAXHP + 2 * sk('zaeh') + 2 * gear('ruestung') + (buff.herz > 0 ? 4 : 0);
+  const maxHp = () => MAXHP + 2 * sk('zaeh') + 2 * gear('ruestung') + 2 * gear('helm') + (buff.herz > 0 ? 4 : 0);
   const WIESE = 0, WUESTE = 1, SCHNEE = 2, DSCHUNGEL = 3, VULKAN = 4, PILZ = 5, LAVA = 8;
   const BIOMES = [
     { n: 'Wiese', foes: ['slime'], info: 'Schleime · Holz, Steine, Äpfel und Beeren' },
@@ -104,6 +116,7 @@
     obsidian: ['Obsidian', '🔮', '#3a2a4a'], kaktus: ['Kaktusfrucht', '🌵', '#e05a8a'], beere: ['Beeren', '🫐', '#d8443a'], apfel: ['Äpfel', '🍎', '#e0402a'],
     kokos: ['Kokosnüsse', '🥥', '#7a5028'], banane: ['Bananen', '🍌', '#f4e04d'], faser: ['Fasern', '🌾', '#c9b06a'], pilz: ['Pilze', '🍄', '#c94a3a'],
     glibber: ['Glibber', '💧', '#8ef07a'], stachel: ['Skorpionstachel', '🦂', '#d9a050'], fell: ['Wolfsfell', '🐺', '#c8ccd8'], glut: ['Glutsteine', '🔥', '#ff7a2a'], sporen: ['Sporen', '✨', '#c9a6ff'],
+    kraeutertee: ['Kräutertee', '🍵', '#7ab060', 1], kokosmilch: ['Kokosmilch', '🥛', '#f4f0e8', 1], feuertrank: ['Feuertrank', '🔥', '#ff6a2a', 1],
     saft: ['Beerensaft', '🧃', '#d84a8a', 1], kuchen: ['Apfelkuchen', '🥧', '#e0a050', 1], suppe: ['Pilzsuppe', '🍲', '#c96a3a', 1], shake: ['Kokos-Shake', '🥤', '#f0e0a0', 1], elixier: ['Kaktus-Elixier', '🧪', '#5ad06a', 1],
     wuestenperle: ['Wüstenperle', '🦪', '#f0e0c0'], frostherz: ['Frostherz', '💙', '#7fc8ff'], giftdruese: ['Giftdrüse', '🟢', '#5ad06a'], drachenschuppe: ['Drachenschuppe', '🐉', '#e04a2a'], koenigsspore: ['Königsspore', '🌟', '#e0a0ff'],
     samen_weizen: ['Weizensamen', '🌰', '#c8a050'], samen_karotte: ['Karottensamen', '🌰', '#e07a30'], samen_kuerbis: ['Kürbissamen', '🌰', '#e8a040'],
@@ -200,7 +213,8 @@
   function stations() {
     if (STPOS) return STPOS;
     let yw = 71; for (let r = 4; r < 50; r += 0.25) if (elev(70.5, 70.5 + r) < 0.02) { yw = 70.5 + r; break; }
-    STPOS = [{ k: 'werk', x: 66.5, y: 68.6 }, { k: 'schmiede', x: 74.5, y: 68.6 }, { k: 'koch', x: 70.5, y: 66.8 }, { k: 'werft', x: 70.5, y: yw - 0.9, wy: yw }];
+    STPOS = [{ k: 'werk', x: 66.5, y: 68.6 }, { k: 'schmiede', x: 74.5, y: 68.6 }, { k: 'koch', x: 70.5, y: 66.8 }, { k: 'werft', x: 70.5, y: yw - 0.9, wy: yw }, { k: 'tischler', x: 62.5, y: 68.6 }];
+    const WH = werkhof(); for (const [k, i] of [['werk', 0], ['schmiede', 1], ['koch', 2], ['tischler', 3], ['werft', 4]]) STPOS.push({ k, x: WH.x0 + 2.4 + i * 4.2, y: WH.y0 + 3.2, v: 1 });
     return STPOS;
   }
   // Gegenstände: 1 Baum, 2 Palme, 3 Fels, 4 Blumen, 5 Gras, 6 Busch, 7 Tanne, 8 Kaktus, 9 toter Baum, 10 Dschungelbaum,
@@ -216,7 +230,7 @@
   };
   function objAt(tx, ty, t) {
     const b = TB;
-    if (Math.abs(tx - 70) < 6 && ty >= 64 && ty <= 73) return 0; // Startplatz und Werkstätten frei
+    if (Math.abs(tx - 68) < 9 && ty >= 64 && ty <= 73) return 0; // Startplatz und Werkstätten frei
     if (STPOS && Math.abs(tx - 70) < 4 && Math.abs(ty - STPOS[3].y) < 3) return 0; // vor der Werft frei
     const E = caveEnt(); if (Math.abs(tx - E.tx) <= 3 && ty >= E.ty - 4 && ty <= E.ty + 2) return 0; // vor der Höhle frei
     { const cx = Math.floor(tx / CELL), cy = Math.floor(ty / CELL); for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) { const isl = islCache.get((cx + i) + ',' + (cy + j)); if (isl && isl.b && isl.r >= 20) { const c = islandCave(isl); if (c && Math.abs(tx - c.ent.tx) <= 3 && ty >= c.ent.ty - 4 && ty <= c.ent.ty + 2) return 0; } } }
@@ -240,7 +254,7 @@
     const tx = Math.floor(x), ty = Math.floor(y), o = objAt(tx, ty, tileAt(tx, ty));
     if (solid(o) && !isCut(tx, ty)) { const dx = x - (tx + 0.5), dy = y - (ty + 0.8); if (dx * dx + dy * dy < (o === 3 ? 0.2 : 0.12)) return false; }
     for (const { e: E } of entsNear(x, y)) { const ex = x - E.x, ey = y - E.y; if (Math.abs(ex) < 1.6 && ey < 0 && ey > -2.7 && !(Math.abs(ex) < 0.4 && ey > -0.7)) return false; } // Felsen um die Eingänge
-    if (STPOS && Math.abs(x - 70.5) < 6) for (const st of STPOS) { const dx = x - st.x, dy = y - (st.y - 0.25); if (dx * dx / (st.k === 'werft' ? 1.6 : 0.8) + dy * dy / 0.25 < 1) return false; }
+    if (STPOS && (Math.abs(x - 68) < 9 || nearBig(x, y))) for (const st of STPOS) { const dx = x - st.x, dy = y - (st.y - 0.25); if (dx * dx / (st.k === 'werft' ? 1.6 : 0.8) + dy * dy / 0.25 < 1) return false; }
     return true;
   }
   const sailable = (x, y) => elev(x, y) < -0.02 && !onDock(x, y);
@@ -307,6 +321,7 @@
     TOWN = { V, shore, plots, roads, houses, npcs, walkers, dock, bb: [PX0 - 6, V.y - 30, shore + 9, PY0 + 3 * PG + 3] };
     return TOWN;
   }
+  const werkhof = () => { const V = { x: BIG.x + 30, y: BIG.y }; return { x0: V.x - 42, x1: V.x - 19, y0: V.y + 1.6, y1: V.y + 6.2 }; };
   const segD = (x, y, [x0, y0, x1, y1]) => { const dx = x1 - x0, dy = y1 - y0, l = dx * dx + dy * dy, t = l ? Math.max(0, Math.min(1, ((x - x0) * dx + (y - y0) * dy) / l)) : 0; return Math.hypot(x - x0 - dx * t, y - y0 - dy * t); };
   // Was liegt an dieser Stelle im Dorf? 1 Platz, 2 Weg, 3 Bauplatz, 4 Steg
   function townAt(x, y) {
@@ -314,11 +329,12 @@
     const T = town(); if (x < T.bb[0] || x > T.bb[2] || y < T.bb[1] || y > T.bb[3]) return 0;
     if (x >= T.dock.x0 && x <= T.dock.x1 && y >= T.dock.y0 && y <= T.dock.y1) return 4;
     if (Math.hypot(x - T.V.x, y - T.V.y) < 5) return 1;
+    { const WH = werkhof(); if (x >= WH.x0 && x <= WH.x1 && y >= WH.y0 && y <= WH.y1) return 5; }
     for (const p of T.plots) if (x >= p.x && x < p.x + p.w && y >= p.y && y < p.y + p.h) return 3;
     for (const r of T.roads) if (segD(x, y, r) < 1.1) return 2;
     return 0;
   }
-  const inTownClear = (tx, ty) => { if (!nearBig(tx, ty)) return false; const T = town(); if (tx < T.bb[0] - 2 || tx > T.bb[2] + 2 || ty < T.bb[1] - 2 || ty > T.bb[3] + 2) return false; if (townAt(tx + 0.5, ty + 0.5)) return true; for (const h of T.houses) if (Math.abs(tx + 0.5 - h.x) < 5 && ty + 0.5 > h.y - 5 && ty + 0.5 < h.y + 4) return true; for (const r of T.roads) if (segD(tx + 0.5, ty + 0.5, r) < 2.2) return true; return Math.hypot(tx + 0.5 - T.V.x, ty + 0.5 - T.V.y) < 9; };
+  const inTownClear = (tx, ty) => { if (!nearBig(tx, ty)) return false; const T = town(); if (tx < T.bb[0] - 2 || tx > T.bb[2] + 2 || ty < T.bb[1] - 2 || ty > T.bb[3] + 2) return false; if (townAt(tx + 0.5, ty + 0.5)) return true; { const WH = werkhof(); if (tx > WH.x0 - 3 && tx < WH.x1 + 2 && ty > WH.y0 - 4 && ty < WH.y1 + 2.5) return true; } for (const h of T.houses) if (Math.abs(tx + 0.5 - h.x) < 5 && ty + 0.5 > h.y - 5 && ty + 0.5 < h.y + 4) return true; for (const r of T.roads) if (segD(tx + 0.5, ty + 0.5, r) < 2.2) return true; return Math.hypot(tx + 0.5 - T.V.x, ty + 0.5 - T.V.y) < 9; };
   function townBlocked(x, y) {
     if (!nearBig(x, y)) return false;
     const T = town(); if (x < T.bb[0] - 3 || x > T.bb[2] + 3 || y < T.bb[1] - 6 || y > T.bb[3] + 3) return false;
@@ -560,6 +576,12 @@
       R(g, 8, 2, 2, 15, '#6b4426'); R(g, 8, 2, 14, 2, '#6b4426'); R(g, 20, 4, 1, 7, '#d8c8a0'); R(g, 18, 11, 5, 3, '#8a8a8a');
       R(g, 28, 9, 10, 7, '#f0e6d0'); R(g, 28, 9, 10, 1, '#ffffff'); R(g, 31, 9, 1, 7, '#d8443a'); R(g, 25, 12, 3, 4, '#6b4426'); R(g, 25, 11, 3, 1, '#8a5a34');
       outline(g, 44, 30, '#1a1008'); st.werft = { trunk: c, w: 44, h: 30, ax: 22, ay: 27, sw: 16 };
+      [c, g] = mk(36, 30); // Tischlerei: Hobelbank, Bretter, Stuhl
+      R(g, 2, 4, 3, 22, '#c99a5a'); R(g, 5, 6, 3, 20, '#a8743f'); R(g, 8, 8, 3, 18, '#c99a5a'); R(g, 2, 4, 3, 1, '#e8c890');
+      R(g, 12, 13, 18, 4, '#9a6a3a'); R(g, 12, 13, 18, 1, '#d8a868'); R(g, 13, 17, 2, 10, '#6b4426'); R(g, 27, 17, 2, 10, '#6b4426'); R(g, 14, 22, 14, 2, '#5a3a20');
+      R(g, 17, 10, 7, 3, '#6b4426'); R(g, 17, 10, 7, 1, '#8a5a34'); R(g, 24, 8, 1, 5, '#c8c8c8'); R(g, 25, 9, 4, 1, '#8a8a8a'); R(g, 20, 11, 2, 1, '#f0d0a0');
+      R(g, 30, 16, 5, 1, '#8a5a34'); R(g, 30, 9, 1, 8, '#8a5a34'); R(g, 34, 16, 1, 10, '#6b4426'); R(g, 30, 17, 1, 9, '#6b4426'); R(g, 30, 9, 5, 1, '#a8743f');
+      outline(g, 36, 30, '#1a1008'); st.tischler = { trunk: c, w: 36, h: 30, ax: 18, ay: 27, sw: 13 };
       SPR.st = st;
     }
     SPR.done = true;
@@ -1069,6 +1091,10 @@
 #isl .is-trow{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}#isl .is-trow button{border:0;border-radius:11px;padding:9px 14px;font:800 14px system-ui;background:rgba(14,22,40,.8);color:#fff;cursor:pointer;border:1px solid rgba(255,255,255,.2)}
 #isl .is-thelp{background:rgba(14,22,40,.88);border-radius:12px;padding:10px 13px;font-size:13.5px;line-height:1.5;text-align:left}
 #isl .is-tbox>small{color:#dfe8ff;text-shadow:0 1px 4px #000}
+#isl .is-fleet{display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:rgba(255,255,255,.05);border-radius:10px;padding:8px;margin:6px 0 10px;font-size:13px}
+#isl .is-fleet button{border:1px solid rgba(255,255,255,.2);background:rgba(14,22,40,.8);color:#fff;border-radius:9px;padding:6px 9px;font:700 13px system-ui;cursor:pointer}#isl .is-fleet button.on{background:#ffcf4a;color:#2a1608}
+#isl .is-fleet small{width:100%;color:#aab}
+#isl .is-bpieces button sup{font-size:10px;color:#ffd27a;margin-left:2px}
 #isl .is-craft{position:absolute;inset:0;z-index:6;background:rgba(6,10,24,.62);display:grid;place-items:center;padding:12px}
 #isl .is-crbox{background:#1c2236;border:2px solid rgba(255,255,255,.25);border-radius:16px;padding:14px;width:min(520px,100%);max-height:88vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.5)}
 #isl .is-crbox h3{margin:0;display:flex;justify-content:space-between;align-items:center;font-size:19px}
@@ -1416,7 +1442,7 @@
   const PETS = { schleimi: ['Schleimi', '🟢', 120], fuchs: ['Fuchs', '🦊', 0], pinguin: ['Pinguin', '🐧', 300], papagei: ['Papagei', '🦜', 350], drache: ['Drachenbaby', '🐲', 600] };
   const HATSHOP = [['stroh', 'Strohhut', 30], ['blumen', 'Blumenkranz', 40], ['fischer', 'Fischerhut', 50], ['koch', 'Kochmütze', 60], ['pirat', 'Piratenhut', 90], ['zauber', 'Zauberhut', 130], ['wikinger', 'Wikingerhelm', 130], ['kapitaen', 'Kapitänsmütze', 160], ['krone', 'Krone', 500]];
   const BOATS = [['natur', 'Holz', 0, ['#4a2e18', '#6b4426', '#a8743f']], ['rot', 'Rot', 60, ['#5a1010', '#a8302a', '#e05a4a']], ['blau', 'Blau', 60, ['#10204a', '#2a4a8a', '#5a8ad8']], ['gruen', 'Grün', 60, ['#103a18', '#2a7a3a', '#5ab05a']], ['schwarz', 'Schwarz', 90, ['#0a0a0e', '#2a2a32', '#4a4a56']], ['gold', 'Gold', 300, ['#5a3a08', '#c89a20', '#f4d060']]];
-  const meta = () => ({ hat: prog.hat || '', title: prog.title || '', pet: prog.pet || '', bc: prog.bc || '' });
+  const meta = () => ({ hat: prog.hat || '', title: prog.title || '', pet: prog.pet || '', bc: prog.bc || '', bs: prog.bs || '' });
   function sendMeta() { if (typeof send === 'function' && myId) send({ t: 'i_meta', m: meta() }); }
   const pet = { x: 70, y: 71, t: 0 };
   function stepPet(dt) {
@@ -1736,11 +1762,11 @@
     { ev: 'skills', g: 'Schau dir den Skillbaum an', tip: 'Taste K oder 🌟. Für jede Stufe gibt es einen Punkt: links Kampf, rechts Sammeln, oben Seefahrt.' },
     { ev: 'talk:hafen', g: 'Hol dir die Tagesaufträge bei Hafenmeisterin Greta', tip: 'Greta steht am Haus mit dem ⚓ im Osten. Jeden Tag gibt es drei neue Aufträge mit Münzen und EP.' },
     { ev: 'talk:bau', g: 'Frag Baumeister Bruno nach einem Bauplatz', tip: 'Bruno (🔨) steht nördlich vom Brunnen. Südlich vom Dorf kannst du dir eine eigene Base bauen.' },
+    { ev: 'craft', g: 'Öffne eine Werkbank im Werkhof', tip: 'Der Werkhof liegt westlich vom Dorfplatz am Weg: Waffen und Werkzeug, Rüstungen, Küche, Tischlerei und Werft. Stell dich davor und drück E.' },
     { poll: () => me.inBoat, g: 'Geh zum Steg im Osten und steig in dein Boot', tip: 'Dein Boot liegt am Steg hinter Gretas Haus. Stell dich daneben und drück E oder ⚓.' },
     { poll: () => me.inBoat && boat.sail, g: 'Setz das Segel', tip: 'Leertaste oder ⛵. Quer zum Wind bist du am schnellsten, gegen den Wind kommst du kaum voran.' },
     { ev: 'travel:mitte', g: 'Reise zum Steg in der Inselmitte', tip: 'Im Boot: Taste R oder 🧭 Reisen. So kommst du jederzeit zwischen dem Hafen und der Inselgruppe hin und her.' },
     { poll: () => !me.inBoat && !me.inCave && !!(nearestIsland(me.x, me.y) || {}).home, g: 'Geh auf der Startinsel an Land', tip: 'Fahr an den Steg und drück E oder ⚓.' },
-    { ev: 'craft', g: 'Öffne eine Werkbank', tip: 'Mitten auf der Startinsel stehen Werkbänke. Dort stellst du Werkzeug, Waffen, Rüstung, Essen und mehr her.' },
     { ev: 'kill', g: 'Besiege einen Gegner', tip: 'Im Norden der Startinsel liegt die Kristallhöhle voller Schleime. Jede Inselart hat eigene Gegner – und in großen Höhlen wartet ein Boss.' },
   ];
   const tutActive = () => prog.tut != null && prog.tut < TUT.length;
@@ -1763,7 +1789,7 @@
   }
   const FAQ = [
     ['🎮 Steuerung', 'Am PC: WASD laufen, Leertaste oder Klick angreifen, E sprechen/benutzen/Boot, R Schnellreise, G angeln, I Rucksack, K Skills, C Crew, T Chat, M Karte. Am Handy: auf der linken Seite irgendwo hinziehen zum Laufen, auf der rechten Seite tippen oder ziehen zum Angreifen; die Knöpfe unten rechts machen den Rest.'],
-    ['🪓 Sammeln und Herstellen', 'Bäume, Felsen, Büsche und Pflanzen geben Rohstoffe. Jede Inselart hat eigene. An den Werkbänken baust du daraus Werkzeug, Waffen, Rüstung, Essen, Bootsteile und Möbel.'],
+    ['🪓 Sammeln und Herstellen', 'Bäume, Felsen, Büsche und Pflanzen geben Rohstoffe. Jede Inselart hat eigene. Im Werkhof im Dorf und auf der Startinsel gibt es fünf Werkbänke: 🗡️ Waffen und Werkzeug, 🛡️ Rüstungen, 🍲 Küche, 🪑 Tischlerei (Möbel, Wände, Deko) und ⚓ Werft (Bootsteile und neue Boote).'],
     ['🌟 Stufen und Skills', 'Für fast alles bekommst du EP. Jede neue Stufe bringt einen Skillpunkt. Im Skillbaum erscheinen neue Felder erst, wenn du ein Nachbarfeld gelernt hast.'],
     ['📜 Aufträge und Händler', 'Greta hat jeden Tag drei Aufträge. Bei Ole kaufst und verkaufst du, bei Frieda gibt es Samen und Haustiere, bei Mila Hüte und Farben, bei Hein Angeln.'],
     ['🏡 Eigene Base', 'Bruno gibt dir einen Bauplatz südlich vom Dorf. Dort baust du mit 🔨 Böden, Wände, Truhen, ein Bett, Felder und Ställe. Alles bleibt gespeichert und alle sehen es.'],
@@ -1883,6 +1909,7 @@
     const nz = h2(wx, wy, SEED + 700);
     if (ta === 1) { const row = Math.floor(wy / 5), cx = Math.floor((wx + (row % 2) * 3) / 6), edge = wy % 5 === 0 || (wx + (row % 2) * 3) % 6 === 0, v = 0.85 + h2(cx, row, 701) * 0.25; const c = edge ? [96, 92, 86] : [168 * v, 162 * v, 152 * v]; return c; }
     if (ta === 2) { const k = 0.9 + nz * 0.15; return nz < 0.025 ? [150, 140, 120] : [200 * k, 168 * k, 120 * k]; }
+    if (ta === 5) { const k = 0.88 + nz * 0.16, edge = Math.abs(x - werkhof().x0) < 0.12 || Math.abs(x - werkhof().x1) < 0.12 || Math.abs(y - werkhof().y1) < 0.12; return edge ? [110, 96, 80] : nz < 0.04 ? [140, 128, 110] : [176 * k, 156 * k, 126 * k]; }
     if (ta === 4) { const seam = wx % 16 === 0, k = 0.9 + h2(Math.floor(wx / 16), Math.floor(wy / 3), 702) * 0.2; return seam ? [74, 46, 24] : [154 * k, 106 * k, 58 * k]; }
     if (ta === 3) { const T = town(), p = T.plots.find(q => x >= q.x && x < q.x + q.w && y >= q.y && y < q.y + q.h); if (p && (x - p.x < 0.12 || p.x + p.w - x < 0.12 || y - p.y < 0.12 || p.y + p.h - y < 0.12)) return [63, 122, 52]; return null; }
     return null;
@@ -1925,6 +1952,9 @@
     flagge: { n: 'Flagge', i: '🚩', l: 1, solid: 1, cost: { holz: 2, faser: 4 } },
     statue: { n: 'Statue', i: '🗿', l: 1, solid: 1, cost: { stein: 10, obsidian: 4 } },
   };
+  const needKit = k => PIECES[k] && PIECES[k].l === 1 && k !== 'feld';
+  const kit = k => (prog.kit && prog.kit[k]) || 0;
+  for (const [k, p] of Object.entries(PIECES)) if (needKit(k)) RECIPES.push({ id: 'm_' + k, st: 'tischler', i: p.i, n: p.n, d: p.station ? 'Eine eigene ' + STATIONS[p.station][1] + ' für deine Base' : p.use ? 'Bauteil für deine Base · ' + p.use : 'Bauteil für deine Base', cost: p.cost, kit: k });
   const SEEDS = { samen_weizen: ['weizen', 300], samen_karotte: ['karotte', 480], samen_kuerbis: ['kuerbis', 720] };
   let PLOTS = {}, buildOn = false, buildSel = 'boden_holz', buildCur = null, chestOpen = null, baseNear = null;
   const myPlotId = () => { for (const [id, p] of Object.entries(PLOTS)) if (p && p.o === myId) return +id; return -1; };
@@ -1944,7 +1974,7 @@
       const L = cur[1] ? 1 : cur[0] ? 0 : -1; if (L < 0) return;
       const k = cur[L];
       if (k === 'truhe' && Object.keys(P2.c || {}).length) { say('Räum die Truhe zuerst aus'); return; }
-      for (const [r, v] of Object.entries(PIECES[k] ? PIECES[k].cost : {})) bag[r] = (bag[r] || 0) + Math.floor(v / 2);
+      if (needKit(k)) { prog.kit = prog.kit || {}; prog.kit[k] = kit(k) + 1; saveProg(); } else for (const [r, v] of Object.entries(PIECES[k] ? PIECES[k].cost : {})) bag[r] = (bag[r] || 0) + Math.floor(v / 2);
       cur[L] = null; P2.it[key] = cur; if (!cur[0] && !cur[1]) delete P2.it[key];
       saveBag(); send({ t: 'i_del', id, x: lx, y: ly, l: L }); if (k === 'bett' && prog.bed) { prog.bed = null; saveProg(); }
       for (let i = 0; i < 8; i++) parts.push({ x: tx + 0.5, y: ty + 0.6, z: 0, vx: (Math.random() - 0.5) * 4, vy: (Math.random() - 0.5) * 4, t: 0, life: 0.5, col: '#c9b08a', sz: 2 });
@@ -1953,8 +1983,8 @@
     const pc = PIECES[buildSel]; if (!pc) return;
     if (cur[pc.l]) { say('Hier steht schon etwas'); return; }
     if (pc.solid && Math.floor(me.x) === tx && Math.floor(me.y) === ty) { say('Du stehst im Weg'); return; }
-    if (!affordable(pc.cost)) { say('Dafür fehlen dir Rohstoffe'); return; }
-    for (const [r, v] of Object.entries(pc.cost)) bag[r] -= v;
+    if (needKit(buildSel)) { if (!kit(buildSel)) { say(`${pc.n} musst du erst in der 🪑 Tischlerei herstellen`); return; } prog.kit[buildSel]--; saveProg(); }
+    else { if (!affordable(pc.cost)) { say('Dafür fehlen dir Rohstoffe'); return; } for (const [r, v] of Object.entries(pc.cost)) bag[r] -= v; }
     cur[pc.l] = buildSel; P2.it[key] = cur; saveBag();
     send({ t: 'i_put', id, x: lx, y: ly, k: buildSel, l: pc.l });
     if (pc.prod) send({ t: 'i_collect', id, x: lx, y: ly });
@@ -1973,8 +2003,9 @@
   function renderBuild() {
     const bar = root.querySelector('.is-build'); if (!bar) return;
     const pc = PIECES[buildSel];
-    bar.innerHTML = `<div class="is-bhead"><b>🔨 Bauen</b><span>${buildSel === 'abriss' ? 'Tippe auf ein Bauteil, um es abzureißen (halbe Rohstoffe zurück)' : `${pc.i} ${pc.n}: ${Object.entries(pc.cost).map(([k, v]) => `<em class="${(bag[k] || 0) >= v ? 'ok' : 'no'}">${RES[k][1]}${v}</em>`).join(' ')} · ${coarse ? 'tippe aufs Feld' : 'klick aufs Feld oder Leertaste'}`}</span><button data-bdone>Fertig</button></div>
-      <div class="is-bpieces"><button data-pc="abriss" class="${buildSel === 'abriss' ? 'on' : ''}"><i>🧹</i>Abreißen</button>${Object.entries(PIECES).map(([k, p]) => `<button data-pc="${k}" class="${buildSel === k ? 'on' : ''} ${affordable(p.cost) ? '' : 'no'}"><i>${p.i}</i>${p.n}</button>`).join('')}</div>`;
+    const info = buildSel === 'abriss' ? 'Tippe auf ein Bauteil, um es abzureißen (Bauteile kommen zurück, Böden geben halbe Rohstoffe)' : needKit(buildSel) ? `${pc.i} ${pc.n}: ${kit(buildSel) ? `<em class="ok">hast ${kit(buildSel)}</em>` : '<em class="no">erst in der 🪑 Tischlerei herstellen</em>'}` : `${pc.i} ${pc.n}: ${Object.entries(pc.cost).map(([k, v]) => `<em class="${(bag[k] || 0) >= v ? 'ok' : 'no'}">${RES[k][1]}${v}</em>`).join(' ')}`;
+    bar.innerHTML = `<div class="is-bhead"><b>🔨 Bauen</b><span>${info}${buildSel === 'abriss' ? '' : ' · ' + (coarse ? 'tippe aufs Feld' : 'klick aufs Feld oder Leertaste')}</span><button data-bdone>Fertig</button></div>
+      <div class="is-bpieces"><button data-pc="abriss" class="${buildSel === 'abriss' ? 'on' : ''}"><i>🧹</i>Abreißen</button>${Object.entries(PIECES).map(([k, p]) => { const ok = needKit(k) ? kit(k) > 0 : affordable(p.cost); return `<button data-pc="${k}" class="${buildSel === k ? 'on' : ''} ${ok ? '' : 'no'}"><i>${p.i}</i>${p.n}${needKit(k) ? `<sup>${kit(k)}</sup>` : ''}</button>`; }).join('')}</div>`;
   }
   // Was ist in der Nähe der eigenen Base benutzbar?
   function findBaseNear() {
@@ -2135,9 +2166,10 @@
 
   function useItem(k) {
     if (!bag[k]) return;
-    if (['saft', 'kuchen', 'brot', 'ruehrei', 'fischbraten'].includes(k) && me.hp >= maxHp()) { say('Du hast schon volle Herzen'); return; }
+    if (['saft', 'kuchen', 'brot', 'ruehrei', 'fischbraten', 'kokosmilch'].includes(k) && me.hp >= maxHp()) { say('Du hast schon volle Herzen'); return; }
     bag[k]--; saveBag();
-    if (k === 'saft') me.hp = Math.min(maxHp(), me.hp + 2);
+    if (k === 'kraeutertee') { me.hp = Math.min(maxHp(), me.hp + 2); buff.tempo = Math.max(buff.tempo, 60); } else if (k === 'kokosmilch') me.hp = Math.min(maxHp(), me.hp + 4); else if (k === 'feuertrank') buff.kraft = Math.max(buff.kraft, 120);
+    else if (k === 'saft') me.hp = Math.min(maxHp(), me.hp + 2);
     else if (k === 'kuchen') me.hp = maxHp();
     else if (k === 'brot' || k === 'fischbraten') me.hp = Math.min(maxHp(), me.hp + 4); else if (k === 'fischsuppe') { me.hp = maxHp(); buff.kraft = 60; } else if (k === 'ruehrei') me.hp = maxHp();
     else if (k === 'karottensuppe') { buff.kraft = 120; buff.tempo = 120; } else if (k === 'kuerbiskuchen') { buff.herz = 180; me.hp = Math.min(maxHp(), me.hp + 4); }
@@ -2153,18 +2185,23 @@
     const d = document.createElement('div'); d.className = 'is-craft'; root.appendChild(d);
     d.onclick = e => {
       if (e.target === d || e.target.closest('[data-close]')) { toggleCraft(); return; }
-      const b = e.target.closest('[data-make]'); if (b) craft(b.dataset.make);
+      const b = e.target.closest('[data-make]'); if (b) craft(b.dataset.make, +(b.dataset.n || 1));
+      const bb = e.target.closest('[data-bsel]'); if (bb) { prog.bs = bb.dataset.bsel === 'ruder' ? '' : bb.dataset.bsel; saveProg(); sendMeta(); renderCraft(); say(`${BSKIN[bb.dataset.bsel].i} ${BSKIN[bb.dataset.bsel].n} gewählt`); }
     };
     renderCraft();
   }
   const recState = r => {
     if (r.gear && gear(r.gear) >= r.tier) return gear(r.gear) === r.tier ? 'have' : 'better';
+    if (r.boat && (prog.boats || []).includes(r.boat)) return 'have';
     return Object.entries(r.cost).every(([k, v]) => (bag[k] || 0) >= v) ? 'ok' : 'miss';
   };
-  function craft(id) {
+  function craft(id, n = 1) {
     const r = RECIPES.find(q => q.id === id); if (!r || recState(r) !== 'ok') return;
-    for (const [k, v] of Object.entries(r.cost)) bag[k] -= v;
-    if (r.gear) { prog.gear = prog.gear || {}; prog.gear[r.gear] = r.tier; if (r.gear === 'ruestung') me.hp = maxHp(); mapDirty = true; }
+    if (r.kit) n = Math.max(1, Math.min(n, ...Object.entries(r.cost).map(([k, v]) => Math.floor((bag[k] || 0) / v)))); else n = 1;
+    for (const [k, v] of Object.entries(r.cost)) bag[k] -= v * n;
+    if (r.gear) { prog.gear = prog.gear || {}; prog.gear[r.gear] = r.tier; if (r.gear === 'ruestung' || r.gear === 'helm') me.hp = maxHp(); mapDirty = true; }
+    else if (r.kit) { prog.kit = prog.kit || {}; prog.kit[r.kit] = kit(r.kit) + n; }
+    else if (r.boat) { prog.boats = prog.boats || []; prog.boats.push(r.boat); prog.bs = r.boat; sendMeta(); }
     else bag[r.item] = (bag[r.item] || 0) + 1;
     saveBag(); saveProg();
     say(`${r.i} ${r.n} hergestellt!`); shake = 2;
@@ -2176,12 +2213,13 @@
     const d = root.querySelector('.is-craft'); if (!d || !craftOpen) return;
     const [ic, name, info] = STATIONS[craftOpen];
     const list = RECIPES.filter(r => r.st === craftOpen);
-    d.innerHTML = `<div class="is-crbox"><h3>${ic} ${name} <button class="is-btn" data-close>✕</button></h3><div class="is-crsub">${info}</div>
+    const fleet = craftOpen === 'werft' ? `<div class="is-fleet"><b>Deine Boote:</b>${['ruder', ...(prog.boats || [])].map(k => `<button data-bsel="${k}" class="${(prog.bs || 'ruder') === k ? 'on' : ''}">${BSKIN[k].i} ${BSKIN[k].n}</button>`).join('')}<small>Bootsfarben bei Schneiderin Mila gelten fürs Ruderboot.</small></div>` : '';
+    d.innerHTML = `<div class="is-crbox"><h3>${ic} ${name} <button class="is-btn" data-close>✕</button></h3><div class="is-crsub">${info}</div>${fleet}
       <div class="is-crlist">${list.map(r => {
         const st = recState(r);
         const cost = Object.entries(r.cost).map(([k, v]) => `<span class="${(bag[k] || 0) >= v ? 'ok' : 'no'}">${RES[k][1]} ${Math.min(bag[k] || 0, v)}/${v}</span>`).join('');
-        const btn = st === 'have' ? '<button class="is-make" disabled>✓ Hast du</button>' : st === 'better' ? '<button class="is-make" disabled>Schon Besseres</button>' : `<button class="is-make" data-make="${r.id}" ${st === 'ok' ? '' : 'disabled'}>Herstellen</button>`;
-        return `<div class="is-rec ${st}"><i>${r.i}</i><div><b>${r.n}</b>${r.item && bag[r.item] ? ` <small>(hast ${bag[r.item]})</small>` : ''}<p>${r.d}</p><div class="is-cost">${cost}</div></div>${btn}</div>`;
+        const btn = st === 'have' ? '<button class="is-make" disabled>✓ Hast du</button>' : st === 'better' ? '<button class="is-make" disabled>Schon Besseres</button>' : `<button class="is-make" data-make="${r.id}" ${st === 'ok' ? '' : 'disabled'}>Herstellen</button>${r.kit && st === 'ok' && Object.entries(r.cost).every(([k, v]) => (bag[k] || 0) >= v * 5) ? `<button class="is-make" data-make="${r.id}" data-n="5">5×</button>` : ''}`;
+        return `<div class="is-rec ${st}"><i>${r.i}</i><div><b>${r.n}</b>${r.item && bag[r.item] ? ` <small>(hast ${bag[r.item]})</small>` : ''}${r.kit && kit(r.kit) ? ` <small>(hast ${kit(r.kit)})</small>` : ''}<p>${r.d}</p><div class="is-cost">${cost}</div></div>${btn}</div>`;
       }).join('')}</div></div>`;
   }
   let bagOpen = false, bagTab = 'bag';
@@ -2430,6 +2468,7 @@
   function hurt(n, fx, fy, src, sea) {
     if (me.inv > 0 || busy || me.hp <= 0 || (me.inBoat && !sea)) return;
     if (src && !src.dead && (gear('ruestung') >= 2 || buff.dorn > 0)) { const dx = src.x - me.x, dy = src.y - me.y, d = Math.hypot(dx, dy) || 1; hitEnemy(src, 1, dx / d, dy / d); }
+    if (gear('schild') && Math.random() < [0, 0.2, 0.35][gear('schild')]) { me.inv = 0.5; texts.push({ x: me.x, y: me.y - 1.4, s: '🛡️ Geblockt!', t: 0, col: '#cfe0ff' }); return; }
     if (Math.random() < 0.15 * sk('dodge')) { me.inv = 0.6; texts.push({ x: me.x, y: me.y - 1.4, s: 'Ausgewichen!', t: 0, col: '#9fe0ff' }); return; }
     me.hp -= n; me.inv = 1; hurtFlash = 0.35; shake = Math.max(shake, 5);
     const dx = me.x - fx, dy = me.y - fy, d = Math.hypot(dx, dy) || 1; if (!me.inBoat) { me.kx = dx / d * 9; me.ky = dy / d * 9; }
@@ -2672,36 +2711,72 @@
   /* ---------- Zeichnen ---------- */
   function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
   function shadow(x, y, rx, a = 0.25) { ctx.fillStyle = `rgba(0,0,0,${a})`; ctx.beginPath(); ctx.ellipse(x, y, rx, rx * 0.38, 0, 0, Math.PI * 2); ctx.fill(); }
-  function drawBoat(x, y, h, sail, col, v, t, withMe, bc) {
-    const HC = (BOATS.find(b2 => b2[0] === bc) || BOATS[0])[3];
-    const u = TP * S;
-    ctx.save(); ctx.translate(x, y); ctx.rotate(h);
-    const L = u * 1.1, B = u * 0.42;
-    ctx.fillStyle = 'rgba(0,20,50,.28)'; ctx.beginPath(); ctx.ellipse(u * 0.06, u * 0.1, L, B * 1.05, 0, 0, Math.PI * 2); ctx.fill();
-    if (v > 0.5) { ctx.strokeStyle = 'rgba(230,248,255,.7)'; ctx.lineWidth = S; ctx.beginPath(); ctx.moveTo(L * 0.6, -B * 1.1); ctx.quadraticCurveTo(L * 1.05, 0, L * 0.6, B * 1.1); ctx.stroke(); }
-    ctx.fillStyle = HC[0]; ctx.beginPath(); ctx.moveTo(L + S, 0); ctx.quadraticCurveTo(L * 0.4, -B * 1.25, -L * 0.88, -B - S); ctx.lineTo(-L * 0.93, B + S); ctx.quadraticCurveTo(L * 0.4, B * 1.25, L + S, 0); ctx.fill();
-    ctx.fillStyle = HC[1]; ctx.beginPath(); ctx.moveTo(L, 0); ctx.quadraticCurveTo(L * 0.4, -B * 1.15, -L * 0.85, -B); ctx.lineTo(-L * 0.9, B); ctx.quadraticCurveTo(L * 0.4, B * 1.15, L, 0); ctx.fill();
-    ctx.fillStyle = HC[2]; ctx.beginPath(); ctx.moveTo(L * 0.86, 0); ctx.quadraticCurveTo(L * 0.35, -B * 0.85, -L * 0.75, -B * 0.72); ctx.lineTo(-L * 0.78, B * 0.72); ctx.quadraticCurveTo(L * 0.35, B * 0.85, L * 0.86, 0); ctx.fill();
-    ctx.fillStyle = '#8a5a34'; for (let i = -2; i <= 2; i++) ctx.fillRect(-L * 0.7, i * B * 0.28 - S / 2, L * 1.35, S * 0.6);
-    if (withMe) {
-      ctx.fillStyle = SHIRTS[col % 8]; ctx.beginPath(); ctx.arc(-L * 0.45, 0, u * 0.2, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#f1c39a'; ctx.beginPath(); ctx.arc(-L * 0.45, 0, u * 0.12, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = HAIRS[col % 4]; ctx.beginPath(); ctx.arc(-L * 0.48, 0, u * 0.1, Math.PI * 0.5, Math.PI * 1.5); ctx.fill();
+  // Bootsformen (Skins): Ruderboot, Floß, Schwanenboot, Wikingerschiff, Piratenschiff, Königsjacht
+  const BSKIN = {
+    ruder: { n: 'Ruderboot', i: '🛶', L: 1.1, B: 0.42 },
+    floss: { n: 'Floß', i: '🪵', L: 1.0, B: 0.56, hull: ['#3a2410', '#7a5030', '#a8743f'], sail: '#d8c890', band: '#8a6a3a' },
+    schwan: { n: 'Schwanenboot', i: '🦢', L: 1.15, B: 0.46, hull: ['#8a8a98', '#e8e8f0', '#ffffff'], sail: '#ffe4f0', band: '#ff9ac8' },
+    wikinger: { n: 'Wikingerschiff', i: '🛡️', L: 1.5, B: 0.46, hull: ['#2a160a', '#6b4426', '#9a6a3a'], sail: '#f0e8d8', band: '#c0302a' },
+    pirat: { n: 'Piratenschiff', i: '🏴‍☠️', L: 1.55, B: 0.56, hull: ['#0a0604', '#2a1a10', '#4a2e1a'], sail: '#1e1e24', band: '#a8302a' },
+    koenig: { n: 'Königsjacht', i: '👑', L: 1.35, B: 0.5, hull: ['#1a0828', '#4a2080', '#7a4ab8'], sail: '#fff8e8', band: '#f4c430' },
+  };
+  const hullShape = (L, B, k) => { ctx.beginPath(); ctx.moveTo(L * k, 0); ctx.quadraticCurveTo(L * 0.4 * k, -B * 1.2 * k, -L * 0.88 * k, -B * k); ctx.lineTo(-L * 0.92 * k, B * k); ctx.quadraticCurveTo(L * 0.4 * k, B * 1.2 * k, L * k, 0); };
+  const dirOf = a => { const c = Math.cos(a), s = Math.sin(a); return Math.abs(c) > Math.abs(s) * 0.8 ? (c < 0 ? 1 : 2) : (s < 0 ? 3 : 0); };
+  function drawBoat(x, y, h, sail, col, v, t, withMe, bc, bs, hat) {
+    const SK = BSKIN[bs] || BSKIN.ruder, HC = SK.hull || (BOATS.find(b2 => b2[0] === bc) || BOATS[0])[3];
+    const u = TP * S, L = u * SK.L, B = u * SK.B, bob = Math.sin(t * 2.2 + x * 0.01) * 0.6 * S, roll = Math.sin(t * 1.7) * 0.025;
+    ctx.save(); ctx.translate(x, y + bob); ctx.rotate(h + roll);
+    // Schatten und Bugwelle
+    ctx.fillStyle = 'rgba(0,20,50,.28)'; ctx.beginPath(); ctx.ellipse(u * 0.06, u * 0.12, L, B * 1.08, 0, 0, Math.PI * 2); ctx.fill();
+    if (v > 0.5) { ctx.strokeStyle = 'rgba(230,248,255,.75)'; ctx.lineWidth = S; for (const k of [1, 1.25]) { ctx.beginPath(); ctx.moveTo(L * (0.6 - (k - 1) * 0.8), -B * 1.1 * k); ctx.quadraticCurveTo(L * 1.05, 0, L * (0.6 - (k - 1) * 0.8), B * 1.1 * k); ctx.stroke(); } }
+    if (bs === 'floss') {
+      for (let i = 0; i < 5; i++) { const yy = -B + i * B * 0.5; ctx.fillStyle = '#2a180a'; roundRect(-L * 0.85, yy - B * 0.24, L * 1.7, B * 0.48, B * 0.24); ctx.fill(); ctx.fillStyle = i % 2 ? HC[1] : HC[2]; roundRect(-L * 0.83, yy - B * 0.2, L * 1.66, B * 0.4, B * 0.2); ctx.fill(); ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(-L * 0.8, yy + B * 0.05, L * 1.6, B * 0.1); }
+      ctx.fillStyle = '#d8c890'; for (const xx of [-L * 0.55, L * 0.5]) ctx.fillRect(xx - S, -B * 1.1, 2 * S, B * 2.2);
+    } else {
+      ctx.fillStyle = HC[0]; hullShape(L + S, B + S, 1); ctx.fill();
+      ctx.fillStyle = HC[1]; hullShape(L, B, 1); ctx.fill();
+      ctx.fillStyle = HC[2]; hullShape(L, B, 0.82); ctx.fill();
+      ctx.fillStyle = bs === 'koenig' ? '#d8b880' : '#8a5a34'; for (let i = -2; i <= 2; i++) ctx.fillRect(-L * 0.68, i * B * 0.27 - S / 2, L * 1.3, S * 0.6);
+      if (SK.band) { ctx.strokeStyle = SK.band; ctx.lineWidth = S * 1.1; hullShape(L - S * 0.6, B - S * 0.6, 1); ctx.stroke(); }
+      if (bs === 'wikinger') { const cs = ['#d8443a', '#f4d060', '#3a6ac0']; for (let i = 0; i < 6; i++) for (const sd of [-1, 1]) { const xx = -L * 0.62 + i * L * 0.24, yy = sd * B * (1.02 - Math.abs(xx / L) * 0.25); ctx.fillStyle = '#1a1008'; ctx.beginPath(); ctx.arc(xx, yy, B * 0.26, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = cs[(i + (sd > 0)) % 3]; ctx.beginPath(); ctx.arc(xx, yy, B * 0.21, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#c8c8d0'; ctx.beginPath(); ctx.arc(xx, yy, B * 0.07, 0, Math.PI * 2); ctx.fill(); }
+        ctx.fillStyle = '#2a6a3a'; ctx.beginPath(); ctx.moveTo(L * 0.92, -S * 1.5); ctx.quadraticCurveTo(L * 1.35, -B * 0.4, L * 1.2, -B * 0.9); ctx.lineTo(L * 1.32, -B * 0.95); ctx.quadraticCurveTo(L * 1.5, -B * 0.3, L * 0.98, S * 1.5); ctx.fill(); ctx.fillStyle = '#ffd24a'; ctx.fillRect(L * 1.22, -B * 0.9, S, S); }
+      if (bs === 'pirat') { for (let i = 0; i < 3; i++) for (const sd of [-1, 1]) { ctx.fillStyle = '#111'; ctx.fillRect(-L * 0.35 + i * L * 0.33, sd * B * 1.02 - S * 1.2, 4 * S, 2.4 * S); ctx.fillStyle = '#3a3a3a'; ctx.fillRect(-L * 0.35 + i * L * 0.33 + S, sd * B * 1.02 - S * 0.5, 2 * S, S); }
+        ctx.fillStyle = '#c8a040'; ctx.fillRect(-L * 0.92, -B * 0.5, S * 1.6, B); }
+      if (bs === 'schwan') { ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#8a8a98'; ctx.lineWidth = S * 0.7; ctx.beginPath(); ctx.moveTo(L * 0.78, -S * 2); ctx.quadraticCurveTo(L * 1.25, -S * 3, L * 1.05, -B * 0.95); ctx.quadraticCurveTo(L * 1.0, -B * 1.35, L * 1.22, -B * 1.3); ctx.lineTo(L * 1.38, -B * 1.15); ctx.lineTo(L * 1.2, -B * 1.05); ctx.quadraticCurveTo(L * 1.42, -S * 1, L * 0.86, S * 2); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#f08a2a'; ctx.fillRect(L * 1.36, -B * 1.2, 2.4 * S, 1.4 * S); ctx.fillStyle = '#111'; ctx.fillRect(L * 1.24, -B * 1.22, S, S);
+        for (const sd of [-1, 1]) { ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.beginPath(); ctx.ellipse(-L * 0.1, sd * B * 0.95, L * 0.5, B * 0.22, sd * 0.08, 0, Math.PI * 2); ctx.fill(); } }
+      if (bs === 'koenig') { ctx.fillStyle = '#f4c430'; ctx.beginPath(); ctx.arc(L * 0.9, 0, S * 1.8, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#a8302a'; ctx.fillRect(-L * 0.9, -B * 0.6, S * 1.6, B * 1.2); }
     }
-    const mx = L * 0.25, w = wind(t), rel = wrap(w.a - h), side = Math.sin(rel) >= 0 ? 1 : -1;
+    const SH = SHIRTS[col % 8], seat = -L * (SK.L > 1.3 ? 0.55 : 0.45), rowing = withMe && !sail && v > 0.3;
+    // Ruder beim Paddeln
+    if (withMe && !sail) { const ph = rowing ? Math.sin(t * 7) : 0.3; for (const sd of [-1, 1]) { const a = sd * (1.25 + ph * 0.45); ctx.strokeStyle = '#4a2e18'; ctx.lineWidth = S * 1.2; ctx.beginPath(); ctx.moveTo(seat + S * 2, 0); const ex = seat + S * 2 + Math.cos(a) * B * 2.2, ey = Math.sin(a) * B * 2.2; ctx.lineTo(ex, ey); ctx.stroke(); ctx.fillStyle = '#6b4426'; ctx.beginPath(); ctx.ellipse(ex, ey, 2.4 * S, 1.2 * S, a, 0, Math.PI * 2); ctx.fill(); if (rowing && ph * sd > 0.6) { ctx.fillStyle = 'rgba(230,248,255,.7)'; ctx.fillRect(ex - S, ey - S, 2 * S, 2 * S); } } }
+    const mx = L * 0.22, w = wind(t), rel = wrap(w.a - h), side = Math.sin(rel) >= 0 ? 1 : -1, sc = SK.sail || '#f6efe0', band = SK.band || SH;
     if (sail) {
-      const k = 0.25 + 1.15 * (1 - Math.abs(rel) / Math.PI), ba = Math.PI - side * k, bl = L * 1.05;
-      const ex = mx + Math.cos(ba) * bl, ey = Math.sin(ba) * bl, nxp = -Math.sin(ba) * side, nyp = Math.cos(ba) * side, bulge = u * 0.35 * w.s;
-      ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.beginPath(); ctx.moveTo(mx + S * 2, S * 2); ctx.quadraticCurveTo((mx + ex) / 2 + nxp * bulge * 2 + S * 2, ey / 2 + nyp * bulge * 2 + S * 2, ex + S * 2, ey + S * 2); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = '#f6efe0'; ctx.beginPath(); ctx.moveTo(mx, 0); ctx.quadraticCurveTo((mx + ex) / 2 + nxp * bulge * 2, ey / 2 + nyp * bulge * 2, ex, ey); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = SHIRTS[col % 8]; ctx.lineWidth = S * 1.2; ctx.beginPath(); ctx.moveTo(mx + (ex - mx) * 0.55, ey * 0.55); ctx.lineTo(mx + (ex - mx) * 0.55 + nxp * bulge * 0.9, ey * 0.55 + nyp * bulge * 0.9); ctx.stroke();
+      const k = 0.25 + 1.15 * (1 - Math.abs(rel) / Math.PI), ba = Math.PI - side * k, bl = L * (SK.L > 1.3 ? 0.95 : 1.05);
+      const ex = mx + Math.cos(ba) * bl, ey = Math.sin(ba) * bl, nxp = -Math.sin(ba) * side, nyp = Math.cos(ba) * side, bulge = u * 0.35 * w.s * (1 + 0.08 * Math.sin(t * 5));
+      const cx = (mx + ex) / 2 + nxp * bulge * 2, cy = ey / 2 + nyp * bulge * 2;
+      ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.beginPath(); ctx.moveTo(mx + S * 2, S * 2); ctx.quadraticCurveTo(cx + S * 2, cy + S * 2, ex + S * 2, ey + S * 2); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = sc; ctx.beginPath(); ctx.moveTo(mx, 0); ctx.quadraticCurveTo(cx, cy, ex, ey); ctx.closePath(); ctx.fill();
+      if (bs === 'wikinger') { ctx.save(); ctx.clip(); ctx.strokeStyle = band; ctx.lineWidth = S * 2.4; for (let i = 1; i < 4; i++) { const f = i / 4; ctx.beginPath(); ctx.moveTo(mx + (ex - mx) * f, ey * f); ctx.lineTo(mx + (ex - mx) * f + nxp * bulge * 2, ey * f + nyp * bulge * 2); ctx.stroke(); } ctx.restore(); }
+      else { ctx.strokeStyle = band; ctx.lineWidth = S * 1.2; ctx.beginPath(); ctx.moveTo(mx + (ex - mx) * 0.55, ey * 0.55); ctx.lineTo(mx + (ex - mx) * 0.55 + nxp * bulge * 0.9, ey * 0.55 + nyp * bulge * 0.9); ctx.stroke(); }
+      if (bs === 'pirat') { const px = (mx + ex) / 2 + nxp * bulge * 0.9, py = ey / 2 + nyp * bulge * 0.9; ctx.fillStyle = '#f4f4f4'; ctx.beginPath(); ctx.arc(px, py, S * 2, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#1e1e24'; ctx.fillRect(px - S, py - S * 0.6, S * 0.8, S * 0.8); ctx.fillRect(px + S * 0.3, py - S * 0.6, S * 0.8, S * 0.8); ctx.strokeStyle = '#f4f4f4'; ctx.lineWidth = S * 0.8; ctx.beginPath(); ctx.moveTo(px - S * 3, py + S * 2.5); ctx.lineTo(px + S * 3, py + S * 4); ctx.moveTo(px + S * 3, py + S * 2.5); ctx.lineTo(px - S * 3, py + S * 4); ctx.stroke(); }
       ctx.strokeStyle = '#5a3a1e'; ctx.lineWidth = S; ctx.beginPath(); ctx.moveTo(mx, 0); ctx.lineTo(ex, ey); ctx.stroke();
     } else {
-      ctx.fillStyle = '#e8dcc2'; ctx.fillRect(-L * 0.55, -S, mx + L * 0.55, S * 2.2);
-      ctx.fillStyle = SHIRTS[col % 8]; ctx.fillRect(-L * 0.2, -S, S * 2, S * 2.2);
+      ctx.fillStyle = sc; ctx.fillRect(-L * 0.5, -S * 1.1, mx + L * 0.5, S * 2.2);
+      ctx.fillStyle = band; ctx.fillRect(-L * 0.15, -S * 1.1, S * 2, S * 2.2); ctx.fillRect(mx - L * 0.3, -S * 1.1, S * 2, S * 2.2);
     }
     ctx.fillStyle = '#4a2e18'; ctx.beginPath(); ctx.arc(mx, 0, S * 1.6, 0, Math.PI * 2); ctx.fill();
+    if (bs === 'pirat' || bs === 'koenig') { const fl = Math.sin(t * 6) * S; ctx.fillStyle = bs === 'pirat' ? '#111' : '#a8302a'; ctx.beginPath(); ctx.moveTo(mx, -S); ctx.lineTo(mx - 6 * S, -3 * S + fl); ctx.lineTo(mx - 6 * S, 1 * S + fl); ctx.closePath(); ctx.fill(); }
+    const sxp = Math.cos(h + roll) * seat, syp = Math.sin(h + roll) * seat;
     ctx.restore();
+    // Spieler sitzt aufrecht im Boot (Kopf und Oberkörper, Beine im Rumpf)
+    if (withMe) {
+      const px = x + sxp, py = y + bob + syp + 2 * S, dir = dirOf(h), fr = rowing ? (Math.floor(t * 7 / Math.PI) % 2 ? 1 : 3) : 0;
+      const sp = charSprite(col, dir, fr);
+      ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(px, py, 5 * S, 2 * S, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.drawImage(sp, 0, 0, 16, 16, px - 8 * S, py - 16 * S + (rowing ? Math.round(Math.sin(t * 7)) * S * 0.5 : 0), 16 * S, 16 * S);
+      ctx.fillStyle = HC[1]; ctx.fillRect(px - 6 * S, py - 1 * S, 12 * S, 2 * S); ctx.fillStyle = HC[0]; ctx.fillRect(px - 6 * S, py + S, 12 * S, S);
+      if (hat && hat !== 'none') drawHat(px, py - 16 * S, dir, hat);
+    }
   }
   function nameTag(x, y, name, gold) {
     ctx.font = `600 ${Math.round(4.2 * S)}px system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
@@ -3041,8 +3116,8 @@
     }
     for (const st of stations()) if (st.x > mx0 && st.x < mx1 && st.y > my0 && st.y < my1) ents.push({ y: st.y, f: () => drawObj({ k: 'st', st: st.k, x: st.x, y: st.y }, ox, oy, u, t) });
     for (const { e: E } of entsNear(me.x, me.y)) if (E.x > mx0 && E.x < mx1 && E.y > my0 && E.y < my1 + 2) ents.push({ y: E.y, f: () => drawObj({ k: 'ent', x: E.x, y: E.y }, ox, oy, u, t) });
-    ents.push({ y: boat.y, f: () => drawBoat(sx(boat.x), sy(boat.y), boat.h, boat.sail, me.col, me.inBoat ? boat.v : 0, t / 1000, me.inBoat, prog.bc) });
-    for (const o of others.values()) ents.push({ y: o.by, f: () => drawBoat(sx(o.bx), sy(o.by), o.bh, o.sail, o.col, o.inBoat && o.moving ? 2 : 0, t / 1000, o.inBoat, o.meta && o.meta.bc) });
+    ents.push({ y: boat.y, f: () => drawBoat(sx(boat.x), sy(boat.y), boat.h, boat.sail, me.col, me.inBoat ? boat.v : 0, t / 1000, me.inBoat, prog.bc, prog.bs, prog.hat) });
+    for (const o of others.values()) ents.push({ y: o.by, f: () => drawBoat(sx(o.bx), sy(o.by), o.bh, o.sail, o.col, o.inBoat && o.moving ? 2 : 0, t / 1000, o.inBoat, o.meta && o.meta.bc, o.meta && o.meta.bs, o.meta && o.meta.hat) });
     for (const e of enemies) ents.push({ y: e.y, f: () => drawEnemy(e, ox, oy, u, t) });
     for (const it of items) ents.push({ y: it.y, f: () => drawItem(it, ox, oy, u, t) });
     drawPeople(ents, ox, oy, u, t, false);

@@ -298,6 +298,13 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 26, title: 'Inselreich: Werkhof und neue Boote', date: '03.11.2026', items: [
+      ['Umstellung', 'Inselreich: Fünf eigene Werkbänke – Waffen und Werkzeug, Rüstungen, Küche, Tischlerei und Werft. Sie stehen im neuen Werkhof im Dorf und auf der Startinsel'],
+      ['Neu', 'Inselreich: Tischlerei – Möbel, Wände und Deko stellst du hier her und baust sie dann auf deinen Bauplatz'],
+      ['Neu', 'Inselreich: Helme und Schilde in der Rüstungsschmiede, neue Getränke in der Küche'],
+      ['Neu', 'Inselreich: Neue Boote aus der Werft: Floß, Schwanenboot, Wikingerschiff, Piratenschiff und Königsjacht'],
+      ['Grafik', 'Inselreich: Du sitzt jetzt richtig im Boot, ruderst beim Paddeln, und das Boot schaukelt auf den Wellen'],
+    ] },
     { id: 25, title: 'Inselreich: Titelbild, Tutorial und Schnellreise', date: '03.11.2026', items: [
       ['Neu', 'Inselreich: Titelbildschirm beim Start'],
       ['Umstellung', 'Inselreich: Neue Spieler starten jetzt im Dorf Lindmark auf der Heimatinsel'],
