@@ -298,6 +298,11 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 19, title: 'Inselreich: Werkstätten', date: '03.11.2026', items: [
+      ['Neu', 'Inselreich: Werkbank, Schmiede und Kochstelle am Startplatz und eine Werft am Südufer der Heimatinsel'],
+      ['Neu', 'Inselreich: Herstellen: Steinschwert, Eisschwert, Obsidianklinge, Äxte, Fellrüstung, Stachelpanzer, Fernrohr, neue Segel und ein verstärkter Rumpf'],
+      ['Neu', 'Inselreich: Kochen: Beerensaft, Apfelkuchen, Pilzsuppe, Kokos-Shake und Kaktus-Elixier – im Rucksack benutzen'],
+    ] },
     { id: 18, title: 'Inselreich: Neuer Skilltree', date: '03.11.2026', items: [
       ['Umstellung', 'Inselreich: Der Skilltree wächst jetzt von der Mitte aus – links Kampf, rechts Sammeln, oben Seefahrt'],
       ['Neu', 'Inselreich: Neue Fähigkeiten erscheinen erst, wenn du die davor gelernt hast. Dazu 10 neue Fähigkeiten, u. a. Volltreffer, Ausweichen, Berserker, Holzfäller, Meistersammler, Goldrausch, Wasserratte, Sturmreiter und Kapitän'],

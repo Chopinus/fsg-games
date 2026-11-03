@@ -45,7 +45,30 @@
   const SKILL = Object.fromEntries(SKILLS.map(s => [s.id, s]));
   const XP_FOE = { slime: 5, bigslime: 10, sandslime: 5, frostslime: 7, fireslime: 8, frog: 5, sporling: 6, bat: 6, moth: 6, scorpion: 8, wolf: 10, golem: 40, troll: 100 };
   const xpNeed = l => Math.round(20 * Math.pow(l, 1.5));
-  let prog = { xp: 0, lvl: 1, pts: 0, sk: {} };
+  // Werkstationen auf der Heimatinsel und was man dort herstellen kann
+  const STATIONS = { werk: ['🪚', 'Werkbank', 'Werkzeuge, Waffen und Rüstung aus Holz, Stein und Fell'], schmiede: ['⚒️', 'Schmiede', 'Starke Waffen und Rüstungen aus seltenen Rohstoffen'], werft: ['⚓', 'Werft', 'Segel und Ausbauten für dein Boot'], koch: ['🍲', 'Kochstelle', 'Essen und Tränke, die heilen oder dich stärker machen'] };
+  const RECIPES = [
+    { id: 'steinschwert', st: 'werk', i: '🗡️', n: 'Steinschwert', d: '+1 Schaden', cost: { holz: 3, stein: 5 }, gear: 'schwert', tier: 1 },
+    { id: 'steinaxt', st: 'werk', i: '🪓', n: 'Steinaxt', d: 'Abbauen braucht einen Schlag weniger', cost: { holz: 3, stein: 3 }, gear: 'axt', tier: 1 },
+    { id: 'fellruestung', st: 'werk', i: '🧥', n: 'Fellrüstung', d: '+1 Herz', cost: { fell: 5, faser: 4 }, gear: 'ruestung', tier: 1 },
+    { id: 'fernrohr', st: 'werk', i: '🔭', n: 'Fernrohr', d: 'Größere Minikarte und Weltkarte', cost: { eiskristall: 1, holz: 4, stein: 2 }, gear: 'fernrohr', tier: 1 },
+    { id: 'eisschwert', st: 'schmiede', i: '❄️', n: 'Eisschwert', d: '+2 Schaden, getroffene Gegner werden langsamer', cost: { eis: 6, eiskristall: 2, holz: 2 }, gear: 'schwert', tier: 2 },
+    { id: 'obsidianklinge', st: 'schmiede', i: '🔮', n: 'Obsidianklinge', d: '+3 Schaden', cost: { obsidian: 6, glut: 3, holz: 2 }, gear: 'schwert', tier: 3 },
+    { id: 'obsidianaxt', st: 'schmiede', i: '⛏️', n: 'Obsidianaxt', d: 'Abbauen braucht zwei Schläge weniger', cost: { obsidian: 4, holz: 3, stein: 2 }, gear: 'axt', tier: 2 },
+    { id: 'stachelpanzer', st: 'schmiede', i: '🛡️', n: 'Stachelpanzer', d: '+2 Herzen, und wer dich berührt, bekommt Schaden', cost: { stachel: 6, stein: 6, fell: 2 }, gear: 'ruestung', tier: 2 },
+    { id: 'fasersegel', st: 'werft', i: '⛵', n: 'Fasersegel', d: 'Dein Boot segelt 10 % schneller', cost: { faser: 8, holz: 4 }, gear: 'segel', tier: 1 },
+    { id: 'seidensegel', st: 'werft', i: '🎐', n: 'Sporenseide-Segel', d: 'Dein Boot segelt 20 % schneller', cost: { sporen: 6, faser: 6, pilz: 4 }, gear: 'segel', tier: 2 },
+    { id: 'rumpf', st: 'werft', i: '🛶', n: 'Verstärkter Rumpf', d: 'Dein Boot wendet 50 % schneller', cost: { holz: 15, stein: 5 }, gear: 'rumpf', tier: 1 },
+    { id: 'saft', st: 'koch', i: '🧃', n: 'Beerensaft', d: 'Heilt ein Herz', cost: { beere: 3 }, item: 'saft' },
+    { id: 'kuchen', st: 'koch', i: '🥧', n: 'Apfelkuchen', d: 'Heilt dich ganz', cost: { apfel: 3, holz: 1 }, item: 'kuchen' },
+    { id: 'suppe', st: 'koch', i: '🍲', n: 'Pilzsuppe', d: '90 Sekunden +1 Schaden', cost: { pilz: 3, glibber: 1 }, item: 'suppe' },
+    { id: 'shake', st: 'koch', i: '🥤', n: 'Kokos-Shake', d: '90 Sekunden 25 % schneller laufen und segeln', cost: { kokos: 2, banane: 2 }, item: 'shake' },
+    { id: 'elixier', st: 'koch', i: '🧪', n: 'Kaktus-Elixier', d: '90 Sekunden Stachelhaut: wer dich berührt, bekommt Schaden', cost: { kaktus: 3, sporen: 1 }, item: 'elixier' },
+  ];
+  const ITEM_USE = { saft: 'Heilt ein Herz', kuchen: 'Heilt dich ganz', suppe: '+1 Schaden für 90 Sek.', shake: 'Schneller für 90 Sek.', elixier: 'Stachelhaut für 90 Sek.' };
+  const buff = { kraft: 0, tempo: 0, dorn: 0 };
+  const GEAR_NAME = { schwert: ['Holzschwert', 'Steinschwert', 'Eisschwert', 'Obsidianklinge'], axt: ['', 'Steinaxt', 'Obsidianaxt'], ruestung: ['', 'Fellrüstung', 'Stachelpanzer'], segel: ['', 'Fasersegel', 'Sporenseide-Segel'], rumpf: ['', 'Verstärkter Rumpf'], fernrohr: ['', 'Fernrohr'] };
+  let prog = { xp: 0, lvl: 1, pts: 0, sk: {}, gear: {} };
   try { const q = JSON.parse(localStorage.getItem('insel.xp') || 'null'); if (q && q.lvl) prog = Object.assign(prog, q); } catch {}
   const saveProg = () => { try { localStorage.setItem('insel.xp', JSON.stringify(prog)); } catch {} };
   const sk = id => (id === 'start' ? 1 : prog.sk[id] || 0);
@@ -53,7 +76,8 @@
     let changed = true;
     while (changed) { changed = false; for (const [id, r] of Object.entries(prog.sk)) { const s = SKILL[id]; if (!s || !s.p || !s.p.some(q => sk(q) > 0) || r > s.max) { const keep = s && s.p && s.p.some(q => sk(q) > 0) ? s.max : 0; prog.pts += r - keep; if (keep) prog.sk[id] = keep; else delete prog.sk[id]; changed = true; } } }
   }
-  const maxHp = () => MAXHP + 2 * sk('zaeh');
+  const gear = g => (prog.gear && prog.gear[g]) || 0;
+  const maxHp = () => MAXHP + 2 * sk('zaeh') + 2 * gear('ruestung');
   const WIESE = 0, WUESTE = 1, SCHNEE = 2, DSCHUNGEL = 3, VULKAN = 4, PILZ = 5, LAVA = 8;
   const BIOMES = [
     { n: 'Wiese', foes: ['slime'], info: 'Schleime · Holz, Steine, Äpfel und Beeren' },
@@ -70,6 +94,7 @@
     obsidian: ['Obsidian', '🔮', '#3a2a4a'], kaktus: ['Kaktusfrucht', '🌵', '#e05a8a'], beere: ['Beeren', '🫐', '#d8443a'], apfel: ['Äpfel', '🍎', '#e0402a'],
     kokos: ['Kokosnüsse', '🥥', '#7a5028'], banane: ['Bananen', '🍌', '#f4e04d'], faser: ['Fasern', '🌾', '#c9b06a'], pilz: ['Pilze', '🍄', '#c94a3a'],
     glibber: ['Glibber', '💧', '#8ef07a'], stachel: ['Skorpionstachel', '🦂', '#d9a050'], fell: ['Wolfsfell', '🐺', '#c8ccd8'], glut: ['Glutsteine', '🔥', '#ff7a2a'], sporen: ['Sporen', '✨', '#c9a6ff'],
+    saft: ['Beerensaft', '🧃', '#d84a8a', 1], kuchen: ['Apfelkuchen', '🥧', '#e0a050', 1], suppe: ['Pilzsuppe', '🍲', '#c96a3a', 1], shake: ['Kokos-Shake', '🥤', '#f0e0a0', 1], elixier: ['Kaktus-Elixier', '🧪', '#5ad06a', 1],
   };
 
   /* ---------- Zufall und Rauschen ---------- */
@@ -154,6 +179,14 @@
     if (!ENT) ENT = { tx: 70, ty: 60, x: 70.5, y: 60.9 };
     return ENT;
   }
+  // Werkstationen: Werkbank, Schmiede und Kochstelle am Startplatz, die Werft am Südufer
+  let STPOS = null;
+  function stations() {
+    if (STPOS) return STPOS;
+    let yw = 71; for (let r = 4; r < 50; r += 0.25) if (elev(70.5, 70.5 + r) < 0.02) { yw = 70.5 + r; break; }
+    STPOS = [{ k: 'werk', x: 66.5, y: 68.6 }, { k: 'schmiede', x: 74.5, y: 68.6 }, { k: 'koch', x: 70.5, y: 66.8 }, { k: 'werft', x: 70.5, y: yw - 0.9, wy: yw }];
+    return STPOS;
+  }
   // Gegenstände: 1 Baum, 2 Palme, 3 Fels, 4 Blumen, 5 Gras, 6 Busch, 7 Tanne, 8 Kaktus, 9 toter Baum, 10 Dschungelbaum,
   // 11 Schneetanne, 12 Eisfels, 13 Obsidian, 14 Sandstein, 15 Riesenpilz, 16 Farn, 17 Trockenbusch, 18 Knochen, 19 kleine Pilze, 20 Schneeflecken
   // Tabelle je Biom und Bodenart: [Gegenstand, Anteil] nacheinander
@@ -167,7 +200,8 @@
   };
   function objAt(tx, ty, t) {
     const b = TB;
-    if (Math.abs(tx - 70) < 3 && Math.abs(ty - 70) < 3) return 0; // Startplatz frei
+    if (Math.abs(tx - 70) < 6 && ty >= 64 && ty <= 73) return 0; // Startplatz und Werkstätten frei
+    if (STPOS && Math.abs(tx - 70) < 4 && Math.abs(ty - STPOS[3].y) < 3) return 0; // vor der Werft frei
     const E = caveEnt(); if (Math.abs(tx - E.tx) <= 3 && ty >= E.ty - 4 && ty <= E.ty + 2) return 0; // vor der Höhle frei
     const list = (OBJ[b] || OBJ[0])[t]; if (!list) return 0;
     let r = h2(tx, ty, SEED + 70);
@@ -186,6 +220,7 @@
     if (solid(o) && !isCut(tx, ty)) { const dx = x - (tx + 0.5), dy = y - (ty + 0.8); if (dx * dx + dy * dy < (o === 3 ? 0.2 : 0.12)) return false; }
     const E = caveEnt(), ex = x - E.x, ey = y - E.y;
     if (Math.abs(ex) < 1.6 && ey < 0 && ey > -2.7 && !(Math.abs(ex) < 0.4 && ey > -0.7)) return false; // Felsen um den Eingang
+    if (STPOS && Math.abs(x - 70.5) < 6) for (const st of STPOS) { const dx = x - st.x, dy = y - (st.y - 0.25); if (dx * dx / (st.k === 'werft' ? 1.6 : 0.8) + dy * dy / 0.25 < 1) return false; }
     return true;
   }
   const sailable = (x, y) => elev(x, y) < -0.02;
@@ -408,6 +443,31 @@
       for (const [x, y, r] of [[10, 10, 2], [19, 8, 2.5], [25, 14, 1.5], [6, 15, 1.5], [15, 15, 1.5]]) for (let j = -3; j <= 3; j++) for (let i = -3; i <= 3; i++) if (i * i + j * j <= r * r) R(cg, x + i, y + j, 1, 1, v ? '#c8f4ff' : '#fff4ea');
       return { trunk: tr, crown: cr, w: 32, h: 40, ax: 16, ay: 37, sw: 9 };
     });
+    // Werkstationen
+    {
+      const st = {};
+      let [c, g] = mk(36, 28); // Werkbank
+      R(g, 3, 10, 30, 5, '#8a5a34'); R(g, 3, 10, 30, 1, '#c99a5a'); R(g, 3, 14, 30, 1, '#5a3a20'); R(g, 5, 15, 3, 11, '#6b4426'); R(g, 28, 15, 3, 11, '#6b4426'); R(g, 6, 20, 24, 2, '#5a3a20');
+      R(g, 6, 6, 10, 4, '#b8b4ac'); R(g, 6, 6, 10, 1, '#ffffff'); for (let i = 0; i < 5; i++) R(g, 6 + i * 2, 10, 1, 1, '#8a8a8a'); R(g, 16, 6, 4, 3, '#6b4426');
+      R(g, 23, 3, 2, 8, '#6b4426'); R(g, 21, 2, 6, 3, '#8a8a8a'); R(g, 21, 2, 6, 1, '#c8c8c8');
+      outline(g, 36, 28, '#1a1008'); st.werk = { trunk: c, w: 36, h: 28, ax: 18, ay: 26, sw: 13 };
+      [c, g] = mk(36, 30); // Schmiede: Amboss und Esse
+      R(g, 2, 8, 13, 20, '#5a5250'); R(g, 3, 9, 11, 18, '#7a706a'); R(g, 5, 14, 7, 7, '#2a1a14'); R(g, 3, 9, 11, 1, '#9a908a'); R(g, 6, 2, 5, 7, '#5a5250');
+      R(g, 22, 18, 8, 10, '#6b4426'); R(g, 22, 18, 8, 1, '#8a5a34'); R(g, 18, 12, 16, 4, '#3a3a40'); R(g, 20, 16, 10, 3, '#3a3a40'); R(g, 18, 12, 16, 1, '#7a7a88'); R(g, 32, 13, 3, 2, '#3a3a40');
+      outline(g, 36, 30, '#120c0a'); st.schmiede = { trunk: c, w: 36, h: 30, ax: 18, ay: 28, sw: 13, fire: [8.5, 18] };
+      [c, g] = mk(30, 30); // Kochstelle
+      for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2; R(g, Math.round(15 + Math.cos(a) * 10) - 1, Math.round(24 + Math.sin(a) * 4) - 1, 3, 2, i % 2 ? '#8d8a84' : '#6f6c68'); }
+      R(g, 4, 6, 2, 20, '#5a3a20'); R(g, 24, 6, 2, 20, '#5a3a20'); R(g, 4, 6, 22, 2, '#6b4426');
+      R(g, 9, 10, 12, 9, '#2a2a30'); R(g, 8, 10, 14, 2, '#4a4a54'); R(g, 10, 12, 10, 6, '#3a3a44'); R(g, 10, 10, 10, 1, '#c96a3a'); R(g, 14, 8, 2, 2, '#4a4a54');
+      outline(g, 30, 30, '#120c0a'); st.koch = { trunk: c, w: 30, h: 30, ax: 15, ay: 27, sw: 10, fire: [15, 22], steam: [15, 9] };
+      [c, g] = mk(44, 30); // Werft: Steg mit Kran
+      for (let i = 0; i < 6; i++) R(g, 4 + i * 6, 16, 5, 12, i % 2 ? '#8a5a34' : '#9a6a3a');
+      R(g, 4, 16, 36, 1, '#c99a5a'); R(g, 4, 27, 36, 1, '#5a3a20'); R(g, 3, 26, 2, 4, '#5a3a20'); R(g, 39, 26, 2, 4, '#5a3a20');
+      R(g, 8, 2, 2, 15, '#6b4426'); R(g, 8, 2, 14, 2, '#6b4426'); R(g, 20, 4, 1, 7, '#d8c8a0'); R(g, 18, 11, 5, 3, '#8a8a8a');
+      R(g, 28, 9, 10, 7, '#f0e6d0'); R(g, 28, 9, 10, 1, '#ffffff'); R(g, 31, 9, 1, 7, '#d8443a'); R(g, 25, 12, 3, 4, '#6b4426'); R(g, 25, 11, 3, 1, '#8a5a34');
+      outline(g, 44, 30, '#1a1008'); st.werft = { trunk: c, w: 44, h: 30, ax: 22, ay: 27, sw: 16 };
+      SPR.st = st;
+    }
     SPR.done = true;
   }
 
@@ -726,6 +786,7 @@
       if (sailable(x, y) && sailable(x + 1, y) && sailable(x - 1, y) && sailable(x, y + 1)) { f = [x, y, a]; break; }
     }
     if (f) { boat.x = f[0]; boat.y = f[1]; boat.h = f[2]; }
+    const wf = stations()[3]; if (sailable(70.5, wf.wy + 1.6) && sailable(71.5, wf.wy + 1.6) && sailable(69.5, wf.wy + 1.6)) { boat.x = 70.5; boat.y = wf.wy + 1.6; boat.h = 0; }
     boat.sail = 0; boat.v = 0; me.inBoat = 0; me.inCave = 0;
   }
   const stateArr = () => [me.x + (me.inCave ? COX : 0), me.y + (me.inCave ? COY : 0), me.dir, me.moving, me.inBoat, boat.x, boat.y, boat.h, boat.sail, me.atk > 0 ? 1 : 0, prog.lvl];
@@ -816,9 +877,28 @@
 #isl .is-learn:disabled{background:#4a4f66;color:#9aa0b8;cursor:default}
 #isl .is-skreset{border:0;background:none;color:#9aa0b8;font:500 12px system-ui;text-decoration:underline;cursor:pointer;margin-top:6px;align-self:flex-start;padding:0}
 @media (max-width:700px){#isl .is-skwrap{grid-template-columns:1fr}#isl .is-skbox{padding:10px}}
+#isl .is-craft{position:absolute;inset:0;z-index:6;background:rgba(6,10,24,.62);display:grid;place-items:center;padding:12px}
+#isl .is-crbox{background:#1c2236;border:2px solid rgba(255,255,255,.25);border-radius:16px;padding:14px;width:min(520px,100%);max-height:88vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+#isl .is-crbox h3{margin:0;display:flex;justify-content:space-between;align-items:center;font-size:19px}
+#isl .is-crsub{color:#c8cde0;font-size:13px;margin:2px 0 10px}
+#isl .is-crlist{display:flex;flex-direction:column;gap:8px}
+#isl .is-rec{display:flex;gap:10px;align-items:center;background:rgba(255,255,255,.06);border-radius:12px;padding:9px 10px;border:1px solid transparent}
+#isl .is-rec.ok{border-color:rgba(79,209,139,.6)}#isl .is-rec.have{opacity:.7}
+#isl .is-rec>i{font-style:normal;font-size:28px;width:38px;text-align:center;flex:none}
+#isl .is-rec>div{flex:1;min-width:0}#isl .is-rec b{font-size:15px}#isl .is-rec small{color:#c8cde0}
+#isl .is-rec p{margin:1px 0 4px;font-size:12.5px;color:#d8dcea;line-height:1.3}
+#isl .is-cost{display:flex;flex-wrap:wrap;gap:4px}
+#isl .is-cost span{font-size:12px;font-weight:700;padding:2px 7px;border-radius:8px;background:rgba(0,0,0,.3)}
+#isl .is-cost .ok{color:#8ff0a8}#isl .is-cost .no{color:#ff8a7a}
+#isl .is-make{border:0;border-radius:10px;padding:9px 12px;font:800 13px system-ui;background:#ffcf4a;color:#2a1608;cursor:pointer;flex:none}
+#isl .is-make:disabled{background:#3c4258;color:#9aa0b8;cursor:default}
+#isl .is-baggrid .eat{border:1px solid rgba(255,207,74,.4)}
+#isl .is-eat{margin-top:3px;border:0;border-radius:8px;background:#ffcf4a;color:#2a1608;font:800 11px system-ui;padding:3px 8px;cursor:pointer}
+#isl .is-gear{font-size:13px;color:#e8e2f4;margin:4px 0 8px}
+#isl .is-buffs{display:flex;gap:4px}#isl .is-buffs b{font-size:11.5px;background:rgba(255,207,74,.2);border-radius:6px;padding:0 4px}
 #isl .is-fade{position:absolute;inset:0;z-index:8;background:#000;opacity:0;pointer-events:none;transition:opacity .35s}
 @media (pointer:coarse){#isl .is-hint{display:none}#isl .is-log{bottom:10px}}
-@media (max-width:600px){#isl canvas.is-map{width:96px;height:96px}#isl .is-wind{font-size:11.5px}#isl .is-log{bottom:100px;max-width:70vw}#isl .is-boss{top:60px;width:70vw}}
+@media (max-width:600px){#isl .is-acts{right:8px;gap:6px}#isl .is-act{width:50px;height:50px;font-size:21px}#isl .is-act.big{width:62px;height:62px;font-size:27px}#isl .is-act span{font-size:10px;bottom:-15px}#isl canvas.is-map{width:96px;height:96px}#isl .is-wind{font-size:11.5px}#isl .is-log{bottom:100px;max-width:70vw}#isl .is-boss{top:60px;width:70vw}}
 `;
   function build() {
     if (!document.getElementById('isl-css')) { const st = document.createElement('style'); st.id = 'isl-css'; st.textContent = CSS; document.head.appendChild(st); }
@@ -829,8 +909,8 @@
 <div class="is-mapwrap"><canvas class="is-map" width="132" height="132" title="Karte vergrößern (M)"></canvas><div class="is-wind"><i></i><span data-wind></span></div></div>
 <div class="is-log"></div>
 <div class="is-chat"><input maxlength="120" placeholder="Nachricht an alle …" enterkeyhint="send"><button class="is-btn" data-send>Senden</button></div>
-<div class="is-acts"><button class="is-act" data-skill>🌟<span>Skills</span><em class="is-dot" data-dot hidden></em></button><button class="is-act" data-bag>🎒<span>Rucksack</span></button><button class="is-act" data-chat>💬<span>Chat</span></button><button class="is-act" data-sail hidden>⛵<span>Segel</span></button><button class="is-act" data-boat>⚓<span>Boot</span></button><button class="is-act big" data-atk>⚔️<span>Angriff</span></button></div>
-<div class="is-hint">WASD laufen · Leertaste/Klick: angreifen und abbauen · E Boot · I Rucksack · K Skills · T Chat · M Karte</div>
+<div class="is-acts"><button class="is-act" data-skill>🌟<span>Skills</span><em class="is-dot" data-dot hidden></em></button><button class="is-act" data-bag>🎒<span>Rucksack</span></button><button class="is-act" data-chat>💬<span>Chat</span></button><button class="is-act" data-sail hidden>⛵<span>Segel</span></button><button class="is-act" data-use hidden>🛠️<span>Benutzen</span></button><button class="is-act" data-boat>⚓<span>Boot</span></button><button class="is-act big" data-atk>⚔️<span>Angriff</span></button></div>
+<div class="is-hint">WASD laufen · Leertaste/Klick: angreifen und abbauen · E Boot/Werkstatt · I Rucksack · K Skills · T Chat · M Karte</div>
 <div class="is-joy"><i></i></div>
 <div class="is-say" style="opacity:0"></div><div class="is-fade"></div>`;
     document.body.appendChild(root);
@@ -852,6 +932,8 @@
     hud.map.onclick = () => toggleMap();
     root.querySelector('[data-bag]').onclick = () => toggleBag();
     root.querySelector('[data-skill]').onclick = () => toggleSkills();
+    hud.use = root.querySelector('[data-use]'); hud.use.onclick = () => { if (nearSt) toggleCraft(nearSt.k); };
+    hud.buffs = document.createElement('span'); hud.buffs.className = 'is-buffs'; root.querySelector('.is-stats').appendChild(hud.buffs);
     root.querySelector('[data-xpbox]').onclick = () => toggleSkills();
     Object.assign(hud, { lvl: root.querySelector('[data-lvl]'), xp: root.querySelector('[data-xp]'), pts: root.querySelector('[data-pts]'), dot: root.querySelector('[data-dot]') });
     cv.addEventListener('pointerdown', joyDown);
@@ -883,7 +965,7 @@
     const d = document.createElement('div'); d.className = 'is-big';
     d.innerHTML = me.inCave ? '<b>Kristallhöhle · tippen zum Schließen</b><canvas width="288" height="216" style="height:auto;aspect-ratio:4/3"></canvas>' : `<b>Karte · ${found.size} Inseln entdeckt · tippen zum Schließen</b><canvas width="320" height="320"></canvas>`;
     root.appendChild(d); d.onclick = () => toggleMap();
-    if (me.inCave) drawCaveMap(d.querySelector('canvas'), true); else drawMap(d.querySelector('canvas'), 420, true);
+    if (me.inCave) drawCaveMap(d.querySelector('canvas'), true); else drawMap(d.querySelector('canvas'), gear('fernrohr') ? 700 : 420, true);
   }
   function gainXP(n, x, y) {
     if (sk('gold')) n = Math.round(n * 1.25);
@@ -976,6 +1058,57 @@
         ${isStart ? `<p class="is-skhint">EP gibt es für Gegner, Abbauen, Schatztruhen und neue Inseln. Jede neue Stufe bringt einen Skillpunkt.</p>` : `<button class="is-learn" data-learn ${r >= sel.max || !av || !prog.pts ? 'disabled' : ''}>${why}</button>`}
         <button class="is-skreset" data-reset>Alle Punkte zurücksetzen (kostenlos)</button></div></div></div>`;
   }
+  let nearSt = null, craftOpen = null;
+  const coarse = matchMedia('(pointer:coarse)').matches;
+  function useItem(k) {
+    if (!bag[k]) return;
+    if ((k === 'saft' || k === 'kuchen') && me.hp >= maxHp()) { say('Du hast schon volle Herzen'); return; }
+    bag[k]--; saveBag();
+    if (k === 'saft') me.hp = Math.min(maxHp(), me.hp + 2);
+    else if (k === 'kuchen') me.hp = maxHp();
+    else if (k === 'suppe') buff.kraft = 90; else if (k === 'shake') buff.tempo = 90; else if (k === 'elixier') buff.dorn = 90;
+    texts.push({ x: me.x, y: me.y - 1.6, s: RES[k][1], t: 0, col: '#fff' }); say(`${RES[k][1]} ${RES[k][0]}: ${ITEM_USE[k]}`);
+    if (bagOpen) renderBag();
+  }
+  function toggleCraft(st) {
+    const old = root.querySelector('.is-craft'); if (old) old.remove();
+    if (!st || craftOpen === st) { craftOpen = null; return; }
+    if (bagOpen) toggleBag(); if (skillOpen) toggleSkills();
+    craftOpen = st;
+    const d = document.createElement('div'); d.className = 'is-craft'; root.appendChild(d);
+    d.onclick = e => {
+      if (e.target === d || e.target.closest('[data-close]')) { toggleCraft(); return; }
+      const b = e.target.closest('[data-make]'); if (b) craft(b.dataset.make);
+    };
+    renderCraft();
+  }
+  const recState = r => {
+    if (r.gear && gear(r.gear) >= r.tier) return gear(r.gear) === r.tier ? 'have' : 'better';
+    return Object.entries(r.cost).every(([k, v]) => (bag[k] || 0) >= v) ? 'ok' : 'miss';
+  };
+  function craft(id) {
+    const r = RECIPES.find(q => q.id === id); if (!r || recState(r) !== 'ok') return;
+    for (const [k, v] of Object.entries(r.cost)) bag[k] -= v;
+    if (r.gear) { prog.gear = prog.gear || {}; prog.gear[r.gear] = r.tier; if (r.gear === 'ruestung') me.hp = maxHp(); mapDirty = true; }
+    else bag[r.item] = (bag[r.item] || 0) + 1;
+    saveBag(); saveProg();
+    say(`${r.i} ${r.n} hergestellt!`); shake = 2;
+    for (let i = 0; i < 18; i++) { const a = Math.random() * Math.PI * 2; parts.push({ x: me.x, y: me.y - 0.8, z: 0, vx: Math.cos(a) * 3, vy: Math.sin(a) * 3, t: 0, life: 0.6, col: i % 2 ? '#ffd27a' : '#ffffff', sz: 2 }); }
+    gainXP(r.gear ? 15 : 3, me.x, me.y - 2);
+    renderCraft();
+  }
+  function renderCraft() {
+    const d = root.querySelector('.is-craft'); if (!d || !craftOpen) return;
+    const [ic, name, info] = STATIONS[craftOpen];
+    const list = RECIPES.filter(r => r.st === craftOpen);
+    d.innerHTML = `<div class="is-crbox"><h3>${ic} ${name} <button class="is-btn" data-close>✕</button></h3><div class="is-crsub">${info}</div>
+      <div class="is-crlist">${list.map(r => {
+        const st = recState(r);
+        const cost = Object.entries(r.cost).map(([k, v]) => `<span class="${(bag[k] || 0) >= v ? 'ok' : 'no'}">${RES[k][1]} ${Math.min(bag[k] || 0, v)}/${v}</span>`).join('');
+        const btn = st === 'have' ? '<button class="is-make" disabled>✓ Hast du</button>' : st === 'better' ? '<button class="is-make" disabled>Schon Besseres</button>' : `<button class="is-make" data-make="${r.id}" ${st === 'ok' ? '' : 'disabled'}>Herstellen</button>`;
+        return `<div class="is-rec ${st}"><i>${r.i}</i><div><b>${r.n}</b>${r.item && bag[r.item] ? ` <small>(hast ${bag[r.item]})</small>` : ''}<p>${r.d}</p><div class="is-cost">${cost}</div></div>${btn}</div>`;
+      }).join('')}</div></div>`;
+  }
   let bagOpen = false;
   function toggleBag() {
     bagOpen = !bagOpen;
@@ -983,7 +1116,7 @@
     if (!bagOpen) return;
     if (skillOpen) toggleSkills();
     const d = document.createElement('div'); d.className = 'is-bag';
-    root.appendChild(d); d.onclick = e => { if (e.target === d || e.target.closest('[data-close]')) toggleBag(); };
+    root.appendChild(d); d.onclick = e => { if (e.target === d || e.target.closest('[data-close]')) { toggleBag(); return; } const u = e.target.closest('[data-eat]'); if (u) useItem(u.dataset.eat); };
     renderBag();
   }
   function renderBag() {
@@ -991,8 +1124,9 @@
     const have = Object.keys(RES).filter(k => bag[k] > 0);
     d.innerHTML = `<div class="is-bagbox"><h3>🎒 Rucksack <button class="is-btn" data-close>✕</button></h3>
       <div class="is-bagsum">🪙 ${me.coins} Münzen · ${have.reduce((a, k) => a + bag[k], 0)} Rohstoffe</div>
-      ${have.length ? `<div class="is-baggrid">${have.map(k => `<div><i>${RES[k][1]}</i><b>${bag[k]}</b><span>${RES[k][0]}</span></div>`).join('')}</div>` : '<p>Noch leer. Schlag Bäume, Felsen, Büsche, Kakteen oder Pilze, um Rohstoffe zu sammeln. Auf jeder Inselart gibt es andere!</p>'}
-      <small>Bald kannst du daraus Werkzeuge, Waffen und Boots-Teile bauen.</small></div>`;
+      ${have.length ? `<div class="is-baggrid">${have.map(k => `<div class="${RES[k][3] ? 'eat' : ''}"><i>${RES[k][1]}</i><b>${bag[k]}</b><span>${RES[k][0]}</span>${RES[k][3] ? `<button class="is-eat" data-eat="${k}" title="${ITEM_USE[k]}">Benutzen</button>` : ''}</div>`).join('')}</div>` : '<p>Noch leer. Schlag Bäume, Felsen, Büsche, Kakteen oder Pilze, um Rohstoffe zu sammeln. Auf jeder Inselart gibt es andere!</p>'}
+      <div class="is-gear"><b>Ausrüstung:</b> ${GEAR_NAME.schwert[gear('schwert')]}${Object.keys(GEAR_NAME).filter(g => g !== 'schwert' && gear(g)).map(g => ' · ' + GEAR_NAME[g][gear(g)]).join('')}</div>
+      <small>Auf der Heimatinsel stehen Werkbank, Schmiede, Kochstelle und am Südufer die Werft. Dort stellst du aus Rohstoffen Sachen her.</small></div>`;
   }
   function fade(fn) {
     if (busy) return; busy = true;
@@ -1025,7 +1159,7 @@
     const k = e.key.toLowerCase();
     if (e.type === 'keydown') {
       if (k === 't' || k === 'enter') { e.preventDefault(); openChat(); return; }
-      if (k === 'e' && !e.repeat) { toggleBoat(); return; }
+      if (k === 'e' && !e.repeat) { if (nearSt && !me.inBoat && !me.inCave) toggleCraft(nearSt.k); else toggleBoat(); return; }
       if (k === ' ' || k === 'q') { e.preventDefault(); if (!e.repeat) { if (me.inBoat) toggleSail(); else attack(); } return; }
       if ((k === 'f' || k === 'j') && !e.repeat) { attack(); return; }
       if (k === 'm' && !e.repeat) { toggleMap(); return; }
@@ -1118,7 +1252,7 @@
       if (d < bd) { bd = d; best = { tx, ty, o, t }; }
     }
     if (!best) return;
-    const { tx, ty, o, t } = best, key = tx + ',' + ty, n = (hits.get(key) || 0) + 1, need = sk('meister') ? 1 : Math.max(1, HARV[o][0] - sk('kraft')), loot = HARV[o][1];
+    const { tx, ty, o, t } = best, key = tx + ',' + ty, n = (hits.get(key) || 0) + 1, need = sk('meister') ? 1 : Math.max(1, HARV[o][0] - sk('kraft') - gear('axt')), loot = HARV[o][1];
     const col = TREES.has(o) ? '#a8743f' : o === 12 ? '#d8f0ff' : o === 13 ? '#4a3468' : o === 15 ? '#e04a3a' : o === 8 ? '#5aaa4a' : o >= 16 || o === 6 ? '#7ac05a' : '#9a9790';
     for (let i = 0; i < 6; i++) parts.push({ x: tx + 0.5, y: ty + 0.6, z: 0, vx: (Math.random() - 0.5) * 5, vy: -Math.random() * 3, t: 0, life: 0.45, col, sz: 2 });
     shake = Math.max(shake, 1.5);
@@ -1130,10 +1264,10 @@
     gainXP(o === 12 || o === 13 ? 4 : o === 6 || o >= 16 ? 1 : 2, tx + 0.5, ty - 0.2);
   }
   const rage = () => sk('zorn') && me.hp <= maxHp() / 2;
-  function dmgRoll() { let d = 1 + sk('klinge') + (rage() ? 1 : 0); if (Math.random() < 0.15 * sk('krit')) { d *= 2; dmgRoll.crit = true; } else dmgRoll.crit = false; return d; }
+  function dmgRoll() { let d = 1 + sk('klinge') + gear('schwert') + (rage() ? 1 : 0) + (buff.kraft > 0 ? 1 : 0); if (Math.random() < 0.15 * sk('krit')) { d *= 2; dmgRoll.crit = true; } else dmgRoll.crit = false; return d; }
   function hitEnemy(e, dmg, nx, ny) {
     const D = e.d, heavy = D.ai === 'slam';
-    e.hp -= dmg; e.flash = 0.15;
+    e.hp -= dmg; e.flash = 0.15; if (gear('schwert') === 2) e.slow = 2.5;
     const kb = heavy ? 1.5 : 7; e.vx = nx * kb; e.vy = ny * kb; e.stun = heavy ? 0.05 : 0.3; e.lunge = 0;
     texts.push({ x: e.x, y: e.y - 1, s: (dmgRoll.crit ? 'Volltreffer! -' : '-') + dmg, t: 0, col: dmgRoll.crit ? '#ff9a3a' : '#ffe08a' }); dmgRoll.crit = false;
     for (let i = 0; i < 5; i++) parts.push({ x: e.x, y: e.y - 0.4, z: 0, vx: (Math.random() - 0.5) * 4 + nx * 2, vy: (Math.random() - 0.5) * 4 + ny * 2, t: 0, life: 0.4, col: D.c ? D.c[1] : '#c9d3b0', sz: 2 });
@@ -1158,8 +1292,9 @@
     } else if (e.k === 'golem') say('🪨 Lavagolem besiegt!');
   }
   function drop(x, y, k) { const a = Math.random() * Math.PI * 2, s = 1 + Math.random() * 2.5; items.push({ x, y, k, vx: Math.cos(a) * s, vy: Math.sin(a) * s, z: 0, vz: 4 + Math.random() * 3, t: 0 }); }
-  function hurt(n, fx, fy) {
+  function hurt(n, fx, fy, src) {
     if (me.inv > 0 || busy || me.hp <= 0 || me.inBoat) return;
+    if (src && !src.dead && (gear('ruestung') >= 2 || buff.dorn > 0)) { const dx = src.x - me.x, dy = src.y - me.y, d = Math.hypot(dx, dy) || 1; hitEnemy(src, 1, dx / d, dy / d); }
     if (Math.random() < 0.15 * sk('dodge')) { me.inv = 0.6; texts.push({ x: me.x, y: me.y - 1.4, s: 'Ausgewichen!', t: 0, col: '#9fe0ff' }); return; }
     me.hp -= n; me.inv = 1; hurtFlash = 0.35; shake = Math.max(shake, 5);
     const dx = me.x - fx, dy = me.y - fy, d = Math.hypot(dx, dy) || 1; me.kx = dx / d * 9; me.ky = dy / d * 9;
@@ -1209,7 +1344,9 @@
       const D = e.d;
       e.t += dt; e.flash = Math.max(0, e.flash - dt);
       const dx = me.x - e.x, dy = me.y - e.y, d = Math.hypot(dx, dy), alive = me.hp > 0 && !me.inBoat;
-      let mx = e.vx * dt, my = e.vy * dt;
+      if (e.slow > 0) e.slow -= dt;
+      const dts = dt * (e.slow > 0 ? 0.5 : 1);
+      let mx = e.vx * dts, my = e.vy * dts;
       e.vx *= Math.pow(0.02, dt); e.vy *= Math.pow(0.02, dt);
       if (Math.abs(dx) > 0.2) e.fx = dx > 0 ? 1 : -1;
       if (e.stun > 0) e.stun -= dt;
@@ -1222,14 +1359,14 @@
           if (d < 8 && alive) { tx = dx / (d || 1); ty = dy / (d || 1); } else { const a = Math.random() * Math.PI * 2; tx = Math.cos(a) * 0.4 + (e.hx - e.x) * 0.1; ty = Math.sin(a) * 0.4 + (e.hy - e.y) * 0.1; }
           const sp = D.frog ? 4.4 : D.big ? 2.6 : 3.2; e.vx = tx * sp; e.vy = ty * sp;
         }
-        if (d < (D.big ? 0.75 : 0.6) && alive) hurt(D.dmg, e.x, e.y);
+        if (d < (D.big ? 0.75 : 0.6) && alive) hurt(D.dmg, e.x, e.y, e);
       } else if (D.ai === 'fly') {
         e.back = Math.max(0, e.back - dt);
         let tx = e.hx + Math.cos(e.t * 1.3) * 2 - e.x, ty = e.hy + Math.sin(e.t * 1.9) * 1.5 - e.y;
         if (d < 9 && alive) { tx = dx + Math.sin(e.t * 6) * 1.2; ty = dy + Math.cos(e.t * 5) * 1.2; if (e.back > 0) { tx = -tx; ty = -ty; } }
         const l = Math.hypot(tx, ty) || 1, sp = d < 9 && alive ? 3.6 : 1.5;
         mx += tx / l * sp * dt; my += ty / l * sp * dt;
-        if (d < 0.6 && e.back <= 0 && alive) { hurt(D.dmg, e.x, e.y); e.back = 0.8; }
+        if (d < 0.6 && e.back <= 0 && alive) { hurt(D.dmg, e.x, e.y, e); e.back = 0.8; }
       } else if (D.ai === 'chase') {
         e.cd -= dt;
         if (e.lunge > 0) { e.lunge -= dt; }
@@ -1238,7 +1375,7 @@
           else if (d > 0.8) { mx += dx / d * D.sp * dt; my += dy / d * D.sp * dt; }
         } else { mx += Math.cos(e.t * 0.7 + e.hx) * 0.6 * dt; my += Math.sin(e.t * 0.9 + e.hy) * 0.6 * dt; }
         e.moving = d < 9 && alive;
-        if (d < 0.65 && alive) hurt(D.dmg, e.x, e.y);
+        if (d < 0.65 && alive) hurt(D.dmg, e.x, e.y, e);
       } else if (D.ai === 'slam') {
         if (d < D.wake && !e.awake) { e.awake = true; if (D.boss) say('⚠️ Der Höhlentroll ist erwacht!'); }
         e.cd -= dt;
@@ -1303,6 +1440,7 @@
   }
   function step(dt) {
     const [ix, iy] = chatOpen || bigMap || busy || me.hp <= 0 ? [0, 0] : inputDir();
+    for (const k in buff) if (buff[k] > 0) buff[k] -= dt;
     me.inv = Math.max(0, me.inv - dt); hurtFlash = Math.max(0, hurtFlash - dt); shake = Math.max(0, shake - dt * 30);
     if (me.atk > 0) { me.atk -= dt; if (!me.hitDone && me.atk < (me.atkT || ATK_T) * 0.6) doHits(); }
     if (me.inCave) {
@@ -1326,17 +1464,18 @@
     }
     if (me.inCave) { /* schon erledigt */ } else if (!me.inBoat) {
       const wade = elev(me.x, me.y) < 0;
-      walkStep(dt, ix, iy, walkable, (wade && !sk('schwimm') ? 2.4 : 4.6) * (1 + 0.1 * sk('fuss')));
+      walkStep(dt, ix, iy, walkable, (wade && !sk('schwimm') ? 2.4 : 4.6) * (1 + 0.1 * sk('fuss')) * (buff.tempo > 0 ? 1.25 : 1));
+      nearSt = null; for (const st of stations()) if (Math.hypot(me.x - st.x, me.y - (st.y + 0.3)) < 1.9) nearSt = st;
       const E = caveEnt();
       if (Math.abs(me.x - E.x) < 0.42 && me.y < E.y - 0.2 && !busy) enterCave();
     } else {
       const w = wind();
       if (ix || iy) {
-        const want = Math.atan2(iy, ix), d = wrap(want - boat.h), turn = 1.9 * dt * Math.min(1, Math.hypot(ix, iy) + 0.3) * (sk('kapitaen') ? 2 : 1);
+        const want = Math.atan2(iy, ix), d = wrap(want - boat.h), turn = 1.9 * dt * Math.min(1, Math.hypot(ix, iy) + 0.3) * (sk('kapitaen') ? 2 : 1) * (gear('rumpf') ? 1.5 : 1);
         boat.h = wrap(boat.h + Math.max(-turn, Math.min(turn, d)));
       }
       let target = 0;
-      if (boat.sail) target = 6.2 * w.s * polar(wrap(boat.h - w.a), sk('wind')) * (1 + 0.12 * sk('boot')) * (sk('kapitaen') ? 1.2 : 1) * (sk('sturm') && w.s > 0.85 ? 1.25 : 1);
+      if (boat.sail) target = 6.2 * w.s * polar(wrap(boat.h - w.a), sk('wind')) * (1 + 0.12 * sk('boot')) * (1 + 0.1 * gear('segel')) * (buff.tempo > 0 ? 1.25 : 1) * (sk('kapitaen') ? 1.2 : 1) * (sk('sturm') && w.s > 0.85 ? 1.25 : 1);
       else if (ix || iy) target = 1.6 * (sk('paddel') ? 1.5 : 1);
       boat.v += (target - boat.v) * Math.min(1, dt * (target > boat.v ? 0.7 : 1.2));
       const nx = boat.x + Math.cos(boat.h) * boat.v * dt, ny = boat.y + Math.sin(boat.h) * boat.v * dt;
@@ -1421,7 +1560,8 @@
     ctx.fillStyle = '#1a1a22'; ctx.fillText(t, x, y - 2.2 * S);
   }
   // Figur mit Schatten, Watten im Wasser, Schwerthieb
-  function drawPerson(x, y, col, dir, frame, wade, t, atkP, blink, whirl) {
+  function drawPerson(x, y, col, dir, frame, wade, t, atkP, blink, whirl, tier) {
+    swordTier = tier || 0;
     const sp = charSprite(col, dir, frame), w = 16 * S, h = 24 * S, top = y - 23 * S;
     const fx = DIRV[dir][0], fy = DIRV[dir][1];
     if (!wade) shadow(x, y - S * 0.5, 5.5 * S, 0.28);
@@ -1437,6 +1577,7 @@
     if (atkP != null && whirl) { ctx.strokeStyle = `rgba(180,230,255,${0.6 * (1 - atkP)})`; ctx.lineWidth = 3 * S; ctx.beginPath(); ctx.ellipse(x, y - 8 * S, (10 + atkP * 14) * S, (6 + atkP * 8) * S, 0, 0, Math.PI * 2 * Math.min(1, atkP * 1.5)); ctx.stroke(); }
     void fx; void fy;
   }
+  let swordTier = 0;
   function drawSword(x, y, dir, p) {
     const base = [Math.PI / 2, Math.PI, 0, -Math.PI / 2][dir], side = dir === 1 ? -1 : 1;
     const a = base - side * 1.3 + side * 2.6 * Math.min(1, p * 1.4);
@@ -1447,9 +1588,10 @@
     ctx.save(); ctx.translate(cx, cy); ctx.rotate(a);
     ctx.fillStyle = '#5a3a22'; ctx.fillRect(0, -S, 3 * S, 2 * S);
     ctx.fillStyle = '#d9b25a'; ctx.fillRect(3 * S, -2.5 * S, S * 1.5, 5 * S);
-    ctx.fillStyle = '#dfe6ee'; ctx.fillRect(4.5 * S, -S, len - 5 * S, 2 * S);
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(4.5 * S, -S, len - 5 * S, S * 0.7);
-    ctx.fillStyle = '#dfe6ee'; ctx.beginPath(); ctx.moveTo(len - 0.5 * S, -S); ctx.lineTo(len + 1.5 * S, 0); ctx.lineTo(len - 0.5 * S, S); ctx.fill();
+    const bl = ['#dfe6ee', '#b8b4ac', '#8fe4ff', '#8a5ad8'][Math.min(3, swordTier)], hl = ['#ffffff', '#e0dcd4', '#e8fbff', '#d0b0ff'][Math.min(3, swordTier)];
+    ctx.fillStyle = bl; ctx.fillRect(4.5 * S, -S, len - 5 * S, 2 * S);
+    ctx.fillStyle = hl; ctx.fillRect(4.5 * S, -S, len - 5 * S, S * 0.7);
+    ctx.fillStyle = bl; ctx.beginPath(); ctx.moveTo(len - 0.5 * S, -S); ctx.lineTo(len + 1.5 * S, 0); ctx.lineTo(len - 0.5 * S, S); ctx.fill();
     ctx.restore(); ctx.lineCap = 'butt';
   }
   function drawObj(o, ox, oy, u, t) {
@@ -1458,7 +1600,7 @@
       if (TREES.has(o.k)) { shadow(x, y - S, 4 * S, 0.2); ctx.fillStyle = '#3a2414'; ctx.fillRect(x - 3 * S, y - 5 * S, 6 * S, 4 * S); ctx.fillStyle = '#8a5a34'; ctx.fillRect(x - 2.5 * S, y - 4.5 * S, 5 * S, 3 * S); ctx.fillStyle = '#d8b07a'; ctx.fillRect(x - 2 * S, y - 5 * S, 4 * S, S); }
       return;
     }
-    const sp = o.k === 'ent' ? SPR.ent : SPR[o.k][o.v];
+    const sp = o.k === 'ent' ? SPR.ent : o.k === 'st' ? SPR.st[o.st] : SPR[o.k][o.v];
     const dx = Math.round(x - sp.ax * S), dy = Math.round(y - sp.ay * S), w = sp.w * S, h = sp.h * S;
     shadow(x, y - S, sp.sw * S, 0.24);
     ctx.drawImage(sp.trunk, dx, dy, w, h);
@@ -1470,6 +1612,9 @@
       ctx.globalAlpha = 1;
     }
     if (sp.torches) for (const [tx, ty] of sp.torches) flame(dx + tx * S, dy + ty * S, t, 1);
+    if (sp.fire) flame(dx + sp.fire[0] * S, dy + sp.fire[1] * S, t, 0.8);
+    if (sp.steam) for (let i = 0; i < 3; i++) { const ph = ((t / 1400 + i / 3) % 1); ctx.fillStyle = `rgba(255,255,255,${0.5 * (1 - ph)})`; ctx.fillRect(dx + (sp.steam[0] + Math.sin(ph * 6 + i) * 2) * S, dy + (sp.steam[1] - ph * 9) * S, 2 * S, 2 * S); }
+    if (o.k === 'st' && nearSt && nearSt.k === o.st) { ctx.font = `700 ${Math.round(4.6 * S)}px system-ui,sans-serif`; const tx2 = (coarse ? '' : 'E – ') + STATIONS[o.st][1], tw = ctx.measureText(tx2).width + 5 * S; ctx.fillStyle = 'rgba(14,22,40,.8)'; roundRect(x - tw / 2, dy - 9 * S, tw, 7 * S, 2.5 * S); ctx.fill(); ctx.fillStyle = '#ffd27a'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(tx2, x, dy - 5.5 * S); }
   }
   function flame(x, y, t, k) {
     const f = Math.sin(t / 70 + x) * 0.5 + Math.sin(t / 43 + y) * 0.5;
@@ -1631,7 +1776,7 @@
     return [u, Math.round(W / 2 - me.x * u + sx), Math.round(H / 2 - (me.y - 0.5) * u + sy)];
   }
   function drawPeople(ents, ox, oy, u, t, cave_) {
-    if (!me.inBoat) ents.push({ y: me.y, f: () => drawPerson(ox + me.x * u, oy + me.y * u, me.col, me.dir, me.frame, !cave_ && elev(me.x, me.y) < 0, t, me.atk > 0 ? 1 - me.atk / (me.atkT || ATK_T) : null, me.inv > 0, sk('wirbel')) });
+    if (!me.inBoat) ents.push({ y: me.y, f: () => drawPerson(ox + me.x * u, oy + me.y * u, me.col, me.dir, me.frame, !cave_ && elev(me.x, me.y) < 0, t, me.atk > 0 ? 1 - me.atk / (me.atkT || ATK_T) : null, me.inv > 0, sk('wirbel'), gear('schwert')) });
     for (const o of others.values()) {
       if (!!o.cave !== !!cave_ || o.inBoat) continue;
       ents.push({ y: o.y, f: () => drawPerson(ox + o.x * u, oy + o.y * u, o.col, o.dir, o.moving ? (Math.floor(o.ft / 0.13) % 4) + 1 : 0, !cave_ && elev(o.x, o.y) < 0, t, o.atk ? Math.min(1, (o.at || 0) / ATK_T) : null) });
@@ -1670,6 +1815,7 @@
     // alles mit Höhe nach Tiefe sortiert: Bäume, Felsen, Figuren, Boote
     const ents = [], mx0 = (-ox) / u - 2, mx1 = (W - ox) / u + 2, my0 = (-oy) / u - 1, my1 = (H - oy) / u + 3.5;
     for (const c of vis) for (const o of c.objs) if (o.x > mx0 && o.x < mx1 && o.y > my0 && o.y < my1) ents.push({ y: o.y, f: () => drawObj(o, ox, oy, u, t) });
+    for (const st of stations()) if (st.x > mx0 && st.x < mx1 && st.y > my0 && st.y < my1) ents.push({ y: st.y, f: () => drawObj({ k: 'st', st: st.k, x: st.x, y: st.y }, ox, oy, u, t) });
     const E = caveEnt(); if (E.x > mx0 && E.x < mx1 && E.y > my0 && E.y < my1 + 2) ents.push({ y: E.y, f: () => drawObj({ k: 'ent', x: E.x, y: E.y }, ox, oy, u, t) });
     ents.push({ y: boat.y, f: () => drawBoat(sx(boat.x), sy(boat.y), boat.h, boat.sail, me.col, me.inBoat ? boat.v : 0, t / 1000, me.inBoat) });
     for (const o of others.values()) ents.push({ y: o.by, f: () => drawBoat(sx(o.bx), sy(o.by), o.bh, o.sail, o.col, o.inBoat && o.moving ? 2 : 0, t / 1000, o.inBoat) });
@@ -1802,10 +1948,13 @@
     hud.on.textContent = online === 1 ? 'nur du bist online' : `${online} Spieler online`;
     hud.sail.hidden = !me.inBoat; hud.sail.classList.toggle('on', !!boat.sail);
     hud.boat.hidden = !!me.inCave;
+    hud.use.hidden = !nearSt || !!me.inBoat || !!me.inCave;
+    if (hud.use.hidden && craftOpen) toggleCraft();
+    hud.buffs.innerHTML = [['kraft', '🍲'], ['tempo', '🥤'], ['dorn', '🧪']].filter(([k]) => buff[k] > 0).map(([k, i]) => `<b>${i}${Math.ceil(buff[k])}s</b>`).join('');
     hud.atk.hidden = !!me.inBoat;
     hud.boat.querySelector('span').textContent = me.inBoat ? 'An Land' : 'Boot';
     if (me.inCave) drawCaveMap(hud.map, false);
-    else if (Math.hypot(me.x - mapAt[0], me.y - mapAt[1]) > 6 || mapDirty) { mapAt = [me.x, me.y]; mapDirty = false; drawMap(hud.map, sk('entdecker') ? 180 : 120, false); }
+    else if (Math.hypot(me.x - mapAt[0], me.y - mapAt[1]) > 6 || mapDirty) { mapAt = [me.x, me.y]; mapDirty = false; drawMap(hud.map, (sk('entdecker') ? 180 : 120) + (gear('fernrohr') ? 80 : 0), false); }
     const now = Date.now(); [...hud.log.children].forEach((el, i) => { const l = log[i]; if (l && now - l.t > 15000) el.style.opacity = 0; });
   }
   let hudT = 0;
@@ -1845,7 +1994,7 @@
   function openGame(name) {
     if (open) return;
     me.name = (name || 'Gast').slice(0, 16);
-    buildSprites(); caveEnt();
+    buildSprites(); caveEnt(); stations();
     if (!load()) spawn();
     if (!root) build(); else root.style.display = '';
     open = true; document.body.style.overflow = 'hidden';
@@ -1872,6 +2021,6 @@
   }
   window.Insel = {
     open: openGame, close, net, isOpen: () => open, rejoin: () => { if (open) join(); },
-    _dbg: { get prog() { return prog; }, gainXP, toggleSkills, me, boat, others, elev, tileAt, objAt, isCut, get bag() { return bag; }, wind, island, spawn, toggleBoat, toggleSail, caveEnt, enterCave, leaveCave, attack, get enemies() { return enemies; }, get cave() { return cave; } },
+    _dbg: { stations, toggleCraft, craft, useItem, buff, get nearSt() { return nearSt; }, get prog() { return prog; }, gainXP, toggleSkills, me, boat, others, elev, tileAt, objAt, isCut, get bag() { return bag; }, wind, island, spawn, toggleBoat, toggleSail, caveEnt, enterCave, leaveCave, attack, get enemies() { return enemies; }, get cave() { return cave; } },
   };
 })();
