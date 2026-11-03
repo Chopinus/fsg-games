@@ -18,6 +18,7 @@ const GAMES = {
   slf: require('./slf.js'),
   spion: require('./spion.js'),
   kniffel: require('./kniffel.js'),
+  casino: require('./casino.js'),
 };
 // Umzug: Ist auf diesem Render-Dienst die Umgebungsvariable MOVED_TO gesetzt (z. B. https://onegame.onrender.com),
 // zeigt jede Seite nur noch den Umzugs-Hinweis. Spielstände werden dann hier weder geladen noch gespeichert,
@@ -48,7 +49,7 @@ const IDLE_MS = 30 * 60 * 1000; // Räume ohne verbundene Spieler verschwinden n
 
 const STATIC = {
   '/': 'index.html', '/index.html': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css',
-  '/mini.js': 'mini.js', '/ritter.js': 'ritter.js', '/spiele2.js': 'spiele2.js',
+  '/mini.js': 'mini.js', '/ritter.js': 'ritter.js', '/spiele2.js': 'spiele2.js', '/welt.js': 'welt.js', '/casino_ui.js': 'casino_ui.js',
 };
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
 
@@ -185,7 +186,7 @@ function broadcastRooms() {
     roomsTimer = null;
     // Nur Runden zeigen, in denen gerade jemand online ist
     const connected = new Set([...clients].map(c => c.pid));
-    const list = [...rooms.values()].filter(r => r.players.some(p => connected.has(p.id)))
+    const list = [...rooms.values()].filter(r => !r.private && r.players.some(p => connected.has(p.id)))
       .sort((a, b) => b.created - a.created).map(summary);
     for (const c of clients) send(c, { t: 'rooms', rooms: list });
   }, 80);
@@ -262,7 +263,7 @@ function handle(c, m) {
     };
     r.push = () => pushRoom(r);
     r.cast = d => { const msg = JSON.stringify({ t: 'cast', d }); for (const x of clients) if (x.room === r.id && x.ws.readyState === 1) x.ws.send(msg); };
-    G.init?.(r);
+    G.init?.(r, m);
     rooms.set(r.id, r);
     c.room = r.id;
     pushRoom(r);

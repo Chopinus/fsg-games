@@ -653,8 +653,9 @@
   /* ================= Aufstieg (2. Prestige-Ebene) ================= */
   const ASC_REQ_REBIRTHS = 9, ASC_REQ_STAGE = 150;
   const CPERKS = [
-    { id: 'k_blut', name: 'Königsblut', desc: 'Alle Helden ×1,5 Schaden und Leben je Stufe', max: 999, cost: r => 3 + 2 * r },
-    { id: 'k_schatz', name: 'Schatzkammer', desc: 'Doppeltes Gold je Stufe', max: 999, cost: r => 3 + 2 * r },
+    // Königsblut und Schatzkammer wirken mal-genommen, darum werden sie stark teurer (sonst wird jeder Aufstieg zum Spaziergang)
+    { id: 'k_blut', name: 'Königsblut', desc: 'Alle Helden ×1,5 Schaden und Leben je Stufe', max: 999, cost: r => Math.ceil(3 * Math.pow(1.45, r)) },
+    { id: 'k_schatz', name: 'Schatzkammer', desc: 'Doppeltes Gold je Stufe', max: 999, cost: r => Math.ceil(3 * Math.pow(1.45, r)) },
     { id: 'k_sterne', name: 'Sternenerbe', desc: '+50 % Sterne bei jeder Wiedergeburt je Stufe', max: 10, cost: r => 4 + 2 * r },
     { id: 'k_seele', name: 'Seelenfluss', desc: 'Bosse geben doppelt so viele Seelen je Stufe', max: 5, cost: r => 4 + 3 * r },
     { id: 'k_schnell', name: 'Schneller Weg', desc: 'Jede Wiedergeburt braucht 5 Stufen weniger je Stufe', max: 3, cost: r => 6 + 3 * r },
@@ -664,9 +665,10 @@
     { id: 'k_feld', name: 'Sechster Platz', desc: '+1 Platz auf dem Feld, für immer. Zusammen mit dem Fünften Platz aus dem Sternen-Laden kämpfen alle 6 Helden', max: 1, cost: () => 10 },
   ];
   const CPERK = Object.fromEntries(CPERKS.map(p => [p.id, p]));
-  // Grundwert: 1. Aufstieg 25, 2. Aufstieg 18, danach 10 Kronen. Dazu +1 je 4 Stufen über 150
+  // Grundwert: 1. Aufstieg 25, 2. Aufstieg 18, danach 10 Kronen. Dazu ein Bonus für tiefe Läufe, der langsamer wächst und bei 20 endet
   const ascBase = S => [25, 18][S.asc || 0] ?? 10;
-  const crownsFor = S => (S.rebirths >= ASC_REQ_REBIRTHS && S.best >= ASC_REQ_STAGE ? ascBase(S) + Math.floor((S.best - ASC_REQ_STAGE) / 4) : 0);
+  const ascDeep = best => Math.min(20, Math.floor(Math.sqrt(Math.max(0, best - ASC_REQ_STAGE)) * 1.2));
+  const crownsFor = S => (S.rebirths >= ASC_REQ_REBIRTHS && S.best >= ASC_REQ_STAGE ? ascBase(S) + ascDeep(S.best) : 0);
   const ASC_ROAD = [
     { a: 1, text: 'Kronen-Laden mit dauerhaften Königs-Boni' }, { a: 2, text: 'Begleiter: Drache und Eule' }, { a: 3, text: 'Begleiter: Golem' },
     { a: 4, text: 'Begleiter: Phönix und ein zweiter Begleiter-Platz' }, { a: 5, text: 'Begleiter bis Stufe 100' },
@@ -1733,6 +1735,8 @@
     out.infV = 1;
     if (!d.startV && out.perks.p_start) { const r0 = Math.floor(Number(d.perks && d.perks.p_start) || 0); let back = 0; for (let r = 0; r < r0; r++) back += 2 + r; out.stars += back; delete out.perks.p_start; if (out.runs > 0) out.startNews = back; }
     out.startV = 1;
+    if (!d.cpV) { let back = 0; for (const id of ['k_blut', 'k_schatz']) { const L = out.cperks[id] || 0; for (let r = 0; r < L; r++) back += 3 + 2 * r; delete out.cperks[id]; } if (back) { out.crowns = (out.crowns || 0) + back; out.cpNews = back; } }
+    out.cpV = 1;
     if (!d.shardV) out.dust = Math.ceil(out.dust / 2); // Runenstaub wird zu Runensplittern (neuer Kurs)
     out.shardV = 1;
     if (!d.starV && Object.keys(out.perks).length) { const back = resetPerks(out); if (out.runs > 0 && back) out.starNews = back; }
@@ -2830,7 +2834,7 @@
       S.tot.kills, S.tot.souls, COMPS.length, ...COMPS.map(c => S.comps[c.id] || 0), ...[0, 1].map(i => (S.compActive[i] ? COMPS.findIndex(c => c.id === S.compActive[i]) + 1 : 0)), S.tempo || 0,
       S.exp.spl, S.exp.done, Math.max(0, PUZZLE.indexOf(S.exp.target)), PUZZLE.length, ...PUZZLE.map(id => pieceMask(S, id)),
       1, kSlots(S), HEROES.length, ...HEROES.map(h => (S.kplace || {})[h.id] || 0), S.altar || 0, 1, 1, 1, S.rlager || 0, 1,
-      1, S.ahn.sig, S.ahn.got, S.ahn.m, S.ahn.lvl, HEROES.length, ...HEROES.map(h => (S.ahn.place[h.id] ? 1 : 0)), S.ascBest || 0, 1, S.rankGot || 0, S.wf || 0, HEROES.length, ...HEROES.map(h => (S.mast || {})[h.id] || 0), ...HEROES.map(h => Math.max(0, SKINS.findIndex(k => k.id === (S.skin || {})[h.id]))), 1, HEROES.length, ...HEROES.flatMap(h => [3, 4, 5].map(i => rIdx((S.sockets[h.id] || [])[i]))), 1, S.season || 0, 1, S.tst ? 1 : 0]);
+      1, S.ahn.sig, S.ahn.got, S.ahn.m, S.ahn.lvl, HEROES.length, ...HEROES.map(h => (S.ahn.place[h.id] ? 1 : 0)), S.ascBest || 0, 1, S.rankGot || 0, S.wf || 0, HEROES.length, ...HEROES.map(h => (S.mast || {})[h.id] || 0), ...HEROES.map(h => Math.max(0, SKINS.findIndex(k => k.id === (S.skin || {})[h.id]))), 1, HEROES.length, ...HEROES.flatMap(h => [3, 4, 5].map(i => rIdx((S.sockets[h.id] || [])[i]))), 1, S.season || 0, 1, S.tst ? 1 : 0, 1, S.cpV || 0]);
   }
   function decode(code) {
     const nums = unpackNums(code); if (!nums) return null;
@@ -2877,6 +2881,7 @@
           if (i < nums.length) { next(); const hc5 = next(); for (let k = 0; k < hc5; k++) { const a = [next(), next(), next()]; if (HEROES[k] && d.sockets[HEROES[k].id]) d.sockets[HEROES[k].id].push(...a.map(x => (x > 0 ? x : null))); } }
           if (i < nums.length) { next(); d.season = next(); }
           if (i < nums.length) { next(); if (next()) d.tst = 1; }
+          if (i < nums.length) { next(); d.cpV = next(); }
         }
       } else return null;
       return migrate(d);

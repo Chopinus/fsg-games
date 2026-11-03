@@ -298,6 +298,15 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 12, title: 'Neu im Game Hub', date: '02.11.2026', items: [
+      ['Neu', 'Casino Aurum: Blackjack, Roulette, Texas Hold\'em, Pferderennen und Spielautomat – nur mit Spieljetons, allein gegen Bots oder mit Freunden'],
+      ['Neu', 'Würfelwelt Überleben: Monster in der Nacht, Hunger, Werkzeuge, Tiere, Fackeln und Betten'],
+    ] },
+    { id: 11, title: 'Kronen-Laden ausbalanciert', date: '02.11.2026', items: [
+      ['Umstellung', 'Königsblut und Schatzkammer werden mit jeder Stufe deutlich teurer, statt nur um 2 Kronen'],
+      ['Umstellung', 'Kronen für tiefe Läufe wachsen langsamer und enden bei 20 extra'],
+      ['Info', 'Wer schon Königsblut oder Schatzkammer hatte, bekommt alle Kronen dafür zurück und kann neu verteilen'],
+    ] },
     { id: 10, title: 'Gold ohne Obergrenze', date: '24.10.2026', items: [
       ['Fix', 'Gold blieb bei 1 Trillion stehen, obwohl die Kosten weiter stiegen. Jetzt zählt es weiter'],
       ['Neu', 'Große Zahlen: nach Trd. kommen Quad., Quint., Sext. bis Dez.'],
