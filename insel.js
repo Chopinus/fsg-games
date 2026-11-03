@@ -221,6 +221,7 @@
     const E = caveEnt(); if (Math.abs(tx - E.tx) <= 3 && ty >= E.ty - 4 && ty <= E.ty + 2) return 0; // vor der Höhle frei
     { const cx = Math.floor(tx / CELL), cy = Math.floor(ty / CELL); for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) { const isl = islCache.get((cx + i) + ',' + (cy + j)); if (isl && isl.b && isl.r >= 20) { const c = islandCave(isl); if (c && Math.abs(tx - c.ent.tx) <= 3 && ty >= c.ent.ty - 4 && ty <= c.ent.ty + 2) return 0; } } }
     if (inTownClear(tx, ty)) return 0;
+    if (nearMid(tx, ty)) { const M = mid(); if (tx >= M.x0 - 1 && tx <= M.x1 + 3 && Math.abs(ty + 0.5 - M.y) < 3.5) return 0; }
     const list = (OBJ[b] || OBJ[0])[t]; if (!list) return 0;
     let r = h2(tx, ty, SEED + 70);
     for (const [o, p] of list) { if (r < p) return o; r -= p; }
@@ -232,6 +233,7 @@
   const cut = new Map(), hits = new Map();
   const isCut = (tx, ty) => (cut.get(tx + ',' + ty) || 0) > Date.now();
   function walkable(x, y) {
+    if (inMid(x, y)) return true;
     if (nearBig(x, y)) { const ta = townAt(x, y); if (ta === 4) return true; if (townBlocked(x, y)) return false; if (ta === 3 && baseSolid(x, y)) return false; }
     const e = elev(x, y); if (e < 0 && cls(e) !== W_SHALLOW) return false;
     if (clsB(e, EB) === LAVA) return false;
@@ -241,7 +243,7 @@
     if (STPOS && Math.abs(x - 70.5) < 6) for (const st of STPOS) { const dx = x - st.x, dy = y - (st.y - 0.25); if (dx * dx / (st.k === 'werft' ? 1.6 : 0.8) + dy * dy / 0.25 < 1) return false; }
     return true;
   }
-  const sailable = (x, y) => elev(x, y) < -0.02 && !(nearBig(x, y) && townAt(x, y) === 4);
+  const sailable = (x, y) => elev(x, y) < -0.02 && !onDock(x, y);
   function nearestIsland(x, y) {
     const cx = Math.floor(x / CELL), cy = Math.floor(y / CELL);
     let best = null, bd = 1e9;
@@ -253,6 +255,18 @@
     if (nearBig(x, y)) { const d = Math.hypot(x - BIG.x, y - BIG.y) / (BIG.r * 1.6); if (d < bd) { bd = d; best = BIG; } }
     return bd < 1 ? best : null;
   }
+  /* ---------- Steg in der Inselmitte (Westufer der Startinsel) ---------- */
+  let MIDD = null;
+  function mid() {
+    if (MIDD) return MIDD;
+    const isl = island(0, 0), y = isl.y; let sx = isl.x - 12;
+    for (let x = isl.x; x > isl.x - 90; x -= 0.25) if (elev(x, y) < -0.02 && elev(x - 3, y) < -0.05 && elev(x - 6, y) < -0.05) { sx = x; break; }
+    MIDD = { x0: sx - 7, x1: sx + 1.8, y0: y - 1.2, y1: y + 1.2, y, sx };
+    return MIDD;
+  }
+  const nearMid = (x, y) => Math.abs(x - 70) < 160 && Math.abs(y - 70) < 160;
+  function inMid(x, y) { if (!nearMid(x, y)) return false; const M = mid(); return x >= M.x0 && x <= M.x1 && y >= M.y0 && y <= M.y1; }
+  const onDock = (x, y) => (nearBig(x, y) && townAt(x, y) === 4) || inMid(x, y);
   /* ---------- Heimatinsel mit Dorf (weit im Westen, außerhalb der Inselgruppe) ---------- */
   const BIG = { x: -400, y: 70, r: 118, b: 0, town: 1, name: 'Heimatinsel Lindmark' };
   BIG.lobes = [[BIG.x, BIG.y, 118, 0.5], [BIG.x - 70, BIG.y - 62, 62, 0.55], [BIG.x + 42, BIG.y - 92, 52, 0.75], [BIG.x - 84, BIG.y + 58, 56, 0.55], [BIG.x + 58, BIG.y + 74, 50, 0.55], [BIG.x - 128, BIG.y - 6, 46, 1.2]];
@@ -285,6 +299,7 @@
       { k: 'bau', n: 'Baumeister Bruno', col: 7, hat: 'bauhelm', x: V.x - 7, y: V.y - 8.6, hi: ['Du willst bauen? Südlich vom Dorfplatz sind Bauplätze frei.', 'Jeder bekommt einen eigenen Bauplatz.'] },
       { k: 'hof', n: 'Bäuerin Frieda', col: 2, hat: 'stroh', x: V.x - 17, y: V.y - 2.6, hi: ['Mit Samen kannst du auf deinem Bauplatz Felder anlegen.', 'Hühner legen Eier, Schafe geben Wolle!'] },
       { k: 'schneider', n: 'Schneiderin Mila', col: 5, hat: 'blumen', x: V.x - 16, y: V.y + 9.4, hi: ['Ein neuer Hut gefällig? Oder eine Farbe für dein Boot?', 'Wer gut aussieht, segelt schneller. Sagt man.'] },
+      { k: 'lotse', n: 'Lotsin Anna', col: 4, hat: 'kapitaen', av: '🧭', x: V.x - 4.4, y: V.y - 1.9, hi: ['Willkommen in Lindmark! Ich zeige dir, wie hier alles läuft.', 'Frag mich ruhig, wenn du etwas nicht weißt.', 'Vom Hafen aus geht es raus zur Inselgruppe.'] },
       { k: 'angler', n: 'Angler Hein', col: 6, hat: 'fischer', x: shore - 4, y: V.y - 3.6, hi: ['Die besten Fische beißen nachts.', 'Jede Inselart hat ihre eigenen Fische.'] },
     ];
     const walkers = [0, 1, 2, 3].map(i => ({ n: ['Lotte', 'Jakob', 'Emil', 'Rosa'][i], col: [0, 4, 6, 2][i], hat: ['none', 'stroh', 'none', 'blumen'][i], path: [[[V.x + 3, V.y + 3], [shore - 6, V.y + 0.8], [V.x + 3, V.y - 3], [V.x + 0.6, V.y - 21]], [[V.x - 3, V.y - 3], [V.x - 30, V.y + 0.8], [V.x - 3, V.y + 3], [V.x + 0.5, PY0 + 24]], [[V.x + 3, V.y - 3], [V.x + 0.6, V.y - 20], [V.x - 3, V.y - 3], [V.x - 3, V.y + 3]], [[V.x - 3, V.y + 3], [V.x + 0.6, PY0 + 11], [V.x + 3, V.y + 3], [shore - 8, V.y - 0.8]]][i], seg: 0, t: i * 7, x: [V.x + 3, V.x - 3, V.x + 3, V.x - 3][i], y: [V.y + 3, V.y - 3, V.y - 3, V.y + 3][i], dir: 0, lines: ['Schönes Wetter heute!', 'Warst du schon in der Kristallhöhle?', 'Im Westen soll es Berge geben.', 'Ich hab gehört, auf den Vulkaninseln gibt es Golems!', 'Die Hafenmeisterin sucht immer Hilfe.'] }));
@@ -601,7 +616,7 @@
   const chunks = new Map();
   function bakeChunk(kx, ky) {
     const N = CH * TP, x0 = kx * CH, y0 = ky * CH;
-    const TB2 = nearBig(x0 + CH / 2, y0 + CH / 2) && (() => { const b = town().bb; return x0 + CH > b[0] - 2 && x0 < b[2] + 2 && y0 + CH > b[1] - 2 && y0 < b[3] + 2; })();
+    const TB2 = (nearBig(x0 + CH / 2, y0 + CH / 2) && (() => { const b = town().bb; return x0 + CH > b[0] - 2 && x0 < b[2] + 2 && y0 + CH > b[1] - 2 && y0 < b[3] + 2; })()) || (nearMid(x0 + CH / 2, y0 + CH / 2) && (() => { const M = mid(); return x0 + CH > M.x0 - 1 && x0 < M.x1 + 1 && y0 + CH > M.y0 - 1 && y0 < M.y1 + 1; })());
     const G = CH + 3, eg = new Float32Array(G * G), fg = new Float32Array(G * G), bg = new Uint8Array(G * G);
     for (let j = 0; j < G; j++) for (let i = 0; i < G; i++) { eg[j * G + i] = elev(x0 + i - 1, y0 + j - 1); bg[j * G + i] = EB; fg[j * G + i] = fbm((x0 + i - 1) / 14, (y0 + j - 1) / 14, SEED + 60); }
     const [ground, g] = mk(N, N), img = g.createImageData(N, N), d = img.data;
@@ -894,17 +909,9 @@
     return false;
   }
   function save() { saveBag(); try { localStorage.setItem('insel.save', JSON.stringify({ caveKey: me.caveKey, x: me.x, y: me.y, inBoat: me.inBoat, inCave: me.inCave, col: me.col, coins: me.coins, hp: me.hp, boat: { x: boat.x, y: boat.y, h: boat.h, sail: boat.sail } })); } catch {} }
-  function spawn() {
-    const isl = island(0, 0);
-    me.x = isl.x + 0.5; me.y = isl.y + 0.5;
-    for (let r = 0; r < 20 && !walkable(me.x, me.y); r++) me.y += 1;
-    let f = null;
-    for (let r = 1; r < 80 && !f; r++) for (let i = 0; i < 32; i++) {
-      const a = i / 32 * Math.PI * 2 + Math.PI / 2, x = me.x + Math.cos(a) * r, y = me.y + Math.sin(a) * r;
-      if (sailable(x, y) && sailable(x + 1, y) && sailable(x - 1, y) && sailable(x, y + 1)) { f = [x, y, a]; break; }
-    }
-    if (f) { boat.x = f[0]; boat.y = f[1]; boat.h = f[2]; }
-    const wf = stations()[3]; if (sailable(70.5, wf.wy + 1.6) && sailable(71.5, wf.wy + 1.6) && sailable(69.5, wf.wy + 1.6)) { boat.x = 70.5; boat.y = wf.wy + 1.6; boat.h = 0; }
+  function spawn() { // neue Spieler beginnen im Dorf Lindmark auf der Heimatinsel
+    const T = town(); me.x = T.V.x - 3.6; me.y = T.V.y - 0.4; me.dir = 1;
+    const [x, y, h] = DEST[0].spot(); boat.x = x; boat.y = y; boat.h = h;
     boat.sail = 0; boat.v = 0; me.inBoat = 0; me.inCave = 0;
   }
   const stateArr = () => [me.x + (me.inCave ? COX + caveSpec.idx * 1000 : 0), me.y + (me.inCave ? COY : 0), me.dir, me.moving, me.inBoat, boat.x, boat.y, boat.h, boat.sail, me.atk > 0 ? 1 : 0, prog.lvl];
@@ -1044,6 +1051,24 @@
 #isl .is-eat.gift{background:#4fd18b;color:#08220f}
 #isl .is-crewform{display:flex;gap:6px;margin:6px 0}#isl .is-crewform input{flex:1;min-width:0;border:0;border-radius:9px;padding:9px;font-size:15px;background:#fff;color:#111}
 #isl .is-code{font-size:18px;letter-spacing:3px;color:#ffd27a;background:rgba(0,0,0,.3);padding:2px 8px;border-radius:6px}
+#isl .is-tut{position:absolute;left:10px;top:118px;z-index:2;max-width:min(330px,62vw);background:rgba(14,22,40,.82);border:2px solid rgba(255,207,74,.55);border-radius:12px;padding:8px 11px;font-size:13px;pointer-events:none;display:flex;flex-direction:column;gap:2px}
+#isl .is-tut b{color:#ffd27a;font-size:12px}#isl .is-tut span{font-weight:800;font-size:14px}#isl .is-tut small{color:#c8cde0;line-height:1.3}
+#isl .is-tutnow{background:rgba(255,207,74,.12);border:1px solid rgba(255,207,74,.5);border-radius:10px;padding:9px 11px;display:flex;flex-direction:column;gap:3px;margin-bottom:8px}#isl .is-tutnow b{color:#ffd27a}#isl .is-tutnow small{color:#c8cde0}
+#isl .is-faq details{background:rgba(255,255,255,.05);border-radius:9px;margin:5px 0;padding:7px 10px}#isl .is-faq summary{font-weight:800;cursor:pointer}#isl .is-faq p{margin:6px 0 2px;color:#dfe3f0;font-size:13.5px;line-height:1.4}
+#isl.titled .is-top,#isl.titled .is-acts,#isl.titled .is-mapwrap,#isl.titled .is-log,#isl.titled .is-hint,#isl.titled .is-tut,#isl.titled .is-say,#isl.titled .is-boss{display:none!important}
+#isl .is-title{position:absolute;inset:0;z-index:9;display:grid;place-items:center;padding:16px;background:radial-gradient(ellipse at 50% 30%,rgba(10,30,70,.15),rgba(4,10,28,.72));transition:opacity .6s}
+#isl .is-title.out{opacity:0;pointer-events:none}
+#isl .is-tbox{text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px;max-width:520px}
+#isl .is-logo h1{margin:0;font:900 clamp(46px,11vw,92px)/1 system-ui;letter-spacing:1px;color:#ffd24a;text-shadow:0 4px 0 #b8741a,0 8px 0 #5a3410,0 12px 26px rgba(0,0,0,.6);transform:rotate(-2deg)}
+#isl .is-logo p{margin:12px 0 0;font-weight:800;color:#e8f4ff;text-shadow:0 2px 6px #000;letter-spacing:2px;font-size:clamp(12px,3.4vw,16px)}
+#isl .is-tboat{display:inline-block;font-size:clamp(40px,9vw,64px);animation:isBob 2.4s ease-in-out infinite}
+@keyframes isBob{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-8px) rotate(6deg)}}
+#isl .is-tplay{border:0;border-radius:16px;padding:15px 34px;font:900 22px system-ui;background:linear-gradient(#ffd75a,#f2a92a);color:#3a1c06;box-shadow:0 5px 0 #a8641a,0 10px 24px rgba(0,0,0,.45);cursor:pointer;animation:isPulse 1.6s ease-in-out infinite}
+#isl .is-tplay:active{transform:translateY(3px);box-shadow:0 2px 0 #a8641a}
+@keyframes isPulse{0%,100%{scale:1}50%{scale:1.05}}
+#isl .is-trow{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}#isl .is-trow button{border:0;border-radius:11px;padding:9px 14px;font:800 14px system-ui;background:rgba(14,22,40,.8);color:#fff;cursor:pointer;border:1px solid rgba(255,255,255,.2)}
+#isl .is-thelp{background:rgba(14,22,40,.88);border-radius:12px;padding:10px 13px;font-size:13.5px;line-height:1.5;text-align:left}
+#isl .is-tbox>small{color:#dfe8ff;text-shadow:0 1px 4px #000}
 #isl .is-craft{position:absolute;inset:0;z-index:6;background:rgba(6,10,24,.62);display:grid;place-items:center;padding:12px}
 #isl .is-crbox{background:#1c2236;border:2px solid rgba(255,255,255,.25);border-radius:16px;padding:14px;width:min(520px,100%);max-height:88vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.5)}
 #isl .is-crbox h3{margin:0;display:flex;justify-content:space-between;align-items:center;font-size:19px}
@@ -1076,8 +1101,8 @@
 <div class="is-mapwrap"><canvas class="is-map" width="132" height="132" title="Karte vergrößern (M)"></canvas><div class="is-wind"><i></i><span data-wind></span></div></div>
 <div class="is-log"></div>
 <div class="is-chat"><input maxlength="120" placeholder="Nachricht an alle …" enterkeyhint="send"><button class="is-btn" data-send>Senden</button></div>
-<div class="is-acts"><button class="is-act" data-skill>🌟<span>Skills</span><em class="is-dot" data-dot hidden></em></button><button class="is-act" data-bag>🎒<span>Rucksack</span></button><button class="is-act" data-chat>💬<span>Chat</span></button><button class="is-act" data-sail hidden>⛵<span>Segel</span></button><button class="is-act" data-fish hidden>🎣<span>Angeln</span></button><button class="is-act" data-build hidden>🔨<span>Bauen</span></button><button class="is-act" data-use hidden>🛠️<span>Benutzen</span></button><button class="is-act" data-boat>⚓<span>Boot</span></button><button class="is-act big" data-atk>⚔️<span>Angriff</span></button></div>
-<div class="is-hint">WASD laufen · Leertaste/Klick: angreifen · E Benutzen/Boot · G Angeln · I Rucksack · K Skills · T Chat · M Karte</div>
+<div class="is-acts"><button class="is-act" data-skill>🌟<span>Skills</span><em class="is-dot" data-dot hidden></em></button><button class="is-act" data-bag>🎒<span>Rucksack</span></button><button class="is-act" data-chat>💬<span>Chat</span></button><button class="is-act" data-sail hidden>⛵<span>Segel</span></button><button class="is-act" data-fish hidden>🎣<span>Angeln</span></button><button class="is-act" data-build hidden>🔨<span>Bauen</span></button><button class="is-act" data-use hidden>🛠️<span>Benutzen</span></button><button class="is-act" data-travel hidden>🧭<span>Reisen</span></button><button class="is-act" data-boat>⚓<span>Boot</span></button><button class="is-act big" data-atk>⚔️<span>Angriff</span></button></div>
+<div class="is-hint">WASD laufen · Leertaste/Klick: angreifen · E Benutzen/Boot · R Reisen · G Angeln · I Rucksack · K Skills · T Chat · M Karte</div><div class="is-tut" hidden></div>
 <div class="is-joy"><i></i></div>
 <div class="is-say" style="opacity:0"></div><div class="is-fade"></div>`;
     document.body.appendChild(root);
@@ -1100,6 +1125,7 @@
     root.querySelector('[data-bag]').onclick = () => toggleBag();
     root.querySelector('[data-skill]').onclick = () => toggleSkills();
     hud.use = root.querySelector('[data-use]'); hud.use.onclick = () => interact();
+    hud.travel = root.querySelector('[data-travel]'); hud.travel.onclick = () => toggleTravel(); hud.tut = root.querySelector('.is-tut');
     hud.build = root.querySelector('[data-build]'); hud.build.onclick = () => toggleBuild();
     hud.fish = root.querySelector('[data-fish]'); hud.fish.addEventListener('pointerdown', e => { e.preventDefault(); fishAction(); });
     hud.buffs = document.createElement('span'); hud.buffs.className = 'is-buffs'; root.querySelector('.is-stats').appendChild(hud.buffs);
@@ -1156,7 +1182,7 @@
   function toggleSkills() {
     skillOpen = !skillOpen;
     const old = root.querySelector('.is-skill'); if (old) old.remove();
-    if (!skillOpen) return;
+    if (!skillOpen) return; tutEv('skills');
     if (bagOpen) toggleBag();
     const d = document.createElement('div'); d.className = 'is-skill';
     root.appendChild(d);
@@ -1252,6 +1278,7 @@
     return list;
   }
   function qEvent(ty, key) {
+    tutEv(ty, key);
     if (!prog.q || prog.q.day !== today()) return;
     for (const q of prog.q.list) if (q.ty === ty && (q.key === key || (key === 'bigslime' && q.key === 'slime')) && !q.done && q.have < q.n) {
       q.have++;
@@ -1264,7 +1291,7 @@
     const old = root.querySelector('.is-npc'); if (old) old.remove();
     if (!n || (npcOpen && npcOpen.k === n.k)) { npcOpen = null; return; }
     if (bagOpen) toggleBag(); if (skillOpen) toggleSkills(); if (craftOpen) toggleCraft();
-    npcOpen = n; npcOpen.line = n.hi[Math.floor(Math.random() * n.hi.length)];
+    npcOpen = n; npcOpen.line = n.hi[Math.floor(Math.random() * n.hi.length)]; tutEv('talk', n.k);
     const d = document.createElement('div'); d.className = 'is-npc'; root.appendChild(d);
     d.onclick = e => {
       if (e.target === d || e.target.closest('[data-close]')) { toggleNpc(); return; }
@@ -1308,7 +1335,7 @@
     if (me.inCave) return null;
     if (me.inBoat) { const a = boat.h + Math.PI / 2; return [boat.x + Math.cos(a) * 1.8, boat.y + Math.sin(a) * 1.8]; }
     const v = DIRV[me.dir];
-    for (const d of [1.4, 2, 2.6]) { const x = me.x + v[0] * d, y = me.y - 0.2 + v[1] * d; if (elev(x, y) < -0.03 && !(nearBig(x, y) && townAt(x, y) === 4)) return [x, y]; }
+    for (const d of [1.4, 2, 2.6]) { const x = me.x + v[0] * d, y = me.y - 0.2 + v[1] * d; if (elev(x, y) < -0.03 && !onDock(x, y)) return [x, y]; }
     return null;
   }
   function fishAction() {
@@ -1535,35 +1562,46 @@
     if (flash > 0) { ctx.fillStyle = `rgba(255,255,255,${flash * 2})`; ctx.fillRect(0, 0, W, H); }
   }
   /* ---------- Gemeinsame Gegner: der Spieler mit der kleinsten Kennung auf einer Insel rechnet sie für alle ---------- */
-  let remote = new Map(), hostId = null, fxT = 0, enemySeq = 1;
+  let remote = new Map(), hostId = null, fxT = 0, enemySeq = 1 + Math.floor(Math.random() * 1e6) * 100;
+  const zoneKey = () => (me.inCave ? 'c' + caveSpec.idx : (nearestIsland(me.x, me.y) || {}).name || null);
   function zoneHost() {
-    if (me.inCave || !myId) return true;
-    const isl = nearestIsland(me.x, me.y); if (!isl) return true;
+    const z = zoneKey(); if (!z || !myId) return true;
     hostId = myId;
-    for (const [id, o] of others) if (!o.cave && o.isl === isl.name && id < hostId) hostId = id;
+    for (const [id, o] of others) if (o.isl === z && id < hostId) hostId = id;
     return hostId === myId;
   }
   function pickTarget(e) {
     let best = { x: me.x, y: me.y, me: 1 }, bd = me.inBoat || me.hp <= 0 ? 1e9 : Math.hypot(me.x - e.x, me.y - e.y);
-    if (!me.inCave) for (const o of others.values()) if (!o.cave && !o.inBoat) { const d = Math.hypot(o.x - e.x, o.y - e.y); if (d < bd) { bd = d; best = { x: o.x, y: o.y, me: 0 }; } }
+    const z = zoneKey();
+    if (z) for (const o of others.values()) if (o.isl === z && !o.inBoat) { const d = Math.hypot(o.x - e.x, o.y - e.y); if (d < bd) { bd = d; best = { x: o.x, y: o.y, me: 0 }; } }
     return best;
   }
   function sendFx() {
-    const isl = nearestIsland(me.x, me.y); if (!isl || typeof send !== 'function') return;
-    const list = enemies.filter(e => !e.dead && Math.hypot(e.x - me.x, e.y - me.y) < 30).slice(0, 12).map(e => [e.id, e.k, e.x, e.y, e.hp, e.max, e.hop || e.wind || e.lunge || 0, e.fx]);
-    send({ t: 'i_fx', z: isl.name, e: list });
+    const z = zoneKey(); if (!z || typeof send !== 'function') return;
+    const R0 = me.inCave ? 70 : 30;
+    const list = enemies.filter(e => !e.dead && Math.hypot(e.x - me.x, e.y - me.y) < R0).slice(0, me.inCave ? 30 : 12).map(e => [e.id, e.k, +e.x.toFixed(2), +e.y.toFixed(2), e.hp, e.max, e.hop || e.wind || e.lunge || 0, e.fx, e.awake ? 1 : 0]);
+    send({ t: 'i_fx', z, e: list });
   }
   function applyFx(m) {
-    if (zoneHost() || m.from !== hostId) return;
-    const isl = nearestIsland(me.x, me.y); if (!isl || m.z !== isl.name) return;
+    if (zoneHost() || m.from !== hostId || m.z !== zoneKey()) return;
     const seen = new Set();
-    for (const [id, k, x, y, hp, max, a, fx] of m.e) {
+    for (const [id, k, x, y, hp, max, a, fx, aw] of m.e) {
       if (!EDEF[k]) continue; seen.add(id);
       let e = remote.get(id);
       if (!e) { e = mkEnemy(k, x, y); e.id = id; e.remote = 1; remote.set(id, e); }
-      Object.assign(e, { tx: x, ty: y, hp, max, fx, hop: a, wind: a, lunge: a, got: Date.now() });
+      Object.assign(e, { tx: x, ty: y, hp, max, fx, hop: a, wind: a, lunge: a, awake: !!aw, got: Date.now() });
     }
     for (const id of [...remote.keys()]) if (!seen.has(id)) remote.delete(id);
+  }
+  let lastZone = null;
+  function runFoes(dt) {
+    const z = zoneKey(); if (z !== lastZone) { lastZone = z; remote.clear(); }
+    if (zoneHost()) {
+      if (remote.size) { enemies = [...remote.values()].map(e => { e.remote = 0; return e; }); remote.clear(); }
+      if (!me.inCave) spawnOver(dt);
+      stepEnemies(dt);
+      fxT += dt; if (fxT > 0.25 && others.size) { fxT = 0; sendFx(); }
+    } else stepRemote(dt);
   }
   function stepRemote(dt) {
     for (const e of remote.values()) {
@@ -1620,6 +1658,131 @@
     });
     if (race && me.inBoat) { const [bx, by] = buoys()[race.i], a = Math.atan2(by - boat.y, bx - boat.x), x = ox + boat.x * u + Math.cos(a) * 2.2 * u, y = oy + boat.y * u + Math.sin(a) * 2.2 * u; ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.fillStyle = '#ffd27a'; ctx.strokeStyle = '#000'; ctx.lineWidth = S; ctx.beginPath(); ctx.moveTo(7 * S, 0); ctx.lineTo(-4 * S, -5 * S); ctx.lineTo(-1 * S, 0); ctx.lineTo(-4 * S, 5 * S); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); }
   }
+  /* ---------- Schnellreise zwischen Hafen Lindmark und Steg Inselmitte ---------- */
+  function seaSpot(x, y) { for (let r = 0; r < 8; r += 0.5) for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2, px = x + Math.cos(a) * r, py = y + Math.sin(a) * r; if (sailable(px, py) && sailable(px + 1, py) && sailable(px - 1, py)) return [px, py]; } return [x, y]; }
+  const DEST = [
+    { k: 'hafen', n: 'Hafen Lindmark', i: '⚓', sub: 'Heimatinsel mit Dorf, Händlern und Bauplätzen', spot: () => { const T = town(); return [...seaSpot(T.dock.x1 + 1.8, T.V.y), 0]; } },
+    { k: 'mitte', n: 'Steg Inselmitte', i: '🪵', sub: 'Startinsel mitten in der Inselgruppe', spot: () => { const M = mid(); return [...seaSpot(M.x0 - 1.8, M.y), Math.PI]; } },
+  ];
+  const destNear = () => DEST.find(d => { const [x, y] = d.spot(); return Math.hypot(me.x - x, me.y - y) < 14; });
+  const canTravel = () => !me.inCave && !titleOn && (me.inBoat || onDock(me.x, me.y));
+  let travelOpen = false;
+  function toggleTravel() {
+    const old = root.querySelector('.is-travel'); if (old) { old.remove(); travelOpen = false; return; }
+    if (!canTravel()) { say('Schnellreise geht vom Boot aus oder auf einem Steg'); return; }
+    if (npcOpen) toggleNpc(); if (bagOpen) toggleBag();
+    travelOpen = true; const here = destNear();
+    const d = document.createElement('div'); d.className = 'is-npc is-travel'; root.appendChild(d);
+    d.innerHTML = `<div class="is-npcbox"><h3><span class="is-npcav">🧭</span><span>Schnellreise<small>Dein Boot bringt dich sofort ans Ziel</small></span><button class="is-btn" data-close>✕</button></h3><div class="is-shop">${DEST.map(t => `<div><i>${t.i}</i><span><b>${t.n}</b><small>${t.sub}</small></span><button class="is-ext" data-go="${t.k}" ${here === t ? 'disabled' : ''}>${here === t ? 'Du bist hier' : 'Hinreisen'}</button></div>`).join('')}</div><p class="is-npcsub">Geht vom Boot aus oder auf einem Steg – aber nicht, wenn Haie oder Piraten in der Nähe sind oder eine Regatta läuft.</p></div>`;
+    d.onclick = e => { if (e.target === d || e.target.closest('[data-close]')) { toggleTravel(); return; } const g = e.target.closest('[data-go]'); if (g) travelTo(g.dataset.go); };
+  }
+  function travelTo(k) {
+    const t = DEST.find(q => q.k === k); if (!t) return;
+    if (seaFoes.some(f => Math.hypot(f.x - me.x, f.y - me.y) < 14)) { say('🦈 Erst die Gefahr loswerden – so kannst du nicht ablegen'); return; }
+    if (race) { say('🏁 Während der Regatta gibt es keine Abkürzung!'); return; }
+    if (travelOpen) toggleTravel();
+    fade(() => {
+      const [x, y, h] = t.spot();
+      boat.x = x; boat.y = y; boat.h = h; boat.v = 0; boat.sail = 0; me.inBoat = 1; me.x = x; me.y = y; me.kx = me.ky = 0;
+      enemies = []; remote.clear(); items.length = 0; wake.length = 0; mapDirty = true; lastSent = '';
+      say(`${t.i} Angekommen: ${t.n} – E oder ⚓ zum An-Land-Gehen`); tutEv('travel', k); save();
+    });
+  }
+  function drawDockSign(x, y, ox, oy, u, t) {
+    const X = ox + x * u, Y = oy + y * u;
+    shadow(X, Y, 4 * S, 0.25);
+    ctx.fillStyle = '#5a3a20'; ctx.fillRect(X - S, Y - 14 * S, 2 * S, 14 * S);
+    ctx.fillStyle = '#3a2412'; ctx.fillRect(X - 9 * S, Y - 19 * S, 18 * S, 9 * S);
+    ctx.fillStyle = '#c89a5a'; ctx.fillRect(X - 8 * S, Y - 18 * S, 16 * S, 7 * S);
+    ctx.font = `${Math.round(5.5 * S)}px system-ui`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('🧭', X, Y - 14.5 * S);
+    if (Math.hypot(me.x - x, me.y - y) < 4 && !me.inBoat) { ctx.font = `700 ${Math.round(4.4 * S)}px system-ui`; const s2 = coarse ? 'Tippe 🧭 Reisen' : 'R – Schnellreise', tw = ctx.measureText(s2).width + 5 * S; ctx.fillStyle = 'rgba(14,22,40,.85)'; roundRect(X - tw / 2, Y - 28 * S, tw, 7 * S, 2.5 * S); ctx.fill(); ctx.fillStyle = '#ffd27a'; ctx.fillText(s2, X, Y - 24.5 * S); }
+  }
+  function drawDocks(ents, ox, oy, u, t, mx0, mx1, my0, my1) {
+    const inV = (x, y) => x > mx0 - 2 && x < mx1 + 2 && y > my0 && y < my1 + 3;
+    if (nearBig(me.x, me.y)) { const T = town(), x = T.dock.x0 + 1.2, y = T.dock.y0 + 0.15; if (inV(x, y)) ents.push({ y, f: () => drawDockSign(x, y, ox, oy, u, t) }); }
+    if (nearMid(me.x, me.y)) { const M = mid();
+      const x = M.x1 - 1.2, y = M.y0 + 0.15; if (inV(x, y)) ents.push({ y, f: () => drawDockSign(x, y, ox, oy, u, t) });
+      for (const [px, py] of [[M.x0 + 0.3, M.y0 + 0.1], [M.x0 + 0.3, M.y1], [M.x0 + 3.5, M.y1]]) if (inV(px, py)) ents.push({ y: py, f: () => { const X = ox + px * u, Y = oy + py * u; ctx.fillStyle = '#3a2412'; ctx.fillRect(X - 1.5 * S, Y - 5 * S, 3 * S, 6 * S); ctx.fillStyle = '#6a4a2a'; ctx.fillRect(X - 1.5 * S, Y - 5 * S, 3 * S, S); } });
+    }
+  }
+
+  /* ---------- Titelbildschirm ---------- */
+  let titleOn = false, hadSave = false;
+  function showTitle() {
+    titleOn = true; root.classList.add('titled');
+    const old = root.querySelector('.is-title'); if (old) old.remove();
+    const d = document.createElement('div'); d.className = 'is-title'; root.appendChild(d);
+    d.innerHTML = `<div class="is-tbox"><div class="is-logo"><span class="is-tboat">⛵</span><h1>Inselreich</h1><p>Segeln · Sammeln · Bauen · Kämpfen</p></div>
+      <button class="is-tplay" data-tplay>▶ ${hadSave ? 'Weiterspielen' : 'Abenteuer beginnen'}</button>
+      <div class="is-trow"><button data-thelp>🎮 Steuerung</button><button data-tback>✕ Zurück zum Hub</button></div>
+      <div class="is-thelp" hidden><b>Am PC:</b> WASD laufen · Leertaste oder Klick angreifen · E sprechen, benutzen, Boot · R Schnellreise · G angeln · I Rucksack · K Skills · C Crew · T Chat · M Karte<br><b>Am Handy:</b> Links irgendwo hinziehen = laufen · rechts tippen oder ziehen = angreifen und zielen · Knöpfe unten rechts für alles andere</div>
+      <small>Du spielst als <b>${escH(me.name)}</b> · ${online} Spieler online</small></div>`;
+    d.onclick = e => { if (e.target.closest('[data-tplay]')) startPlay(); else if (e.target.closest('[data-thelp]')) { const h = d.querySelector('.is-thelp'); h.hidden = !h.hidden; } else if (e.target.closest('[data-tback]')) close(); };
+  }
+  function startPlay() {
+    const d = root.querySelector('.is-title'); if (d) { d.classList.add('out'); setTimeout(() => d.remove(), 600); }
+    titleOn = false; root.classList.remove('titled'); keys.clear();
+    say(me.inCave ? 'Zurück in der Höhle' : me.inBoat ? 'Willkommen zurück auf See' : 'Willkommen auf der ' + (nearestIsland(me.x, me.y) || { name: 'Insel' }).name);
+    if (tutActive() && prog.tut === 0) setTimeout(() => say('🧭 Lotsin Anna winkt dir zu – sprich mit ihr (E oder 🛠️)'), 2900);
+    tutBox();
+  }
+
+  /* ---------- Tutorial mit Lotsin Anna ---------- */
+  const TUT = [
+    { ev: 'talk:lotse', g: 'Sprich mit Lotsin Anna am Dorfplatz', tip: 'Stell dich neben sie und drück E (am Handy 🛠️).' },
+    { ev: 'talk:markt', g: 'Schau bei Händler Ole vorbei', tip: 'Sein Stand mit 🪙 steht nördlich vom Brunnen. Bei Ole kaufst du Waren und verkaufst alles, was du sammelst.' },
+    { ev: 'harvest:baum', g: 'Fälle einen Baum', tip: 'Stell dich vor einen Baum und greif mehrmals an (Leertaste, Klick oder ⚔️). Felsen und Büsche gehen genauso.' },
+    { ev: 'bag', g: 'Öffne deinen Rucksack', tip: 'Taste I oder 🎒. Dort liegen Rohstoffe und Essen – und deine Erfolge und Crew.' },
+    { ev: 'skills', g: 'Schau dir den Skillbaum an', tip: 'Taste K oder 🌟. Für jede Stufe gibt es einen Punkt: links Kampf, rechts Sammeln, oben Seefahrt.' },
+    { ev: 'talk:hafen', g: 'Hol dir die Tagesaufträge bei Hafenmeisterin Greta', tip: 'Greta steht am Haus mit dem ⚓ im Osten. Jeden Tag gibt es drei neue Aufträge mit Münzen und EP.' },
+    { ev: 'talk:bau', g: 'Frag Baumeister Bruno nach einem Bauplatz', tip: 'Bruno (🔨) steht nördlich vom Brunnen. Südlich vom Dorf kannst du dir eine eigene Base bauen.' },
+    { poll: () => me.inBoat, g: 'Geh zum Steg im Osten und steig in dein Boot', tip: 'Dein Boot liegt am Steg hinter Gretas Haus. Stell dich daneben und drück E oder ⚓.' },
+    { poll: () => me.inBoat && boat.sail, g: 'Setz das Segel', tip: 'Leertaste oder ⛵. Quer zum Wind bist du am schnellsten, gegen den Wind kommst du kaum voran.' },
+    { ev: 'travel:mitte', g: 'Reise zum Steg in der Inselmitte', tip: 'Im Boot: Taste R oder 🧭 Reisen. So kommst du jederzeit zwischen dem Hafen und der Inselgruppe hin und her.' },
+    { poll: () => !me.inBoat && !me.inCave && !!(nearestIsland(me.x, me.y) || {}).home, g: 'Geh auf der Startinsel an Land', tip: 'Fahr an den Steg und drück E oder ⚓.' },
+    { ev: 'craft', g: 'Öffne eine Werkbank', tip: 'Mitten auf der Startinsel stehen Werkbänke. Dort stellst du Werkzeug, Waffen, Rüstung, Essen und mehr her.' },
+    { ev: 'kill', g: 'Besiege einen Gegner', tip: 'Im Norden der Startinsel liegt die Kristallhöhle voller Schleime. Jede Inselart hat eigene Gegner – und in großen Höhlen wartet ein Boss.' },
+  ];
+  const tutActive = () => prog.tut != null && prog.tut < TUT.length;
+  function tutEv(ty, key) {
+    if (!tutActive()) return; const s = TUT[prog.tut];
+    if (s.ev && (s.ev === ty || s.ev === ty + ':' + key)) tutNext();
+  }
+  function tutPoll() { if (tutActive() && !titleOn) { const s = TUT[prog.tut]; if (s.poll && s.poll()) tutNext(); } }
+  function tutNext() {
+    prog.tut++; me.coins += 5; gainXP(10, me.x, me.y - 1.6);
+    if (prog.tut >= TUT.length) { me.coins += 50; gainXP(60, me.x, me.y - 2.2); say('🎓 Tutorial geschafft! +50 Münzen. Lotsin Anna hilft dir jederzeit weiter.'); addLog('🎓 <b>Tutorial geschafft!</b> Jetzt gehört das Inselreich dir.'); }
+    else setTimeout(() => say('✅ Geschafft! Als Nächstes: ' + TUT[prog.tut].g), 250);
+    saveProg(); save(); tutBox();
+  }
+  function tutBox() {
+    if (!hud.tut) return;
+    if (!tutActive() || titleOn) { hud.tut.hidden = true; return; }
+    const s = TUT[prog.tut]; hud.tut.hidden = false;
+    hud.tut.innerHTML = `<b>🧭 Tutorial ${prog.tut + 1}/${TUT.length}</b><span>${s.g}</span><small>${s.tip}</small>`;
+  }
+  const FAQ = [
+    ['🎮 Steuerung', 'Am PC: WASD laufen, Leertaste oder Klick angreifen, E sprechen/benutzen/Boot, R Schnellreise, G angeln, I Rucksack, K Skills, C Crew, T Chat, M Karte. Am Handy: auf der linken Seite irgendwo hinziehen zum Laufen, auf der rechten Seite tippen oder ziehen zum Angreifen; die Knöpfe unten rechts machen den Rest.'],
+    ['🪓 Sammeln und Herstellen', 'Bäume, Felsen, Büsche und Pflanzen geben Rohstoffe. Jede Inselart hat eigene. An den Werkbänken baust du daraus Werkzeug, Waffen, Rüstung, Essen, Bootsteile und Möbel.'],
+    ['🌟 Stufen und Skills', 'Für fast alles bekommst du EP. Jede neue Stufe bringt einen Skillpunkt. Im Skillbaum erscheinen neue Felder erst, wenn du ein Nachbarfeld gelernt hast.'],
+    ['📜 Aufträge und Händler', 'Greta hat jeden Tag drei Aufträge. Bei Ole kaufst und verkaufst du, bei Frieda gibt es Samen und Haustiere, bei Mila Hüte und Farben, bei Hein Angeln.'],
+    ['🏡 Eigene Base', 'Bruno gibt dir einen Bauplatz südlich vom Dorf. Dort baust du mit 🔨 Böden, Wände, Truhen, ein Bett, Felder und Ställe. Alles bleibt gespeichert und alle sehen es.'],
+    ['⛵ Boot, Wind und Schnellreise', 'Dein Boot wartet am Steg. Mit Segel bist du schnell, quer zum Wind am schnellsten. Mit 🧭 Reisen (Taste R) springst du vom Boot oder von einem Steg zwischen dem Hafen Lindmark und dem Steg in der Inselmitte hin und her.'],
+    ['🦈 Gefahren auf See', 'Im tiefen Wasser jagen Haie, auf offener See lauern Piratenschiffe, und manchmal zieht ein Sturm auf. Mit der Bootskanone aus der Werft wehrst du dich.'],
+    ['🕳️ Höhlen und Bosse', 'Große Inseln haben Höhlen mit einem Boss. Bosse lassen seltene Materialien und oft eine Schatzkarte fallen. Mit der Schaufel gräbst du den Schatz am roten X aus.'],
+    ['🌙 Tag und Nacht', 'Nachts wird es dunkel, und es kommen mehr und stärkere Gegner. Fackeln und Laternen machen Licht.'],
+    ['🎣 Angeln', 'Mit einer Angel von Hein angelst du am Wasser (G). Jede Inselart und Tageszeit hat andere Fische – sie landen im Fischbuch.'],
+    ['👥 Zusammen spielen', 'Auf einer Insel und in einer Höhle kämpft ihr gegen dieselben Gegner. Im Rucksack kannst du Geschenke machen und eine Crew gründen. Bei Greta gibt es die Regatta mit Bestenliste.'],
+    ['🎩 Aussehen und Erfolge', 'Erfolge geben Titel für dein Namensschild. Haustiere sammeln für dich ein. Mila verkauft Hüte, Bootsfarben und Boote in anderen Formen.'],
+  ];
+  npcBody.lotse = () => {
+    const a = prog.tut ?? 0, done = a >= TUT.length;
+    return (done ? '<p>Du kennst dich schon richtig gut aus! Wenn du etwas vergessen hast, lies einfach hier nach:</p>' : `<div class="is-tutnow"><b>Dein nächster Schritt (${a + 1}/${TUT.length})</b><span>${TUT[a].g}</span><small>${TUT[a].tip}</small></div><p class="is-npcsub">Hier kannst du alles nachlesen:</p>`)
+      + `<div class="is-faq">${FAQ.map(([q, tx]) => `<details><summary>${q}</summary><p>${tx}</p></details>`).join('')}</div>`
+      + `<div style="margin-top:10px">${done ? '<button class="is-ext" data-ext="tutreset">Tutorial neu starten</button>' : '<button class="is-ext" data-ext="tutskip">Tutorial überspringen</button>'}</div>`;
+  };
+  npcExt.tutskip = () => { prog.tut = TUT.length; saveProg(); renderNpc(); tutBox(); say('Tutorial übersprungen – Anna hilft dir jederzeit weiter'); };
+  npcExt.tutreset = () => { prog.tut = 1; saveProg(); renderNpc(); tutBox(); };
   function claimQuest(i) {
     const q = quests()[i]; if (!q || q.claimed) return;
     if (q.ty === 'collect' && !q.done) { if ((bag[q.key] || 0) < q.n) return; bag[q.key] -= q.n; saveBag(); q.done = true; }
@@ -1643,7 +1806,7 @@
         return `<div class="${q.claimed ? 'claimed' : ready ? 'ready' : ''}"><b>${q.txt}</b><small>Belohnung: 🪙 ${q.coins} · ✨ ${q.xp} EP</small><i><u style="width:${have / q.n * 100}%"></u></i><span>${have}/${q.n}</span>${q.claimed ? '<em>✓ Erledigt</em>' : `<button data-q="${i}" ${ready ? '' : 'disabled'}>${q.ty === 'collect' ? 'Abgeben' : 'Belohnung'}</button>`}</div>`;
       }).join('')}</div>` + (npcBody.hafen ? npcBody.hafen() : '');
     } else body = npcBody[n.k] ? npcBody[n.k]() : '<p>Komm bald wieder, ich habe noch einiges vor!</p>';
-    d.innerHTML = `<div class="is-npcbox"><h3><span class="is-npcav">${H ? H.sign : '🙂'}</span><span>${n.n}<small>„${n.line}“</small></span><button class="is-btn" data-close>✕</button></h3>
+    d.innerHTML = `<div class="is-npcbox"><h3><span class="is-npcav">${H ? H.sign : n.av || '🙂'}</span><span>${n.n}<small>„${n.line}“</small></span><button class="is-btn" data-close>✕</button></h3>
       <div class="is-npcmoney">🪙 ${me.coins} Münzen</div>${body}</div>`;
     renderHatPreviews(d);
   }
@@ -1716,7 +1879,7 @@
     ctx.fillStyle = 'rgba(160,220,255,.8)'; for (let i = 0; i < 6; i++) { const ph = ((t / 600 + i / 6) % 1), a = i / 6 * Math.PI * 2; ctx.fillRect(x + Math.cos(a) * ph * 12 * S, y - 18 * S + ph * ph * 18 * S + Math.sin(a) * ph * 4 * S, S * 1.5, S * 1.5); }
   }
   function townPix(wx, wy) { // Farbe für Dorfboden oder null
-    const x = wx / TP, y = wy / TP, ta = townAt(x, y); if (!ta) return null;
+    const x = wx / TP, y = wy / TP, ta = inMid(x, y) ? 4 : townAt(x, y); if (!ta) return null;
     const nz = h2(wx, wy, SEED + 700);
     if (ta === 1) { const row = Math.floor(wy / 5), cx = Math.floor((wx + (row % 2) * 3) / 6), edge = wy % 5 === 0 || (wx + (row % 2) * 3) % 6 === 0, v = 0.85 + h2(cx, row, 701) * 0.25; const c = edge ? [96, 92, 86] : [168 * v, 162 * v, 152 * v]; return c; }
     if (ta === 2) { const k = 0.9 + nz * 0.15; return nz < 0.025 ? [150, 140, 120] : [200 * k, 168 * k, 120 * k]; }
@@ -1986,7 +2149,7 @@
     const old = root.querySelector('.is-craft'); if (old) old.remove();
     if (!st || craftOpen === st) { craftOpen = null; return; }
     if (bagOpen) toggleBag(); if (skillOpen) toggleSkills();
-    craftOpen = st;
+    craftOpen = st; tutEv('craft');
     const d = document.createElement('div'); d.className = 'is-craft'; root.appendChild(d);
     d.onclick = e => {
       if (e.target === d || e.target.closest('[data-close]')) { toggleCraft(); return; }
@@ -2025,7 +2188,7 @@
   function toggleBag() {
     bagOpen = !bagOpen;
     const old = root.querySelector('.is-bag'); if (old) old.remove();
-    if (!bagOpen) return;
+    if (!bagOpen) return; tutEv('bag');
     if (skillOpen) toggleSkills();
     const d = document.createElement('div'); d.className = 'is-bag';
     root.appendChild(d); d.onclick = e => { if (e.target === d || e.target.closest('[data-close]')) { toggleBag(); return; } const u = e.target.closest('[data-eat]'); if (u) useItem(u.dataset.eat);
@@ -2056,7 +2219,7 @@
   /* ---------- Steuerung ---------- */
   function screenTile(cx, cy) { const r = cv.getBoundingClientRect(), [u, ox, oy] = camera(); return [Math.floor(((cx - r.left) * DPR - ox) / u), Math.floor(((cy - r.top) * DPR - oy) / u)]; }
   function joyDown(e) {
-    if (chatOpen || bigMap) return;
+    if (chatOpen || bigMap || titleOn) return;
     if (buildOn) { const tt = screenTile(e.clientX, e.clientY); if (e.pointerType === 'mouse') { if (e.button === 0) { mouseTile = tt; updateBuildCursor(); if (buildCur && buildCur[2]) placeAt(buildCur[0], buildCur[1]); } return; } joy.tap = { x: e.clientX, y: e.clientY, t: Date.now(), tt }; }
     if (e.pointerType === 'mouse') { // am PC: Klick greift in Mausrichtung an
       if (e.button !== 0) return;
@@ -2084,7 +2247,10 @@
     if (e.target && e.target.tagName === 'INPUT') return;
     const k = e.key.toLowerCase();
     if (e.type === 'keydown') {
+      if (titleOn) { if ((k === 'enter' || k === ' ') && !e.repeat) { e.preventDefault(); startPlay(); } return; }
       if (k === 't' || k === 'enter') { e.preventDefault(); openChat(); return; }
+      if (k === 'r' && !e.repeat) { toggleTravel(); return; }
+      if (k === 'escape' && travelOpen) { toggleTravel(); return; }
       if (k === 'e' && !e.repeat) { interact(); return; }
       if (k === 'escape' && (npcOpen || craftOpen)) { toggleNpc(); toggleCraft(); return; }
       if (k === ' ' || k === 'q') { e.preventDefault(); if (!e.repeat) { if (fishing) fishAction(); else if (me.inBoat) toggleSail(); else if (buildOn) { mouseTile = null; updateBuildCursor(); if (buildCur && buildCur[2]) placeAt(buildCur[0], buildCur[1]); } else attack(); } return; }
@@ -2115,7 +2281,7 @@
     if (me.inBoat) {
       for (let r = 1; r <= 2.6; r += 0.4) for (let i = 0; i < 16; i++) {
         const a = boat.h + i / 16 * Math.PI * 2, x = boat.x + Math.cos(a) * r, y = boat.y + Math.sin(a) * r;
-        if (walkable(x, y) && (elev(x, y) >= 0 || (nearBig(x, y) && townAt(x, y) === 4))) { me.inBoat = 0; me.x = x; me.y = y; boat.v = 0; boat.sail = 0; say('An Land gegangen'); return; }
+        if (walkable(x, y) && (elev(x, y) >= 0 || onDock(x, y))) { me.inBoat = 0; me.x = x; me.y = y; boat.v = 0; boat.sail = 0; say('An Land gegangen'); return; }
       }
       say('Hier ist kein Ufer – fahr näher ans Land');
       return;
@@ -2274,12 +2440,13 @@
       setTimeout(() => fade(() => {
         seaFoes = []; shots = []; if (inCave) leaveCave(true); else respawnHome();
         if (!inCave && prog.bed && myPlotId() >= 0) { me.x = prog.bed.x; me.y = prog.bed.y; }
-        me.hp = maxHp(); say(inCave ? 'Du bist ohnmächtig geworden … und wachst vor der Höhle wieder auf.' : (prog.bed && myPlotId() >= 0 ? 'Du bist ohnmächtig geworden … und wachst in deinem Bett wieder auf.' : 'Du bist ohnmächtig geworden … und wachst auf der Startinsel wieder auf.'));
+        me.hp = maxHp(); say(inCave ? 'Du bist ohnmächtig geworden … und wachst vor der Höhle wieder auf.' : (prog.bed && myPlotId() >= 0 ? 'Du bist ohnmächtig geworden … und wachst in deinem Bett wieder auf.' : 'Du bist ohnmächtig geworden … und wachst im Dorf Lindmark wieder auf.'));
       }), 500);
     }
   }
   function respawnHome() {
-    me.inBoat = 0; me.inCave = 0; me.x = 70.5; me.y = 70.5; me.kx = me.ky = 0; me.dir = 0;
+    const T = town(); me.inBoat = 0; me.inCave = 0; me.x = T.V.x - 3.6; me.y = T.V.y - 0.4; me.kx = me.ky = 0; me.dir = 0;
+    if (Math.hypot(boat.x - me.x, boat.y - me.y) > 40) { const [x, y, h] = DEST[0].spot(); boat.x = x; boat.y = y; boat.h = h; boat.v = 0; boat.sail = 0; }
     enemies = []; items.length = 0; mapDirty = true; lastSent = '';
   }
   function spawnEnemies() {
@@ -2412,7 +2579,8 @@
     } else me.frame = 0;
   }
   function step(dt) {
-    const [ix, iy] = chatOpen || bigMap || busy || me.hp <= 0 ? [0, 0] : inputDir();
+    const [ix, iy] = chatOpen || bigMap || busy || titleOn || me.hp <= 0 ? [0, 0] : inputDir();
+    if (titleOn) me.inv = Math.max(me.inv, 0.5);
     for (const k in buff) if (buff[k] > 0) buff[k] -= dt;
     flash = Math.max(0, flash - dt); if (!me.inCave && storm() > 0.5 && Math.random() < dt * 0.07) { flash = 0.25; shake = 3; }
     if (me.inBoat && storm() > 0) { const w2 = wind(); const nx = boat.x + Math.cos(w2.a) * 0.45 * storm() * dt, ny = boat.y + Math.sin(w2.a) * 0.45 * storm() * dt; if (sailable(nx, ny)) { boat.x = nx; boat.y = ny; } }
@@ -2429,7 +2597,7 @@
     if (me.atk > 0) { me.atk -= dt; if (!me.hitDone && me.atk < (me.atkT || ATK_T) * 0.6) doHits(); }
     if (me.inCave) {
       walkStep(dt, ix, iy, (x, y) => caveFree(x, y), 4.4 * (1 + 0.1 * sk('fuss')));
-      stepEnemies(dt);
+      runFoes(dt);
       const C = cave;
       for (let j = -6; j <= 6; j++) for (let i = -6; i <= 6; i++) { const x = Math.floor(me.x) + i, y = Math.floor(me.y) + j; if (x >= 0 && y >= 0 && x < CW && y < CHH && i * i + j * j < 40) C.seen[y * CW + x] = 1; }
       for (const [x, y, k] of C.chests.map((c, i) => [c[0], c[1], i])) {
@@ -2443,8 +2611,7 @@
       if (me.y > C.EY + 0.35 && !busy) fade(() => leaveCave());
     }
     if (!me.inCave) {
-      if (zoneHost()) { if (remote.size) { remote.clear(); enemies = []; } spawnOver(dt); stepEnemies(dt); fxT += dt; if (fxT > 0.25 && others.size) { fxT = 0; sendFx(); } }
-      else stepRemote(dt);
+      runFoes(dt);
       stepSea(dt); stepRace();
       regenT += dt; if (regenT > 4) { regenT = 0; if (me.hp < maxHp() && !enemies.some(e => Math.hypot(e.x - me.x, e.y - me.y) < 9)) me.hp++; }
     }
@@ -2815,11 +2982,12 @@
   }
   function camera() {
     const u = TP * S, sx = shake > 0 ? (Math.random() - 0.5) * shake * S * 0.5 : 0, sy = shake > 0 ? (Math.random() - 0.5) * shake * S * 0.5 : 0;
+    if (titleOn) { const a = performance.now() / 7000, cx = me.x + Math.cos(a) * 7, cy = me.y - 0.5 + Math.sin(a) * 4; return [u, Math.round(W / 2 - cx * u), Math.round(H / 2 - cy * u)]; }
     return [u, Math.round(W / 2 - me.x * u + sx), Math.round(H / 2 - (me.y - 0.5) * u + sy)];
   }
   const sameZone = (o, cave_) => (cave_ ? !!o.cave && o.cidx === caveSpec.idx : !o.cave);
   function drawPeople(ents, ox, oy, u, t, cave_) {
-    if (!me.inBoat) ents.push({ y: me.y, f: () => drawPerson(ox + me.x * u, oy + me.y * u, me.col, me.dir, me.frame, !cave_ && elev(me.x, me.y) < 0 && !(nearBig(me.x, me.y) && townAt(me.x, me.y) === 4), t, me.atk > 0 ? 1 - me.atk / (me.atkT || ATK_T) : null, me.inv > 0, sk('wirbel'), gear('schwert'), prog.hat) });
+    if (!me.inBoat) ents.push({ y: me.y, f: () => drawPerson(ox + me.x * u, oy + me.y * u, me.col, me.dir, me.frame, !cave_ && elev(me.x, me.y) < 0 && !onDock(me.x, me.y), t, me.atk > 0 ? 1 - me.atk / (me.atkT || ATK_T) : null, me.inv > 0, sk('wirbel'), gear('schwert'), prog.hat) });
     if (prog.pet && !me.inBoat) ents.push({ y: pet.y, f: () => drawPet(prog.pet, ox + pet.x * u, oy + pet.y * u, pet.t, pet.x > me.x) });
     for (const o of others.values()) {
       if (!sameZone(o, cave_) || o.inBoat) continue;
@@ -2861,11 +3029,12 @@
     // alles mit Höhe nach Tiefe sortiert: Bäume, Felsen, Figuren, Boote
     const ents = [], mx0 = (-ox) / u - 2, mx1 = (W - ox) / u + 2, my0 = (-oy) / u - 1, my1 = (H - oy) / u + 3.5;
     for (const c of vis) for (const o of c.objs) if (o.x > mx0 && o.x < mx1 && o.y > my0 && o.y < my1) ents.push({ y: o.y, f: () => drawObj(o, ox, oy, u, t) });
+    drawDocks(ents, ox, oy, u, t, mx0, mx1, my0, my1);
     if (nearBig(me.x, me.y)) {
       const T = town(), inV = (x, y) => x > mx0 - 2 && x < mx1 + 2 && y > my0 && y < my1 + 3;
       for (const hs of T.houses) if (inV(hs.x, hs.y)) ents.push({ y: hs.y, f: () => drawHouse(hs, ox, oy, u, t) });
       if (inV(T.V.x, T.V.y)) ents.push({ y: T.V.y + 0.4, f: () => drawFountain(ox, oy, u, t) });
-      for (const n of T.npcs) if (inV(n.x, n.y)) ents.push({ y: n.y, f: () => { drawPerson(ox + n.x * u, oy + n.y * u, n.col, 0, 0, false, t, null, false, 0, 0, n.hat); nameTag(ox + n.x * u, oy + n.y * u - 1.75 * u, n.n, true); if (nearNpc === n) { ctx.font = `700 ${Math.round(4.6 * S)}px system-ui,sans-serif`; const tx2 = coarse ? 'Tippe 🛠️' : 'E – Sprechen', tw = ctx.measureText(tx2).width + 5 * S; ctx.fillStyle = 'rgba(14,22,40,.85)'; roundRect(ox + n.x * u - tw / 2, oy + n.y * u - 2.4 * u - 7 * S, tw, 7 * S, 2.5 * S); ctx.fill(); ctx.fillStyle = '#ffd27a'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(tx2, ox + n.x * u, oy + n.y * u - 2.4 * u - 3.5 * S); } } });
+      for (const n of T.npcs) if (inV(n.x, n.y)) ents.push({ y: n.y, f: () => { drawPerson(ox + n.x * u, oy + n.y * u, n.col, 0, 0, false, t, null, false, 0, 0, n.hat); nameTag(ox + n.x * u, oy + n.y * u - 1.75 * u, n.n, true); if (n.k === 'lotse' && tutActive() && prog.tut === 0) { ctx.font = `800 ${Math.round(9 * S)}px system-ui`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ffd24a'; ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5 * S; const by = oy + n.y * u - 2.9 * u + Math.sin(t / 220) * 2 * S; ctx.strokeText('!', ox + n.x * u, by); ctx.fillText('!', ox + n.x * u, by); } if (nearNpc === n) { ctx.font = `700 ${Math.round(4.6 * S)}px system-ui,sans-serif`; const tx2 = coarse ? 'Tippe 🛠️' : 'E – Sprechen', tw = ctx.measureText(tx2).width + 5 * S; ctx.fillStyle = 'rgba(14,22,40,.85)'; roundRect(ox + n.x * u - tw / 2, oy + n.y * u - 2.4 * u - 7 * S, tw, 7 * S, 2.5 * S); ctx.fill(); ctx.fillStyle = '#ffd27a'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(tx2, ox + n.x * u, oy + n.y * u - 2.4 * u - 3.5 * S); } } });
       for (const w of T.walkers) if (inV(w.x, w.y)) ents.push({ y: w.y, f: () => { drawPerson(ox + w.x * u, oy + w.y * u, w.col, w.dir, w.moving ? (Math.floor(w.t / 0.15) % 4) + 1 : 0, false, t, null, false, 0, 0, w.hat); if (w.say && Date.now() - w.say.t < 4000) bubble(ox + w.x * u, oy + w.y * u - 1.6 * u, w.say.m); } });
       drawBases(ents, ox, oy, u, t);
       for (const pl of T.plots) if (inV(pl.x + 1, pl.y + 0.6)) ents.push({ y: pl.y + 0.6, f: () => drawPlotSign(pl, ox, oy, u) });
@@ -3032,7 +3201,7 @@
     }
     hud.on.textContent = online === 1 ? 'nur du bist online' : `${online} Spieler online`;
     hud.sail.hidden = !me.inBoat; hud.sail.classList.toggle('on', !!boat.sail);
-    hud.boat.hidden = !!me.inCave;
+    hud.boat.hidden = !!me.inCave; hud.travel.hidden = !canTravel(); if (travelOpen && !canTravel()) toggleTravel(); tutPoll();
     const myP = myPlotId(), inMine = myP >= 0 && !me.inBoat && (() => { const pl = town().plots[myP]; return me.x > pl.x - 2 && me.x < pl.x + pl.w + 2 && me.y > pl.y - 2 && me.y < pl.y + pl.h + 2; })();
     hud.build.hidden = !inMine;
     const canF = gear('angel') && !me.inCave && (fishing || waterAhead()); hud.fish.hidden = !canF; hud.fish.classList.toggle('on', !!fishing && fishing.ph === 'bite');
@@ -3077,7 +3246,7 @@
         const tgt = { x, y, bx: inBoat ? x : bx, by: inBoat ? y : by, bh };
         let o = others.get(id);
         if (!o || o.cave !== inCave || o.cidx !== cidx || Math.hypot(o.x - x, o.y - y) > 20) { o = { ...tgt, t: tgt, ft: 0 }; others.set(id, o); }
-        o.isl = inCave ? null : (nearestIsland(x, y) || {}).name;
+        o.isl = inCave ? 'c' + cidx : (nearestIsland(x, y) || {}).name;
         Object.assign(o, { name, col, dir, moving, inBoat, sail, atk, meta: mt || null, lvl: lvl || 1, cave: inCave, cidx, t: tgt });
       }
       for (const id of [...others.keys()]) if (!seen.has(id)) others.delete(id);
@@ -3086,7 +3255,9 @@
     }
     if (m.t === 'i_fx') { applyFx(m); return; }
     if (m.t === 'i_hit') { const e = enemies.find(q => q.id === m.id && !q.remote && !q.dead); if (e) hitEnemy(e, m.dmg, m.nx, m.ny, m.from); return; }
-    if (m.t === 'i_kill') { const D = EDEF[m.k]; if (!D) return; const n = Math.round((D.coins[0] + Math.floor(Math.random() * (D.coins[1] - D.coins[0] + 1))) * (1 + 0.25 * sk('glueck'))); for (let i = 0; i < n; i++) drop(m.x, m.y, 'coin'); if (D.loot && Math.random() < 0.7) drop(m.x, m.y, D.loot); gainXP(XP_FOE[m.k] || 5, m.x, m.y - 1.4); qEvent('kill', m.k); st().kills = (st().kills || 0) + 1; return; }
+    if (m.t === 'i_kill') { const D = EDEF[m.k]; if (!D) return; const n = Math.round((D.coins[0] + Math.floor(Math.random() * (D.coins[1] - D.coins[0] + 1))) * (1 + 0.25 * sk('glueck'))); for (let i = 0; i < n; i++) drop(m.x, m.y, 'coin'); if (D.loot && Math.random() < 0.7) drop(m.x, m.y, D.loot); gainXP(XP_FOE[m.k] || 5, m.x, m.y - 1.4); qEvent('kill', m.k); st().kills = (st().kills || 0) + 1;
+      if (D.boss) { st().bossK = st().bossK || {}; st().bossK[m.k] = 1; st().bosse = (st().bosse || 0) + 1; for (let i = 0; i < 3; i++) drop(m.x, m.y, 'heart'); for (let i = 0; i < (D.lootN || 0); i++) drop(m.x, m.y, D.loot); if (Math.random() < 0.5) drop(m.x, m.y, 'karte'); if (me.inCave) { cs().boss = Date.now(); saveCave(); } say(`🏆 Du hast den ${D.name} besiegt!`); saveProg(); }
+      return; }
     if (m.t === 'i_gift') { if (m.k === 'muenzen') me.coins += m.n; else bag[m.k] = (bag[m.k] || 0) + m.n; saveBag(); save(); say(`🎁 ${m.from} schenkt dir ${m.n} ${m.k === 'muenzen' ? 'Münzen' : (RES[m.k] || [m.k])[0]}!`); if (bagOpen) renderBag(); return; }
     if (m.t === 'i_crew') { if (m.err) { say(m.err); return; } crew = { code: m.code, n: m.n, names: m.names || [] }; if (bagOpen) renderBag(); return; }
     if (m.t === 'i_crewpos') { crewPos = (m.m || []).map(([id, n, x, y]) => (x < COX / 2 ? [id, n, -1e5, -1e5] : [id, n, x, y])); return; }
@@ -3098,7 +3269,7 @@
     if (open) return;
     me.name = (name || 'Gast').slice(0, 16);
     buildSprites(); caveEnt(); stations();
-    if (!load()) spawn();
+    hadSave = load(); if (!hadSave) { spawn(); prog.tut = 0; } else if (prog.tut == null) prog.tut = TUT.length; saveProg();
     if (!root) build(); else root.style.display = '';
     open = true; document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', onKey); window.addEventListener('keyup', onKey);
@@ -3111,9 +3282,9 @@
       buildCave(caveSpec); spawnEnemies();
     }
     join();
-    addLog('Willkommen im <b>Inselreich</b>! Das ist ein früher Prototyp.');
-    if (!me.inCave) addLog('Im Norden der Startinsel liegt die <b>Kristallhöhle</b>. Dort lauern Gegner!'); if (!found.has(BIG.name)) addLog('Weit im <b>Westen</b> liegt die große <b>Heimatinsel</b> mit dem Dorf Lindmark. Segle hin! (Pfeil auf der Karte)');
-    say(me.inCave ? 'Zurück in der Kristallhöhle' : me.inBoat ? 'Willkommen zurück auf See' : 'Willkommen auf der ' + (nearestIsland(me.x, me.y) || { name: 'Insel' }).name);
+    addLog('Willkommen im <b>Inselreich</b>!');
+    if (tutActive()) addLog('<b>Lotsin Anna</b> am Dorfplatz erklärt dir alles Wichtige.'); else if (!found.has(BIG.name)) addLog('Weit im <b>Westen</b> liegt die große <b>Heimatinsel</b> mit dem Dorf Lindmark. Segle hin – oder nimm 🧭 Reisen vom Boot aus!');
+    showTitle(); tutBox();
     raf = requestAnimationFrame(loop);
   }
   function blur() { keys.clear(); }
@@ -3128,6 +3299,6 @@
   }
   window.Insel = {
     open: openGame, close, net, isOpen: () => open, rejoin: () => { if (open) join(); },
-    _dbg: { get seaFoes() { return seaFoes; }, fireCannon, storm, buoys, get race() { return race; }, set race(v) { race = v; }, get remote() { return remote; }, zoneHost, get crew() { return crew; }, get raceTop() { return raceTop; }, fishAction, get fishing() { return fishing; }, set fishing(v) { fishing = v; }, catchFish, checkAch, sendMeta, islandCave, entsNear, newMap, darkness, get caveSpec() { return caveSpec; }, get PLOTS() { return PLOTS; }, myPlotId, placeAt, toggleBuild, get buildSel() { return buildSel; }, set buildSel(v) { buildSel = v; }, get baseNear() { return baseNear; }, toggleChest, town, BIG, quests, qEvent, toggleNpc, get nearNpc() { return nearNpc; }, interact, stations, toggleCraft, craft, useItem, buff, get nearSt() { return nearSt; }, get prog() { return prog; }, gainXP, toggleSkills, me, boat, others, elev, tileAt, objAt, isCut, get bag() { return bag; }, wind, island, spawn, toggleBoat, toggleSail, caveEnt, enterCave, leaveCave, attack, get enemies() { return enemies; }, get cave() { return cave; } },
+    _dbg: { get titleOn() { return titleOn; }, startPlay, travelTo, toggleTravel, mid, DEST, TUT, tutNext, zoneKey, get seaFoes() { return seaFoes; }, fireCannon, storm, buoys, get race() { return race; }, set race(v) { race = v; }, get remote() { return remote; }, zoneHost, get crew() { return crew; }, get raceTop() { return raceTop; }, fishAction, get fishing() { return fishing; }, set fishing(v) { fishing = v; }, catchFish, checkAch, sendMeta, islandCave, entsNear, newMap, darkness, get caveSpec() { return caveSpec; }, get PLOTS() { return PLOTS; }, myPlotId, placeAt, toggleBuild, get buildSel() { return buildSel; }, set buildSel(v) { buildSel = v; }, get baseNear() { return baseNear; }, toggleChest, town, BIG, quests, qEvent, toggleNpc, get nearNpc() { return nearNpc; }, interact, stations, toggleCraft, craft, useItem, buff, get nearSt() { return nearSt; }, get prog() { return prog; }, gainXP, toggleSkills, me, boat, others, elev, tileAt, objAt, isCut, get bag() { return bag; }, wind, island, spawn, toggleBoat, toggleSail, caveEnt, enterCave, leaveCave, attack, get enemies() { return enemies; }, get cave() { return cave; } },
   };
 })();

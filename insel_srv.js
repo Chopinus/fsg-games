@@ -97,7 +97,7 @@ module.exports = function (send) {
     if (m.t === 'i_leave') { P.delete(c); return; }
     if (m.t === 'i_meta') { me.meta = meta(m.m); return; }
     // gemeinsame Gegner: der Gastgeber einer Insel schickt ihre Lage, die anderen melden Treffer
-    if (m.t === 'i_fx') { if (!Array.isArray(m.e) || m.e.length > 12) return; const msg = { t: 'i_fx', from: c.pid, z: clean(m.z, 40), e: m.e.map(e => (Array.isArray(e) ? e.slice(0, 8).map(v => (typeof v === 'string' ? clean(v, 16) : Math.round(num(v) * 100) / 100)) : null)).filter(Boolean) }; for (const o of near(me, NEAR)) send(o, msg); return; }
+    if (m.t === 'i_fx') { if (!Array.isArray(m.e) || m.e.length > 30) return; const msg = { t: 'i_fx', from: c.pid, z: clean(m.z, 40), e: m.e.map(e => (Array.isArray(e) ? e.slice(0, 9).map(v => (typeof v === 'string' ? clean(v, 16) : Math.round(num(v) * 100) / 100)) : null)).filter(Boolean) }; for (const o of near(me, NEAR)) send(o, msg); return; }
     if (m.t === 'i_hit' || m.t === 'i_kill') { const o = connOf(clean(m.to, 20)); if (o) send(o, { t: m.t, from: c.pid, id: Math.floor(num(m.id)), dmg: Math.min(20, num(m.dmg, 1)), nx: num(m.nx), ny: num(m.ny), k: clean(m.k, 16), x: num(m.x), y: num(m.y) }); return; }
     if (m.t === 'i_gift') { const o = connOf(clean(m.to, 20)), n = Math.max(1, Math.min(99, Math.floor(num(m.n, 1)))), k = String(m.k); if (o && KEY.test(k) && Math.hypot(P.get(o).s[0] - me.s[0], P.get(o).s[1] - me.s[1]) < 8) send(o, { t: 'i_gift', from: me.name, k, n }); return; }
     // Crews: Freunde-Gruppen mit Code, sehen sich auf der Karte überall

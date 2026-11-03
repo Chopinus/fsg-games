@@ -298,6 +298,13 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 25, title: 'Inselreich: Titelbild, Tutorial und Schnellreise', date: '03.11.2026', items: [
+      ['Neu', 'Inselreich: Titelbildschirm beim Start'],
+      ['Umstellung', 'Inselreich: Neue Spieler starten jetzt im Dorf Lindmark auf der Heimatinsel'],
+      ['Neu', 'Inselreich: Lotsin Anna am Dorfplatz führt dich in 13 Schritten durch alles Wichtige und erklärt jederzeit alle Funktionen'],
+      ['Neu', 'Inselreich: Schnellreise (R oder 🧭) vom Boot oder von einem Steg zwischen dem Hafen Lindmark und dem neuen Steg in der Inselmitte'],
+      ['Neu', 'Inselreich: Auch in Höhlen kämpfen jetzt alle Spieler gegen dieselben Gegner und denselben Boss'],
+    ] },
     { id: 24, title: 'Inselreich: Gefahren auf See und Zusammenspiel', date: '03.11.2026', items: [
       ['Neu', 'Inselreich: Auf hoher See lauern Haie und Piratenschiffe. Mit der Bootskanone aus der Werft schießt du zurück (F, Klick oder ⚔️) – versenkte Piraten geben Münzen und eine Schatzkarte'],
       ['Neu', 'Inselreich: Stürme mit Regen, Blitzen und kräftigem Wind, der dein Boot abtreibt'],
