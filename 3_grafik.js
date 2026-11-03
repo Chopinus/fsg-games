@@ -298,6 +298,11 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 16, title: 'Inselreich: Sechs Inselarten', date: '03.11.2026', items: [
+      ['Neu', 'Inselreich: Wüsten-, Frost-, Dschungel-, Vulkan- und Pilzinseln, jede mit eigenem Aussehen, eigenen Pflanzen und eigenem Wetter'],
+      ['Neu', 'Inselreich: Neue Gegner je Inselart: Skorpione, Eiswölfe, Giftfrösche, Feuerschleime, Lavagolems, Sporlinge und Glühfalter'],
+      ['Neu', 'Inselreich: Rohstoffe abbauen (Holz, Stein, Eis, Obsidian, Kakteen, Pilze und mehr) und im Rucksack sammeln'],
+    ] },
     { id: 15, title: 'Inselreich: Höhle und neue Grafik', date: '03.11.2026', items: [
       ['Neu', 'Inselreich: Kristallhöhle auf der Heimatinsel mit Schleimen, Fledermäusen, Schatztruhen und dem Höhlentroll als Boss'],
       ['Neu', 'Inselreich: Kämpfen mit dem Schwert (Leertaste, Klick oder ⚔️), Herzen und Münzen'],
