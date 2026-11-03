@@ -266,6 +266,7 @@
     sizeCanvas(); refresh();
     if (S.starNews) { const n = S.starNews; delete S.starNews; save(); setTimeout(() => toast(`Sternen-Laden zurückgesetzt: ${n} Sterne zurück. Verteile sie neu!`, true), 1200); }
     if (S.startNews) { const n = S.startNews; delete S.startNews; save(); setTimeout(() => toast(`Sprungstart wurde zu Beutezug umgebaut: ${n} Sterne zurück.`, true), 600); }
+    if (S.cpNews) { const n = S.cpNews; delete S.cpNews; save(); setTimeout(() => toast(`Kronen-Laden neu ausbalanciert: Königsblut und Schatzkammer wurden zurückgesetzt, du hast ${n} Kronen zurückbekommen.`, true), 900); }
     if (conflict) setTimeout(() => resolveConflict(conflict), 300); else if (acct) setTimeout(() => cloudSave(true), 800);
     showTitle();
 
@@ -1880,7 +1881,7 @@
     let html = `<div class="rl-asc"><div><h3>${S.asc ? `Aufstieg ${S.asc + 1}` : 'Aufstieg'}</h3>
       <p class="note">Die zweite Prestige-Ebene. Setzt auch Wiedergeburten, Sterne und den Sternen-Laden zurück – dafür bekommst du Kronen für mächtige Königs-Boni. Auch der Turm-Rekord und sein Bonus fangen von vorne an. Runen, Erfolge, Begleiter und Ahnensiegel bleiben. Gegner werden mit jedem Aufstieg stärker.</p>
       ${rankLadder()}
-      <p>Voraussetzung: <b>9. Wiedergeburt</b> und <b>Stufe ${ASC_REQ_STAGE}</b> · ${k ? `jetzt: <b class="rl-cur crown">${crown}${k} Kronen</b> (Grundwert ${ascBase(S)}${(S.asc || 0) < 2 ? ' beim ' + ((S.asc || 0) + 1) + '. Aufstieg' : ''}, dazu 1 je 4 Stufen über 150)` : can ? `dein Rekord: ${S.best}` : `du bist bei Wiedergeburt ${S.rebirths}`}</p></div>
+      <p>Voraussetzung: <b>9. Wiedergeburt</b> und <b>Stufe ${ASC_REQ_STAGE}</b> · ${k ? `jetzt: <b class="rl-cur crown">${crown}${k} Kronen</b> (Grundwert ${ascBase(S)}${(S.asc || 0) < 2 ? ' beim ' + ((S.asc || 0) + 1) + '. Aufstieg' : ''}, dazu bis zu 20 für tiefe Läufe über Stufe 150)` : can ? `dein Rekord: ${S.best}` : `du bist bei Wiedergeburt ${S.rebirths}`}</p></div>
       <button class="btn ${confirm === 'ascend' ? 'danger' : 'gold'}" data-rl="ascend" ${k && inCamp() ? '' : 'disabled'}>${confirm === 'ascend' ? 'Wirklich aufsteigen?' : 'Aufsteigen'}</button></div>`;
     if (main || S.asc) html += `<div class="rl-road">${ASC_ROAD.map(x => `<div class="rl-step crown ${S.asc >= x.a ? 'done' : S.asc + 1 === x.a ? 'next' : ''}"><span>${x.a}</span><div><b>${x.text}</b><small>Gegner ×${Math.pow(1.6, x.a).toFixed(1).replace('.', ',')} stärker</small></div></div>`).join('')}</div>`;
     if (S.asc || S.crowns) html += `<div class="rl-gohint"><span>Den <b>Kronen-Laden</b> findest du jetzt im Reiter Läden.</span><button class="btn small gold rl-gotree" data-tab="laeden">Zu den Läden</button></div>`;
