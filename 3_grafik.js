@@ -298,6 +298,11 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 20, title: 'Inselreich: Die Heimatinsel', date: '03.11.2026', items: [
+      ['Neu', 'Inselreich: Weit im Westen liegt die große Heimatinsel Lindmark mit Dorf, Brunnen, Hafen und Steg – ein Pfeil auf der Karte zeigt den Weg'],
+      ['Neu', 'Inselreich: Dorfbewohner: Händler Ole kauft und verkauft, Hafenmeisterin Greta hat jeden Tag drei neue Aufträge'],
+      ['Umstellung', 'Inselreich: Die bisherige Heimatinsel heißt jetzt Startinsel'],
+    ] },
     { id: 19, title: 'Inselreich: Werkstätten', date: '03.11.2026', items: [
       ['Neu', 'Inselreich: Werkbank, Schmiede und Kochstelle am Startplatz und eine Werft am Südufer der Heimatinsel'],
       ['Neu', 'Inselreich: Herstellen: Steinschwert, Eisschwert, Obsidianklinge, Äxte, Fellrüstung, Stachelpanzer, Fernrohr, neue Segel und ein verstärkter Rumpf'],

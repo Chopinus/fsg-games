@@ -121,6 +121,7 @@
     if (islCache.has(k)) return islCache.get(k);
     let v = null;
     const home = cx === 0 && cy === 0;
+    if (!home && Math.hypot(cx * CELL + 70 - BIG.x, cy * CELL + 70 - BIG.y) < 360) { islCache.set(k, null); return null; } // Meer um die Heimatinsel
     if (home || h2(cx, cy, SEED) < 0.62) {
       const x = home ? CELL / 2 : cx * CELL + 25 + h2(cx, cy, SEED + 1) * 90;
       const y = home ? CELL / 2 : cy * CELL + 25 + h2(cx, cy, SEED + 2) * 90;
@@ -136,7 +137,7 @@
       }
       const nm = SYL[Math.floor(h2(cx, cy, SEED + 5) * SYL.length)] + END[Math.floor(h2(cx, cy, SEED + 6) * END.length)];
       const kind = KIND[Math.floor(h2(cx, cy, SEED + 7) * (r < 18 ? 4 : 2))];
-      v = { x, y, r, lobes, b: bi, name: home ? 'Heimatinsel' : bi ? BIOMES[bi].pre + ' ' + nm : (kind === 'Inseln' ? nm + '-Inseln' : kind + ' ' + nm) };
+      v = { x, y, r, lobes, b: bi, home: home ? 1 : 0, name: home ? 'Startinsel' : bi ? BIOMES[bi].pre + ' ' + nm : (kind === 'Inseln' ? nm + '-Inseln' : kind + ' ' + nm) };
     }
     islCache.set(k, v);
     return v;
@@ -153,6 +154,7 @@
         if (v > best) { best = v; EB = isl.b; }
       }
     }
+    if (nearBig(x, y)) for (const [lx, ly, lr, lk] of BIG.lobes) { const dx = x - lx, dy = y - ly; let v = 1 - (dx * dx + dy * dy) / (lr * lr); if (v > 0) v *= lk; if (v > best) { best = v; EB = 0; } }
     if (best < -2.5) return best;
     return best + (fbm(x / 22, y / 22, SEED + 50) - 0.5) * 1.05 + (vn(x / 5, y / 5, SEED + 51) - 0.5) * 0.16;
   }
@@ -203,6 +205,7 @@
     if (Math.abs(tx - 70) < 6 && ty >= 64 && ty <= 73) return 0; // Startplatz und Werkstätten frei
     if (STPOS && Math.abs(tx - 70) < 4 && Math.abs(ty - STPOS[3].y) < 3) return 0; // vor der Werft frei
     const E = caveEnt(); if (Math.abs(tx - E.tx) <= 3 && ty >= E.ty - 4 && ty <= E.ty + 2) return 0; // vor der Höhle frei
+    if (inTownClear(tx, ty)) return 0;
     const list = (OBJ[b] || OBJ[0])[t]; if (!list) return 0;
     let r = h2(tx, ty, SEED + 70);
     for (const [o, p] of list) { if (r < p) return o; r -= p; }
@@ -214,6 +217,7 @@
   const cut = new Map(), hits = new Map();
   const isCut = (tx, ty) => (cut.get(tx + ',' + ty) || 0) > Date.now();
   function walkable(x, y) {
+    if (nearBig(x, y)) { const ta = townAt(x, y); if (ta === 4) return true; if (townBlocked(x, y)) return false; }
     const e = elev(x, y); if (e < 0 && cls(e) !== W_SHALLOW) return false;
     if (clsB(e, EB) === LAVA) return false;
     const tx = Math.floor(x), ty = Math.floor(y), o = objAt(tx, ty, tileAt(tx, ty));
@@ -223,7 +227,7 @@
     if (STPOS && Math.abs(x - 70.5) < 6) for (const st of STPOS) { const dx = x - st.x, dy = y - (st.y - 0.25); if (dx * dx / (st.k === 'werft' ? 1.6 : 0.8) + dy * dy / 0.25 < 1) return false; }
     return true;
   }
-  const sailable = (x, y) => elev(x, y) < -0.02;
+  const sailable = (x, y) => elev(x, y) < -0.02 && !(nearBig(x, y) && townAt(x, y) === 4);
   function nearestIsland(x, y) {
     const cx = Math.floor(x / CELL), cy = Math.floor(y / CELL);
     let best = null, bd = 1e9;
@@ -232,8 +236,69 @@
       const d = Math.hypot(x - isl.x, y - isl.y) / (isl.r * 1.6);
       if (d < bd) { bd = d; best = isl; }
     }
+    if (nearBig(x, y)) { const d = Math.hypot(x - BIG.x, y - BIG.y) / (BIG.r * 1.6); if (d < bd) { bd = d; best = BIG; } }
     return bd < 1 ? best : null;
   }
+  /* ---------- Heimatinsel mit Dorf (weit im Westen, außerhalb der Inselgruppe) ---------- */
+  const BIG = { x: -400, y: 70, r: 118, b: 0, town: 1, name: 'Heimatinsel Lindmark' };
+  BIG.lobes = [[BIG.x, BIG.y, 118, 0.5], [BIG.x - 70, BIG.y - 62, 62, 0.55], [BIG.x + 42, BIG.y - 92, 52, 0.75], [BIG.x - 84, BIG.y + 58, 56, 0.55], [BIG.x + 58, BIG.y + 74, 50, 0.55], [BIG.x - 128, BIG.y - 6, 46, 1.2]];
+  const nearBig = (x, y) => Math.abs(x - BIG.x) < 270 && Math.abs(y - BIG.y) < 270;
+  let TOWN = null;
+  // Dorf-Grundriss: Platz, Wege, Häuser, Hafen und Bauplätze
+  function town() {
+    if (TOWN) return TOWN;
+    const V = { x: BIG.x + 30, y: BIG.y };
+    let shore = V.x + 60; for (let x = V.x + 10; x < V.x + 200; x += 0.25) if (elev(x, V.y) < 0.02) { shore = x; break; }
+    const PX0 = V.x - 38, PY0 = V.y + 17, PW = 10, PG = 13; // Bauplätze 10×10, 5 Spalten, 3 Reihen
+    const plots = [];
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 5; c++) plots.push({ id: r * 5 + c, x: PX0 + c * PG, y: PY0 + r * PG, w: PW, h: PW });
+    const roads = [
+      [V.x + 6, V.y, shore + 0.5, V.y], [V.x, V.y - 6, V.x, V.y - 24], [V.x - 6, V.y, V.x - 34, V.y], [V.x, V.y + 6, V.x, PY0 - 1.5],
+      [PX0 - 1.5, PY0 - 1.5, PX0 + 5 * PG - 1.5, PY0 - 1.5], [PX0 - 1.5, PY0 + PG - 1.5, PX0 + 5 * PG - 1.5, PY0 + PG - 1.5], [PX0 - 1.5, PY0 + 2 * PG - 1.5, PX0 + 5 * PG - 1.5, PY0 + 2 * PG - 1.5],
+      ...[0, 1, 2, 3, 4, 5].map(c => [PX0 + c * PG - 1.5, PY0 - 1.5, PX0 + c * PG - 1.5, PY0 + 3 * PG - 1.5]),
+    ];
+    const houses = [
+      { k: 'hafen', x: V.x + 15, y: V.y - 4, wall: '#d8c8a8', roof: '#3b6aa8', sign: '⚓' },
+      { k: 'markt', x: V.x + 6, y: V.y - 10, stall: 1, sign: '🪙' },
+      { k: 'bau', x: V.x - 7, y: V.y - 10, wall: '#c8b8a0', roof: '#8a3a2a', sign: '🔨' },
+      { k: 'hof', x: V.x - 17, y: V.y - 4, wall: '#e0d0b0', roof: '#c8a040', sign: '🌾' },
+      { k: 'schneider', x: V.x - 16, y: V.y + 8, wall: '#e8d8e8', roof: '#8a4aa8', sign: '🎩' },
+      { k: 'angler', x: shore - 4, y: V.y - 5, wall: '#b89a70', roof: '#4a7a6a', sign: '🎣', small: 1 },
+    ];
+    const npcs = [
+      { k: 'hafen', n: 'Hafenmeisterin Greta', col: 1, hat: 'kapitaen', x: V.x + 15, y: V.y - 2.6, hi: ['Ahoi! Ich habe Aufträge für fleißige Abenteurer.', 'Jeden Tag gibt es neue Aufträge bei mir.'] },
+      { k: 'markt', n: 'Händler Ole', col: 3, hat: 'none', x: V.x + 6, y: V.y - 8.6, hi: ['Frische Ware! Ich kaufe auch alles, was du findest.', 'Münzen gegen Rohstoffe, Rohstoffe gegen Münzen!'] },
+      { k: 'bau', n: 'Baumeister Bruno', col: 7, hat: 'bauhelm', x: V.x - 7, y: V.y - 8.6, hi: ['Du willst bauen? Südlich vom Dorfplatz sind Bauplätze frei.', 'Jeder bekommt einen eigenen Bauplatz.'] },
+      { k: 'hof', n: 'Bäuerin Frieda', col: 2, hat: 'stroh', x: V.x - 17, y: V.y - 2.6, hi: ['Mit Samen kannst du auf deinem Bauplatz Felder anlegen.', 'Hühner legen Eier, Schafe geben Wolle!'] },
+      { k: 'schneider', n: 'Schneiderin Mila', col: 5, hat: 'blumen', x: V.x - 16, y: V.y + 9.4, hi: ['Ein neuer Hut gefällig? Oder eine Farbe für dein Boot?', 'Wer gut aussieht, segelt schneller. Sagt man.'] },
+      { k: 'angler', n: 'Angler Hein', col: 6, hat: 'fischer', x: shore - 4, y: V.y - 3.6, hi: ['Die besten Fische beißen nachts.', 'Jede Inselart hat ihre eigenen Fische.'] },
+    ];
+    const walkers = [0, 1, 2, 3].map(i => ({ n: ['Lotte', 'Jakob', 'Emil', 'Rosa'][i], col: [0, 4, 6, 2][i], hat: ['none', 'stroh', 'none', 'blumen'][i], path: [[[V.x + 3, V.y + 3], [shore - 6, V.y + 0.8], [V.x + 3, V.y - 3], [V.x + 0.6, V.y - 21]], [[V.x - 3, V.y - 3], [V.x - 30, V.y + 0.8], [V.x - 3, V.y + 3], [V.x + 0.5, PY0 + 24]], [[V.x + 3, V.y - 3], [V.x + 0.6, V.y - 20], [V.x - 3, V.y - 3], [V.x - 3, V.y + 3]], [[V.x - 3, V.y + 3], [V.x + 0.6, PY0 + 11], [V.x + 3, V.y + 3], [shore - 8, V.y - 0.8]]][i], seg: 0, t: i * 7, x: [V.x + 3, V.x - 3, V.x + 3, V.x - 3][i], y: [V.y + 3, V.y - 3, V.y - 3, V.y + 3][i], dir: 0, lines: ['Schönes Wetter heute!', 'Warst du schon in der Kristallhöhle?', 'Im Westen soll es Berge geben.', 'Ich hab gehört, auf den Vulkaninseln gibt es Golems!', 'Die Hafenmeisterin sucht immer Hilfe.'] }));
+    const dock = { x0: shore - 1, x1: shore + 7, y0: V.y - 1.2, y1: V.y + 1.2 };
+    TOWN = { V, shore, plots, roads, houses, npcs, walkers, dock, bb: [PX0 - 6, V.y - 30, shore + 9, PY0 + 3 * PG + 3] };
+    return TOWN;
+  }
+  const segD = (x, y, [x0, y0, x1, y1]) => { const dx = x1 - x0, dy = y1 - y0, l = dx * dx + dy * dy, t = l ? Math.max(0, Math.min(1, ((x - x0) * dx + (y - y0) * dy) / l)) : 0; return Math.hypot(x - x0 - dx * t, y - y0 - dy * t); };
+  // Was liegt an dieser Stelle im Dorf? 1 Platz, 2 Weg, 3 Bauplatz, 4 Steg
+  function townAt(x, y) {
+    if (!nearBig(x, y)) return 0;
+    const T = town(); if (x < T.bb[0] || x > T.bb[2] || y < T.bb[1] || y > T.bb[3]) return 0;
+    if (x >= T.dock.x0 && x <= T.dock.x1 && y >= T.dock.y0 && y <= T.dock.y1) return 4;
+    if (Math.hypot(x - T.V.x, y - T.V.y) < 5) return 1;
+    for (const p of T.plots) if (x >= p.x && x < p.x + p.w && y >= p.y && y < p.y + p.h) return 3;
+    for (const r of T.roads) if (segD(x, y, r) < 1.1) return 2;
+    return 0;
+  }
+  const inTownClear = (tx, ty) => { if (!nearBig(tx, ty)) return false; const T = town(); if (tx < T.bb[0] - 2 || tx > T.bb[2] + 2 || ty < T.bb[1] - 2 || ty > T.bb[3] + 2) return false; if (townAt(tx + 0.5, ty + 0.5)) return true; for (const h of T.houses) if (Math.abs(tx + 0.5 - h.x) < 5 && ty + 0.5 > h.y - 5 && ty + 0.5 < h.y + 4) return true; for (const r of T.roads) if (segD(tx + 0.5, ty + 0.5, r) < 2.2) return true; return Math.hypot(tx + 0.5 - T.V.x, ty + 0.5 - T.V.y) < 9; };
+  function townBlocked(x, y) {
+    if (!nearBig(x, y)) return false;
+    const T = town(); if (x < T.bb[0] - 3 || x > T.bb[2] + 3 || y < T.bb[1] - 6 || y > T.bb[3] + 3) return false;
+    for (const h of T.houses) { const hw = h.small ? 1.6 : 2.2; if (Math.abs(x - h.x) < hw && y < h.y - 0.05 && y > h.y - 2.4) return true; }
+    if (Math.hypot(x - T.V.x, (y - T.V.y) * 1.6) < 1.5) return true; // Brunnen
+    for (const n of T.npcs) if (Math.hypot(x - n.x, y - n.y) < 0.4) return true;
+    return false;
+  }
+
 
   /* ---------- Farben ---------- */
   const hex = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
@@ -522,6 +587,7 @@
   const chunks = new Map();
   function bakeChunk(kx, ky) {
     const N = CH * TP, x0 = kx * CH, y0 = ky * CH;
+    const TB2 = nearBig(x0 + CH / 2, y0 + CH / 2) && (() => { const b = town().bb; return x0 + CH > b[0] - 2 && x0 < b[2] + 2 && y0 + CH > b[1] - 2 && y0 < b[3] + 2; })();
     const G = CH + 3, eg = new Float32Array(G * G), fg = new Float32Array(G * G), bg = new Uint8Array(G * G);
     for (let j = 0; j < G; j++) for (let i = 0; i < G; i++) { eg[j * G + i] = elev(x0 + i - 1, y0 + j - 1); bg[j * G + i] = EB; fg[j * G + i] = fbm((x0 + i - 1) / 14, (y0 + j - 1) / 14, SEED + 60); }
     const [ground, g] = mk(N, N), img = g.createImageData(N, N), d = img.data;
@@ -549,6 +615,7 @@
         const sl = ((b - a) + (e4 - c)) * 0.5 + ((c - a) + (e4 - b)) * 0.5;
         if (t >= GRASS && t !== LAVA) { k *= 1 - Math.max(-0.12, Math.min(0.12, sl * 0.55)); k *= 0.95 + vn(wx / 9, wy / 9, SEED + 82) * 0.1; }
         if (t <= W_SHALLOW) k *= 0.96 + vn(wx / 40, wy / 40, SEED + 81) * 0.08;
+        if (TB2) { const tc = townPix(wx, wy); if (tc) { col = tc; k = 1; } }
         const o = (py * N + px) * 4;
         d[o] = Math.min(255, col[0] * k); d[o + 1] = Math.min(255, col[1] * k); d[o + 2] = Math.min(255, col[2] * k); d[o + 3] = 255;
       }
@@ -877,6 +944,26 @@
 #isl .is-learn:disabled{background:#4a4f66;color:#9aa0b8;cursor:default}
 #isl .is-skreset{border:0;background:none;color:#9aa0b8;font:500 12px system-ui;text-decoration:underline;cursor:pointer;margin-top:6px;align-self:flex-start;padding:0}
 @media (max-width:700px){#isl .is-skwrap{grid-template-columns:1fr}#isl .is-skbox{padding:10px}}
+#isl .is-npc{position:absolute;inset:0;z-index:6;background:rgba(6,10,24,.55);display:grid;place-items:center;padding:12px}
+#isl .is-npcbox{background:#1c2236;border:2px solid rgba(255,207,74,.45);border-radius:16px;padding:14px;width:min(520px,100%);max-height:86vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+#isl .is-npcbox h3{margin:0;display:flex;gap:10px;align-items:center;font-size:17px}
+#isl .is-npcbox h3>span:nth-child(2){flex:1;min-width:0;display:flex;flex-direction:column}
+#isl .is-npcbox h3 small{font-weight:500;color:#e8d8b8;font-size:13px;font-style:italic;margin-top:2px}
+#isl .is-npcav{width:46px;height:46px;border-radius:50%;background:#e8d4a8;display:grid;place-items:center;font-size:24px;flex:none;border:3px solid #5a3a20}
+#isl .is-npcmoney{color:#ffd27a;font-weight:800;font-size:14px;margin:10px 0 6px}
+#isl .is-npcsub{color:#c8cde0;font-size:13px;margin:4px 0 8px}
+#isl .is-npcbox p{font-size:14px;line-height:1.4;color:#d8dcea}
+#isl .is-tabs{display:flex;gap:6px;margin-bottom:8px}#isl .is-tabs button{flex:1;border:0;border-radius:10px;padding:8px;font:700 14px system-ui;background:#2a3150;color:#c8cde0;cursor:pointer}#isl .is-tabs button.on{background:#ffcf4a;color:#2a1608}
+#isl .is-shop{display:flex;flex-direction:column;gap:6px}
+#isl .is-shop>div{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border-radius:10px;padding:7px 9px}
+#isl .is-shop i{font-style:normal;font-size:24px;width:32px;text-align:center}#isl .is-shop span{flex:1;min-width:0;display:flex;flex-direction:column}#isl .is-shop small{color:#c8cde0;font-size:12px}
+#isl .is-shop button,#isl .is-quests button,#isl .is-ext{border:0;border-radius:9px;padding:7px 11px;font:800 13px system-ui;background:#ffcf4a;color:#2a1608;cursor:pointer;white-space:nowrap}
+#isl .is-shop button:disabled,#isl .is-quests button:disabled,#isl .is-ext:disabled{background:#3c4258;color:#9aa0b8;cursor:default}
+#isl .is-quests{display:flex;flex-direction:column;gap:7px}
+#isl .is-quests>div{background:rgba(255,255,255,.06);border-radius:10px;padding:9px 10px;display:grid;grid-template-columns:1fr auto;gap:3px 10px;align-items:center}
+#isl .is-quests>div.ready{border:1px solid rgba(79,209,139,.7)}#isl .is-quests>div.claimed{opacity:.55}
+#isl .is-quests small{grid-column:1;color:#c8cde0;font-size:12px}#isl .is-quests i{grid-column:1;height:7px;border-radius:4px;background:rgba(0,0,0,.4);overflow:hidden}#isl .is-quests u{display:block;height:100%;background:#4fd18b}
+#isl .is-quests span{grid-column:1;font-size:12px;color:#c8cde0}#isl .is-quests button,#isl .is-quests em{grid-column:2;grid-row:1/span 4;font-style:normal;color:#8ff0a8;font-weight:800;font-size:13px}
 #isl .is-craft{position:absolute;inset:0;z-index:6;background:rgba(6,10,24,.62);display:grid;place-items:center;padding:12px}
 #isl .is-crbox{background:#1c2236;border:2px solid rgba(255,255,255,.25);border-radius:16px;padding:14px;width:min(520px,100%);max-height:88vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.5)}
 #isl .is-crbox h3{margin:0;display:flex;justify-content:space-between;align-items:center;font-size:19px}
@@ -904,7 +991,7 @@
     if (!document.getElementById('isl-css')) { const st = document.createElement('style'); st.id = 'isl-css'; st.textContent = CSS; document.head.appendChild(st); }
     root = document.createElement('div'); root.id = 'isl';
     root.innerHTML = `<canvas class="is-main"></canvas>
-<div class="is-top"><button class="is-btn" data-x title="Zurück zum Hub">✕</button><div class="is-place"><span data-isle>Heimatinsel</span><small data-on>1 Spieler online</small><div class="is-stats"><span class="is-hearts" data-hp></span><span data-coins>🪙 0</span></div><div class="is-xp" data-xpbox title="Skilltree öffnen (K)"><b data-lvl>St. 1</b><i><u data-xp></u></i><em data-pts hidden>!</em></div></div></div>
+<div class="is-top"><button class="is-btn" data-x title="Zurück zum Hub">✕</button><div class="is-place"><span data-isle>Startinsel</span><small data-on>1 Spieler online</small><div class="is-stats"><span class="is-hearts" data-hp></span><span data-coins>🪙 0</span></div><div class="is-xp" data-xpbox title="Skilltree öffnen (K)"><b data-lvl>St. 1</b><i><u data-xp></u></i><em data-pts hidden>!</em></div></div></div>
 <div class="is-boss"><span>Höhlentroll</span><i><u></u></i></div>
 <div class="is-mapwrap"><canvas class="is-map" width="132" height="132" title="Karte vergrößern (M)"></canvas><div class="is-wind"><i></i><span data-wind></span></div></div>
 <div class="is-log"></div>
@@ -932,7 +1019,7 @@
     hud.map.onclick = () => toggleMap();
     root.querySelector('[data-bag]').onclick = () => toggleBag();
     root.querySelector('[data-skill]').onclick = () => toggleSkills();
-    hud.use = root.querySelector('[data-use]'); hud.use.onclick = () => { if (nearSt) toggleCraft(nearSt.k); };
+    hud.use = root.querySelector('[data-use]'); hud.use.onclick = () => interact();
     hud.buffs = document.createElement('span'); hud.buffs.className = 'is-buffs'; root.querySelector('.is-stats').appendChild(hud.buffs);
     root.querySelector('[data-xpbox]').onclick = () => toggleSkills();
     Object.assign(hud, { lvl: root.querySelector('[data-lvl]'), xp: root.querySelector('[data-xp]'), pts: root.querySelector('[data-pts]'), dot: root.querySelector('[data-dot]') });
@@ -1059,7 +1146,170 @@
         <button class="is-skreset" data-reset>Alle Punkte zurücksetzen (kostenlos)</button></div></div></div>`;
   }
   let nearSt = null, craftOpen = null;
+  /* ---------- Dorfbewohner: Händler, Aufträge ---------- */
+  const PRICE = { holz: 1, stein: 1, faser: 1, beere: 1, apfel: 2, kokos: 3, banane: 3, kaktus: 3, pilz: 3, eis: 3, glibber: 2, stachel: 5, fell: 5, glut: 6, sporen: 4, obsidian: 8, eiskristall: 12, saft: 3, kuchen: 8, suppe: 6, shake: 8, elixier: 8 };
+  const SHOP = [['saft', 15], ['kuchen', 40], ['fell', 22], ['stachel', 22], ['glut', 30], ['sporen', 18], ['obsidian', 38], ['eiskristall', 48]];
+  const FOE_NAME = { slime: 'Schleime', sandslime: 'Sandschleime', frostslime: 'Frostschleime', fireslime: 'Feuerschleime', frog: 'Giftfrösche', sporling: 'Sporlinge', bat: 'Fledermäuse', moth: 'Glühfalter', scorpion: 'Skorpione', wolf: 'Eiswölfe' };
+  const today = () => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
+  function quests() {
+    if (prog.q && prog.q.day === today()) return prog.q.list;
+    const day = today(), seed = [...(day + me.name)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 7), R = i => h2(seed, i, 990);
+    const list = [], used = new Set();
+    for (let i = 0; list.length < 3 && i < 30; i++) {
+      const ty = ['collect', 'kill', 'harvest', 'visit'][Math.floor(R(i) * 4)];
+      let q;
+      if (ty === 'collect') { const k = ['holz', 'stein', 'faser', 'beere', 'apfel', 'kokos', 'kaktus', 'eis', 'pilz', 'glibber'][Math.floor(R(i + 50) * 10)]; const n = 5 + Math.floor(R(i + 60) * 8); q = { ty, key: k, n, txt: `Bring ${n} ${RES[k][0]} ${RES[k][1]}` }; }
+      else if (ty === 'kill') { const k = Object.keys(FOE_NAME)[Math.floor(R(i + 70) * Object.keys(FOE_NAME).length)]; const n = 3 + Math.floor(R(i + 80) * 5); q = { ty, key: k, n, txt: `Besiege ${n} ${FOE_NAME[k]}` }; }
+      else if (ty === 'harvest') { const k = R(i + 90) < 0.5 ? 'baum' : 'fels'; const n = 6 + Math.floor(R(i + 95) * 7); q = { ty, key: k, n, txt: `${k === 'baum' ? 'Fälle' : 'Zerschlage'} ${n} ${k === 'baum' ? 'Bäume' : 'Felsen'}` }; }
+      else { const b = 1 + Math.floor(R(i + 99) * 5); q = { ty, key: b, n: 1, txt: `Betritt eine ${BIOMES[b].pre}` }; }
+      const id = ty + q.key; if (used.has(id)) continue; used.add(id);
+      q.have = 0; q.coins = 20 + q.n * 4 + (ty === 'visit' ? 30 : 0); q.xp = 25 + q.n * 4; list.push(q);
+    }
+    prog.q = { day, list }; saveProg();
+    return list;
+  }
+  function qEvent(ty, key) {
+    if (!prog.q || prog.q.day !== today()) return;
+    for (const q of prog.q.list) if (q.ty === ty && (q.key === key || (key === 'bigslime' && q.key === 'slime')) && !q.done && q.have < q.n) {
+      q.have++;
+      if (q.have >= q.n) { q.done = true; say(`📜 Auftrag erfüllt: ${q.txt}! Hol dir die Belohnung bei Greta.`); }
+      saveProg();
+    }
+  }
+  let npcOpen = null, npcTab = 'kaufen', nearNpc = null, nearWalker = null;
+  function toggleNpc(n) {
+    const old = root.querySelector('.is-npc'); if (old) old.remove();
+    if (!n || (npcOpen && npcOpen.k === n.k)) { npcOpen = null; return; }
+    if (bagOpen) toggleBag(); if (skillOpen) toggleSkills(); if (craftOpen) toggleCraft();
+    npcOpen = n; npcOpen.line = n.hi[Math.floor(Math.random() * n.hi.length)];
+    const d = document.createElement('div'); d.className = 'is-npc'; root.appendChild(d);
+    d.onclick = e => {
+      if (e.target === d || e.target.closest('[data-close]')) { toggleNpc(); return; }
+      const t = e.target.closest('[data-tab]'); if (t) { npcTab = t.dataset.tab; renderNpc(); return; }
+      const b = e.target.closest('[data-buy]'); if (b) { const [k, pr] = SHOP.find(s => s[0] === b.dataset.buy) || []; if (k && me.coins >= pr) { me.coins -= pr; bag[k] = (bag[k] || 0) + 1; saveBag(); save(); say(`${RES[k][1]} ${RES[k][0]} gekauft`); } else say('Dafür hast du nicht genug Münzen'); renderNpc(); return; }
+      const sl = e.target.closest('[data-sell]'); if (sl) { const k = sl.dataset.sell, n = sl.dataset.all ? bag[k] : 1; if (bag[k] >= n && n > 0) { bag[k] -= n; me.coins += n * PRICE[k]; saveBag(); save(); texts.push({ x: me.x, y: me.y - 1.6, s: '+' + n * PRICE[k] + ' 🪙', t: 0, col: '#ffd27a' }); } renderNpc(); return; }
+      const qb = e.target.closest('[data-q]'); if (qb) { claimQuest(+qb.dataset.q); return; }
+      const ex = e.target.closest('[data-ext]'); if (ex && npcExt[ex.dataset.ext]) { npcExt[ex.dataset.ext](ex); return; }
+    };
+    renderNpc();
+  }
+  const npcExt = {}; // spätere Etappen hängen hier Aktionen an (Bauplätze, Samen, Hüte ...)
+  const npcBody = {}; // und eigene Inhalte je Bewohner
+  function claimQuest(i) {
+    const q = quests()[i]; if (!q || q.claimed) return;
+    if (q.ty === 'collect' && !q.done) { if ((bag[q.key] || 0) < q.n) return; bag[q.key] -= q.n; saveBag(); q.done = true; }
+    if (!q.done) return;
+    q.claimed = true; me.coins += q.coins; save(); saveProg();
+    gainXP(q.xp, me.x, me.y - 2); texts.push({ x: me.x, y: me.y - 2.4, s: '+' + q.coins + ' 🪙', t: 0, col: '#ffd27a' });
+    say(`🎉 Belohnung: ${q.coins} Münzen und ${q.xp} EP`); renderNpc();
+  }
+  function renderNpc() {
+    const d = root.querySelector('.is-npc'); if (!d || !npcOpen) return;
+    const n = npcOpen, H = town().houses.find(h => h.k === n.k);
+    let body = '';
+    if (n.k === 'markt') {
+      body = `<div class="is-tabs"><button data-tab="kaufen" class="${npcTab === 'kaufen' ? 'on' : ''}">Kaufen</button><button data-tab="verkaufen" class="${npcTab === 'verkaufen' ? 'on' : ''}">Verkaufen</button></div>`;
+      if (npcTab === 'kaufen') body += `<div class="is-shop">${SHOP.map(([k, pr]) => `<div><i>${RES[k][1]}</i><span><b>${RES[k][0]}</b><small>${RES[k][3] ? ITEM_USE[k] : 'Rohstoff'}${bag[k] ? ` · hast ${bag[k]}` : ''}</small></span><button data-buy="${k}" ${me.coins >= pr ? '' : 'disabled'}>🪙 ${pr}</button></div>`).join('')}</div>`;
+      else { const have = Object.keys(PRICE).filter(k => bag[k] > 0); body += have.length ? `<div class="is-shop">${have.map(k => `<div><i>${RES[k][1]}</i><span><b>${RES[k][0]}</b><small>hast ${bag[k]} · je 🪙 ${PRICE[k]}</small></span><button data-sell="${k}">1</button><button data-sell="${k}" data-all="1">Alle (${bag[k] * PRICE[k]})</button></div>`).join('')}</div>` : '<p>Du hast nichts zum Verkaufen. Sammle Rohstoffe auf den Inseln!</p>'; }
+    } else if (n.k === 'hafen') {
+      const list = quests();
+      body = `<p class="is-npcsub">Heutige Aufträge · neue gibt es morgen</p><div class="is-quests">${list.map((q, i) => {
+        const have = q.ty === 'collect' ? Math.min(q.n, bag[q.key] || 0) : q.have, ready = q.ty === 'collect' ? have >= q.n : q.done;
+        return `<div class="${q.claimed ? 'claimed' : ready ? 'ready' : ''}"><b>${q.txt}</b><small>Belohnung: 🪙 ${q.coins} · ✨ ${q.xp} EP</small><i><u style="width:${have / q.n * 100}%"></u></i><span>${have}/${q.n}</span>${q.claimed ? '<em>✓ Erledigt</em>' : `<button data-q="${i}" ${ready ? '' : 'disabled'}>${q.ty === 'collect' ? 'Abgeben' : 'Belohnung'}</button>`}</div>`;
+      }).join('')}</div>` + (npcBody.hafen ? npcBody.hafen() : '');
+    } else body = npcBody[n.k] ? npcBody[n.k]() : '<p>Komm bald wieder, ich habe noch einiges vor!</p>';
+    d.innerHTML = `<div class="is-npcbox"><h3><span class="is-npcav">${H ? H.sign : '🙂'}</span><span>${n.n}<small>„${n.line}“</small></span><button class="is-btn" data-close>✕</button></h3>
+      <div class="is-npcmoney">🪙 ${me.coins} Münzen</div>${body}</div>`;
+  }
+  // Hüte (auch für Spieler in einer späteren Etappe): Rechtecke in Sprite-Pixeln über dem Kopf
+  const HATS = {
+    stroh: [[1, 3, 14, 2, '#e0c070'], [4, 0, 8, 3, '#d8b050'], [4, 2, 8, 1, '#c0503a']],
+    kapitaen: [[3, 2, 10, 2, '#1d2a4a'], [4, -1, 8, 3, '#f4f4f4'], [7, 0, 2, 1, '#e3a92b']],
+    bauhelm: [[3, 2, 10, 2, '#e8b020'], [4, -1, 8, 3, '#f4c430'], [7, -1, 2, 3, '#d89a10']],
+    blumen: [[4, 1, 8, 1, '#3a8a36'], [4, 0, 2, 2, '#ff6a9a'], [7, 0, 2, 2, '#ffe060'], [10, 0, 2, 2, '#9ad8ff']],
+    fischer: [[2, 2, 12, 2, '#e8d040'], [4, -1, 8, 3, '#f0dc50'], [3, 4, 2, 2, '#e8d040']],
+    pirat: [[2, 1, 12, 2, '#1a1a1a'], [4, -2, 8, 3, '#2a2a2a'], [7, -1, 2, 2, '#f4f4f4']],
+    krone: [[4, -1, 8, 3, '#f4c430'], [4, -3, 1, 2, '#f4c430'], [7, -3, 2, 2, '#f4c430'], [11, -3, 1, 2, '#f4c430'], [7, 0, 2, 1, '#d8443a']],
+    zauber: [[3, 2, 10, 1, '#5a2a9a'], [5, -2, 6, 4, '#6a3ab0'], [6, -5, 4, 3, '#6a3ab0'], [7, -7, 2, 2, '#6a3ab0'], [7, -2, 1, 1, '#ffe060']],
+    wikinger: [[4, -1, 8, 4, '#8a8a90'], [4, -1, 8, 1, '#b8b8c0'], [2, -3, 2, 3, '#f0ead6'], [12, -3, 2, 3, '#f0ead6']],
+    koch: [[4, 1, 8, 2, '#f4f4f4'], [4, -5, 8, 6, '#ffffff'], [3, -6, 10, 2, '#ffffff']],
+  };
+  function drawHat(x, top, dir, hat) {
+    const H = HATS[hat]; if (!H) return;
+    const flip = dir === 1;
+    for (const [a, b, w, h, c] of H) { ctx.fillStyle = '#1a1420'; ctx.fillRect(x + ((flip ? 16 - a - w : a) - 8) * S - S * 0.5, top + b * S - S * 0.5, w * S + S, h * S + S); }
+    for (const [a, b, w, h, c] of H) { ctx.fillStyle = c; ctx.fillRect(x + ((flip ? 16 - a - w : a) - 8) * S, top + b * S, w * S, h * S); }
+  }
+  // Häuser im Dorf
+  const houseCache = new Map();
+  function houseSpr(h) {
+    const key = h.stall ? 'stall' : h.wall + h.roof + (h.small ? 's' : '');
+    if (houseCache.has(key)) return houseCache.get(key);
+    const W2 = h.small ? 44 : 60, H2 = h.small ? 46 : 56, [c, g] = mk(W2, H2);
+    if (h.stall) {
+      R(g, 6, 30, 48, 18, '#8a5a34'); R(g, 6, 30, 48, 2, '#c99a5a'); R(g, 8, 36, 44, 1, '#5a3a20');
+      R(g, 8, 10, 3, 40, '#6b4426'); R(g, 49, 10, 3, 40, '#6b4426');
+      for (let i = 0; i < 6; i++) R(g, 4 + i * 9, 8, 9, 10, i % 2 ? '#f4f0e0' : '#d8443a');
+      for (let i = 0; i < 6; i++) R(g, 4 + i * 9, 18, 9, 2, i % 2 ? '#d8d0c0' : '#a8302a');
+      R(g, 12, 25, 7, 5, '#e0402a'); R(g, 21, 26, 6, 4, '#f4e04d'); R(g, 30, 25, 8, 5, '#8a5a34'); R(g, 40, 26, 6, 4, '#5aaa4a');
+      R(g, 10, 48, 10, 8, '#a8743f'); R(g, 40, 48, 10, 8, '#a8743f');
+    } else {
+      const wx0 = h.small ? 5 : 7, wx1 = W2 - wx0, wy0 = h.small ? 24 : 28, wy1 = H2 - 2;
+      for (let y = wy0; y < wy1; y++) R(g, wx0, y, wx1 - wx0, 1, (y - wy0) % 5 === 4 ? shadeHex(h.wall, 0.82) : h.wall);
+      R(g, wx0, wy0, 2, wy1 - wy0, shadeHex(h.wall, 0.7)); R(g, wx1 - 2, wy0, 2, wy1 - wy0, shadeHex(h.wall, 0.7));
+      const ry0 = 4, ry1 = wy0 + 3;
+      for (let y = ry0; y < ry1; y++) { const f = (y - ry0) / (ry1 - ry0), hw = (W2 / 2 - 10) * 0.25 + (W2 / 2 - 1) * 0.75 * f + 2; R(g, Math.round(W2 / 2 - hw), y, Math.round(hw * 2), 1, (y - ry0) % 4 === 3 ? shadeHex(h.roof, 0.7) : y < ry0 + 2 ? shadeHex(h.roof, 1.25) : h.roof); }
+      R(g, W2 - 18, 1, 5, 9, '#7a6a64'); R(g, W2 - 19, 0, 7, 2, '#5a4a44');
+      const dw = 8, dx0 = W2 / 2 - dw / 2; R(g, dx0 - 1, wy1 - 15, dw + 2, 15, '#4a2e18'); R(g, dx0, wy1 - 14, dw, 14, '#8a5a34'); R(g, dx0 + dw - 3, wy1 - 8, 1, 2, '#f4c430');
+      for (const wx of [wx0 + 4, wx1 - 12]) { R(g, wx - 1, wy0 + 5, 10, 9, '#4a2e18'); R(g, wx, wy0 + 6, 8, 7, '#9fd0f0'); R(g, wx, wy0 + 6, 8, 2, '#d8f0ff'); R(g, wx + 3, wy0 + 6, 1, 7, '#4a2e18'); R(g, wx, wy0 + 9, 8, 1, '#4a2e18'); R(g, wx - 1, wy0 + 14, 10, 2, '#5aaa4a'); }
+    }
+    outline(g, W2, H2, '#1a1008');
+    const v = { c, w: W2, h: H2 };
+    houseCache.set(key, v); return v;
+  }
+  function drawHouse(hs, ox, oy, u, t) {
+    const sp = houseSpr(hs), x = ox + hs.x * u, y = oy + hs.y * u, dx = Math.round(x - sp.w / 2 * S), dy = Math.round(y - sp.h * S);
+    shadow(x, y - S, sp.w / 2.4 * S, 0.25);
+    ctx.drawImage(sp.c, dx, dy, sp.w * S, sp.h * S);
+    if (!hs.stall) { // Rauch aus dem Schornstein
+      for (let i = 0; i < 3; i++) { const ph = ((t / 2200 + i / 3 + hs.x * 0.1) % 1); ctx.fillStyle = `rgba(230,230,230,${0.45 * (1 - ph)})`; const r2 = (2 + ph * 3) * S; ctx.fillRect(dx + (sp.w - 15.5 + Math.sin(ph * 5 + i) * 2) * S - r2 / 2, dy - ph * 14 * S - r2 / 2, r2, r2); }
+    }
+    ctx.font = `${Math.round(7 * S)}px system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const sy = hs.stall ? dy + 4 * S : dy + (sp.h - 22) * S;
+    ctx.fillStyle = '#5a3a20'; roundRect(x - 5 * S, sy - 4.5 * S, 10 * S, 9 * S, 2 * S); ctx.fill(); ctx.fillStyle = '#e8d4a8'; roundRect(x - 4.3 * S, sy - 3.8 * S, 8.6 * S, 7.6 * S, 1.5 * S); ctx.fill();
+    ctx.fillText(hs.sign, x, sy + 0.3 * S);
+  }
+  function drawFountain(ox, oy, u, t) {
+    const V = town().V, x = ox + V.x * u, y = oy + V.y * u;
+    shadow(x, y + 4 * S, 22 * S, 0.22);
+    ctx.fillStyle = '#5d5a56'; ctx.beginPath(); ctx.ellipse(x, y, 22 * S, 13 * S, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#9a9790'; ctx.beginPath(); ctx.ellipse(x, y - S, 21 * S, 12 * S, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#3f9bcb'; ctx.beginPath(); ctx.ellipse(x, y, 17 * S, 9 * S, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.5)'; for (let i = 0; i < 4; i++) { const a = t / 900 + i * 1.6; ctx.fillRect(x + Math.cos(a) * 11 * S, y + Math.sin(a) * 5 * S, 4 * S, S); }
+    ctx.fillStyle = '#7b7873'; ctx.fillRect(x - 2.5 * S, y - 16 * S, 5 * S, 16 * S); ctx.fillStyle = '#9a9790'; ctx.fillRect(x - 5 * S, y - 18 * S, 10 * S, 3 * S);
+    ctx.fillStyle = 'rgba(160,220,255,.8)'; for (let i = 0; i < 6; i++) { const ph = ((t / 600 + i / 6) % 1), a = i / 6 * Math.PI * 2; ctx.fillRect(x + Math.cos(a) * ph * 12 * S, y - 18 * S + ph * ph * 18 * S + Math.sin(a) * ph * 4 * S, S * 1.5, S * 1.5); }
+  }
+  function townPix(wx, wy) { // Farbe für Dorfboden oder null
+    const x = wx / TP, y = wy / TP, ta = townAt(x, y); if (!ta) return null;
+    const nz = h2(wx, wy, SEED + 700);
+    if (ta === 1) { const row = Math.floor(wy / 5), cx = Math.floor((wx + (row % 2) * 3) / 6), edge = wy % 5 === 0 || (wx + (row % 2) * 3) % 6 === 0, v = 0.85 + h2(cx, row, 701) * 0.25; const c = edge ? [96, 92, 86] : [168 * v, 162 * v, 152 * v]; return c; }
+    if (ta === 2) { const k = 0.9 + nz * 0.15; return nz < 0.025 ? [150, 140, 120] : [200 * k, 168 * k, 120 * k]; }
+    if (ta === 4) { const seam = wx % 16 === 0, k = 0.9 + h2(Math.floor(wx / 16), Math.floor(wy / 3), 702) * 0.2; return seam ? [74, 46, 24] : [154 * k, 106 * k, 58 * k]; }
+    if (ta === 3) { const T = town(), p = T.plots.find(q => x >= q.x && x < q.x + q.w && y >= q.y && y < q.y + q.h); if (p && (x - p.x < 0.12 || p.x + p.w - x < 0.12 || y - p.y < 0.12 || p.y + p.h - y < 0.12)) return [63, 122, 52]; return null; }
+    return null;
+  }
+
   const coarse = matchMedia('(pointer:coarse)').matches;
+  function interact() {
+    if (!me.inBoat && !me.inCave) {
+      if (nearNpc) { toggleNpc(nearNpc); return; }
+      if (nearWalker) { nearWalker.say = { m: nearWalker.lines[Math.floor(Math.random() * nearWalker.lines.length)], t: Date.now() }; nearWalker.wait = 3; return; }
+      if (extraInteract && extraInteract()) return;
+      if (nearSt) { toggleCraft(nearSt.k); return; }
+    }
+    toggleBoat();
+  }
+  let extraInteract = null, extraNear = null; // Bauplatz, Felder, Truhen (Etappe 2)
   function useItem(k) {
     if (!bag[k]) return;
     if ((k === 'saft' || k === 'kuchen') && me.hp >= maxHp()) { say('Du hast schon volle Herzen'); return; }
@@ -1126,7 +1376,7 @@
       <div class="is-bagsum">🪙 ${me.coins} Münzen · ${have.reduce((a, k) => a + bag[k], 0)} Rohstoffe</div>
       ${have.length ? `<div class="is-baggrid">${have.map(k => `<div class="${RES[k][3] ? 'eat' : ''}"><i>${RES[k][1]}</i><b>${bag[k]}</b><span>${RES[k][0]}</span>${RES[k][3] ? `<button class="is-eat" data-eat="${k}" title="${ITEM_USE[k]}">Benutzen</button>` : ''}</div>`).join('')}</div>` : '<p>Noch leer. Schlag Bäume, Felsen, Büsche, Kakteen oder Pilze, um Rohstoffe zu sammeln. Auf jeder Inselart gibt es andere!</p>'}
       <div class="is-gear"><b>Ausrüstung:</b> ${GEAR_NAME.schwert[gear('schwert')]}${Object.keys(GEAR_NAME).filter(g => g !== 'schwert' && gear(g)).map(g => ' · ' + GEAR_NAME[g][gear(g)]).join('')}</div>
-      <small>Auf der Heimatinsel stehen Werkbank, Schmiede, Kochstelle und am Südufer die Werft. Dort stellst du aus Rohstoffen Sachen her.</small></div>`;
+      <small>Auf der Startinsel stehen Werkbank, Schmiede, Kochstelle und am Südufer die Werft. Dort stellst du aus Rohstoffen Sachen her.</small></div>`;
   }
   function fade(fn) {
     if (busy) return; busy = true;
@@ -1159,7 +1409,8 @@
     const k = e.key.toLowerCase();
     if (e.type === 'keydown') {
       if (k === 't' || k === 'enter') { e.preventDefault(); openChat(); return; }
-      if (k === 'e' && !e.repeat) { if (nearSt && !me.inBoat && !me.inCave) toggleCraft(nearSt.k); else toggleBoat(); return; }
+      if (k === 'e' && !e.repeat) { interact(); return; }
+      if (k === 'escape' && (npcOpen || craftOpen)) { toggleNpc(); toggleCraft(); return; }
       if (k === ' ' || k === 'q') { e.preventDefault(); if (!e.repeat) { if (me.inBoat) toggleSail(); else attack(); } return; }
       if ((k === 'f' || k === 'j') && !e.repeat) { attack(); return; }
       if (k === 'm' && !e.repeat) { toggleMap(); return; }
@@ -1184,7 +1435,7 @@
     if (me.inBoat) {
       for (let r = 1; r <= 2.6; r += 0.4) for (let i = 0; i < 16; i++) {
         const a = boat.h + i / 16 * Math.PI * 2, x = boat.x + Math.cos(a) * r, y = boat.y + Math.sin(a) * r;
-        if (walkable(x, y) && elev(x, y) >= 0) { me.inBoat = 0; me.x = x; me.y = y; boat.v = 0; boat.sail = 0; say('An Land gegangen'); return; }
+        if (walkable(x, y) && (elev(x, y) >= 0 || (nearBig(x, y) && townAt(x, y) === 4))) { me.inBoat = 0; me.x = x; me.y = y; boat.v = 0; boat.sail = 0; say('An Land gegangen'); return; }
       }
       say('Hier ist kein Ufer – fahr näher ans Land');
       return;
@@ -1262,6 +1513,7 @@
     for (const k of got) { drop(tx + 0.5, ty + 0.6, k); if (Math.random() < 0.3 * sk('ernte')) drop(tx + 0.5, ty + 0.6, k); }
     if (sk('schatz') && Math.random() < 0.2) for (let i = 0; i < 2 + Math.floor(Math.random() * 3); i++) drop(tx + 0.5, ty + 0.6, 'coin');
     gainXP(o === 12 || o === 13 ? 4 : o === 6 || o >= 16 ? 1 : 2, tx + 0.5, ty - 0.2);
+    if (TREES.has(o)) qEvent('harvest', 'baum'); else if (o === 3 || (o >= 12 && o <= 14)) qEvent('harvest', 'fels');
   }
   const rage = () => sk('zorn') && me.hp <= maxHp() / 2;
   function dmgRoll() { let d = 1 + sk('klinge') + gear('schwert') + (rage() ? 1 : 0) + (buff.kraft > 0 ? 1 : 0); if (Math.random() < 0.15 * sk('krit')) { d *= 2; dmgRoll.crit = true; } else dmgRoll.crit = false; return d; }
@@ -1280,7 +1532,7 @@
     e.dead = true;
     for (let i = 0; i < 14; i++) { const a = Math.random() * Math.PI * 2, s = 1 + Math.random() * 3; parts.push({ x: e.x, y: e.y - 0.3, z: 0, vx: Math.cos(a) * s, vy: Math.sin(a) * s, t: 0, life: 0.6, col: i % 3 ? '#e8e8f0' : '#bfbfd0', sz: 3 }); }
     const n = Math.round((D.coins[0] + Math.floor(Math.random() * (D.coins[1] - D.coins[0] + 1))) * (1 + 0.25 * sk('glueck')));
-    gainXP(XP_FOE[e.k] || 5, e.x, e.y - 1.4);
+    gainXP(XP_FOE[e.k] || 5, e.x, e.y - 1.4); qEvent('kill', e.k);
     if (sk('heil')) me.hp = Math.min(maxHp(), me.hp + 1);
     for (let i = 0; i < n; i++) drop(e.x, e.y, 'coin');
     if (D.loot && Math.random() < 0.7) drop(e.x, e.y, D.loot);
@@ -1304,7 +1556,7 @@
       const inCave = me.inCave;
       setTimeout(() => fade(() => {
         if (inCave) leaveCave(true); else respawnHome();
-        me.hp = maxHp(); say(inCave ? 'Du bist ohnmächtig geworden … und wachst vor der Höhle wieder auf.' : 'Du bist ohnmächtig geworden … und wachst auf der Heimatinsel wieder auf.');
+        me.hp = maxHp(); say(inCave ? 'Du bist ohnmächtig geworden … und wachst vor der Höhle wieder auf.' : 'Du bist ohnmächtig geworden … und wachst auf der Startinsel wieder auf.');
       }), 500);
     }
   }
@@ -1327,7 +1579,7 @@
     for (const e of enemies) if (Math.hypot(e.x - me.x, e.y - me.y) > 28) e.dead = true;
     spawnT += dt; if (spawnT < 1.4) return; spawnT = 0;
     if (me.inBoat || enemies.length >= 5) return;
-    const isl = nearestIsland(me.x, me.y); if (!isl || isl.name === 'Heimatinsel') return;
+    const isl = nearestIsland(me.x, me.y); if (!isl || isl.home || isl.town) return;
     for (let k = 0; k < 6; k++) {
       const a = Math.random() * Math.PI * 2, r = 8 + Math.random() * 5, x = me.x + Math.cos(a) * r, y = me.y + Math.sin(a) * r;
       if (!landFree(x, y, 0.3)) continue;
@@ -1441,6 +1693,14 @@
   function step(dt) {
     const [ix, iy] = chatOpen || bigMap || busy || me.hp <= 0 ? [0, 0] : inputDir();
     for (const k in buff) if (buff[k] > 0) buff[k] -= dt;
+    if (nearBig(me.x, me.y)) for (const w of town().walkers) { // Dorfbewohner gehen spazieren
+      w.t += dt; if (w.wait > 0) { w.wait -= dt; w.moving = 0; continue; }
+      const [tx, ty] = w.path[(w.seg + 1) % w.path.length], dx = tx - w.x, dy = ty - w.y, d = Math.hypot(dx, dy);
+      if (d < 0.1) { w.seg = (w.seg + 1) % w.path.length; w.wait = 1 + Math.random() * 3; continue; }
+      if (Math.hypot(me.x - w.x, me.y - w.y) < 1) { w.moving = 0; continue; }
+      const sp = 1.4 * dt; w.x += dx / d * Math.min(sp, d); w.y += dy / d * Math.min(sp, d); w.moving = 1;
+      w.dir = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 1 : 2) : (dy < 0 ? 3 : 0);
+    }
     me.inv = Math.max(0, me.inv - dt); hurtFlash = Math.max(0, hurtFlash - dt); shake = Math.max(0, shake - dt * 30);
     if (me.atk > 0) { me.atk -= dt; if (!me.hitDone && me.atk < (me.atkT || ATK_T) * 0.6) doHits(); }
     if (me.inCave) {
@@ -1466,6 +1726,8 @@
       const wade = elev(me.x, me.y) < 0;
       walkStep(dt, ix, iy, walkable, (wade && !sk('schwimm') ? 2.4 : 4.6) * (1 + 0.1 * sk('fuss')) * (buff.tempo > 0 ? 1.25 : 1));
       nearSt = null; for (const st of stations()) if (Math.hypot(me.x - st.x, me.y - (st.y + 0.3)) < 1.9) nearSt = st;
+      nearNpc = null; nearWalker = null;
+      if (nearBig(me.x, me.y)) { const T = town(); for (const n of T.npcs) if (Math.hypot(me.x - n.x, me.y - n.y) < 1.8) nearNpc = n; for (const w of T.walkers) if (Math.hypot(me.x - w.x, me.y - w.y) < 1.4) nearWalker = w; }
       const E = caveEnt();
       if (Math.abs(me.x - E.x) < 0.42 && me.y < E.y - 0.2 && !busy) enterCave();
     } else {
@@ -1560,7 +1822,15 @@
     ctx.fillStyle = '#1a1a22'; ctx.fillText(t, x, y - 2.2 * S);
   }
   // Figur mit Schatten, Watten im Wasser, Schwerthieb
-  function drawPerson(x, y, col, dir, frame, wade, t, atkP, blink, whirl, tier) {
+  function drawPlotSign(pl, ox, oy, u) {
+    const x = ox + (pl.x + 1) * u, y = oy + (pl.y + 0.7) * u, own = plotOwner(pl.id);
+    ctx.fillStyle = '#5a3a20'; ctx.fillRect(x - S, y - 10 * S, 2 * S, 10 * S);
+    ctx.fillStyle = '#3a2414'; ctx.fillRect(x - 8.5 * S, y - 15.5 * S, 17 * S, 8 * S); ctx.fillStyle = own ? '#e8d4a8' : '#c8f0b8'; ctx.fillRect(x - 8 * S, y - 15 * S, 16 * S, 7 * S);
+    ctx.fillStyle = '#2a1608'; ctx.font = `700 ${Math.round(3.6 * S)}px system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(own ? (own.length > 9 ? own.slice(0, 8) + '…' : own) : 'Frei', x, y - 11.4 * S);
+  }
+  let plotOwner = () => null; // wird in Etappe 2 mit den Server-Bauplätzen ersetzt
+  function drawPerson(x, y, col, dir, frame, wade, t, atkP, blink, whirl, tier, hat) {
     swordTier = tier || 0;
     const sp = charSprite(col, dir, frame), w = 16 * S, h = 24 * S, top = y - 23 * S;
     const fx = DIRV[dir][0], fy = DIRV[dir][1];
@@ -1572,6 +1842,7 @@
       ctx.drawImage(sp, x - w / 2, top + 3 * S, w, h); ctx.restore();
       ctx.strokeStyle = 'rgba(230,248,255,.75)'; ctx.lineWidth = S; ctx.beginPath(); ctx.ellipse(x, y - 4 * S, 6 * S + Math.sin(t / 200) * S, 2 * S, 0, 0, Math.PI * 2); ctx.stroke();
     } else ctx.drawImage(sp, x - w / 2, top, w, h);
+    if (hat && hat !== 'none') drawHat(x, top + (frame === 2 || frame === 4 ? -S : 0), dir, hat);
     ctx.globalAlpha = 1;
     if (atkP != null && dir !== 3) drawSword(x, y, dir, atkP);
     if (atkP != null && whirl) { ctx.strokeStyle = `rgba(180,230,255,${0.6 * (1 - atkP)})`; ctx.lineWidth = 3 * S; ctx.beginPath(); ctx.ellipse(x, y - 8 * S, (10 + atkP * 14) * S, (6 + atkP * 8) * S, 0, 0, Math.PI * 2 * Math.min(1, atkP * 1.5)); ctx.stroke(); }
@@ -1776,7 +2047,7 @@
     return [u, Math.round(W / 2 - me.x * u + sx), Math.round(H / 2 - (me.y - 0.5) * u + sy)];
   }
   function drawPeople(ents, ox, oy, u, t, cave_) {
-    if (!me.inBoat) ents.push({ y: me.y, f: () => drawPerson(ox + me.x * u, oy + me.y * u, me.col, me.dir, me.frame, !cave_ && elev(me.x, me.y) < 0, t, me.atk > 0 ? 1 - me.atk / (me.atkT || ATK_T) : null, me.inv > 0, sk('wirbel'), gear('schwert')) });
+    if (!me.inBoat) ents.push({ y: me.y, f: () => drawPerson(ox + me.x * u, oy + me.y * u, me.col, me.dir, me.frame, !cave_ && elev(me.x, me.y) < 0 && !(nearBig(me.x, me.y) && townAt(me.x, me.y) === 4), t, me.atk > 0 ? 1 - me.atk / (me.atkT || ATK_T) : null, me.inv > 0, sk('wirbel'), gear('schwert')) });
     for (const o of others.values()) {
       if (!!o.cave !== !!cave_ || o.inBoat) continue;
       ents.push({ y: o.y, f: () => drawPerson(ox + o.x * u, oy + o.y * u, o.col, o.dir, o.moving ? (Math.floor(o.ft / 0.13) % 4) + 1 : 0, !cave_ && elev(o.x, o.y) < 0, t, o.atk ? Math.min(1, (o.at || 0) / ATK_T) : null) });
@@ -1815,6 +2086,14 @@
     // alles mit Höhe nach Tiefe sortiert: Bäume, Felsen, Figuren, Boote
     const ents = [], mx0 = (-ox) / u - 2, mx1 = (W - ox) / u + 2, my0 = (-oy) / u - 1, my1 = (H - oy) / u + 3.5;
     for (const c of vis) for (const o of c.objs) if (o.x > mx0 && o.x < mx1 && o.y > my0 && o.y < my1) ents.push({ y: o.y, f: () => drawObj(o, ox, oy, u, t) });
+    if (nearBig(me.x, me.y)) {
+      const T = town(), inV = (x, y) => x > mx0 - 2 && x < mx1 + 2 && y > my0 && y < my1 + 3;
+      for (const hs of T.houses) if (inV(hs.x, hs.y)) ents.push({ y: hs.y, f: () => drawHouse(hs, ox, oy, u, t) });
+      if (inV(T.V.x, T.V.y)) ents.push({ y: T.V.y + 0.4, f: () => drawFountain(ox, oy, u, t) });
+      for (const n of T.npcs) if (inV(n.x, n.y)) ents.push({ y: n.y, f: () => { drawPerson(ox + n.x * u, oy + n.y * u, n.col, 0, 0, false, t, null, false, 0, 0, n.hat); nameTag(ox + n.x * u, oy + n.y * u - 1.75 * u, n.n, true); if (nearNpc === n) { ctx.font = `700 ${Math.round(4.6 * S)}px system-ui,sans-serif`; const tx2 = coarse ? 'Tippe 🛠️' : 'E – Sprechen', tw = ctx.measureText(tx2).width + 5 * S; ctx.fillStyle = 'rgba(14,22,40,.85)'; roundRect(ox + n.x * u - tw / 2, oy + n.y * u - 2.4 * u - 7 * S, tw, 7 * S, 2.5 * S); ctx.fill(); ctx.fillStyle = '#ffd27a'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(tx2, ox + n.x * u, oy + n.y * u - 2.4 * u - 3.5 * S); } } });
+      for (const w of T.walkers) if (inV(w.x, w.y)) ents.push({ y: w.y, f: () => { drawPerson(ox + w.x * u, oy + w.y * u, w.col, w.dir, w.moving ? (Math.floor(w.t / 0.15) % 4) + 1 : 0, false, t, null, false, 0, 0, w.hat); if (w.say && Date.now() - w.say.t < 4000) bubble(ox + w.x * u, oy + w.y * u - 1.6 * u, w.say.m); } });
+      for (const pl of T.plots) if (inV(pl.x + 1, pl.y + 0.6)) ents.push({ y: pl.y + 0.6, f: () => drawPlotSign(pl, ox, oy, u) });
+    }
     for (const st of stations()) if (st.x > mx0 && st.x < mx1 && st.y > my0 && st.y < my1) ents.push({ y: st.y, f: () => drawObj({ k: 'st', st: st.k, x: st.x, y: st.y }, ox, oy, u, t) });
     const E = caveEnt(); if (E.x > mx0 && E.x < mx1 && E.y > my0 && E.y < my1 + 2) ents.push({ y: E.y, f: () => drawObj({ k: 'ent', x: E.x, y: E.y }, ox, oy, u, t) });
     ents.push({ y: boat.y, f: () => drawBoat(sx(boat.x), sy(boat.y), boat.h, boat.sail, me.col, me.inBoat ? boat.v : 0, t / 1000, me.inBoat) });
@@ -1907,6 +2186,9 @@
     }
     const dot = (x, y, col, r) => { const [a, b] = P(x, y); g.fillStyle = '#000'; g.beginPath(); g.arc(a, b, r + 1.2, 0, Math.PI * 2); g.fill(); g.fillStyle = col; g.beginPath(); g.arc(a, b, r, 0, Math.PI * 2); g.fill(); };
     const E = caveEnt(); dot(E.x, E.y, '#2a2028', big ? 2.5 : 2);
+    { const T = town(), [a, b] = P(T.V.x, T.V.y);
+      if (a > 4 && b > 4 && a < N - 4 && b < N - 4) { g.font = `${big ? 12 : 10}px system-ui`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('🏠', a, b); if (big) { g.font = '700 9px system-ui'; g.fillStyle = '#fff'; g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 2.5; g.strokeText('Lindmark', a, b + 11); g.fillText('Lindmark', a, b + 11); } }
+      else { const ang = Math.atan2(T.V.y - me.y, T.V.x - me.x), rr = N / 2 - (big ? 12 : 10), qx = N / 2 + Math.cos(ang) * rr, qy = N / 2 + Math.sin(ang) * rr; g.save(); g.translate(qx, qy); g.rotate(ang); g.fillStyle = '#ffd27a'; g.strokeStyle = '#000'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(7, 0); g.lineTo(-5, -5); g.lineTo(-2, 0); g.lineTo(-5, 5); g.closePath(); g.fill(); g.stroke(); g.restore(); g.font = '9px system-ui'; g.textAlign = 'center'; g.fillText('🏠', qx - Math.cos(ang) * 12, qy - Math.sin(ang) * 12); } }
     for (const o of others.values()) if (!o.cave) dot(o.x, o.y, SHIRTS[o.col % 8], big ? 2.5 : 2);
     if (!me.inBoat) dot(boat.x, boat.y, '#a8743f', big ? 2.5 : 2);
     dot(me.x, me.y, '#ffd27a', big ? 3.5 : 3);
@@ -1943,12 +2225,14 @@
       hud.wind.innerHTML = `Wind nach ${dirName(w.a)}, ${str}` + (me.inBoat ? `<br>Fahrt: ${(boat.v * 2).toFixed(1)} Knoten${boat.sail ? '' : ' (Paddeln)'}` : '');
       const isl = nearestIsland(me.x, me.y);
       const place = isl ? isl.name : T_NAMES[cls(elev(me.x, me.y))] || 'Offenes Meer';
-      if (place !== lastIsle) { lastIsle = place; hud.isle.textContent = place; if (isl && discover(isl) && place !== 'Heimatinsel') { say('🏝️ Neue Insel entdeckt: ' + place); gainXP(sk('entdecker') ? 50 : 25, me.x, me.y - 2); addLog(`Entdeckt: <b>${escH(place)}</b> (${found.size} Inseln bisher) – ${escH(BIOMES[isl.b].info)}`); } }
+      if (isl && isl.b && lastIsle !== place) qEvent('visit', isl.b);
+      if (place !== lastIsle) { lastIsle = place; hud.isle.textContent = place; if (isl && discover(isl) && !isl.home) { say('🏝️ Neue Insel entdeckt: ' + place); gainXP(sk('entdecker') ? 50 : 25, me.x, me.y - 2); addLog(`Entdeckt: <b>${escH(place)}</b> (${found.size} Inseln bisher) – ${escH(isl.town ? 'Hier liegt das Dorf mit Händler, Hafenmeisterin und Bauplätzen für deine eigene Base' : BIOMES[isl.b].info)}`); } }
     }
     hud.on.textContent = online === 1 ? 'nur du bist online' : `${online} Spieler online`;
     hud.sail.hidden = !me.inBoat; hud.sail.classList.toggle('on', !!boat.sail);
     hud.boat.hidden = !!me.inCave;
-    hud.use.hidden = !nearSt || !!me.inBoat || !!me.inCave;
+    hud.use.hidden = !(nearSt || nearNpc || nearWalker || (extraNear && extraNear())) || !!me.inBoat || !!me.inCave;
+    if (npcOpen && (!nearNpc || nearNpc.k !== npcOpen.k)) toggleNpc();
     if (hud.use.hidden && craftOpen) toggleCraft();
     hud.buffs.innerHTML = [['kraft', '🍲'], ['tempo', '🥤'], ['dorn', '🧪']].filter(([k]) => buff[k] > 0).map(([k, i]) => `<b>${i}${Math.ceil(buff[k])}s</b>`).join('');
     hud.atk.hidden = !!me.inBoat;
@@ -2005,7 +2289,7 @@
     if (me.inCave) { buildCave(); spawnEnemies(); }
     join();
     addLog('Willkommen im <b>Inselreich</b>! Das ist ein früher Prototyp.');
-    if (!me.inCave) addLog('Im Norden der Heimatinsel liegt die <b>Kristallhöhle</b>. Dort lauern Gegner!');
+    if (!me.inCave) addLog('Im Norden der Startinsel liegt die <b>Kristallhöhle</b>. Dort lauern Gegner!'); if (!found.has(BIG.name)) addLog('Weit im <b>Westen</b> liegt die große <b>Heimatinsel</b> mit dem Dorf Lindmark. Segle hin! (Pfeil auf der Karte)');
     say(me.inCave ? 'Zurück in der Kristallhöhle' : me.inBoat ? 'Willkommen zurück auf See' : 'Willkommen auf der ' + (nearestIsland(me.x, me.y) || { name: 'Insel' }).name);
     raf = requestAnimationFrame(loop);
   }
@@ -2021,6 +2305,6 @@
   }
   window.Insel = {
     open: openGame, close, net, isOpen: () => open, rejoin: () => { if (open) join(); },
-    _dbg: { stations, toggleCraft, craft, useItem, buff, get nearSt() { return nearSt; }, get prog() { return prog; }, gainXP, toggleSkills, me, boat, others, elev, tileAt, objAt, isCut, get bag() { return bag; }, wind, island, spawn, toggleBoat, toggleSail, caveEnt, enterCave, leaveCave, attack, get enemies() { return enemies; }, get cave() { return cave; } },
+    _dbg: { town, BIG, quests, qEvent, toggleNpc, get nearNpc() { return nearNpc; }, interact, stations, toggleCraft, craft, useItem, buff, get nearSt() { return nearSt; }, get prog() { return prog; }, gainXP, toggleSkills, me, boat, others, elev, tileAt, objAt, isCut, get bag() { return bag; }, wind, island, spawn, toggleBoat, toggleSail, caveEnt, enterCave, leaveCave, attack, get enemies() { return enemies; }, get cave() { return cave; } },
   };
 })();
