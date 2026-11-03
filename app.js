@@ -28,7 +28,7 @@ const GAMES = [
   { key: 'party', title: 'Minispiel-Party', sub: 'Zufällige Minispiele à 1–2 Minuten, Punkte nach Platzierung · 2–12 Spieler',
     art: ['r', 'g', 'b', 'y'].map((c, i) => `<span class="s-${c}" style="width:28px;height:28px;border-radius:8px;display:inline-block;transform:rotate(${i * 9 - 12}deg)"></span>`).join('') },
 ];
-const gameOf = k => GAMES.find(g => g.key === k) || (k === 'casino' ? { title: 'Casino' } : { title: k });
+const gameOf = k => GAMES.find(g => g.key === k) || (k === 'casino' ? { title: 'Casino' } : k === 'welt' ? { title: 'Würfelwelt' } : { title: k });
 
 let key = store.get('fsg.key');
 if (!key) { const a = new Uint8Array(16); crypto.getRandomValues(a); key = [...a].map(b => b.toString(16).padStart(2, '0')).join(''); store.set('fsg.key', key); }
@@ -52,9 +52,9 @@ function onMsg(m) {
     room = m.room; roomId = room.id; store.set('fsg.room', roomId);
     if (room.view && room.view.left != null) deadline = Date.now() + room.view.left; else deadline = null;
     render();
-  } else if (m.t === 'closed') { room = null; roomId = null; store.set('fsg.room', null); render(); }
+  } else if (m.t === 'closed') { const wasWelt = room && room.game === 'welt'; room = null; roomId = null; store.set('fsg.room', null); render(); if (wasWelt && window.Welt && Welt.inMP()) Welt.roomGone(); }
   else if (m.t === 'err') toast(m.msg);
-  else if (m.t === 'cast') { if (window.Spiele2) Spiele2.cast(m.d); }
+  else if (m.t === 'cast') { if (m.d && m.d.g === 'welt') { if (window.Welt) Welt.net(m.d); } else if (window.Spiele2) Spiele2.cast(m.d); }
 }
 
 /* ---------- Helfer ---------- */
@@ -111,12 +111,15 @@ function loadCasino(cb) {
   document.body.appendChild(sc);
 }
 // Würfelwelt wird erst geladen, wenn jemand sie startet (spart Datenvolumen)
-function openWelt(btn) {
-  if (window.Welt) { window.Welt.open(); return; }
+function openWelt(btn, then) {
+  const go = () => { if (!window.Welt) return; if (then) then(); else window.Welt.open(); };
+  if (window.Welt) { go(); return; }
+  if (openWelt.busy) { openWelt.q.push(go); return; } // schon am Laden: nicht doppelt einbinden
+  openWelt.busy = true; openWelt.q = [go];
   if (btn) { btn.disabled = true; btn.textContent = 'Lädt …'; }
   const sc = document.createElement('script'); sc.src = 'welt.js';
-  sc.onload = () => { if (btn) { btn.disabled = false; btn.textContent = 'Spielen'; } if (window.Welt) window.Welt.open(); };
-  sc.onerror = () => { if (btn) { btn.disabled = false; btn.textContent = 'Spielen'; } toast('Würfelwelt konnte nicht geladen werden.'); sc.remove(); };
+  sc.onload = () => { openWelt.busy = false; if (btn) { btn.disabled = false; btn.textContent = 'Spielen'; } const q = openWelt.q; openWelt.q = []; q.forEach(f => f()); };
+  sc.onerror = () => { openWelt.busy = false; openWelt.q = []; if (btn) { btn.disabled = false; btn.textContent = 'Spielen'; } toast('Würfelwelt konnte nicht geladen werden.'); sc.remove(); };
   document.body.appendChild(sc);
 }
 $('#tiles').addEventListener('click', e => { if (e.target.closest('[data-solo]')) { window.Ritter.open(); return; } const ww = e.target.closest('[data-welt]'); if (ww) { openWelt(ww); return; } if (e.target.closest('[data-casino]')) { loadCasino(() => Casino.openLobby()); return; } const b = e.target.closest('[data-create]'); if (b && needNick()) send({ t: 'create', game: b.dataset.create }); });
@@ -144,6 +147,7 @@ function renderRoom() {
   else if (r.game === 'vier') renderVier(st, r.view);
   else if (r.game === 'maedn') renderMaedn(st, r.view);
   else if (r.game === 'party') renderParty(st, r.view);
+  else if (r.game === 'welt') { if (window.Welt) Welt.onRoom(r); else openWelt(null, () => { if (room && room.game === 'welt') Welt.onRoom(room); }); }
   else if (r.game === 'casino') { if (window.Casino) { Casino.closeLobby(); Casino.render(st, r.view); } else loadCasino(() => { if (room && room.game === 'casino') renderRoom(); }); }
   else if (window.Spiele2 && Spiele2[r.game]) Spiele2[r.game](st, r.view);
 }

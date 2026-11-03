@@ -19,6 +19,7 @@ const GAMES = {
   spion: require('./spion.js'),
   kniffel: require('./kniffel.js'),
   casino: require('./casino.js'),
+  welt: require('./welt_mp.js'),
 };
 // Umzug: Ist auf diesem Render-Dienst die Umgebungsvariable MOVED_TO gesetzt (z. B. https://onegame.onrender.com),
 // zeigt jede Seite nur noch den Umzugs-Hinweis. Spielstände werden dann hier weder geladen noch gespeichert,
@@ -298,6 +299,7 @@ function handle(c, m) {
   if (m.t === 'act') {
     if (!r.players.some(p => p.id === c.pid) || !m.a || typeof m.a !== 'object') return;
     const err = G.act(r, c.pid, m.a);
+    if (err && typeof err === 'object') { if (err.reply) send(c, { t: 'cast', d: err.reply }); return; } // Antwort nur an diesen Spieler
     if (err === 'quiet') return;
     if (err === 'soon') { pushSoon(r); return; } // häufige Live-Updates gebündelt senden
     if (typeof err === 'string') send(c, { t: 'err', msg: err });
