@@ -298,6 +298,12 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 21, title: 'Inselreich: Eigene Basen', date: '03.11.2026', items: [
+      ['Neu', 'Inselreich: Bei Baumeister Bruno bekommst du einen eigenen Bauplatz im Dorf – alles, was du baust, sehen auch die anderen und es bleibt gespeichert'],
+      ['Neu', 'Inselreich: 23 Bauteile: Böden, Wände, Türen, Zäune, Fackeln, Laternen, Truhe, Bett, Möbel, Werkbank, Kochstelle, Amboss, Flagge, Statue und mehr'],
+      ['Neu', 'Inselreich: Bauernhof: Samen von Bäuerin Frieda, Felder mit Weizen, Karotten und Kürbissen, Hühnerstall und Schafweide'],
+      ['Neu', 'Inselreich: Neue Rezepte: Brot, Rührei, Karottensuppe, Kürbiskuchen und Wollsegel'],
+    ] },
     { id: 20, title: 'Inselreich: Die Heimatinsel', date: '03.11.2026', items: [
       ['Neu', 'Inselreich: Weit im Westen liegt die große Heimatinsel Lindmark mit Dorf, Brunnen, Hafen und Steg – ein Pfeil auf der Karte zeigt den Weg'],
       ['Neu', 'Inselreich: Dorfbewohner: Händler Ole kauft und verkauft, Hafenmeisterin Greta hat jeden Tag drei neue Aufträge'],

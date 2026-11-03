@@ -57,17 +57,22 @@
     { id: 'obsidianaxt', st: 'schmiede', i: '⛏️', n: 'Obsidianaxt', d: 'Abbauen braucht zwei Schläge weniger', cost: { obsidian: 4, holz: 3, stein: 2 }, gear: 'axt', tier: 2 },
     { id: 'stachelpanzer', st: 'schmiede', i: '🛡️', n: 'Stachelpanzer', d: '+2 Herzen, und wer dich berührt, bekommt Schaden', cost: { stachel: 6, stein: 6, fell: 2 }, gear: 'ruestung', tier: 2 },
     { id: 'fasersegel', st: 'werft', i: '⛵', n: 'Fasersegel', d: 'Dein Boot segelt 10 % schneller', cost: { faser: 8, holz: 4 }, gear: 'segel', tier: 1 },
-    { id: 'seidensegel', st: 'werft', i: '🎐', n: 'Sporenseide-Segel', d: 'Dein Boot segelt 20 % schneller', cost: { sporen: 6, faser: 6, pilz: 4 }, gear: 'segel', tier: 2 },
+    { id: 'wollsegel', st: 'werft', i: '🧶', n: 'Wollsegel', d: 'Dein Boot segelt 20 % schneller', cost: { wolle: 8, faser: 4 }, gear: 'segel', tier: 2 },
+    { id: 'seidensegel', st: 'werft', i: '🎐', n: 'Sporenseide-Segel', d: 'Dein Boot segelt 30 % schneller', cost: { sporen: 6, faser: 6, pilz: 4, wolle: 2 }, gear: 'segel', tier: 3 },
     { id: 'rumpf', st: 'werft', i: '🛶', n: 'Verstärkter Rumpf', d: 'Dein Boot wendet 50 % schneller', cost: { holz: 15, stein: 5 }, gear: 'rumpf', tier: 1 },
     { id: 'saft', st: 'koch', i: '🧃', n: 'Beerensaft', d: 'Heilt ein Herz', cost: { beere: 3 }, item: 'saft' },
     { id: 'kuchen', st: 'koch', i: '🥧', n: 'Apfelkuchen', d: 'Heilt dich ganz', cost: { apfel: 3, holz: 1 }, item: 'kuchen' },
     { id: 'suppe', st: 'koch', i: '🍲', n: 'Pilzsuppe', d: '90 Sekunden +1 Schaden', cost: { pilz: 3, glibber: 1 }, item: 'suppe' },
     { id: 'shake', st: 'koch', i: '🥤', n: 'Kokos-Shake', d: '90 Sekunden 25 % schneller laufen und segeln', cost: { kokos: 2, banane: 2 }, item: 'shake' },
+    { id: 'brot', st: 'koch', i: '🍞', n: 'Brot', d: 'Heilt zwei Herzen', cost: { weizen: 3 }, item: 'brot' },
+    { id: 'ruehrei', st: 'koch', i: '🍳', n: 'Rührei', d: 'Heilt dich ganz', cost: { ei: 3 }, item: 'ruehrei' },
+    { id: 'karottensuppe', st: 'koch', i: '🥣', n: 'Karottensuppe', d: '2 Minuten +1 Schaden und schneller', cost: { karotte: 3, pilz: 1 }, item: 'karottensuppe' },
+    { id: 'kuerbiskuchen', st: 'koch', i: '🥮', n: 'Kürbiskuchen', d: '3 Minuten zwei Herzen mehr', cost: { kuerbis: 1, ei: 2, weizen: 2 }, item: 'kuerbiskuchen' },
     { id: 'elixier', st: 'koch', i: '🧪', n: 'Kaktus-Elixier', d: '90 Sekunden Stachelhaut: wer dich berührt, bekommt Schaden', cost: { kaktus: 3, sporen: 1 }, item: 'elixier' },
   ];
-  const ITEM_USE = { saft: 'Heilt ein Herz', kuchen: 'Heilt dich ganz', suppe: '+1 Schaden für 90 Sek.', shake: 'Schneller für 90 Sek.', elixier: 'Stachelhaut für 90 Sek.' };
-  const buff = { kraft: 0, tempo: 0, dorn: 0 };
-  const GEAR_NAME = { schwert: ['Holzschwert', 'Steinschwert', 'Eisschwert', 'Obsidianklinge'], axt: ['', 'Steinaxt', 'Obsidianaxt'], ruestung: ['', 'Fellrüstung', 'Stachelpanzer'], segel: ['', 'Fasersegel', 'Sporenseide-Segel'], rumpf: ['', 'Verstärkter Rumpf'], fernrohr: ['', 'Fernrohr'] };
+  const ITEM_USE = { brot: 'Heilt zwei Herzen', ruehrei: 'Heilt dich ganz', karottensuppe: '+1 Schaden und schneller für 2 Min.', kuerbiskuchen: '+2 Herzen für 3 Min.', saft: 'Heilt ein Herz', kuchen: 'Heilt dich ganz', suppe: '+1 Schaden für 90 Sek.', shake: 'Schneller für 90 Sek.', elixier: 'Stachelhaut für 90 Sek.' };
+  const buff = { kraft: 0, tempo: 0, dorn: 0, herz: 0 };
+  const GEAR_NAME = { schwert: ['Holzschwert', 'Steinschwert', 'Eisschwert', 'Obsidianklinge'], axt: ['', 'Steinaxt', 'Obsidianaxt'], ruestung: ['', 'Fellrüstung', 'Stachelpanzer'], segel: ['', 'Fasersegel', 'Wollsegel', 'Sporenseide-Segel'], rumpf: ['', 'Verstärkter Rumpf'], fernrohr: ['', 'Fernrohr'] };
   let prog = { xp: 0, lvl: 1, pts: 0, sk: {}, gear: {} };
   try { const q = JSON.parse(localStorage.getItem('insel.xp') || 'null'); if (q && q.lvl) prog = Object.assign(prog, q); } catch {}
   const saveProg = () => { try { localStorage.setItem('insel.xp', JSON.stringify(prog)); } catch {} };
@@ -77,7 +82,7 @@
     while (changed) { changed = false; for (const [id, r] of Object.entries(prog.sk)) { const s = SKILL[id]; if (!s || !s.p || !s.p.some(q => sk(q) > 0) || r > s.max) { const keep = s && s.p && s.p.some(q => sk(q) > 0) ? s.max : 0; prog.pts += r - keep; if (keep) prog.sk[id] = keep; else delete prog.sk[id]; changed = true; } } }
   }
   const gear = g => (prog.gear && prog.gear[g]) || 0;
-  const maxHp = () => MAXHP + 2 * sk('zaeh') + 2 * gear('ruestung');
+  const maxHp = () => MAXHP + 2 * sk('zaeh') + 2 * gear('ruestung') + (buff.herz > 0 ? 4 : 0);
   const WIESE = 0, WUESTE = 1, SCHNEE = 2, DSCHUNGEL = 3, VULKAN = 4, PILZ = 5, LAVA = 8;
   const BIOMES = [
     { n: 'Wiese', foes: ['slime'], info: 'Schleime · Holz, Steine, Äpfel und Beeren' },
@@ -95,6 +100,9 @@
     kokos: ['Kokosnüsse', '🥥', '#7a5028'], banane: ['Bananen', '🍌', '#f4e04d'], faser: ['Fasern', '🌾', '#c9b06a'], pilz: ['Pilze', '🍄', '#c94a3a'],
     glibber: ['Glibber', '💧', '#8ef07a'], stachel: ['Skorpionstachel', '🦂', '#d9a050'], fell: ['Wolfsfell', '🐺', '#c8ccd8'], glut: ['Glutsteine', '🔥', '#ff7a2a'], sporen: ['Sporen', '✨', '#c9a6ff'],
     saft: ['Beerensaft', '🧃', '#d84a8a', 1], kuchen: ['Apfelkuchen', '🥧', '#e0a050', 1], suppe: ['Pilzsuppe', '🍲', '#c96a3a', 1], shake: ['Kokos-Shake', '🥤', '#f0e0a0', 1], elixier: ['Kaktus-Elixier', '🧪', '#5ad06a', 1],
+    samen_weizen: ['Weizensamen', '🌰', '#c8a050'], samen_karotte: ['Karottensamen', '🌰', '#e07a30'], samen_kuerbis: ['Kürbissamen', '🌰', '#e8a040'],
+    weizen: ['Weizen', '🌾', '#e0c050'], karotte: ['Karotten', '🥕', '#f07a20'], kuerbis: ['Kürbisse', '🎃', '#e87a20'], ei: ['Eier', '🥚', '#f4eee0'], wolle: ['Wolle', '🧶', '#f0ece4'],
+    brot: ['Brot', '🍞', '#d8a050', 1], ruehrei: ['Rührei', '🍳', '#f4d040', 1], karottensuppe: ['Karottensuppe', '🥣', '#f08a30', 1], kuerbiskuchen: ['Kürbiskuchen', '🥮', '#e8902a', 1],
   };
 
   /* ---------- Zufall und Rauschen ---------- */
@@ -217,7 +225,7 @@
   const cut = new Map(), hits = new Map();
   const isCut = (tx, ty) => (cut.get(tx + ',' + ty) || 0) > Date.now();
   function walkable(x, y) {
-    if (nearBig(x, y)) { const ta = townAt(x, y); if (ta === 4) return true; if (townBlocked(x, y)) return false; }
+    if (nearBig(x, y)) { const ta = townAt(x, y); if (ta === 4) return true; if (townBlocked(x, y)) return false; if (ta === 3 && baseSolid(x, y)) return false; }
     const e = elev(x, y); if (e < 0 && cls(e) !== W_SHALLOW) return false;
     if (clsB(e, EB) === LAVA) return false;
     const tx = Math.floor(x), ty = Math.floor(y), o = objAt(tx, ty, tileAt(tx, ty));
@@ -964,6 +972,21 @@
 #isl .is-quests>div.ready{border:1px solid rgba(79,209,139,.7)}#isl .is-quests>div.claimed{opacity:.55}
 #isl .is-quests small{grid-column:1;color:#c8cde0;font-size:12px}#isl .is-quests i{grid-column:1;height:7px;border-radius:4px;background:rgba(0,0,0,.4);overflow:hidden}#isl .is-quests u{display:block;height:100%;background:#4fd18b}
 #isl .is-quests span{grid-column:1;font-size:12px;color:#c8cde0}#isl .is-quests button,#isl .is-quests em{grid-column:2;grid-row:1/span 4;font-style:normal;color:#8ff0a8;font-weight:800;font-size:13px}
+#isl .is-build{position:absolute;left:8px;right:8px;bottom:84px;z-index:4;background:rgba(20,26,44,.92);border:2px solid rgba(255,207,74,.5);border-radius:14px;padding:8px;max-width:760px;margin:0 auto}
+#isl .is-bhead{display:flex;gap:8px;align-items:center;font-size:13px;margin-bottom:6px}#isl .is-bhead span{flex:1;min-width:0;color:#d8dcea}#isl .is-bhead em{font-style:normal;font-weight:800}#isl .is-bhead .ok{color:#8ff0a8}#isl .is-bhead .no{color:#ff8a7a}
+#isl .is-bhead button{border:0;border-radius:9px;padding:7px 12px;font:800 13px system-ui;background:#4fd18b;color:#08220f;cursor:pointer}
+#isl .is-bpieces{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+#isl .is-bpieces button{flex:none;width:72px;border:2px solid transparent;border-radius:10px;background:#2a3150;color:#fff;font:600 10.5px system-ui;padding:5px 2px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
+#isl .is-bpieces button i{font-style:normal;font-size:20px}#isl .is-bpieces button.on{border-color:#ffcf4a;background:#3a4268}#isl .is-bpieces button.no{opacity:.45}
+#isl .is-act.on{background:#e3a92b}
+#isl .is-chest{position:absolute;inset:0;z-index:6;background:rgba(6,10,24,.6);display:grid;place-items:center;padding:12px}
+#isl .is-chbox{background:#1c2236;border:2px solid rgba(255,255,255,.25);border-radius:16px;padding:14px;width:min(640px,100%);max-height:86vh;overflow:auto}
+#isl .is-chbox h3{margin:0;display:flex;justify-content:space-between;align-items:center}
+#isl .is-chcols{display:grid;grid-template-columns:1fr 1fr;gap:10px}#isl .is-chcols h4{margin:4px 0 6px;font-size:14px}
+#isl .is-chcols>div>div{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.06);border-radius:9px;padding:5px 6px;margin-bottom:4px;font-size:12px}
+#isl .is-chcols i{font-style:normal;font-size:18px}#isl .is-chcols span{flex:1;min-width:0;display:flex;justify-content:space-between;gap:4px}
+#isl .is-chcols button{border:0;border-radius:7px;padding:4px 6px;font:800 11px system-ui;background:#ffcf4a;color:#2a1608;cursor:pointer}
+@media (max-width:600px){#isl .is-build{bottom:76px}#isl .is-chcols{grid-template-columns:1fr}}
 #isl .is-craft{position:absolute;inset:0;z-index:6;background:rgba(6,10,24,.62);display:grid;place-items:center;padding:12px}
 #isl .is-crbox{background:#1c2236;border:2px solid rgba(255,255,255,.25);border-radius:16px;padding:14px;width:min(520px,100%);max-height:88vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.5)}
 #isl .is-crbox h3{margin:0;display:flex;justify-content:space-between;align-items:center;font-size:19px}
@@ -996,7 +1019,7 @@
 <div class="is-mapwrap"><canvas class="is-map" width="132" height="132" title="Karte vergrößern (M)"></canvas><div class="is-wind"><i></i><span data-wind></span></div></div>
 <div class="is-log"></div>
 <div class="is-chat"><input maxlength="120" placeholder="Nachricht an alle …" enterkeyhint="send"><button class="is-btn" data-send>Senden</button></div>
-<div class="is-acts"><button class="is-act" data-skill>🌟<span>Skills</span><em class="is-dot" data-dot hidden></em></button><button class="is-act" data-bag>🎒<span>Rucksack</span></button><button class="is-act" data-chat>💬<span>Chat</span></button><button class="is-act" data-sail hidden>⛵<span>Segel</span></button><button class="is-act" data-use hidden>🛠️<span>Benutzen</span></button><button class="is-act" data-boat>⚓<span>Boot</span></button><button class="is-act big" data-atk>⚔️<span>Angriff</span></button></div>
+<div class="is-acts"><button class="is-act" data-skill>🌟<span>Skills</span><em class="is-dot" data-dot hidden></em></button><button class="is-act" data-bag>🎒<span>Rucksack</span></button><button class="is-act" data-chat>💬<span>Chat</span></button><button class="is-act" data-sail hidden>⛵<span>Segel</span></button><button class="is-act" data-build hidden>🔨<span>Bauen</span></button><button class="is-act" data-use hidden>🛠️<span>Benutzen</span></button><button class="is-act" data-boat>⚓<span>Boot</span></button><button class="is-act big" data-atk>⚔️<span>Angriff</span></button></div>
 <div class="is-hint">WASD laufen · Leertaste/Klick: angreifen und abbauen · E Boot/Werkstatt · I Rucksack · K Skills · T Chat · M Karte</div>
 <div class="is-joy"><i></i></div>
 <div class="is-say" style="opacity:0"></div><div class="is-fade"></div>`;
@@ -1020,6 +1043,7 @@
     root.querySelector('[data-bag]').onclick = () => toggleBag();
     root.querySelector('[data-skill]').onclick = () => toggleSkills();
     hud.use = root.querySelector('[data-use]'); hud.use.onclick = () => interact();
+    hud.build = root.querySelector('[data-build]'); hud.build.onclick = () => toggleBuild();
     hud.buffs = document.createElement('span'); hud.buffs.className = 'is-buffs'; root.querySelector('.is-stats').appendChild(hud.buffs);
     root.querySelector('[data-xpbox]').onclick = () => toggleSkills();
     Object.assign(hud, { lvl: root.querySelector('[data-lvl]'), xp: root.querySelector('[data-xp]'), pts: root.querySelector('[data-pts]'), dot: root.querySelector('[data-dot]') });
@@ -1147,7 +1171,7 @@
   }
   let nearSt = null, craftOpen = null;
   /* ---------- Dorfbewohner: Händler, Aufträge ---------- */
-  const PRICE = { holz: 1, stein: 1, faser: 1, beere: 1, apfel: 2, kokos: 3, banane: 3, kaktus: 3, pilz: 3, eis: 3, glibber: 2, stachel: 5, fell: 5, glut: 6, sporen: 4, obsidian: 8, eiskristall: 12, saft: 3, kuchen: 8, suppe: 6, shake: 8, elixier: 8 };
+  const PRICE = { weizen: 2, karotte: 3, kuerbis: 6, ei: 3, wolle: 5, brot: 6, ruehrei: 10, karottensuppe: 10, kuerbiskuchen: 14, holz: 1, stein: 1, faser: 1, beere: 1, apfel: 2, kokos: 3, banane: 3, kaktus: 3, pilz: 3, eis: 3, glibber: 2, stachel: 5, fell: 5, glut: 6, sporen: 4, obsidian: 8, eiskristall: 12, saft: 3, kuchen: 8, suppe: 6, shake: 8, elixier: 8 };
   const SHOP = [['saft', 15], ['kuchen', 40], ['fell', 22], ['stachel', 22], ['glut', 30], ['sporen', 18], ['obsidian', 38], ['eiskristall', 48]];
   const FOE_NAME = { slime: 'Schleime', sandslime: 'Sandschleime', frostslime: 'Frostschleime', fireslime: 'Feuerschleime', frog: 'Giftfrösche', sporling: 'Sporlinge', bat: 'Fledermäuse', moth: 'Glühfalter', scorpion: 'Skorpione', wolf: 'Eiswölfe' };
   const today = () => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
@@ -1193,8 +1217,18 @@
     };
     renderNpc();
   }
-  const npcExt = {}; // spätere Etappen hängen hier Aktionen an (Bauplätze, Samen, Hüte ...)
-  const npcBody = {}; // und eigene Inhalte je Bewohner
+  const npcExt = {
+    claim: () => { const free = town().plots.find(p => !PLOTS[p.id]); if (!free) { say('Gerade ist kein Bauplatz frei'); return; } send({ t: 'i_claim', id: free.id }); say(`🏡 Bauplatz Nr. ${free.id + 1} gehört jetzt dir! Geh hin und tippe auf 🔨 Bauen.`); },
+    unclaim: b => { if (!b.dataset.sure) { b.dataset.sure = 1; b.textContent = 'Wirklich? Alles darauf geht verloren'; return; } send({ t: 'i_unclaim', id: myPlotId() }); prog.bed = null; saveProg(); say('Bauplatz aufgegeben'); },
+    seed: b => { const [k, pr] = SEEDSHOP.find(s => s[0] === b.dataset.k) || []; if (k && me.coins >= pr) { me.coins -= pr; bag[k] = (bag[k] || 0) + 1; saveBag(); save(); say(`${RES[k][0]} gekauft`); renderNpc(); } else say('Dafür hast du nicht genug Münzen'); },
+  };
+  const SEEDSHOP = [['samen_weizen', 6], ['samen_karotte', 10], ['samen_kuerbis', 16]]; // spätere Etappen hängen hier Aktionen an (Bauplätze, Samen, Hüte ...)
+  const npcBody = {
+    bau: () => { const id = myPlotId(), free = town().plots.filter(p => !PLOTS[p.id]).length;
+      return id >= 0 ? `<p>Dein Bauplatz ist <b>Nr. ${id + 1}</b> südlich vom Dorfplatz (dein Name steht auf dem Schild). Stell dich drauf und tippe auf <b>🔨 Bauen</b>. Alles, was du baust, sehen auch die anderen – und es bleibt gespeichert.</p><p>Tipps: Eine <b>Truhe</b> lagert Rohstoffe sicher, im <b>Bett</b> wachst du nach einer Ohnmacht auf, auf <b>Feldern</b> wachsen Samen, <b>Hühner</b> und <b>Schafe</b> geben Eier und Wolle.</p><button class="is-ext" data-ext="unclaim">Bauplatz aufgeben</button>`
+        : `<p>Hier bekommt jeder Abenteurer einen eigenen Bauplatz (10 × 10 Felder) für eine Base mit Haus, Truhen, Feldern und Tieren. Frei sind noch <b>${free}</b> von ${town().plots.length}.</p><button class="is-ext" data-ext="claim" ${free && myId ? '' : 'disabled'}>🏡 Bauplatz nehmen</button>`; },
+    hof: () => `<p>Samen pflanzt du auf einem <b>Feld</b> auf deinem Bauplatz. Danach heißt es warten – auch wenn du nicht spielst, wächst alles weiter.</p><div class="is-shop">${SEEDSHOP.map(([k, pr]) => `<div><i>${RES[SEEDS[k][0]][1]}</i><span><b>${RES[k][0]}</b><small>wächst in ${Math.round(SEEDS[k][1] / 60)} Min. zu ${RES[SEEDS[k][0]][0]}${bag[k] ? ` · hast ${bag[k]}` : ''}</small></span><button class="is-ext" data-ext="seed" data-k="${k}" ${me.coins >= pr ? '' : 'disabled'}>🪙 ${pr}</button></div>`).join('')}</div><p class="is-npcsub">Hühnerstall und Schafweide baust du selbst auf deinem Bauplatz.</p>`,
+  }; // und eigene Inhalte je Bewohner
   function claimQuest(i) {
     const q = quests()[i]; if (!q || q.claimed) return;
     if (q.ty === 'collect' && !q.done) { if ((bag[q.key] || 0) < q.n) return; bag[q.key] -= q.n; saveBag(); q.done = true; }
@@ -1309,13 +1343,249 @@
     }
     toggleBoat();
   }
-  let extraInteract = null, extraNear = null; // Bauplatz, Felder, Truhen (Etappe 2)
+  let extraInteract = null, extraNear = null; // Bauplatz, Felder, Truhen
+  /* ---------- Eigene Basen auf den Bauplätzen (auf dem Server gespeichert) ---------- */
+  const PIECES = {
+    boden_holz: { n: 'Holzboden', i: '🟫', l: 0, cost: { holz: 2 } },
+    boden_stein: { n: 'Steinboden', i: '⬜', l: 0, cost: { stein: 2 } },
+    teppich: { n: 'Teppich', i: '🟥', l: 0, cost: { faser: 4 } },
+    wand_holz: { n: 'Holzwand', i: '🪵', l: 1, solid: 1, cost: { holz: 4 } },
+    wand_stein: { n: 'Steinwand', i: '🧱', l: 1, solid: 1, cost: { stein: 4 } },
+    tuer: { n: 'Tür', i: '🚪', l: 1, cost: { holz: 3 } },
+    zaun: { n: 'Zaun', i: '🚧', l: 1, solid: 1, cost: { holz: 2 } },
+    hecke: { n: 'Hecke', i: '🌳', l: 1, solid: 1, cost: { holz: 1, faser: 2 } },
+    fackel: { n: 'Fackel', i: '🔥', l: 1, cost: { holz: 1, faser: 1 }, light: 1 },
+    laterne: { n: 'Laterne', i: '🏮', l: 1, solid: 1, cost: { stein: 2, glut: 1 }, light: 1 },
+    truhe: { n: 'Truhe', i: '📦', l: 1, solid: 1, cost: { holz: 8 }, use: 'Truhe öffnen' },
+    bett: { n: 'Bett', i: '🛏️', l: 1, solid: 1, cost: { holz: 6, faser: 6 }, use: 'Schlafen' },
+    tisch: { n: 'Tisch', i: '🍽️', l: 1, solid: 1, cost: { holz: 4 } },
+    stuhl: { n: 'Stuhl', i: '🪑', l: 1, cost: { holz: 2 } },
+    blumen: { n: 'Blumenbeet', i: '🌷', l: 1, cost: { faser: 1, beere: 1 } },
+    feld: { n: 'Feld', i: '🌱', l: 1, cost: { holz: 1, stein: 1 }, use: 'Feld' },
+    huehner: { n: 'Hühnerstall', i: '🐔', l: 1, solid: 1, cost: { holz: 10, stein: 4 }, use: 'Eier holen', prod: ['ei', 480] },
+    schafe: { n: 'Schafweide', i: '🐑', l: 1, solid: 1, cost: { holz: 12, faser: 6 }, use: 'Scheren', prod: ['wolle', 720] },
+    werkbank: { n: 'Werkbank', i: '🪚', l: 1, solid: 1, cost: { holz: 10, stein: 6 }, station: 'werk', use: 'Werkbank' },
+    amboss: { n: 'Amboss', i: '⚒️', l: 1, solid: 1, cost: { stein: 12, obsidian: 2 }, station: 'schmiede', use: 'Schmiede' },
+    kochtopf: { n: 'Kochstelle', i: '🍲', l: 1, solid: 1, cost: { stein: 6, holz: 4 }, station: 'koch', use: 'Kochstelle' },
+    flagge: { n: 'Flagge', i: '🚩', l: 1, solid: 1, cost: { holz: 2, faser: 4 } },
+    statue: { n: 'Statue', i: '🗿', l: 1, solid: 1, cost: { stein: 10, obsidian: 4 } },
+  };
+  const SEEDS = { samen_weizen: ['weizen', 300], samen_karotte: ['karotte', 480], samen_kuerbis: ['kuerbis', 720] };
+  let PLOTS = {}, buildOn = false, buildSel = 'boden_holz', buildCur = null, chestOpen = null, baseNear = null;
+  const myPlotId = () => { for (const [id, p] of Object.entries(PLOTS)) if (p && p.o === myId) return +id; return -1; };
+  function plotAt(x, y) { if (!nearBig(x, y)) return null; for (const p of town().plots) if (x >= p.x && x < p.x + p.w && y >= p.y && y < p.y + p.h) return p; return null; }
+  function baseSolid(x, y) {
+    const pl = plotAt(x, y); if (!pl || !PLOTS[pl.id]) return false;
+    const it = PLOTS[pl.id].it[Math.floor(x - pl.x) + ',' + Math.floor(y - pl.y)];
+    return !!(it && it[1] && PIECES[it[1]] && PIECES[it[1]].solid);
+  }
+  const affordable = cost => Object.entries(cost).every(([k, v]) => (bag[k] || 0) >= v);
+  function placeAt(tx, ty) {
+    const id = myPlotId(); if (id < 0) return;
+    const pl = town().plots[id], lx = tx - pl.x, ly = ty - pl.y;
+    if (lx < 0 || ly < 0 || lx >= pl.w || ly >= pl.h) { say('Nur auf deinem eigenen Bauplatz'); return; }
+    const P2 = PLOTS[id], key = lx + ',' + ly, cur = P2.it[key] || [null, null];
+    if (buildSel === 'abriss') {
+      const L = cur[1] ? 1 : cur[0] ? 0 : -1; if (L < 0) return;
+      const k = cur[L];
+      if (k === 'truhe' && Object.keys(P2.c || {}).length) { say('Räum die Truhe zuerst aus'); return; }
+      for (const [r, v] of Object.entries(PIECES[k] ? PIECES[k].cost : {})) bag[r] = (bag[r] || 0) + Math.floor(v / 2);
+      cur[L] = null; P2.it[key] = cur; if (!cur[0] && !cur[1]) delete P2.it[key];
+      saveBag(); send({ t: 'i_del', id, x: lx, y: ly, l: L }); if (k === 'bett' && prog.bed) { prog.bed = null; saveProg(); }
+      for (let i = 0; i < 8; i++) parts.push({ x: tx + 0.5, y: ty + 0.6, z: 0, vx: (Math.random() - 0.5) * 4, vy: (Math.random() - 0.5) * 4, t: 0, life: 0.5, col: '#c9b08a', sz: 2 });
+      return;
+    }
+    const pc = PIECES[buildSel]; if (!pc) return;
+    if (cur[pc.l]) { say('Hier steht schon etwas'); return; }
+    if (pc.solid && Math.floor(me.x) === tx && Math.floor(me.y) === ty) { say('Du stehst im Weg'); return; }
+    if (!affordable(pc.cost)) { say('Dafür fehlen dir Rohstoffe'); return; }
+    for (const [r, v] of Object.entries(pc.cost)) bag[r] -= v;
+    cur[pc.l] = buildSel; P2.it[key] = cur; saveBag();
+    send({ t: 'i_put', id, x: lx, y: ly, k: buildSel, l: pc.l });
+    if (pc.prod) send({ t: 'i_collect', id, x: lx, y: ly });
+    for (let i = 0; i < 8; i++) parts.push({ x: tx + 0.5, y: ty + 0.6, z: 0, vx: (Math.random() - 0.5) * 4, vy: (Math.random() - 0.5) * 4, t: 0, life: 0.5, col: '#fff3c0', sz: 2 });
+    gainXP(1, tx + 0.5, ty);
+    renderBuild();
+  }
+  function toggleBuild(on) {
+    buildOn = on ?? !buildOn;
+    let bar = root.querySelector('.is-build'); if (bar) bar.remove();
+    if (!buildOn) return;
+    bar = document.createElement('div'); bar.className = 'is-build'; root.appendChild(bar);
+    bar.onclick = e => { const b = e.target.closest('[data-pc]'); if (b) { buildSel = b.dataset.pc; renderBuild(); return; } if (e.target.closest('[data-bdone]')) toggleBuild(false); };
+    renderBuild();
+  }
+  function renderBuild() {
+    const bar = root.querySelector('.is-build'); if (!bar) return;
+    const pc = PIECES[buildSel];
+    bar.innerHTML = `<div class="is-bhead"><b>🔨 Bauen</b><span>${buildSel === 'abriss' ? 'Tippe auf ein Bauteil, um es abzureißen (halbe Rohstoffe zurück)' : `${pc.i} ${pc.n}: ${Object.entries(pc.cost).map(([k, v]) => `<em class="${(bag[k] || 0) >= v ? 'ok' : 'no'}">${RES[k][1]}${v}</em>`).join(' ')} · ${coarse ? 'tippe aufs Feld' : 'klick aufs Feld oder Leertaste'}`}</span><button data-bdone>Fertig</button></div>
+      <div class="is-bpieces"><button data-pc="abriss" class="${buildSel === 'abriss' ? 'on' : ''}"><i>🧹</i>Abreißen</button>${Object.entries(PIECES).map(([k, p]) => `<button data-pc="${k}" class="${buildSel === k ? 'on' : ''} ${affordable(p.cost) ? '' : 'no'}"><i>${p.i}</i>${p.n}</button>`).join('')}</div>`;
+  }
+  // Was ist in der Nähe der eigenen Base benutzbar?
+  function findBaseNear() {
+    const id = myPlotId(); if (id < 0) return null;
+    const pl = town().plots[id], P2 = PLOTS[id]; if (!P2 || Math.abs(me.x - pl.x - 5) > 8 || Math.abs(me.y - pl.y - 5) > 8) return null;
+    let best = null, bd = 1.45;
+    for (const [key, [, o]] of Object.entries(P2.it)) {
+      if (!o || !PIECES[o] || !PIECES[o].use) continue;
+      const [lx, ly] = key.split(',').map(Number), d = Math.hypot(me.x - (pl.x + lx + 0.5), me.y - (pl.y + ly + 0.8));
+      if (d < bd) { bd = d; best = { id, key, k: o, x: pl.x + lx, y: pl.y + ly, lx, ly }; }
+    }
+    return best;
+  }
+  extraNear = () => !buildOn && !!baseNear;
+  extraInteract = () => {
+    if (buildOn) return false;
+    const b = baseNear; if (!b) return false;
+    const P2 = PLOTS[b.id], pc = PIECES[b.k];
+    if (pc.station) { toggleCraft(pc.station); return true; }
+    if (b.k === 'truhe') { toggleChest(b.id); return true; }
+    if (b.k === 'bett') { prog.bed = { x: b.x + 0.5, y: b.y + 1.5 }; saveProg(); me.hp = maxHp(); say('🛏️ Gut geschlafen! Hier wachst du jetzt auf, wenn du ohnmächtig wirst.'); return true; }
+    if (b.k === 'feld') {
+      const g = P2.g[b.key];
+      if (g) {
+        const [seed, at] = g, [crop, sec] = SEEDS[seed] || ['weizen', 300], left = sec * 1000 - (Date.now() - at);
+        if (left > 0) { say(`${RES[crop][1]} wächst noch ${Math.ceil(left / 60000)} Min.`); return true; }
+        const n = 2 + Math.floor(Math.random() * 2); for (let i = 0; i < n; i++) drop(b.x + 0.5, b.y + 0.6, crop);
+        if (Math.random() < 0.4) drop(b.x + 0.5, b.y + 0.6, seed);
+        delete P2.g[b.key]; send({ t: 'i_crop', id: b.id, x: b.lx, y: b.ly }); gainXP(3, b.x + 0.5, b.y); qEvent('harvest', 'ernte'); return true;
+      }
+      const seed = Object.keys(SEEDS).find(s => bag[s] > 0);
+      if (!seed) { say('Du hast keine Samen. Bäuerin Frieda im Dorf verkauft welche.'); return true; }
+      bag[seed]--; saveBag(); P2.g[b.key] = [seed, Date.now()]; send({ t: 'i_plant', id: b.id, x: b.lx, y: b.ly, k: seed });
+      say(`${RES[seed][1]} gepflanzt – fertig in ${Math.round(SEEDS[seed][1] / 60)} Min.`); return true;
+    }
+    if (pc.prod) {
+      const [res, sec] = pc.prod, last = P2.a[b.key] || Date.now(), n = Math.min(3, Math.floor((Date.now() - last) / (sec * 1000)));
+      if (!n) { say(`Noch nichts da – alle ${Math.round(sec / 60)} Min. gibt es ${RES[res][0]}`); return true; }
+      for (let i = 0; i < n; i++) drop(b.x + 0.5, b.y + 0.8, res);
+      P2.a[b.key] = Date.now(); send({ t: 'i_collect', id: b.id, x: b.lx, y: b.ly }); gainXP(2 * n, b.x + 0.5, b.y); return true;
+    }
+    return false;
+  };
+  function toggleChest(id) {
+    const old = root.querySelector('.is-chest'); if (old) old.remove();
+    if (id == null || chestOpen === id) { chestOpen = null; return; }
+    chestOpen = id;
+    const d = document.createElement('div'); d.className = 'is-chest'; root.appendChild(d);
+    d.onclick = e => {
+      if (e.target === d || e.target.closest('[data-close]')) { toggleChest(); return; }
+      const b = e.target.closest('[data-mv]'); if (!b) return;
+      const k = b.dataset.k, P2 = PLOTS[chestOpen]; if (!P2) return;
+      let n = +b.dataset.mv;
+      if (n > 0) n = b.dataset.all ? bag[k] || 0 : Math.min(1, bag[k] || 0); else n = b.dataset.all ? -(P2.c[k] || 0) : -Math.min(1, P2.c[k] || 0);
+      if (!n) return;
+      bag[k] = (bag[k] || 0) - n; P2.c[k] = (P2.c[k] || 0) + n; if (!P2.c[k]) delete P2.c[k];
+      saveBag(); send({ t: 'i_chest', id: chestOpen, k, n }); renderChest();
+    };
+    renderChest();
+  }
+  function renderChest() {
+    const d = root.querySelector('.is-chest'), P2 = PLOTS[chestOpen]; if (!d || !P2) return;
+    const row = (k, n, dir) => `<div><i>${RES[k][1]}</i><span>${RES[k][0]}<b>${n}</b></span><button data-mv="${dir}" data-k="${k}">${dir > 0 ? '→' : '←'} 1</button><button data-mv="${dir}" data-k="${k}" data-all="1">${dir > 0 ? '→' : '←'} alle</button></div>`;
+    const mine = Object.keys(RES).filter(k => bag[k] > 0), box = Object.keys(P2.c || {}).filter(k => RES[k] && P2.c[k] > 0);
+    d.innerHTML = `<div class="is-chbox"><h3>📦 Truhe <button class="is-btn" data-close>✕</button></h3><p class="is-npcsub">Was in der Truhe liegt, ist sicher auf dem Server gespeichert – auch wenn du das Gerät wechselst.</p>
+      <div class="is-chcols"><div><h4>🎒 Rucksack</h4>${mine.map(k => row(k, bag[k], 1)).join('') || '<p>leer</p>'}</div><div><h4>📦 Truhe</h4>${box.map(k => row(k, P2.c[k], -1)).join('') || '<p>leer</p>'}</div></div></div>`;
+  }
+  // Bauteile zeichnen (im Raster des Bauplatzes)
+  function drawFloor(k, x, y, u) {
+    const c = k === 'boden_holz' ? ['#9a6a3a', '#7a5028'] : k === 'boden_stein' ? ['#a8a49c', '#7a7670'] : ['#b8303a', '#e8c040'];
+    ctx.fillStyle = c[0]; ctx.fillRect(x, y, u, u); ctx.fillStyle = c[1];
+    if (k === 'boden_holz') for (let i = 1; i < 4; i++) ctx.fillRect(x, y + i * u / 4, u, S * 0.6);
+    else if (k === 'boden_stein') { ctx.fillRect(x + u / 2, y, S * 0.6, u); ctx.fillRect(x, y + u / 2, u, S * 0.6); }
+    else { ctx.strokeStyle = c[1]; ctx.lineWidth = S; ctx.strokeRect(x + 2 * S, y + 2 * S, u - 4 * S, u - 4 * S); }
+  }
+  function drawPiece(k, x, y, u, t, P2, key, owner) {
+    const P = (a, b, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x + a * S, y + b * S, w * S, h * S); };
+    if (k === 'wand_holz' || k === 'wand_stein') {
+      const st = k === 'wand_stein', top = st ? '#b8b4ac' : '#b08050', front = st ? '#8a8680' : '#8a5a34', line = st ? '#6a6660' : '#5a3a20';
+      shadow(x + u / 2, y + u, 8 * S, 0.2);
+      P(0, -10, 16, 10, top); P(0, -10, 16, 1, st ? '#d8d4cc' : '#c99a5a'); P(0, 0, 16, 16, front);
+      if (st) for (let r = 0; r < 4; r++) { P(0, r * 4, 16, 0.6, line); P(((r % 2) * 4) + 4, r * 4, 0.6, 4, line); P(((r % 2) * 4) + 12, r * 4, 0.6, 4, line); }
+      else for (let i = 1; i < 4; i++) P(i * 4, 0, 0.6, 16, line);
+      ctx.strokeStyle = 'rgba(20,12,8,.8)'; ctx.lineWidth = S * 0.8; ctx.strokeRect(x, y - 10 * S, u, 26 * S);
+      return;
+    }
+    if (k === 'tuer') { P(1, -8, 14, 24, '#4a2e18'); P(3, -6, 10, 22, '#a8743f'); P(3, -6, 10, 1, '#c99a5a'); P(10, 4, 1.5, 2, '#f4c430'); return; }
+    if (k === 'zaun') { P(1, 2, 2, 12, '#8a5a34'); P(13, 2, 2, 12, '#8a5a34'); P(0, 5, 16, 2, '#a8743f'); P(0, 10, 16, 2, '#a8743f'); return; }
+    if (k === 'hecke') { const sp = SPR[6][0]; ctx.drawImage(sp.trunk, x - 2 * S, y - 4 * S, 20 * S, 16 * S); return; }
+    if (k === 'fackel') { P(7, 4, 2, 11, '#6b4426'); flame(x + 8 * S, y + 5 * S, t, 0.8); return; }
+    if (k === 'laterne') { shadow(x + u / 2, y + u, 4 * S, 0.2); P(7, 2, 2, 14, '#3a3a40'); P(4, -4, 8, 7, '#2a2a30'); P(5, -3, 6, 5, '#ffd25a'); ctx.fillStyle = 'rgba(255,200,80,.22)'; ctx.beginPath(); ctx.arc(x + 8 * S, y - S, 10 * S, 0, Math.PI * 2); ctx.fill(); return; }
+    if (k === 'truhe') { drawChest(x + u / 2, y + u - S, false); return; }
+    if (k === 'bett') { shadow(x + u / 2, y + u, 8 * S, 0.2); P(1, -2, 14, 18, '#5a3a20'); P(2, -1, 12, 5, '#f4f4f4'); P(2, 4, 12, 11, SHIRTS[owner % 8]); P(2, 4, 12, 1, '#ffffff55'); return; }
+    if (k === 'tisch') { shadow(x + u / 2, y + u, 7 * S, 0.2); P(1, 2, 14, 6, '#a8743f'); P(1, 2, 14, 1, '#c99a5a'); P(2, 8, 2, 7, '#6b4426'); P(12, 8, 2, 7, '#6b4426'); P(6, 0, 4, 3, '#f4f4f4'); return; }
+    if (k === 'stuhl') { P(4, 0, 8, 2, '#8a5a34'); P(4, 2, 1.5, 12, '#6b4426'); P(4, 7, 8, 3, '#a8743f'); P(10.5, 9, 1.5, 6, '#6b4426'); return; }
+    if (k === 'blumen') { P(2, 10, 12, 5, '#5a3a20'); const cs = ['#ff6a9a', '#ffe060', '#9ad8ff', '#ff8a3a']; for (let i = 0; i < 4; i++) { P(3 + i * 3, 6, 1, 4, '#3a8a36'); P(2 + i * 3, 4 + (i % 2), 3, 3, cs[i]); } return; }
+    if (k === 'feld') {
+      P(0, 0, 16, 16, '#5a3a20'); for (let i = 0; i < 4; i++) P(1, 1 + i * 4, 14, 2, '#7a5230');
+      const g = P2 && P2.g[key]; if (!g) return;
+      const [seed, at] = g, [crop, sec] = SEEDS[seed] || ['weizen', 300], f = Math.min(1, (Date.now() - at) / (sec * 1000)), st = f >= 1 ? 3 : Math.floor(f * 3);
+      for (let i = 0; i < 4; i++) {
+        const cx = 2 + (i % 2) * 8, cy = 3 + Math.floor(i / 2) * 8;
+        if (st === 0) P(cx + 1, cy + 2, 2, 2, '#6ac04a');
+        else if (crop === 'weizen') { P(cx + 1, cy - st * 2 + 3, 1, st * 2 + 1, st === 3 ? '#d8b040' : '#6ac04a'); P(cx + 3, cy - st * 2 + 3, 1, st * 2 + 1, st === 3 ? '#e8c050' : '#5aaa3a'); if (st === 3) P(cx, cy - 4, 4, 2, '#f0d060'); }
+        else if (crop === 'karotte') { P(cx, cy, 4, st + 1, '#4aa03a'); if (st === 3) P(cx + 1, cy + 3, 2, 2, '#f07a20'); }
+        else { P(cx, cy + 1, 4, 2, '#3a8a2a'); if (st >= 2) { P(cx - (st - 2), cy + 2 - (st - 2), 4 + (st - 2) * 2, 3 + (st - 2), '#e87a20'); P(cx, cy + 2, 1, 2, '#c85a10'); } }
+      }
+      if (st === 3 && owner === me.col && Math.floor(t / 400) % 2) { ctx.font = `${Math.round(6 * S)}px system-ui`; ctx.textAlign = 'center'; ctx.fillText('✨', x + u / 2, y - 3 * S); }
+      return;
+    }
+    if (k === 'huehner' || k === 'schafe') {
+      const ch = k === 'huehner';
+      shadow(x + u / 2, y + u, 9 * S, 0.22);
+      if (ch) { P(1, -2, 14, 14, '#a8743f'); P(0, -6, 16, 5, '#8a3a2a'); P(6, 4, 4, 8, '#3a2414'); }
+      else { P(0, 2, 1.5, 13, '#8a5a34'); P(14.5, 2, 1.5, 13, '#8a5a34'); P(0, 4, 16, 1.5, '#a8743f'); P(0, 11, 16, 1.5, '#a8743f'); }
+      for (let i = 0; i < 2; i++) { // Tiere laufen herum
+        const ph = t / 1000 * (0.6 + i * 0.3) + key.length + i * 2, ax = 8 + Math.sin(ph) * 9 + i * 3 - 1.5, ay = 14 + Math.cos(ph * 0.7) * 3 + i * 2;
+        if (ch) { P(ax - 2, ay - 3, 4, 3, '#f4f4f4'); P(ax + 1, ay - 5, 2, 2, '#f4f4f4'); P(ax + 3, ay - 4, 1, 1, '#f0a020'); P(ax + 1, ay - 6, 1, 1, '#d8443a'); }
+        else { P(ax - 4, ay - 4, 7, 5, '#f0ece4'); P(ax - 4, ay - 4, 7, 1, '#ffffff'); P(ax + 3, ay - 4, 3, 3, '#3a3a3a'); P(ax - 3, ay + 1, 1, 2, '#3a3a3a'); P(ax + 1, ay + 1, 1, 2, '#3a3a3a'); }
+      }
+      const pc = PIECES[k], last = P2 && P2.a[key], n = last ? Math.min(3, Math.floor((Date.now() - last) / (pc.prod[1] * 1000))) : 0;
+      if (n > 0) { ctx.font = `${Math.round(6 * S)}px system-ui`; ctx.textAlign = 'center'; ctx.fillText(RES[pc.prod[0]][1] + (n > 1 ? '×' + n : ''), x + u / 2, y - 8 * S); }
+      return;
+    }
+    if (PIECES[k] && PIECES[k].station) { const sp = SPR.st[PIECES[k].station], w = sp.w * S * 0.6, h = sp.h * S * 0.6; shadow(x + u / 2, y + u, 7 * S, 0.22); ctx.drawImage(sp.trunk, x + u / 2 - w / 2, y + u - h, w, h); if (sp.fire) flame(x + u / 2 - w / 2 + sp.fire[0] * S * 0.6, y + u - h + sp.fire[1] * S * 0.6, t, 0.5); return; }
+    if (k === 'flagge') { P(3, -14, 1.5, 29, '#6b4426'); const wv = Math.sin(t / 200) * 1.5; ctx.fillStyle = SHIRTS[owner % 8]; ctx.beginPath(); ctx.moveTo(x + 4.5 * S, y - 13 * S); ctx.lineTo(x + (15 + wv) * S, y - 10 * S); ctx.lineTo(x + 4.5 * S, y - 6 * S); ctx.fill(); return; }
+    if (k === 'statue') { shadow(x + u / 2, y + u, 8 * S, 0.25); P(2, 8, 12, 7, '#8d8a84'); P(2, 8, 12, 1, '#b8b4ac'); P(5, -8, 6, 16, '#d8b040'); P(4, -12, 8, 5, '#e8c850'); P(6, -11, 1, 1, '#5a3a10'); P(9, -11, 1, 1, '#5a3a10'); P(3, -3, 2, 6, '#d8b040'); P(11, -3, 2, 6, '#d8b040'); return; }
+  }
+  function drawBases(ents, ox, oy, u, t) {
+    const T = town();
+    for (const pl of T.plots) {
+      const P2 = PLOTS[pl.id]; if (!P2) continue;
+      const sx = ox + pl.x * u, sy = oy + pl.y * u; if (sx > W + u || sy > H + u * 2 || sx + pl.w * u < -u || sy + pl.h * u < -u * 2) continue;
+      const owner = (others.get(P2.o) || {}).col ?? (P2.o === myId ? me.col : pl.id % 8);
+      for (const [key, [f, o]] of Object.entries(P2.it)) {
+        const [lx, ly] = key.split(',').map(Number), x = sx + lx * u, y = sy + ly * u;
+        if (f) drawFloor(f, x, y, u);
+        if (o) ents.push({ y: pl.y + ly + (o === 'teppich' ? 0 : 0.95), f: () => drawPiece(o, x, y, u, t, P2, key, owner) });
+      }
+    }
+    if (buildOn && buildCur) {
+      const x = ox + buildCur[0] * u, y = oy + buildCur[1] * u, ok = buildCur[2];
+      ents.push({ y: 1e9, f: () => { ctx.strokeStyle = ok ? 'rgba(120,255,160,.95)' : 'rgba(255,90,80,.95)'; ctx.lineWidth = S; ctx.setLineDash([3 * S, 2 * S]); ctx.strokeRect(x + S / 2, y + S / 2, u - S, u - S); ctx.setLineDash([]); if (ok && buildSel !== 'abriss' && PIECES[buildSel]) { ctx.globalAlpha = 0.55; PIECES[buildSel].l === 0 ? drawFloor(buildSel, x, y, u) : drawPiece(buildSel, x, y, u, t, null, '', me.col); ctx.globalAlpha = 1; } } });
+    }
+  }
+  // Bauen: Zielfeld vor dem Spieler, am PC unter der Maus
+  let mouseTile = null;
+  function updateBuildCursor() {
+    if (!buildOn) { buildCur = null; return; }
+    const id = myPlotId(); if (id < 0) { toggleBuild(false); return; }
+    const pl = town().plots[id];
+    let tx, ty;
+    if (mouseTile && !coarse) [tx, ty] = mouseTile;
+    else { const v = DIRV[me.dir]; tx = Math.floor(me.x + v[0] * 0.9); ty = Math.floor(me.y - 0.2 + v[1] * 0.9); }
+    const ok = tx >= pl.x && ty >= pl.y && tx < pl.x + pl.w && ty < pl.y + pl.h;
+    buildCur = [tx, ty, ok];
+  }
+
   function useItem(k) {
     if (!bag[k]) return;
-    if ((k === 'saft' || k === 'kuchen') && me.hp >= maxHp()) { say('Du hast schon volle Herzen'); return; }
+    if (['saft', 'kuchen', 'brot', 'ruehrei'].includes(k) && me.hp >= maxHp()) { say('Du hast schon volle Herzen'); return; }
     bag[k]--; saveBag();
     if (k === 'saft') me.hp = Math.min(maxHp(), me.hp + 2);
     else if (k === 'kuchen') me.hp = maxHp();
+    else if (k === 'brot') me.hp = Math.min(maxHp(), me.hp + 4); else if (k === 'ruehrei') me.hp = maxHp();
+    else if (k === 'karottensuppe') { buff.kraft = 120; buff.tempo = 120; } else if (k === 'kuerbiskuchen') { buff.herz = 180; me.hp = Math.min(maxHp(), me.hp + 4); }
     else if (k === 'suppe') buff.kraft = 90; else if (k === 'shake') buff.tempo = 90; else if (k === 'elixier') buff.dorn = 90;
     texts.push({ x: me.x, y: me.y - 1.6, s: RES[k][1], t: 0, col: '#fff' }); say(`${RES[k][1]} ${RES[k][0]}: ${ITEM_USE[k]}`);
     if (bagOpen) renderBag();
@@ -1385,8 +1655,10 @@
   }
 
   /* ---------- Steuerung ---------- */
+  function screenTile(cx, cy) { const r = cv.getBoundingClientRect(), [u, ox, oy] = camera(); return [Math.floor(((cx - r.left) * DPR - ox) / u), Math.floor(((cy - r.top) * DPR - oy) / u)]; }
   function joyDown(e) {
     if (chatOpen || bigMap) return;
+    if (buildOn) { const tt = screenTile(e.clientX, e.clientY); if (e.pointerType === 'mouse') { if (e.button === 0) { mouseTile = tt; updateBuildCursor(); if (buildCur && buildCur[2]) placeAt(buildCur[0], buildCur[1]); } return; } joy.tap = { x: e.clientX, y: e.clientY, t: Date.now(), tt }; }
     if (e.pointerType === 'mouse') { // am PC: Klick greift in Mausrichtung an
       if (e.button !== 0) return;
       const r = cv.getBoundingClientRect(), dx = e.clientX - r.left - r.width / 2, dy = e.clientY - r.top - r.height / 2;
@@ -1397,13 +1669,17 @@
     hud.joy.style.display = 'block'; hud.joy.style.left = e.clientX + 'px'; hud.joy.style.top = e.clientY + 'px'; hud.joy.firstChild.style.transform = '';
   }
   function joyMove(e) {
+    if (buildOn && e.pointerType === 'mouse') mouseTile = screenTile(e.clientX, e.clientY);
     if (!joy.on || e.pointerId !== joy.id) return;
     let dx = e.clientX - joy.x0, dy = e.clientY - joy.y0; const l = Math.hypot(dx, dy), m = 50;
     if (l > m) { dx = dx / l * m; dy = dy / l * m; }
     joy.dx = dx / m; joy.dy = dy / m;
     hud.joy.firstChild.style.transform = `translate(${dx}px,${dy}px)`;
   }
-  function joyUp(e) { if (!joy.on || e.pointerId !== joy.id) return; joy.on = false; joy.dx = joy.dy = 0; hud.joy.style.display = 'none'; }
+  function joyUp(e) {
+    if (buildOn && joy.tap && Math.hypot(e.clientX - joy.tap.x, e.clientY - joy.tap.y) < 12 && Date.now() - joy.tap.t < 350) { const [tx, ty] = joy.tap.tt, pl = town().plots[myPlotId()]; if (pl && tx >= pl.x && ty >= pl.y && tx < pl.x + pl.w && ty < pl.y + pl.h) placeAt(tx, ty); }
+    joy.tap = null;
+    if (!joy.on || e.pointerId !== joy.id) return; joy.on = false; joy.dx = joy.dy = 0; hud.joy.style.display = 'none'; }
   function onKey(e) {
     if (!open || chatOpen) return;
     const k = e.key.toLowerCase();
@@ -1411,10 +1687,11 @@
       if (k === 't' || k === 'enter') { e.preventDefault(); openChat(); return; }
       if (k === 'e' && !e.repeat) { interact(); return; }
       if (k === 'escape' && (npcOpen || craftOpen)) { toggleNpc(); toggleCraft(); return; }
-      if (k === ' ' || k === 'q') { e.preventDefault(); if (!e.repeat) { if (me.inBoat) toggleSail(); else attack(); } return; }
+      if (k === ' ' || k === 'q') { e.preventDefault(); if (!e.repeat) { if (me.inBoat) toggleSail(); else if (buildOn) { mouseTile = null; updateBuildCursor(); if (buildCur && buildCur[2]) placeAt(buildCur[0], buildCur[1]); } else attack(); } return; }
+      if (k === 'b' && !e.repeat && !hud.build.hidden) { toggleBuild(); return; }
       if ((k === 'f' || k === 'j') && !e.repeat) { attack(); return; }
       if (k === 'm' && !e.repeat) { toggleMap(); return; }
-      if ((k === 'i' || k === 'b') && !e.repeat) { toggleBag(); return; }
+      if (k === 'i' && !e.repeat) { toggleBag(); return; }
       if (k === 'k' && !e.repeat) { toggleSkills(); return; }
       if (k === 'escape' && skillOpen) { toggleSkills(); return; }
       if (k === 'escape') { if (bigMap) toggleMap(); return; }
@@ -1556,7 +1833,8 @@
       const inCave = me.inCave;
       setTimeout(() => fade(() => {
         if (inCave) leaveCave(true); else respawnHome();
-        me.hp = maxHp(); say(inCave ? 'Du bist ohnmächtig geworden … und wachst vor der Höhle wieder auf.' : 'Du bist ohnmächtig geworden … und wachst auf der Startinsel wieder auf.');
+        if (!inCave && prog.bed && myPlotId() >= 0) { me.x = prog.bed.x; me.y = prog.bed.y; }
+        me.hp = maxHp(); say(inCave ? 'Du bist ohnmächtig geworden … und wachst vor der Höhle wieder auf.' : (prog.bed && myPlotId() >= 0 ? 'Du bist ohnmächtig geworden … und wachst in deinem Bett wieder auf.' : 'Du bist ohnmächtig geworden … und wachst auf der Startinsel wieder auf.'));
       }), 500);
     }
   }
@@ -1726,7 +2004,7 @@
       const wade = elev(me.x, me.y) < 0;
       walkStep(dt, ix, iy, walkable, (wade && !sk('schwimm') ? 2.4 : 4.6) * (1 + 0.1 * sk('fuss')) * (buff.tempo > 0 ? 1.25 : 1));
       nearSt = null; for (const st of stations()) if (Math.hypot(me.x - st.x, me.y - (st.y + 0.3)) < 1.9) nearSt = st;
-      nearNpc = null; nearWalker = null;
+      nearNpc = null; nearWalker = null; baseNear = nearBig(me.x, me.y) ? findBaseNear() : null; updateBuildCursor();
       if (nearBig(me.x, me.y)) { const T = town(); for (const n of T.npcs) if (Math.hypot(me.x - n.x, me.y - n.y) < 1.8) nearNpc = n; for (const w of T.walkers) if (Math.hypot(me.x - w.x, me.y - w.y) < 1.4) nearWalker = w; }
       const E = caveEnt();
       if (Math.abs(me.x - E.x) < 0.42 && me.y < E.y - 0.2 && !busy) enterCave();
@@ -1829,7 +2107,7 @@
     ctx.fillStyle = '#2a1608'; ctx.font = `700 ${Math.round(3.6 * S)}px system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(own ? (own.length > 9 ? own.slice(0, 8) + '…' : own) : 'Frei', x, y - 11.4 * S);
   }
-  let plotOwner = () => null; // wird in Etappe 2 mit den Server-Bauplätzen ersetzt
+  const plotOwner = id => (PLOTS[id] ? PLOTS[id].n : null);
   function drawPerson(x, y, col, dir, frame, wade, t, atkP, blink, whirl, tier, hat) {
     swordTier = tier || 0;
     const sp = charSprite(col, dir, frame), w = 16 * S, h = 24 * S, top = y - 23 * S;
@@ -2092,6 +2370,7 @@
       if (inV(T.V.x, T.V.y)) ents.push({ y: T.V.y + 0.4, f: () => drawFountain(ox, oy, u, t) });
       for (const n of T.npcs) if (inV(n.x, n.y)) ents.push({ y: n.y, f: () => { drawPerson(ox + n.x * u, oy + n.y * u, n.col, 0, 0, false, t, null, false, 0, 0, n.hat); nameTag(ox + n.x * u, oy + n.y * u - 1.75 * u, n.n, true); if (nearNpc === n) { ctx.font = `700 ${Math.round(4.6 * S)}px system-ui,sans-serif`; const tx2 = coarse ? 'Tippe 🛠️' : 'E – Sprechen', tw = ctx.measureText(tx2).width + 5 * S; ctx.fillStyle = 'rgba(14,22,40,.85)'; roundRect(ox + n.x * u - tw / 2, oy + n.y * u - 2.4 * u - 7 * S, tw, 7 * S, 2.5 * S); ctx.fill(); ctx.fillStyle = '#ffd27a'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(tx2, ox + n.x * u, oy + n.y * u - 2.4 * u - 3.5 * S); } } });
       for (const w of T.walkers) if (inV(w.x, w.y)) ents.push({ y: w.y, f: () => { drawPerson(ox + w.x * u, oy + w.y * u, w.col, w.dir, w.moving ? (Math.floor(w.t / 0.15) % 4) + 1 : 0, false, t, null, false, 0, 0, w.hat); if (w.say && Date.now() - w.say.t < 4000) bubble(ox + w.x * u, oy + w.y * u - 1.6 * u, w.say.m); } });
+      drawBases(ents, ox, oy, u, t);
       for (const pl of T.plots) if (inV(pl.x + 1, pl.y + 0.6)) ents.push({ y: pl.y + 0.6, f: () => drawPlotSign(pl, ox, oy, u) });
     }
     for (const st of stations()) if (st.x > mx0 && st.x < mx1 && st.y > my0 && st.y < my1) ents.push({ y: st.y, f: () => drawObj({ k: 'st', st: st.k, x: st.x, y: st.y }, ox, oy, u, t) });
@@ -2231,10 +2510,15 @@
     hud.on.textContent = online === 1 ? 'nur du bist online' : `${online} Spieler online`;
     hud.sail.hidden = !me.inBoat; hud.sail.classList.toggle('on', !!boat.sail);
     hud.boat.hidden = !!me.inCave;
+    const myP = myPlotId(), inMine = myP >= 0 && !me.inBoat && (() => { const pl = town().plots[myP]; return me.x > pl.x - 2 && me.x < pl.x + pl.w + 2 && me.y > pl.y - 2 && me.y < pl.y + pl.h + 2; })();
+    hud.build.hidden = !inMine; hud.build.classList.toggle('on', buildOn);
+    if (!inMine && buildOn) toggleBuild(false);
     hud.use.hidden = !(nearSt || nearNpc || nearWalker || (extraNear && extraNear())) || !!me.inBoat || !!me.inCave;
+    if (chestOpen != null && (!baseNear || baseNear.k !== 'truhe')) toggleChest();
     if (npcOpen && (!nearNpc || nearNpc.k !== npcOpen.k)) toggleNpc();
     if (hud.use.hidden && craftOpen) toggleCraft();
-    hud.buffs.innerHTML = [['kraft', '🍲'], ['tempo', '🥤'], ['dorn', '🧪']].filter(([k]) => buff[k] > 0).map(([k, i]) => `<b>${i}${Math.ceil(buff[k])}s</b>`).join('');
+    if (buff.herz <= 0 && me.hp > maxHp()) me.hp = maxHp();
+    hud.buffs.innerHTML = [['kraft', '🍲'], ['tempo', '🥤'], ['dorn', '🧪'], ['herz', '🥮']].filter(([k]) => buff[k] > 0).map(([k, i]) => `<b>${i}${Math.ceil(buff[k])}s</b>`).join('');
     hud.atk.hidden = !!me.inBoat;
     hud.boat.querySelector('span').textContent = me.inBoat ? 'An Land' : 'Boot';
     if (me.inCave) drawCaveMap(hud.map, false);
@@ -2257,6 +2541,8 @@
   function join() { if (typeof send === 'function') send({ t: 'i_join', name: me.name, col: me.col, s: stateArr() }); lastSent = ''; }
   function net(m) {
     if (m.t === 'i_hi') { myId = m.id; online = m.n; return; }
+    if (m.t === 'i_plots') { PLOTS = m.plots || {}; for (const k in PLOTS) if (!PLOTS[k]) delete PLOTS[k]; return; }
+    if (m.t === 'i_plot') { if (m.p) PLOTS[m.id] = m.p; else delete PLOTS[m.id]; if (chestOpen === m.id) renderChest(); if (npcOpen && npcOpen.k === 'bau') renderNpc(); return; }
     if (m.t === 'i_w') {
       online = m.n || online;
       const seen = new Set();
@@ -2305,6 +2591,6 @@
   }
   window.Insel = {
     open: openGame, close, net, isOpen: () => open, rejoin: () => { if (open) join(); },
-    _dbg: { town, BIG, quests, qEvent, toggleNpc, get nearNpc() { return nearNpc; }, interact, stations, toggleCraft, craft, useItem, buff, get nearSt() { return nearSt; }, get prog() { return prog; }, gainXP, toggleSkills, me, boat, others, elev, tileAt, objAt, isCut, get bag() { return bag; }, wind, island, spawn, toggleBoat, toggleSail, caveEnt, enterCave, leaveCave, attack, get enemies() { return enemies; }, get cave() { return cave; } },
+    _dbg: { get PLOTS() { return PLOTS; }, myPlotId, placeAt, toggleBuild, get buildSel() { return buildSel; }, set buildSel(v) { buildSel = v; }, get baseNear() { return baseNear; }, toggleChest, town, BIG, quests, qEvent, toggleNpc, get nearNpc() { return nearNpc; }, interact, stations, toggleCraft, craft, useItem, buff, get nearSt() { return nearSt; }, get prog() { return prog; }, gainXP, toggleSkills, me, boat, others, elev, tileAt, objAt, isCut, get bag() { return bag; }, wind, island, spawn, toggleBoat, toggleSail, caveEnt, enterCave, leaveCave, attack, get enemies() { return enemies; }, get cave() { return cave; } },
   };
 })();
