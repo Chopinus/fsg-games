@@ -298,6 +298,12 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 22, title: 'Inselreich: Nacht, Bosse und Schätze', date: '03.11.2026', items: [
+      ['Neu', 'Inselreich: Tag und Nacht – nachts wird es dunkel, Fackeln und Laternen leuchten, und es kommen mehr und stärkere Gegner'],
+      ['Neu', 'Inselreich: Große Inseln jeder Inselart haben eine eigene Höhle mit Boss: Sandwurm, Frostwyrm, Riesenfrosch, Feuerdrache und Sporenkönigin'],
+      ['Neu', 'Inselreich: Boss-Beute für die stärksten Sachen: Drachenklinge, Drachenpanzer und Sturmsegel'],
+      ['Neu', 'Inselreich: Schatzkarten fallen manchmal von Gegnern – mit einer Schaufel gräbst du am roten X einen Schatz aus'],
+    ] },
     { id: 21, title: 'Inselreich: Eigene Basen', date: '03.11.2026', items: [
       ['Neu', 'Inselreich: Bei Baumeister Bruno bekommst du einen eigenen Bauplatz im Dorf – alles, was du baust, sehen auch die anderen und es bleibt gespeichert'],
       ['Neu', 'Inselreich: 23 Bauteile: Böden, Wände, Türen, Zäune, Fackeln, Laternen, Truhe, Bett, Möbel, Werkbank, Kochstelle, Amboss, Flagge, Statue und mehr'],

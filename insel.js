@@ -51,14 +51,18 @@
     { id: 'steinschwert', st: 'werk', i: '🗡️', n: 'Steinschwert', d: '+1 Schaden', cost: { holz: 3, stein: 5 }, gear: 'schwert', tier: 1 },
     { id: 'steinaxt', st: 'werk', i: '🪓', n: 'Steinaxt', d: 'Abbauen braucht einen Schlag weniger', cost: { holz: 3, stein: 3 }, gear: 'axt', tier: 1 },
     { id: 'fellruestung', st: 'werk', i: '🧥', n: 'Fellrüstung', d: '+1 Herz', cost: { fell: 5, faser: 4 }, gear: 'ruestung', tier: 1 },
+    { id: 'schaufel', st: 'werk', i: '🪏', n: 'Schaufel', d: 'Damit gräbst du Schätze von Schatzkarten aus', cost: { holz: 4, stein: 4 }, gear: 'schaufel', tier: 1 },
     { id: 'fernrohr', st: 'werk', i: '🔭', n: 'Fernrohr', d: 'Größere Minikarte und Weltkarte', cost: { eiskristall: 1, holz: 4, stein: 2 }, gear: 'fernrohr', tier: 1 },
     { id: 'eisschwert', st: 'schmiede', i: '❄️', n: 'Eisschwert', d: '+2 Schaden, getroffene Gegner werden langsamer', cost: { eis: 6, eiskristall: 2, holz: 2 }, gear: 'schwert', tier: 2 },
     { id: 'obsidianklinge', st: 'schmiede', i: '🔮', n: 'Obsidianklinge', d: '+3 Schaden', cost: { obsidian: 6, glut: 3, holz: 2 }, gear: 'schwert', tier: 3 },
+    { id: 'drachenklinge', st: 'schmiede', i: '🔥', n: 'Drachenklinge', d: '+4 Schaden – aus den Schuppen des Feuerdrachen', cost: { drachenschuppe: 3, obsidian: 4, glut: 4 }, gear: 'schwert', tier: 4 },
+    { id: 'drachenpanzer', st: 'schmiede', i: '🐲', n: 'Drachenpanzer', d: '+3 Herzen, Stacheln – aus drei Boss-Beuten', cost: { drachenschuppe: 2, frostherz: 2, wuestenperle: 2 }, gear: 'ruestung', tier: 3 },
     { id: 'obsidianaxt', st: 'schmiede', i: '⛏️', n: 'Obsidianaxt', d: 'Abbauen braucht zwei Schläge weniger', cost: { obsidian: 4, holz: 3, stein: 2 }, gear: 'axt', tier: 2 },
     { id: 'stachelpanzer', st: 'schmiede', i: '🛡️', n: 'Stachelpanzer', d: '+2 Herzen, und wer dich berührt, bekommt Schaden', cost: { stachel: 6, stein: 6, fell: 2 }, gear: 'ruestung', tier: 2 },
     { id: 'fasersegel', st: 'werft', i: '⛵', n: 'Fasersegel', d: 'Dein Boot segelt 10 % schneller', cost: { faser: 8, holz: 4 }, gear: 'segel', tier: 1 },
     { id: 'wollsegel', st: 'werft', i: '🧶', n: 'Wollsegel', d: 'Dein Boot segelt 20 % schneller', cost: { wolle: 8, faser: 4 }, gear: 'segel', tier: 2 },
     { id: 'seidensegel', st: 'werft', i: '🎐', n: 'Sporenseide-Segel', d: 'Dein Boot segelt 30 % schneller', cost: { sporen: 6, faser: 6, pilz: 4, wolle: 2 }, gear: 'segel', tier: 3 },
+    { id: 'sturmsegel', st: 'werft', i: '🌪️', n: 'Sturmsegel', d: 'Dein Boot segelt 40 % schneller', cost: { koenigsspore: 2, giftdruese: 2, wolle: 6 }, gear: 'segel', tier: 4 },
     { id: 'rumpf', st: 'werft', i: '🛶', n: 'Verstärkter Rumpf', d: 'Dein Boot wendet 50 % schneller', cost: { holz: 15, stein: 5 }, gear: 'rumpf', tier: 1 },
     { id: 'saft', st: 'koch', i: '🧃', n: 'Beerensaft', d: 'Heilt ein Herz', cost: { beere: 3 }, item: 'saft' },
     { id: 'kuchen', st: 'koch', i: '🥧', n: 'Apfelkuchen', d: 'Heilt dich ganz', cost: { apfel: 3, holz: 1 }, item: 'kuchen' },
@@ -72,7 +76,7 @@
   ];
   const ITEM_USE = { brot: 'Heilt zwei Herzen', ruehrei: 'Heilt dich ganz', karottensuppe: '+1 Schaden und schneller für 2 Min.', kuerbiskuchen: '+2 Herzen für 3 Min.', saft: 'Heilt ein Herz', kuchen: 'Heilt dich ganz', suppe: '+1 Schaden für 90 Sek.', shake: 'Schneller für 90 Sek.', elixier: 'Stachelhaut für 90 Sek.' };
   const buff = { kraft: 0, tempo: 0, dorn: 0, herz: 0 };
-  const GEAR_NAME = { schwert: ['Holzschwert', 'Steinschwert', 'Eisschwert', 'Obsidianklinge'], axt: ['', 'Steinaxt', 'Obsidianaxt'], ruestung: ['', 'Fellrüstung', 'Stachelpanzer'], segel: ['', 'Fasersegel', 'Wollsegel', 'Sporenseide-Segel'], rumpf: ['', 'Verstärkter Rumpf'], fernrohr: ['', 'Fernrohr'] };
+  const GEAR_NAME = { schwert: ['Holzschwert', 'Steinschwert', 'Eisschwert', 'Obsidianklinge', 'Drachenklinge'], axt: ['', 'Steinaxt', 'Obsidianaxt'], ruestung: ['', 'Fellrüstung', 'Stachelpanzer', 'Drachenpanzer'], segel: ['', 'Fasersegel', 'Wollsegel', 'Sporenseide-Segel', 'Sturmsegel'], schaufel: ['', 'Schaufel'], rumpf: ['', 'Verstärkter Rumpf'], fernrohr: ['', 'Fernrohr'] };
   let prog = { xp: 0, lvl: 1, pts: 0, sk: {}, gear: {} };
   try { const q = JSON.parse(localStorage.getItem('insel.xp') || 'null'); if (q && q.lvl) prog = Object.assign(prog, q); } catch {}
   const saveProg = () => { try { localStorage.setItem('insel.xp', JSON.stringify(prog)); } catch {} };
@@ -100,6 +104,7 @@
     kokos: ['Kokosnüsse', '🥥', '#7a5028'], banane: ['Bananen', '🍌', '#f4e04d'], faser: ['Fasern', '🌾', '#c9b06a'], pilz: ['Pilze', '🍄', '#c94a3a'],
     glibber: ['Glibber', '💧', '#8ef07a'], stachel: ['Skorpionstachel', '🦂', '#d9a050'], fell: ['Wolfsfell', '🐺', '#c8ccd8'], glut: ['Glutsteine', '🔥', '#ff7a2a'], sporen: ['Sporen', '✨', '#c9a6ff'],
     saft: ['Beerensaft', '🧃', '#d84a8a', 1], kuchen: ['Apfelkuchen', '🥧', '#e0a050', 1], suppe: ['Pilzsuppe', '🍲', '#c96a3a', 1], shake: ['Kokos-Shake', '🥤', '#f0e0a0', 1], elixier: ['Kaktus-Elixier', '🧪', '#5ad06a', 1],
+    wuestenperle: ['Wüstenperle', '🦪', '#f0e0c0'], frostherz: ['Frostherz', '💙', '#7fc8ff'], giftdruese: ['Giftdrüse', '🟢', '#5ad06a'], drachenschuppe: ['Drachenschuppe', '🐉', '#e04a2a'], koenigsspore: ['Königsspore', '🌟', '#e0a0ff'],
     samen_weizen: ['Weizensamen', '🌰', '#c8a050'], samen_karotte: ['Karottensamen', '🌰', '#e07a30'], samen_kuerbis: ['Kürbissamen', '🌰', '#e8a040'],
     weizen: ['Weizen', '🌾', '#e0c050'], karotte: ['Karotten', '🥕', '#f07a20'], kuerbis: ['Kürbisse', '🎃', '#e87a20'], ei: ['Eier', '🥚', '#f4eee0'], wolle: ['Wolle', '🧶', '#f0ece4'],
     brot: ['Brot', '🍞', '#d8a050', 1], ruehrei: ['Rührei', '🍳', '#f4d040', 1], karottensuppe: ['Karottensuppe', '🥣', '#f08a30', 1], kuerbiskuchen: ['Kürbiskuchen', '🥮', '#e8902a', 1],
@@ -145,7 +150,7 @@
       }
       const nm = SYL[Math.floor(h2(cx, cy, SEED + 5) * SYL.length)] + END[Math.floor(h2(cx, cy, SEED + 6) * END.length)];
       const kind = KIND[Math.floor(h2(cx, cy, SEED + 7) * (r < 18 ? 4 : 2))];
-      v = { x, y, r, lobes, b: bi, home: home ? 1 : 0, name: home ? 'Startinsel' : bi ? BIOMES[bi].pre + ' ' + nm : (kind === 'Inseln' ? nm + '-Inseln' : kind + ' ' + nm) };
+      v = { x, y, r, lobes, b: bi, cx, cy, home: home ? 1 : 0, name: home ? 'Startinsel' : bi ? BIOMES[bi].pre + ' ' + nm : (kind === 'Inseln' ? nm + '-Inseln' : kind + ' ' + nm) };
     }
     islCache.set(k, v);
     return v;
@@ -213,6 +218,7 @@
     if (Math.abs(tx - 70) < 6 && ty >= 64 && ty <= 73) return 0; // Startplatz und Werkstätten frei
     if (STPOS && Math.abs(tx - 70) < 4 && Math.abs(ty - STPOS[3].y) < 3) return 0; // vor der Werft frei
     const E = caveEnt(); if (Math.abs(tx - E.tx) <= 3 && ty >= E.ty - 4 && ty <= E.ty + 2) return 0; // vor der Höhle frei
+    { const cx = Math.floor(tx / CELL), cy = Math.floor(ty / CELL); for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) { const isl = islCache.get((cx + i) + ',' + (cy + j)); if (isl && isl.b && isl.r >= 20) { const c = islandCave(isl); if (c && Math.abs(tx - c.ent.tx) <= 3 && ty >= c.ent.ty - 4 && ty <= c.ent.ty + 2) return 0; } } }
     if (inTownClear(tx, ty)) return 0;
     const list = (OBJ[b] || OBJ[0])[t]; if (!list) return 0;
     let r = h2(tx, ty, SEED + 70);
@@ -230,8 +236,7 @@
     if (clsB(e, EB) === LAVA) return false;
     const tx = Math.floor(x), ty = Math.floor(y), o = objAt(tx, ty, tileAt(tx, ty));
     if (solid(o) && !isCut(tx, ty)) { const dx = x - (tx + 0.5), dy = y - (ty + 0.8); if (dx * dx + dy * dy < (o === 3 ? 0.2 : 0.12)) return false; }
-    const E = caveEnt(), ex = x - E.x, ey = y - E.y;
-    if (Math.abs(ex) < 1.6 && ey < 0 && ey > -2.7 && !(Math.abs(ex) < 0.4 && ey > -0.7)) return false; // Felsen um den Eingang
+    for (const { e: E } of entsNear(x, y)) { const ex = x - E.x, ey = y - E.y; if (Math.abs(ex) < 1.6 && ey < 0 && ey > -2.7 && !(Math.abs(ex) < 0.4 && ey > -0.7)) return false; } // Felsen um die Eingänge
     if (STPOS && Math.abs(x - 70.5) < 6) for (const st of STPOS) { const dx = x - st.x, dy = y - (st.y - 0.25); if (dx * dx / (st.k === 'werft' ? 1.6 : 0.8) + dy * dy / 0.25 < 1) return false; }
     return true;
   }
@@ -672,11 +677,40 @@
 
   /* ---------- Kristallhöhle ---------- */
   let cave = null;
-  function buildCave() {
-    if (cave) return cave;
+  const caves = new Map();
+  const START_CAVE = { key: 'start', idx: 0, seed: SEED, b: -1, name: 'Kristallhöhle', boss: 'troll', foes: ['slime', 'bigslime'], fly: 'bat' };
+  let caveSpec = START_CAVE;
+  const CAVE_NAME = { 1: 'Sandgrube', 2: 'Eishöhle', 3: 'Dschungeltempel', 4: 'Vulkanschlund', 5: 'Pilzgrotte' };
+  const CAVE_BOSS = { 1: 'sandwurm', 2: 'frostwyrm', 3: 'riesenfrosch', 4: 'feuerdrache', 5: 'sporenkoenigin' };
+  const CAVE_FLY = { 1: 'bat', 2: 'bat', 3: 'bat', 4: 'bat', 5: 'moth' };
+  // Höhle auf einer großen Insel einer Inselart (nicht auf Wiesen-Inseln)
+  function islandCave(isl) {
+    if (!isl || isl.cave !== undefined) return isl ? isl.cave : null;
+    isl.cave = null;
+    if (!isl.b || isl.town || isl.home || isl.r < 20 || isl.cx == null) return null;
+    const keepE = EB, keepT = TB;
+    for (let r = 3; r < isl.r * 0.7 && !isl.cave; r += 1.5) for (let i = 0; i < 16 && !isl.cave; i++) {
+      const a = i / 16 * Math.PI * 2 + h2(isl.cx, isl.cy, 77), tx = Math.round(isl.x + Math.cos(a) * r), ty = Math.round(isl.y + Math.sin(a) * r);
+      let ok = true;
+      for (let dy = -4; dy <= 2 && ok; dy++) for (let dx = -3; dx <= 3 && ok; dx++) { const t = tileAt(tx + dx, ty + dy); if (t < GRASS || t === LAVA) ok = false; }
+      if (ok) isl.cave = { key: 'c' + isl.cx + ',' + isl.cy, idx: 1 + ((Math.imul(isl.cx, 73856093) ^ Math.imul(isl.cy, 19349663)) >>> 0) % 900, seed: SEED + isl.cx * 1013 + isl.cy * 7919, b: isl.b, name: CAVE_NAME[isl.b], boss: CAVE_BOSS[isl.b], foes: BIOMES[isl.b].foes.filter(f => f !== 'golem'), fly: CAVE_FLY[isl.b], ent: { tx, ty, x: tx + 0.5, y: ty + 0.9 } };
+    }
+    EB = keepE; TB = keepT;
+    return isl.cave;
+  }
+  // alle Höhleneingänge in der Nähe einer Stelle
+  function entsNear(x, y) {
+    const out = [{ spec: START_CAVE, e: caveEnt() }];
+    const cx = Math.floor(x / CELL), cy = Math.floor(y / CELL);
+    for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) { const c = islandCave(island(cx + i, cy + j)); if (c) out.push({ spec: c, e: c.ent }); }
+    return out;
+  }
+  const CPAL = { [-1]: [[98, 84, 86], [104, 86, 82], [20, 16, 26]], 1: [[150, 118, 78], [140, 100, 60], [40, 28, 18]], 2: [[140, 160, 182], [100, 130, 160], [22, 30, 48]], 3: [[74, 96, 62], [70, 90, 60], [14, 24, 14]], 4: [[72, 54, 52], [96, 54, 42], [22, 10, 10]], 5: [[96, 76, 120], [90, 70, 120], [26, 14, 36]] };
+  function buildCave(spec = caveSpec) {
+    if (caves.has(spec.key)) return (cave = caves.get(spec.key));
     let g = new Uint8Array(CW * CHH);
     const I = (x, y) => y * CW + x, border = (x, y) => x < 2 || y < 2 || x >= CW - 2 || y >= CHH - 2;
-    for (let y = 0; y < CHH; y++) for (let x = 0; x < CW; x++) g[I(x, y)] = border(x, y) || h2(x, y, SEED + 300) < 0.46 ? 1 : 0;
+    for (let y = 0; y < CHH; y++) for (let x = 0; x < CW; x++) g[I(x, y)] = border(x, y) || h2(x, y, spec.seed + 300) < 0.46 ? 1 : 0;
     for (let it = 0; it < 5; it++) {
       const n = new Uint8Array(g);
       for (let y = 1; y < CHH - 1; y++) for (let x = 1; x < CW - 1; x++) {
@@ -722,7 +756,7 @@
     const wallsAround = s => { let w = 0; const x = s % CW, y = (s / CW) | 0; for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if ((i || j) && g[I(x + i, y + j)]) w++; return w; };
     const pick = (list, n, space) => { const out = []; for (const s of list) { if (out.length >= n) break; const x = s % CW, y = (s / CW) | 0; if (out.every(o => Math.hypot(o[0] - x, o[1] - y) >= space)) out.push([x, y]); } return out; };
     const byHash = seed => floor.slice().sort((a, b) => h2(a, 0, seed) - h2(b, 0, seed));
-    const far = floor.reduce((a, s) => (dist[s] > dist[a] ? s : a), floor[0]);
+    const far = floor.filter(s => ((s / CW) | 0) < CHH - 14).reduce((a, s) => (dist[s] > dist[a] ? s : a), floor[0]);
     const boss = [far % CW + 0.5, ((far / CW) | 0) + 0.5];
     const slimes = pick(byHash(310).filter(s => dist[s] > 12 && Math.hypot(s % CW - boss[0], ((s / CW) | 0) - boss[1]) > 9 && wallsAround(s) < 3), 18, 4);
     const bats = pick(byHash(311).filter(s => dist[s] > 24 && wallsAround(s) < 2), 9, 6);
@@ -737,13 +771,15 @@
         else if (r > 0.94) crystals.push([x + 0.5, y + 0.6, h2(x, y, 321) < 0.5 ? 0 : 1]);
       } else if (!g[s] && dist[s] > 6 && h2(x, y, 322) < 0.025) shrooms.push([x, y, h2(x, y, 323) < 0.35 ? 1 : 0]);
     }
-    cave = { g, dist, EX, EY, boss, slimes, bats, chests, crystals, torches, shrooms, seen: new Uint8Array(CW * CHH) };
-    cave.canvas = bakeCave(cave);
+    cave = { g, dist, EX, EY, boss, slimes, bats, chests, crystals, torches, shrooms, seen: new Uint8Array(CW * CHH), spec };
+    cave.canvas = bakeCave(cave, spec.b);
+    caves.set(spec.key, cave);
     return cave;
   }
   const caveCell = (x, y) => (x < 0 || y < 0 || x >= CW || y >= CHH ? 1 : cave.g[y * CW + x]);
   const caveFree = (x, y, r = 0.28) => !caveCell(Math.floor(x - r), Math.floor(y - 0.15)) && !caveCell(Math.floor(x + r), Math.floor(y - 0.15)) && !caveCell(Math.floor(x - r), Math.floor(y + 0.12)) && !caveCell(Math.floor(x + r), Math.floor(y + 0.12));
-  function bakeCave(C) {
+  function bakeCave(C, bio) {
+    const [F0, B0, T0] = CPAL[bio] || CPAL[-1];
     const W2 = CW * TP, H2 = CHH * TP, [cv2, g] = mk(W2, H2), img = g.createImageData(W2, H2), d = img.data;
     const wall = (x, y) => caveCell(x, y);
     for (let ty = 0; ty < CHH; ty++) for (let tx = 0; tx < CW; tx++) {
@@ -754,7 +790,7 @@
         let r, gg, b;
         if (!isW) {
           const v = vn(wx / 7, wy / 7, SEED + 331);
-          r = 98 + v * 22; gg = 84 + v * 18; b = 86 + v * 18;
+          r = F0[0] + v * 22; gg = F0[1] + v * 18; b = F0[2] + v * 18;
           let k = 0.92 + nz * 0.14;
           if (wN && py < 6) k *= 0.55 + py * 0.075; if (wW && px < 4) k *= 0.7 + px * 0.075; if (wE && px > 11) k *= 0.7 + (15 - px) * 0.075; if (wS && py > 13) k *= 0.85;
           if (nz < 0.012) k *= 1.35;
@@ -763,14 +799,14 @@
         } else if (face && py >= 5) {
           const row = Math.floor((py - 5) / 4), mort = (py - 5) % 4 === 0 || (px + (row % 2) * 5) % 9 === 0;
           const v = 0.85 + h2(Math.floor((px + (row % 2) * 5) / 9) + tx * 3, row + ty * 5, SEED + 332) * 0.3;
-          r = 104 * v; gg = 86 * v; b = 82 * v;
+          r = B0[0] * v; gg = B0[1] * v; b = B0[2] * v;
           if (mort) { r *= 0.62; gg *= 0.62; b *= 0.62; }
           if (py >= 14) { r *= 0.7; gg *= 0.7; b *= 0.7; }
-          if (py === 5) { r = 132; gg = 116; b = 112; }
+          if (py === 5) { r = B0[0] * 1.27; gg = B0[1] * 1.35; b = B0[2] * 1.37; }
           r *= 0.92 + nz * 0.12; gg *= 0.92 + nz * 0.12; b *= 0.92 + nz * 0.12;
         } else {
           const v = vn(wx / 5, wy / 5, SEED + 333);
-          r = 20 + v * 10; gg = 16 + v * 8; b = 26 + v * 10;
+          r = T0[0] + v * 10; gg = T0[1] + v * 8; b = T0[2] + v * 10;
           const rim = (!wW && px < 2) || (!wE && px > 13) || (!wN && py < 2) || (face && py >= 3);
           if (rim) { r += 38; gg += 32; b += 38; }
           if (nz < 0.03) { r += 14; gg += 12; b += 16; }
@@ -780,7 +816,7 @@
     }
     g.putImageData(img, 0, 0);
     for (const [x, y, k] of C.crystals) {
-      const cx = x * TP, cy = y * TP, col = k ? ['#7a5cff', '#b9a6ff', '#e6deff'] : ['#25b8d8', '#7fe3f5', '#e0fbff'];
+      const cx = x * TP, cy = y * TP, col = bio === 4 ? ['#ff6a1a', '#ffb050', '#fff0c0'] : bio === 1 ? ['#e0a030', '#f4d070', '#fff4d0'] : k ? ['#7a5cff', '#b9a6ff', '#e6deff'] : ['#25b8d8', '#7fe3f5', '#e0fbff'];
       for (const [ox, h, w] of [[-4, 7, 3], [0, 10, 3], [4, 6, 2]]) { R(g, cx + ox, cy - h + 4, w, h, col[0]); R(g, cx + ox, cy - h + 4, 1, h, col[1]); R(g, cx + ox, cy - h + 4, w, 1, col[2]); }
     }
     for (const [x, y] of C.torches) { const cx = x * TP, cy = y * TP; R(g, cx - 1, cy - 1, 3, 7, '#5a3a22'); R(g, cx - 2, cy - 2, 5, 2, '#3a3036'); }
@@ -814,6 +850,11 @@
   const DIRN = ['Osten', 'Südosten', 'Süden', 'Südwesten', 'Westen', 'Nordwesten', 'Norden', 'Nordosten'];
   const dirName = a => DIRN[((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8];
   const DIRV = [[0, 1], [-1, 0], [1, 0], [0, -1]];
+  // Tag und Nacht: ein Tag dauert 14 Minuten, für alle gleich
+  const DAYLEN = 840;
+  const dayPhase = () => ((Date.now() / 1000) % DAYLEN) / DAYLEN;
+  function darkness() { const p = dayPhase(); return p < 0.6 ? 0 : p < 0.68 ? (p - 0.6) / 0.08 * 0.62 : p < 0.93 ? 0.62 : (1 - p) / 0.07 * 0.62; }
+  const isNight = () => darkness() > 0.3;
 
   /* ---------- Spielzustand ---------- */
   const me = { x: 70.5, y: 70.5, dir: 0, moving: 0, frame: 0, ft: 0, inBoat: 0, inCave: 0, col: 0, name: 'Gast', hp: MAXHP, coins: 0, inv: 0, atk: 0, kx: 0, ky: 0, fx: 0, fy: 1 };
@@ -833,16 +874,17 @@
   let bag = {};
   try { bag = JSON.parse(localStorage.getItem('insel.bag') || '{}') || {}; } catch {}
   const saveBag = () => { try { localStorage.setItem('insel.bag', JSON.stringify(bag)); } catch {} };
-  let caveSave = { boss: 0, chests: {} };
-  try { caveSave = Object.assign(caveSave, JSON.parse(localStorage.getItem('insel.cave') || '{}')); } catch {}
-  const saveCave = () => { try { localStorage.setItem('insel.cave', JSON.stringify(caveSave)); } catch {} };
+  let caveSaves = {};
+  try { const q = JSON.parse(localStorage.getItem('insel.cave') || '{}'); caveSaves = q.boss !== undefined || q.chests ? { start: q } : q; } catch {}
+  const cs = () => (caveSaves[caveSpec.key] = caveSaves[caveSpec.key] || { boss: 0, chests: {} });
+  const saveCave = () => { try { localStorage.setItem('insel.cave', JSON.stringify(caveSaves)); } catch {} };
   function discover(isl) { if (found.has(isl.name)) return false; found.add(isl.name); try { localStorage.setItem('insel.found', JSON.stringify([...found])); } catch {} return true; }
 
   function load() {
     try {
       const s = JSON.parse(localStorage.getItem('insel.save') || 'null');
       if (s && Number.isFinite(s.x)) {
-        Object.assign(me, { x: s.x, y: s.y, inBoat: s.inBoat ? 1 : 0, inCave: s.inCave ? 1 : 0, col: s.col | 0, coins: s.coins | 0, hp: Math.max(1, Math.min(maxHp(), s.hp ?? maxHp())) });
+        Object.assign(me, { x: s.x, y: s.y, inBoat: s.inBoat ? 1 : 0, inCave: s.inCave ? 1 : 0, caveKey: s.caveKey || 'start', col: s.col | 0, coins: s.coins | 0, hp: Math.max(1, Math.min(maxHp(), s.hp ?? maxHp())) });
         Object.assign(boat, s.boat || {}); boat.v = 0;
         return true;
       }
@@ -850,7 +892,7 @@
     me.col = Math.floor(Math.random() * 8);
     return false;
   }
-  function save() { saveBag(); try { localStorage.setItem('insel.save', JSON.stringify({ x: me.x, y: me.y, inBoat: me.inBoat, inCave: me.inCave, col: me.col, coins: me.coins, hp: me.hp, boat: { x: boat.x, y: boat.y, h: boat.h, sail: boat.sail } })); } catch {} }
+  function save() { saveBag(); try { localStorage.setItem('insel.save', JSON.stringify({ caveKey: me.caveKey, x: me.x, y: me.y, inBoat: me.inBoat, inCave: me.inCave, col: me.col, coins: me.coins, hp: me.hp, boat: { x: boat.x, y: boat.y, h: boat.h, sail: boat.sail } })); } catch {} }
   function spawn() {
     const isl = island(0, 0);
     me.x = isl.x + 0.5; me.y = isl.y + 0.5;
@@ -864,7 +906,7 @@
     const wf = stations()[3]; if (sailable(70.5, wf.wy + 1.6) && sailable(71.5, wf.wy + 1.6) && sailable(69.5, wf.wy + 1.6)) { boat.x = 70.5; boat.y = wf.wy + 1.6; boat.h = 0; }
     boat.sail = 0; boat.v = 0; me.inBoat = 0; me.inCave = 0;
   }
-  const stateArr = () => [me.x + (me.inCave ? COX : 0), me.y + (me.inCave ? COY : 0), me.dir, me.moving, me.inBoat, boat.x, boat.y, boat.h, boat.sail, me.atk > 0 ? 1 : 0, prog.lvl];
+  const stateArr = () => [me.x + (me.inCave ? COX + caveSpec.idx * 1000 : 0), me.y + (me.inCave ? COY : 0), me.dir, me.moving, me.inBoat, boat.x, boat.y, boat.h, boat.sail, me.atk > 0 ? 1 : 0, prog.lvl];
 
   /* ---------- Oberfläche ---------- */
   const CSS = `
@@ -1171,7 +1213,7 @@
   }
   let nearSt = null, craftOpen = null;
   /* ---------- Dorfbewohner: Händler, Aufträge ---------- */
-  const PRICE = { weizen: 2, karotte: 3, kuerbis: 6, ei: 3, wolle: 5, brot: 6, ruehrei: 10, karottensuppe: 10, kuerbiskuchen: 14, holz: 1, stein: 1, faser: 1, beere: 1, apfel: 2, kokos: 3, banane: 3, kaktus: 3, pilz: 3, eis: 3, glibber: 2, stachel: 5, fell: 5, glut: 6, sporen: 4, obsidian: 8, eiskristall: 12, saft: 3, kuchen: 8, suppe: 6, shake: 8, elixier: 8 };
+  const PRICE = { wuestenperle: 25, frostherz: 25, giftdruese: 25, drachenschuppe: 30, koenigsspore: 25, weizen: 2, karotte: 3, kuerbis: 6, ei: 3, wolle: 5, brot: 6, ruehrei: 10, karottensuppe: 10, kuerbiskuchen: 14, holz: 1, stein: 1, faser: 1, beere: 1, apfel: 2, kokos: 3, banane: 3, kaktus: 3, pilz: 3, eis: 3, glibber: 2, stachel: 5, fell: 5, glut: 6, sporen: 4, obsidian: 8, eiskristall: 12, saft: 3, kuchen: 8, suppe: 6, shake: 8, elixier: 8 };
   const SHOP = [['saft', 15], ['kuchen', 40], ['fell', 22], ['stachel', 22], ['glut', 30], ['sporen', 18], ['obsidian', 38], ['eiskristall', 48]];
   const FOE_NAME = { slime: 'Schleime', sandslime: 'Sandschleime', frostslime: 'Frostschleime', fireslime: 'Feuerschleime', frog: 'Giftfrösche', sporling: 'Sporlinge', bat: 'Fledermäuse', moth: 'Glühfalter', scorpion: 'Skorpione', wolf: 'Eiswölfe' };
   const today = () => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
@@ -1747,9 +1789,14 @@
     scorpion: { ai: 'chase', hp: 3, dmg: 1, sp: 2.4, c: ['#5a3010', '#d08a3a'], loot: 'stachel', coins: [2, 3] },
     wolf: { ai: 'chase', hp: 4, dmg: 1, sp: 3.1, c: ['#4a5060', '#c8ccd8'], loot: 'fell', coins: [2, 4], wolf: 1 },
     golem: { ai: 'slam', hp: 10, dmg: 2, sp: 1.0, r: 1.6, wake: 7, loot: 'glut', coins: [6, 10] },
-    troll: { ai: 'slam', hp: 24, dmg: 2, sp: 1.35, r: 1.9, wake: 9, coins: [30, 30], boss: 1 },
+    troll: { ai: 'slam', hp: 24, dmg: 2, sp: 1.35, r: 1.9, wake: 9, coins: [30, 30], boss: 1, name: 'Höhlentroll' },
+    sandwurm: { ai: 'slam', hp: 40, dmg: 2, sp: 1.2, r: 2, wake: 9, coins: [40, 50], boss: 1, name: 'Sandwurm', loot: 'wuestenperle', lootN: 3, look: 'wurm', c: ['#8a6a3a', '#c8a060'] },
+    frostwyrm: { ai: 'slam', hp: 45, dmg: 2, sp: 1.3, r: 2, wake: 9, coins: [40, 50], boss: 1, name: 'Frostwyrm', loot: 'frostherz', lootN: 3, look: 'wyrm', c: ['#3a6a9a', '#a8e4ff'] },
+    riesenfrosch: { ai: 'slam', hp: 38, dmg: 2, sp: 1.5, r: 2.2, wake: 9, coins: [40, 50], boss: 1, name: 'Riesenfrosch', loot: 'giftdruese', lootN: 3, look: 'frosch', c: ['#0f4a3a', '#3ad0a0'] },
+    feuerdrache: { ai: 'slam', hp: 55, dmg: 3, sp: 1.3, r: 2.2, wake: 10, coins: [60, 70], boss: 1, name: 'Feuerdrache', loot: 'drachenschuppe', lootN: 3, look: 'wyrm', c: ['#8a1a0a', '#ff7a2a'] },
+    sporenkoenigin: { ai: 'slam', hp: 42, dmg: 2, sp: 1.2, r: 2.1, wake: 9, coins: [40, 50], boss: 1, name: 'Sporenkönigin', loot: 'koenigsspore', lootN: 3, look: 'koenigin', c: ['#5a1a6a', '#d06ae0'] },
   };
-  function mkEnemy(k, x, y) { const d = EDEF[k]; return { k, d, x, y, hx: x, hy: y, hp: d.hp, max: d.hp, vx: 0, vy: 0, t: Math.random(), hop: 0, flash: 0, stun: 0, cd: 1, wind: 0, awake: false, back: 0, lunge: 0, fx: 1 }; }
+  function mkEnemy(k, x, y) { const d = EDEF[k], nh = !me.inCave && isNight() ? Math.ceil(d.hp * 1.5) : d.hp; return { k, d, x, y, hx: x, hy: y, hp: nh, max: nh, vx: 0, vy: 0, t: Math.random(), hop: 0, flash: 0, stun: 0, cd: 1, wind: 0, awake: false, back: 0, lunge: 0, fx: 1 }; }
   // Was ein abgebauter Gegenstand bringt: [Schläge, () => Beute]
   const HARV = {
     1: [3, v => ['holz', 'holz', ...(v === 1 ? ['apfel', 'apfel'] : [])]], 2: [3, () => ['holz', ...(Math.random() < 0.7 ? ['kokos'] : [])]], 3: [4, () => ['stein', 'stein']],
@@ -1770,6 +1817,7 @@
       hitEnemy(e, dmgRoll(), ex / (d || 1), ey / (d || 1)); any = true;
     }
     if (any || me.inCave) return;
+    if (digTreasure()) return;
     // Rohstoffe abbauen: nächster Gegenstand in Schlagrichtung
     let best = null, bd = 9;
     for (let ty = Math.floor(me.y) - 2; ty <= Math.floor(me.y) + 1; ty++) for (let tx = Math.floor(me.x) - 2; tx <= Math.floor(me.x) + 2; tx++) {
@@ -1812,13 +1860,40 @@
     gainXP(XP_FOE[e.k] || 5, e.x, e.y - 1.4); qEvent('kill', e.k);
     if (sk('heil')) me.hp = Math.min(maxHp(), me.hp + 1);
     for (let i = 0; i < n; i++) drop(e.x, e.y, 'coin');
-    if (D.loot && Math.random() < 0.7) drop(e.x, e.y, D.loot);
+    if (D.loot && !D.boss && Math.random() < 0.7) drop(e.x, e.y, D.loot);
     if (D.ai !== 'slam' && Math.random() < 0.2) drop(e.x, e.y, 'heart');
-    if (e.k === 'troll') {
-      caveSave.boss = Date.now(); saveCave();
-      say('🏆 Du hast den Höhlentroll besiegt!'); addLog('<b>Höhlentroll besiegt!</b> Er kommt in 10 Minuten wieder.');
+    if (D.boss) {
+      cs().boss = Date.now(); saveCave();
+      say(`🏆 Du hast den ${D.name} besiegt!`); addLog(`<b>${D.name} besiegt!</b> Er kommt in 10 Minuten wieder.`);
       for (let i = 0; i < 3; i++) drop(e.x, e.y, 'heart');
-    } else if (e.k === 'golem') say('🪨 Lavagolem besiegt!');
+      for (let i = 0; i < (D.lootN || 0); i++) drop(e.x, e.y, D.loot);
+      if (Math.random() < 0.5) drop(e.x, e.y, 'karte');
+      prog.st = prog.st || {}; prog.st.bosse = (prog.st.bosse || 0) + 1; saveProg();
+    }
+    if (!me.inCave && !D.boss && Math.random() < 0.06) drop(e.x, e.y, 'karte'); else if (e.k === 'golem') say('🪨 Lavagolem besiegt!');
+  }
+  function newMap() {
+    prog.maps = prog.maps || [];
+    if (prog.maps.length >= 3) { me.coins += 15; texts.push({ x: me.x, y: me.y - 1.6, s: '+15 🪙', t: 0, col: '#ffd27a' }); return; }
+    const cx0 = Math.floor(me.x / CELL), cy0 = Math.floor(me.y / CELL);
+    for (let k = 0; k < 60; k++) {
+      const isl = island(cx0 + Math.floor((Math.random() - 0.5) * 9), cy0 + Math.floor((Math.random() - 0.5) * 9)); if (!isl || !isl.b) continue;
+      const a = Math.random() * Math.PI * 2, r = Math.random() * isl.r * 0.55, x = isl.x + Math.cos(a) * r, y = isl.y + Math.sin(a) * r;
+      if (!walkable(x, y) || elev(x, y) < 0.12) continue;
+      prog.maps.push({ x: Math.floor(x) + 0.5, y: Math.floor(y) + 0.5, n: isl.name }); saveProg();
+      say(`🗺️ Schatzkarte! Ein Schatz liegt auf ${isl.name} – rotes X auf der Karte`); addLog(`Schatzkarte gefunden: <b>${escH(isl.name)}</b>. Grab mit einer Schaufel (Werkbank) am X.`); mapDirty = true; return;
+    }
+  }
+  function digTreasure() {
+    const m = (prog.maps || []).find(q => Math.hypot(q.x - me.x, q.y - (me.y - 0.3)) < 1.4); if (!m) return false;
+    if (!gear('schaufel')) { say('Hier liegt ein Schatz! Du brauchst eine Schaufel (Werkbank).'); return true; }
+    prog.maps.splice(prog.maps.indexOf(m), 1); saveProg();
+    shake = 5; say('💰 Schatz ausgegraben!');
+    const rare = ['eiskristall', 'obsidian', 'glut', 'sporen', 'stachel', 'fell', 'drachenschuppe'];
+    for (let i = 0; i < 25 + Math.floor(Math.random() * 25); i++) drop(m.x, m.y, 'coin');
+    for (let i = 0; i < 3; i++) drop(m.x, m.y, rare[Math.floor(Math.random() * (rare.length - (Math.random() < 0.85 ? 1 : 0)))]);
+    gainXP(40, m.x, m.y - 1); prog.st = prog.st || {}; prog.st.schatz = (prog.st.schatz || 0) + 1; mapDirty = true;
+    return true;
   }
   function drop(x, y, k) { const a = Math.random() * Math.PI * 2, s = 1 + Math.random() * 2.5; items.push({ x, y, k, vx: Math.cos(a) * s, vy: Math.sin(a) * s, z: 0, vz: 4 + Math.random() * 3, t: 0 }); }
   function hurt(n, fx, fy, src) {
@@ -1845,9 +1920,10 @@
   function spawnEnemies() {
     const C = buildCave();
     enemies = [];
-    for (const [x, y] of C.slimes) enemies.push(mkEnemy(h2(x, y, 340) < 0.25 ? 'bigslime' : 'slime', x + 0.5, y + 0.6));
-    for (const [x, y] of C.bats) enemies.push(mkEnemy('bat', x + 0.5, y + 0.6));
-    if (Date.now() - (caveSave.boss || 0) > 10 * 60e3) enemies.push(mkEnemy('troll', C.boss[0], C.boss[1]));
+    const sp = caveSpec, fo = sp.foes;
+    for (const [x, y] of C.slimes) enemies.push(mkEnemy(sp.key === 'start' ? (h2(x, y, 340) < 0.25 ? 'bigslime' : 'slime') : fo[Math.floor(h2(x, y, 341) * fo.length)], x + 0.5, y + 0.6));
+    for (const [x, y] of C.bats) enemies.push(mkEnemy(sp.fly || 'bat', x + 0.5, y + 0.6));
+    if (Date.now() - (cs().boss || 0) > 10 * 60e3) enemies.push(mkEnemy(sp.boss, C.boss[0], C.boss[1]));
     items.length = 0;
   }
   // Gegner auf den Inseln tauchen in der Nähe auf (nicht auf der Heimatinsel) und verschwinden weit weg wieder
@@ -1855,8 +1931,9 @@
   const landFree = (x, y, r) => walkable(x, y) && elev(x, y) >= 0 && (!r || (walkable(x - r, y) && walkable(x + r, y)));
   function spawnOver(dt) {
     for (const e of enemies) if (Math.hypot(e.x - me.x, e.y - me.y) > 28) e.dead = true;
-    spawnT += dt; if (spawnT < 1.4) return; spawnT = 0;
-    if (me.inBoat || enemies.length >= 5) return;
+    const nt = isNight();
+    spawnT += dt; if (spawnT < (nt ? 0.9 : 1.4)) return; spawnT = 0;
+    if (me.inBoat || enemies.length >= (nt ? 7 : 5)) return;
     const isl = nearestIsland(me.x, me.y); if (!isl || isl.home || isl.town) return;
     for (let k = 0; k < 6; k++) {
       const a = Math.random() * Math.PI * 2, r = 8 + Math.random() * 5, x = me.x + Math.cos(a) * r, y = me.y + Math.sin(a) * r;
@@ -1907,7 +1984,7 @@
         e.moving = d < 9 && alive;
         if (d < 0.65 && alive) hurt(D.dmg, e.x, e.y, e);
       } else if (D.ai === 'slam') {
-        if (d < D.wake && !e.awake) { e.awake = true; if (D.boss) say('⚠️ Der Höhlentroll ist erwacht!'); }
+        if (d < D.wake && !e.awake) { e.awake = true; if (D.boss) say(`⚠️ ${D.name} ist erwacht!`); }
         e.cd -= dt;
         if (e.wind > 0) {
           e.wind -= dt;
@@ -1931,17 +2008,18 @@
   }
 
   /* ---------- Höhle betreten und verlassen ---------- */
-  function enterCave() {
+  function enterCave(spec = START_CAVE) {
     fade(() => {
-      const C = buildCave();
+      caveSpec = spec; me.caveKey = spec.key; me.caveRet = spec.ent ? [spec.ent.x, spec.ent.y] : null;
+      const C = buildCave(spec);
       me.inCave = 1; me.x = C.EX + 0.5; me.y = C.EY - 0.4; me.dir = 3; me.kx = me.ky = 0;
       spawnEnemies(); mapDirty = true;
-      say('Kristallhöhle – Vorsicht, hier leben Schleime, Fledermäuse und ein Höhlentroll!');
+      say(spec.key === 'start' ? 'Kristallhöhle – Vorsicht, hier leben Schleime, Fledermäuse und ein Höhlentroll!' : `${spec.name} – hier haust ${EDEF[spec.boss].name === 'Sporenkönigin' ? 'die' : 'der'} ${EDEF[spec.boss].name}!`);
       lastSent = '';
     });
   }
   function leaveCave(silent) {
-    const E = caveEnt();
+    const E = caveSpec.ent || caveEnt();
     me.inCave = 0; me.x = E.x; me.y = E.y + 0.7; me.dir = 0; me.kx = me.ky = 0;
     enemies = []; items.length = 0; mapDirty = true; hud.boss.style.display = 'none';
     if (!silent) say('Zurück an der frischen Luft');
@@ -1987,9 +2065,9 @@
       const C = cave;
       for (let j = -6; j <= 6; j++) for (let i = -6; i <= 6; i++) { const x = Math.floor(me.x) + i, y = Math.floor(me.y) + j; if (x >= 0 && y >= 0 && x < CW && y < CHH && i * i + j * j < 40) C.seen[y * CW + x] = 1; }
       for (const [x, y, k] of C.chests.map((c, i) => [c[0], c[1], i])) {
-        if (caveSave.chests[k] && Date.now() - caveSave.chests[k] < 30 * 60e3) continue;
+        if (cs().chests[k] && Date.now() - cs().chests[k] < 30 * 60e3) continue;
         if (Math.hypot(me.x - (x + 0.5), me.y - (y + 0.7)) < 0.95) {
-          caveSave.chests[k] = Date.now(); saveCave();
+          cs().chests[k] = Date.now(); saveCave();
           const n = 8 + Math.floor(Math.random() * 8); for (let i = 0; i < n; i++) drop(x + 0.5, y + 0.9, 'coin');
           say('📦 Schatztruhe geöffnet!'); shake = 3; gainXP(15, x + 0.5, y);
         }
@@ -2006,8 +2084,7 @@
       nearSt = null; for (const st of stations()) if (Math.hypot(me.x - st.x, me.y - (st.y + 0.3)) < 1.9) nearSt = st;
       nearNpc = null; nearWalker = null; baseNear = nearBig(me.x, me.y) ? findBaseNear() : null; updateBuildCursor();
       if (nearBig(me.x, me.y)) { const T = town(); for (const n of T.npcs) if (Math.hypot(me.x - n.x, me.y - n.y) < 1.8) nearNpc = n; for (const w of T.walkers) if (Math.hypot(me.x - w.x, me.y - w.y) < 1.4) nearWalker = w; }
-      const E = caveEnt();
-      if (Math.abs(me.x - E.x) < 0.42 && me.y < E.y - 0.2 && !busy) enterCave();
+      for (const { spec, e: E } of entsNear(me.x, me.y)) if (Math.abs(me.x - E.x) < 0.42 && me.y < E.y - 0.2 && me.y > E.y - 1.2 && !busy) enterCave(spec);
     } else {
       const w = wind();
       if (ix || iy) {
@@ -2032,10 +2109,11 @@
       const dx = me.x - it.x, dy = me.y - it.y, d = Math.hypot(dx, dy);
       if (it.t > 0.5 && d < (sk('magnet') ? 5 : 2.2)) { it.vx += dx / d * 30 * dt; it.vy += dy / d * 30 * dt; }
       const nx = it.x + it.vx * dt, ny = it.y + it.vy * dt;
-      if (!me.inCave || caveFree(nx, ny, 0.1)) { it.x = nx; it.y = ny; }
+      if (!me.inCave || caveFree(nx, ny, 0.1) || (it.t > 0.5 && d < 2.6)) { it.x = nx; it.y = ny; }
       if (it.t > 0.4 && d < 0.5) {
         items.splice(i, 1);
         if (it.k === 'coin') { me.coins++; texts.push({ x: me.x, y: me.y - 1.6, s: '+1', t: 0, col: '#ffd27a' }); }
+        else if (it.k === 'karte') newMap();
         else if (it.k === 'heart') { me.hp = Math.min(maxHp(), me.hp + 2); texts.push({ x: me.x, y: me.y - 1.6, s: '♥', t: 0, col: '#ff6a7a' }); }
         else if (RES[it.k]) { bag[it.k] = (bag[it.k] || 0) + 1; texts.push({ x: me.x, y: me.y - 1.6, s: '+1 ' + RES[it.k][1], t: 0, col: '#ffffff' }); if (bagOpen) renderBag(); }
       } else if (it.t > 40) items.splice(i, 1);
@@ -2137,7 +2215,7 @@
     ctx.save(); ctx.translate(cx, cy); ctx.rotate(a);
     ctx.fillStyle = '#5a3a22'; ctx.fillRect(0, -S, 3 * S, 2 * S);
     ctx.fillStyle = '#d9b25a'; ctx.fillRect(3 * S, -2.5 * S, S * 1.5, 5 * S);
-    const bl = ['#dfe6ee', '#b8b4ac', '#8fe4ff', '#8a5ad8'][Math.min(3, swordTier)], hl = ['#ffffff', '#e0dcd4', '#e8fbff', '#d0b0ff'][Math.min(3, swordTier)];
+    const bl = ['#dfe6ee', '#b8b4ac', '#8fe4ff', '#8a5ad8', '#ff5a2a'][Math.min(4, swordTier)], hl = ['#ffffff', '#e0dcd4', '#e8fbff', '#d0b0ff', '#ffd080'][Math.min(4, swordTier)];
     ctx.fillStyle = bl; ctx.fillRect(4.5 * S, -S, len - 5 * S, 2 * S);
     ctx.fillStyle = hl; ctx.fillRect(4.5 * S, -S, len - 5 * S, S * 0.7);
     ctx.fillStyle = bl; ctx.beginPath(); ctx.moveTo(len - 0.5 * S, -S); ctx.lineTo(len + 1.5 * S, 0); ctx.lineTo(len - 0.5 * S, S); ctx.fill();
@@ -2196,6 +2274,9 @@
       ctx.fillStyle = '#9a6a10'; ctx.fillRect(x - 3 * S * sq - S * 0.5, by - 3 * S, (6 * sq + 1) * S, 6 * S);
       ctx.fillStyle = '#ffd24a'; ctx.fillRect(x - 2.5 * S * sq, by - 2.5 * S, 5 * S * sq, 5 * S);
       ctx.fillStyle = '#fff3b0'; ctx.fillRect(x - 1.5 * S * sq, by - 2 * S, S * sq, 2 * S);
+    } else if (it.k === 'karte') {
+      ctx.fillStyle = '#5a3a20'; ctx.fillRect(x - 4.5 * S, by - 3.5 * S, 9 * S, 7 * S); ctx.fillStyle = '#f0e0b0'; ctx.fillRect(x - 4 * S, by - 3 * S, 8 * S, 6 * S);
+      ctx.strokeStyle = '#d8302a'; ctx.lineWidth = S; ctx.beginPath(); ctx.moveTo(x - S, by - S); ctx.lineTo(x + 2 * S, by + 2 * S); ctx.moveTo(x + 2 * S, by - S); ctx.lineTo(x - S, by + 2 * S); ctx.stroke();
     } else if (it.k !== 'heart') {
       const c = RES[it.k] ? RES[it.k][2] : '#fff';
       if (it.k === 'holz') { ctx.fillStyle = '#3a2414'; ctx.fillRect(x - 4.5 * S, by - 2.5 * S, 9 * S, 5 * S); ctx.fillStyle = '#8a5a34'; ctx.fillRect(x - 4 * S, by - 2 * S, 8 * S, 4 * S); ctx.fillStyle = '#d8b07a'; ctx.fillRect(x + 2 * S, by - 2 * S, 2 * S, 4 * S); ctx.fillStyle = '#a8743f'; ctx.fillRect(x - 4 * S, by - 2 * S, 6 * S, S); }
@@ -2292,6 +2373,46 @@
       P(top, -10, 6, 20, 15, rk); P(top, -9, 7, 18, 12, rk2); P(top, -3, 9, 1, 6, lava); P(top, -3, 12, 5, 1, lava); P(top, 3, 8, 1, 4, lava);
       P(top, -6, 0, 12, 8, rk); P(top, -5, 1, 10, 6, rk2); P(top, -4, 3, 3, 2, lava); P(top, 1, 3, 3, 2, lava);
       P(top, -14, 7 - raise * 8, 5, 12, rk); P(top, 9, 7 - raise * 8, 5, 12, rk); P(top, -14, 17 - raise * 8, 5, 3, rk2); P(top, 9, 17 - raise * 8, 5, 3, rk2);
+    } else if (D.look) {
+      // neue Bosse in den Höhlen der Inselarten
+      if (e.wind > 0) {
+        const p = 1 - e.wind / 0.75, sx = ox + e.sx * u, sy = oy + e.sy * u;
+        ctx.strokeStyle = `rgba(255,60,40,${0.4 + p * 0.5})`; ctx.lineWidth = S; ctx.fillStyle = `rgba(255,60,40,${0.12 + p * 0.15})`;
+        ctx.beginPath(); ctx.ellipse(sx, sy, D.r * u * p, D.r * u * p * 0.55, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.ellipse(sx, sy, D.r * u, D.r * u * 0.55, 0, 0, Math.PI * 2); ctx.stroke();
+      }
+      const c0 = fl ? '#fff' : D.c[0], c1 = fl ? '#fff' : D.c[1], raise = e.wind > 0 ? 1 - e.wind / 0.75 : 0, bob = Math.sin(t / 240) * S;
+      shadow(x, y, 15 * S, 0.35);
+      const E2 = (a, b, rx, ry, c) => { ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(x + a * S, y + b * S + bob, rx * S, ry * S, 0, 0, Math.PI * 2); ctx.fill(); };
+      if (D.look === 'wurm') {
+        for (let i = 4; i >= 0; i--) { const a = Math.sin(t / 300 + i * 0.8) * 3 * (i / 4); E2(a, -i * 7 - raise * 6, 9 - i * 0.6 + 1, 6, '#3a2410'); E2(a, -i * 7 - raise * 6, 9 - i * 0.6, 5.2, i % 2 ? c0 : c1); }
+        const hy = -34 - raise * 8; E2(0, hy, 9, 8, '#3a2410'); E2(0, hy, 8, 7, c1); E2(0, hy + 3, 6, 3, '#2a0a0a');
+        for (let i = -2; i <= 2; i++) { ctx.fillStyle = '#f0ead6'; ctx.fillRect(x + (i * 2.2 - 0.6) * S, y + (hy + 1) * S + bob, 1.2 * S, 2 * S); }
+        E2(-4, hy - 4, 1.6, 1.6, '#ff3a2a'); E2(4, hy - 4, 1.6, 1.6, '#ff3a2a');
+      } else if (D.look === 'wyrm') {
+        const fw = Math.sin(t / 180) * 4 + raise * 6;
+        for (const sd of [-1, 1]) { ctx.fillStyle = c0; ctx.beginPath(); ctx.moveTo(x + sd * 6 * S, y - 18 * S + bob); ctx.lineTo(x + sd * 26 * S, y - (30 + fw) * S + bob); ctx.lineTo(x + sd * 22 * S, y - 12 * S + bob); ctx.lineTo(x + sd * 10 * S, y - 10 * S + bob); ctx.fill(); }
+        E2(0, -14, 12, 10, '#1a0a0a'); E2(0, -14, 11, 9, c0); E2(0, -11, 7, 6, c1);
+        ctx.strokeStyle = c0; ctx.lineWidth = 4 * S; ctx.beginPath(); ctx.moveTo(x + 8 * S, y - 8 * S + bob); ctx.quadraticCurveTo(x + 20 * S, y - 2 * S, x + 18 * S + Math.sin(t / 300) * 4 * S, y - 12 * S); ctx.stroke();
+        const hy = -30 - raise * 6; E2(0, hy, 8, 7, '#1a0a0a'); E2(0, hy, 7, 6, c0); E2(0, hy + 4, 5, 3, c1);
+        ctx.fillStyle = '#f0ead6'; ctx.fillRect(x - 6 * S, y + (hy - 9) * S + bob, 2 * S, 4 * S); ctx.fillRect(x + 4 * S, y + (hy - 9) * S + bob, 2 * S, 4 * S);
+        E2(-3, hy - 1, 1.5, 1.5, '#ffe060'); E2(3, hy - 1, 1.5, 1.5, '#ffe060');
+        if (e.wind > 0) { ctx.fillStyle = e.k === 'feuerdrache' ? 'rgba(255,140,40,.7)' : 'rgba(180,240,255,.7)'; ctx.beginPath(); ctx.arc(x, y + (hy + 6) * S, (3 + raise * 5) * S, 0, Math.PI * 2); ctx.fill(); }
+      } else if (D.look === 'frosch') {
+        const jump = raise * 10;
+        E2(0, -12 - jump, 16, 11, '#0a2a20'); E2(0, -12 - jump, 15, 10, c1); E2(0, -9 - jump, 10, 6, '#c8f0a0');
+        for (const sd of [-1, 1]) { E2(sd * 8, -24 - jump, 5, 5, '#0a2a20'); E2(sd * 8, -24 - jump, 4.2, 4.2, '#fff'); E2(sd * 8 + 1, -24 - jump, 2, 2.5, '#111'); E2(sd * 14, -2 - jump * 0.5, 6, 3, c0); }
+        ctx.fillStyle = '#f4e04d'; for (let i = 0; i < 6; i++) ctx.fillRect(x + ((h2(i, 1, 5) - 0.5) * 22) * S, y + (-16 + h2(i, 2, 5) * 8 - jump) * S + bob, 2 * S, 2 * S);
+        ctx.fillStyle = '#f4c430'; ctx.fillRect(x - 5 * S, y + (-34 - jump) * S + bob, 10 * S, 3 * S); for (let i = 0; i < 3; i++) ctx.fillRect(x + (-5 + i * 4) * S, y + (-37 - jump) * S + bob, 2 * S, 3 * S);
+      } else {
+        // Sporenkönigin
+        E2(0, -8, 8, 9, '#e8dcc6'); E2(-3, -12, 1.4, 2, '#111'); E2(3, -12, 1.4, 2, '#111');
+        for (const sd of [-1, 1]) { ctx.strokeStyle = '#e8dcc6'; ctx.lineWidth = 3 * S; ctx.beginPath(); ctx.moveTo(x + sd * 7 * S, y - 8 * S + bob); ctx.lineTo(x + sd * (14 + raise * 4) * S, y - (4 + raise * 12) * S + bob); ctx.stroke(); }
+        E2(0, -22, 19, 10, '#2a0a3a'); E2(0, -23, 18, 9, c0); E2(0, -25, 14, 6, c1);
+        ctx.fillStyle = '#fff0ff'; for (const [a, b] of [[-10, -26], [-3, -29], [6, -27], [12, -23], [-14, -21]]) ctx.fillRect(x + a * S, y + b * S + bob, 3 * S, 2 * S);
+        ctx.fillStyle = '#f4c430'; ctx.fillRect(x - 5 * S, y - 36 * S + bob, 10 * S, 3 * S); for (let i = 0; i < 3; i++) ctx.fillRect(x + (-5 + i * 4) * S, y - 39 * S + bob, 2 * S, 3 * S);
+        ctx.fillStyle = 'rgba(220,160,255,.5)'; for (let i = 0; i < 6; i++) { const ph = (t / 1500 + i / 6) % 1; ctx.fillRect(x + Math.sin(i * 2 + ph * 6) * 20 * S, y - (20 + ph * 30) * S, 2 * S, 2 * S); }
+      }
     } else {
       // Höhlentroll
       if (e.wind > 0) {
@@ -2324,17 +2445,18 @@
     const u = TP * S, sx = shake > 0 ? (Math.random() - 0.5) * shake * S * 0.5 : 0, sy = shake > 0 ? (Math.random() - 0.5) * shake * S * 0.5 : 0;
     return [u, Math.round(W / 2 - me.x * u + sx), Math.round(H / 2 - (me.y - 0.5) * u + sy)];
   }
+  const sameZone = (o, cave_) => (cave_ ? !!o.cave && o.cidx === caveSpec.idx : !o.cave);
   function drawPeople(ents, ox, oy, u, t, cave_) {
     if (!me.inBoat) ents.push({ y: me.y, f: () => drawPerson(ox + me.x * u, oy + me.y * u, me.col, me.dir, me.frame, !cave_ && elev(me.x, me.y) < 0 && !(nearBig(me.x, me.y) && townAt(me.x, me.y) === 4), t, me.atk > 0 ? 1 - me.atk / (me.atkT || ATK_T) : null, me.inv > 0, sk('wirbel'), gear('schwert')) });
     for (const o of others.values()) {
-      if (!!o.cave !== !!cave_ || o.inBoat) continue;
+      if (!sameZone(o, cave_) || o.inBoat) continue;
       ents.push({ y: o.y, f: () => drawPerson(ox + o.x * u, oy + o.y * u, o.col, o.dir, o.moving ? (Math.floor(o.ft / 0.13) % 4) + 1 : 0, !cave_ && elev(o.x, o.y) < 0, t, o.atk ? Math.min(1, (o.at || 0) / ATK_T) : null) });
     }
   }
   function drawTags(ox, oy, u, cave_) {
     const now = Date.now();
     for (const o of others.values()) {
-      if (!!o.cave !== !!cave_) continue;
+      if (!sameZone(o, cave_)) continue;
       const hx = ox + o.x * u, hy = oy + o.y * u - (o.inBoat ? 0.6 : 1.6) * u;
       nameTag(hx, hy, `${o.name} · St. ${o.lvl || 1}`, false);
       const b = bubbles.get(o.name); if (b && now - b.t < 6000) bubble(hx, hy - 7 * S, b.m);
@@ -2361,6 +2483,7 @@
     ctx.globalAlpha = 1;
     for (const p of wake) { ctx.globalAlpha = Math.max(0, 0.6 - p.t * 0.38); ctx.fillStyle = '#eaf8ff'; const r = (1 + p.t * 2) * S; ctx.fillRect(sx(p.x) - r, sy(p.y) - r / 2, r * 2, Math.max(S, r / 2)); }
     ctx.globalAlpha = 1;
+    for (const m of prog.maps || []) if (Math.hypot(m.x - me.x, m.y - me.y) < 30) { const a = sx(m.x), b = sy(m.y); ctx.strokeStyle = 'rgba(120,20,10,.85)'; ctx.lineWidth = 3 * S; ctx.beginPath(); ctx.moveTo(a - 5 * S, b - 3 * S); ctx.lineTo(a + 5 * S, b + 3 * S); ctx.moveTo(a + 5 * S, b - 3 * S); ctx.lineTo(a - 5 * S, b + 3 * S); ctx.stroke(); ctx.strokeStyle = '#ff4a3a'; ctx.lineWidth = 1.6 * S; ctx.stroke(); }
     // alles mit Höhe nach Tiefe sortiert: Bäume, Felsen, Figuren, Boote
     const ents = [], mx0 = (-ox) / u - 2, mx1 = (W - ox) / u + 2, my0 = (-oy) / u - 1, my1 = (H - oy) / u + 3.5;
     for (const c of vis) for (const o of c.objs) if (o.x > mx0 && o.x < mx1 && o.y > my0 && o.y < my1) ents.push({ y: o.y, f: () => drawObj(o, ox, oy, u, t) });
@@ -2374,7 +2497,7 @@
       for (const pl of T.plots) if (inV(pl.x + 1, pl.y + 0.6)) ents.push({ y: pl.y + 0.6, f: () => drawPlotSign(pl, ox, oy, u) });
     }
     for (const st of stations()) if (st.x > mx0 && st.x < mx1 && st.y > my0 && st.y < my1) ents.push({ y: st.y, f: () => drawObj({ k: 'st', st: st.k, x: st.x, y: st.y }, ox, oy, u, t) });
-    const E = caveEnt(); if (E.x > mx0 && E.x < mx1 && E.y > my0 && E.y < my1 + 2) ents.push({ y: E.y, f: () => drawObj({ k: 'ent', x: E.x, y: E.y }, ox, oy, u, t) });
+    for (const { e: E } of entsNear(me.x, me.y)) if (E.x > mx0 && E.x < mx1 && E.y > my0 && E.y < my1 + 2) ents.push({ y: E.y, f: () => drawObj({ k: 'ent', x: E.x, y: E.y }, ox, oy, u, t) });
     ents.push({ y: boat.y, f: () => drawBoat(sx(boat.x), sy(boat.y), boat.h, boat.sail, me.col, me.inBoat ? boat.v : 0, t / 1000, me.inBoat) });
     for (const o of others.values()) ents.push({ y: o.by, f: () => drawBoat(sx(o.bx), sy(o.by), o.bh, o.sail, o.col, o.inBoat && o.moving ? 2 : 0, t / 1000, o.inBoat) });
     for (const e of enemies) ents.push({ y: e.y, f: () => drawEnemy(e, ox, oy, u, t) });
@@ -2391,6 +2514,24 @@
       if (px < -rr * 2 || px > W + rr * 2 || py < -rr * 2 || py > H + rr * 2) continue;
       const gr = ctx.createRadialGradient(px, py, 0, px, py, rr); gr.addColorStop(0, 'rgba(10,20,40,.13)'); gr.addColorStop(1, 'rgba(10,20,40,0)');
       ctx.fillStyle = gr; ctx.fillRect(px - rr, py - rr, rr * 2, rr * 2);
+    }
+    const dk = darkness();
+    if (dk > 0.02) {
+      const lw = lc.width, lh = lc.height, L4 = 4;
+      lg.globalCompositeOperation = 'source-over'; lg.fillStyle = `rgba(8,12,42,${dk})`; lg.fillRect(0, 0, lw, lh);
+      lg.globalCompositeOperation = 'destination-out';
+      const light = (x, y, r, a) => { const px = (ox + x * u) / L4, py = (oy + y * u) / L4, rr = r * u / L4; if (px < -rr || py < -rr || px > lw + rr || py > lh + rr) return; const gr = lg.createRadialGradient(px, py, 0, px, py, rr); gr.addColorStop(0, `rgba(0,0,0,${a})`); gr.addColorStop(0.55, `rgba(0,0,0,${a * 0.6})`); gr.addColorStop(1, 'rgba(0,0,0,0)'); lg.fillStyle = gr; lg.fillRect(px - rr, py - rr, rr * 2, rr * 2); };
+      const fl = Math.sin(t / 90) * 0.15;
+      light(me.x, me.y - 0.5, 5.5 + fl, 1);
+      for (const o of others.values()) if (!o.cave) light(o.x, o.y - 0.5, 4, 0.9);
+      for (const st of stations()) if (st.k !== 'werk') light(st.x, st.y - 0.6, 3.2 + fl, 0.85);
+      for (const { e: E } of entsNear(me.x, me.y)) light(E.x, E.y - 1.8, 3.5 + fl, 0.85);
+      if (nearBig(me.x, me.y)) {
+        const T = town(); for (const hs of T.houses) light(hs.x, hs.y - 1.2, 3.2, 0.8); light(T.V.x, T.V.y, 3, 0.6);
+        for (const pl of T.plots) { const P2 = PLOTS[pl.id]; if (!P2) continue; for (const [key, [, o]] of Object.entries(P2.it)) if (o && PIECES[o] && PIECES[o].light) { const [lx, ly] = key.split(',').map(Number); light(pl.x + lx + 0.5, pl.y + ly + 0.3, o === 'laterne' ? 5 : 4 + fl, 0.95); } }
+      }
+      ctx.imageSmoothingEnabled = true; ctx.drawImage(lc, 0, 0, lw * L4, lh * L4); ctx.imageSmoothingEnabled = false;
+      ctx.fillStyle = 'rgba(255,255,255,.8)'; for (let i = 0; i < 24 && dk > 0.4; i++) { const a2 = h2(i, 3, 980), b2 = h2(i, 4, 980); if (Math.sin(t / 700 + i) > 0.3) ctx.fillRect(a2 * W, b2 * H * 0.5, S, S); }
     }
     // Stimmung je Insel: Schnee, Asche und Glut, Sporen, Glühwürmchen
     const here = nearestIsland(me.x, me.y), hb = here ? here.b : -1;
@@ -2414,7 +2555,7 @@
     const sx0 = Math.max(0, Math.floor(-ox / u)), sy0 = Math.max(0, Math.floor(-oy / u)), sx1 = Math.min(CW, Math.ceil((W - ox) / u)), sy1 = Math.min(CHH, Math.ceil((H - oy) / u));
     if (sx1 > sx0 && sy1 > sy0) ctx.drawImage(C.canvas, sx0 * TP, sy0 * TP, (sx1 - sx0) * TP, (sy1 - sy0) * TP, ox + sx0 * u, oy + sy0 * u, (sx1 - sx0) * u, (sy1 - sy0) * u);
     const ents = [], inView = (x, y) => x > sx0 - 2 && x < sx1 + 2 && y > sy0 - 2 && y < sy1 + 3;
-    C.chests.forEach(([x, y], i) => { if (inView(x, y)) ents.push({ y: y + 0.8, f: () => drawChest(ox + (x + 0.5) * u, oy + (y + 0.8) * u, caveSave.chests[i] && Date.now() - caveSave.chests[i] < 30 * 60e3) }); });
+    C.chests.forEach(([x, y], i) => { if (inView(x, y)) ents.push({ y: y + 0.8, f: () => drawChest(ox + (x + 0.5) * u, oy + (y + 0.8) * u, cs().chests[i] && Date.now() - cs().chests[i] < 30 * 60e3) }); });
     for (const e of enemies) if (inView(e.x, e.y)) ents.push({ y: e.y, f: () => drawEnemy(e, ox, oy, u, t) });
     for (const it of items) ents.push({ y: it.y, f: () => drawItem(it, ox, oy, u, t) });
     drawPeople(ents, ox, oy, u, t, true);
@@ -2428,7 +2569,7 @@
     const light = (x, y, r, a) => { const px = (ox + x * u) / L4, py = (oy + y * u) / L4, rr = r * u / L4; if (px < -rr || py < -rr || px > lw + rr || py > lh + rr) return; const gr = lg.createRadialGradient(px, py, 0, px, py, rr); gr.addColorStop(0, `rgba(0,0,0,${a})`); gr.addColorStop(0.55, `rgba(0,0,0,${a * 0.65})`); gr.addColorStop(1, 'rgba(0,0,0,0)'); lg.fillStyle = gr; lg.fillRect(px - rr, py - rr, rr * 2, rr * 2); };
     const fl = Math.sin(t / 90) * 0.15 + Math.sin(t / 37) * 0.1;
     light(me.x, me.y - 0.5, 7 + fl, 1);
-    for (const o of others.values()) if (o.cave) light(o.x, o.y - 0.5, 4.5, 0.9);
+    for (const o of others.values()) if (sameZone(o, true)) light(o.x, o.y - 0.5, 4.5, 0.9);
     for (const [x, y] of C.torches) light(x, y, 4.6 + fl, 0.95);
     for (const [x, y] of C.crystals) light(x, y, 2.8, 0.75);
     for (const [x, y, k] of C.shrooms) if (k) light(x + 0.5, y + 0.5, 1.6, 0.6);
@@ -2464,7 +2605,8 @@
       for (let cy = c0y; cy <= c1y; cy++) for (let cx = c0x; cx <= c1x; cx++) { const isl = island(cx, cy); if (!isl || !found.has(isl.name)) continue; const [a, b] = P(isl.x, isl.y); g.strokeText(isl.name, a, b - isl.r / step - 3); g.fillText(isl.name, a, b - isl.r / step - 3); }
     }
     const dot = (x, y, col, r) => { const [a, b] = P(x, y); g.fillStyle = '#000'; g.beginPath(); g.arc(a, b, r + 1.2, 0, Math.PI * 2); g.fill(); g.fillStyle = col; g.beginPath(); g.arc(a, b, r, 0, Math.PI * 2); g.fill(); };
-    const E = caveEnt(); dot(E.x, E.y, '#2a2028', big ? 2.5 : 2);
+    for (const { e: E } of entsNear(me.x, me.y)) dot(E.x, E.y, '#2a2028', big ? 2.5 : 2);
+    for (const m of prog.maps || []) { const [a, b] = P(m.x, m.y); if (a > 0 && b > 0 && a < N && b < N) { g.strokeStyle = '#000'; g.lineWidth = 4; g.beginPath(); g.moveTo(a - 4, b - 4); g.lineTo(a + 4, b + 4); g.moveTo(a + 4, b - 4); g.lineTo(a - 4, b + 4); g.stroke(); g.strokeStyle = '#ff3a2a'; g.lineWidth = 2; g.stroke(); } }
     { const T = town(), [a, b] = P(T.V.x, T.V.y);
       if (a > 4 && b > 4 && a < N - 4 && b < N - 4) { g.font = `${big ? 12 : 10}px system-ui`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('🏠', a, b); if (big) { g.font = '700 9px system-ui'; g.fillStyle = '#fff'; g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 2.5; g.strokeText('Lindmark', a, b + 11); g.fillText('Lindmark', a, b + 11); } }
       else { const ang = Math.atan2(T.V.y - me.y, T.V.x - me.x), rr = N / 2 - (big ? 12 : 10), qx = N / 2 + Math.cos(ang) * rr, qy = N / 2 + Math.sin(ang) * rr; g.save(); g.translate(qx, qy); g.rotate(ang); g.fillStyle = '#ffd27a'; g.strokeStyle = '#000'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(7, 0); g.lineTo(-5, -5); g.lineTo(-2, 0); g.lineTo(-5, 5); g.closePath(); g.fill(); g.stroke(); g.restore(); g.font = '9px system-ui'; g.textAlign = 'center'; g.fillText('🏠', qx - Math.cos(ang) * 12, qy - Math.sin(ang) * 12); } }
@@ -2482,7 +2624,7 @@
     }
     const dot = (x, y, col, r) => { g.fillStyle = '#000'; g.beginPath(); g.arc((x - x0) * sc, (y - y0) * sc, r + 1.2, 0, Math.PI * 2); g.fill(); g.fillStyle = col; g.beginPath(); g.arc((x - x0) * sc, (y - y0) * sc, r, 0, Math.PI * 2); g.fill(); };
     dot(C.EX + 0.5, C.EY + 0.5, '#fff3b0', 2.5);
-    for (const o of others.values()) if (o.cave) dot(o.x, o.y, SHIRTS[o.col % 8], 2);
+    for (const o of others.values()) if (sameZone(o, true)) dot(o.x, o.y, SHIRTS[o.col % 8], 2);
     dot(me.x, me.y, '#ffd27a', 3);
   }
   function hudTick() {
@@ -2493,15 +2635,17 @@
     hud.pts.hidden = !prog.pts; hud.dot.hidden = !prog.pts; hud.pts.textContent = prog.pts;
     if (me.inCave) {
       hud.windBox.style.display = 'none';
-      if (lastIsle !== 'Kristallhöhle') { lastIsle = 'Kristallhöhle'; hud.isle.textContent = 'Kristallhöhle'; }
-      const boss = enemies.find(e => e.k === 'troll');
+      if (lastIsle !== caveSpec.name) { lastIsle = caveSpec.name; hud.isle.textContent = caveSpec.name; }
+      const boss = enemies.find(e => e.d.boss);
+      if (boss) hud.boss.firstChild.textContent = boss.d.name;
       hud.boss.style.display = boss && boss.awake ? 'block' : 'none';
       if (boss) hud.bossBar.style.width = Math.max(0, boss.hp / boss.max * 100) + '%';
     } else {
       hud.windBox.style.display = ''; hud.boss.style.display = 'none';
       hud.arrow.style.setProperty('--a', w.a + 'rad');
       const str = w.s < 0.6 ? 'schwach' : w.s < 0.85 ? 'mäßig' : 'kräftig';
-      hud.wind.innerHTML = `Wind nach ${dirName(w.a)}, ${str}` + (me.inBoat ? `<br>Fahrt: ${(boat.v * 2).toFixed(1)} Knoten${boat.sail ? '' : ' (Paddeln)'}` : '');
+      const dp = dayPhase(), nightLeft = dp >= 0.64 ? Math.ceil((1 - dp) * DAYLEN / 60) : 0;
+      hud.wind.innerHTML = `${isNight() ? `🌙 Nacht · noch ${nightLeft} Min.` : dp > 0.55 && dp < 0.64 ? '🌇 Abend' : '☀️ Tag'}<br>Wind nach ${dirName(w.a)}, ${str}` + (me.inBoat ? `<br>Fahrt: ${(boat.v * 2).toFixed(1)} Knoten${boat.sail ? '' : ' (Paddeln)'}` : '');
       const isl = nearestIsland(me.x, me.y);
       const place = isl ? isl.name : T_NAMES[cls(elev(me.x, me.y))] || 'Offenes Meer';
       if (isl && isl.b && lastIsle !== place) qEvent('visit', isl.b);
@@ -2548,11 +2692,11 @@
       const seen = new Set();
       for (const p of m.p || []) {
         let [id, name, col, x, y, dir, moving, inBoat, bx, by, bh, sail, atk, lvl] = p; seen.add(id);
-        const inCave = x < COX / 2; if (inCave) { x -= COX; y -= COY; }
+        const inCave = x < COX / 2; let cidx = 0; if (inCave) { cidx = Math.floor((x - COX) / 1000); x -= COX + cidx * 1000; y -= COY; }
         const tgt = { x, y, bx: inBoat ? x : bx, by: inBoat ? y : by, bh };
         let o = others.get(id);
-        if (!o || o.cave !== inCave || Math.hypot(o.x - x, o.y - y) > 20) { o = { ...tgt, t: tgt, ft: 0 }; others.set(id, o); }
-        Object.assign(o, { name, col, dir, moving, inBoat, sail, atk, lvl: lvl || 1, cave: inCave, t: tgt });
+        if (!o || o.cave !== inCave || o.cidx !== cidx || Math.hypot(o.x - x, o.y - y) > 20) { o = { ...tgt, t: tgt, ft: 0 }; others.set(id, o); }
+        Object.assign(o, { name, col, dir, moving, inBoat, sail, atk, lvl: lvl || 1, cave: inCave, cidx, t: tgt });
       }
       for (const id of [...others.keys()]) if (!seen.has(id)) others.delete(id);
       mapDirty = true;
@@ -2572,7 +2716,11 @@
     window.addEventListener('blur', blur);
     const hint = root.querySelector('.is-hint'); hint.style.display = ''; clearTimeout(openGame.ht); openGame.ht = setTimeout(() => { hint.style.display = 'none'; }, 20000);
     resize(); lastT = 0; others.clear(); mapDirty = true; lastIsle = '';
-    if (me.inCave) { buildCave(); spawnEnemies(); }
+    if (me.inCave) {
+      caveSpec = START_CAVE;
+      if (me.caveKey && me.caveKey !== 'start') { const [cx, cy] = me.caveKey.slice(1).split(',').map(Number), sp = islandCave(island(cx, cy)); if (sp) caveSpec = sp; }
+      buildCave(caveSpec); spawnEnemies();
+    }
     join();
     addLog('Willkommen im <b>Inselreich</b>! Das ist ein früher Prototyp.');
     if (!me.inCave) addLog('Im Norden der Startinsel liegt die <b>Kristallhöhle</b>. Dort lauern Gegner!'); if (!found.has(BIG.name)) addLog('Weit im <b>Westen</b> liegt die große <b>Heimatinsel</b> mit dem Dorf Lindmark. Segle hin! (Pfeil auf der Karte)');
@@ -2591,6 +2739,6 @@
   }
   window.Insel = {
     open: openGame, close, net, isOpen: () => open, rejoin: () => { if (open) join(); },
-    _dbg: { get PLOTS() { return PLOTS; }, myPlotId, placeAt, toggleBuild, get buildSel() { return buildSel; }, set buildSel(v) { buildSel = v; }, get baseNear() { return baseNear; }, toggleChest, town, BIG, quests, qEvent, toggleNpc, get nearNpc() { return nearNpc; }, interact, stations, toggleCraft, craft, useItem, buff, get nearSt() { return nearSt; }, get prog() { return prog; }, gainXP, toggleSkills, me, boat, others, elev, tileAt, objAt, isCut, get bag() { return bag; }, wind, island, spawn, toggleBoat, toggleSail, caveEnt, enterCave, leaveCave, attack, get enemies() { return enemies; }, get cave() { return cave; } },
+    _dbg: { islandCave, entsNear, newMap, darkness, get caveSpec() { return caveSpec; }, get PLOTS() { return PLOTS; }, myPlotId, placeAt, toggleBuild, get buildSel() { return buildSel; }, set buildSel(v) { buildSel = v; }, get baseNear() { return baseNear; }, toggleChest, town, BIG, quests, qEvent, toggleNpc, get nearNpc() { return nearNpc; }, interact, stations, toggleCraft, craft, useItem, buff, get nearSt() { return nearSt; }, get prog() { return prog; }, gainXP, toggleSkills, me, boat, others, elev, tileAt, objAt, isCut, get bag() { return bag; }, wind, island, spawn, toggleBoat, toggleSail, caveEnt, enterCave, leaveCave, attack, get enemies() { return enemies; }, get cave() { return cave; } },
   };
 })();
