@@ -298,6 +298,13 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 29, title: 'Inselreich: Stufen-Sperren und Lehrkapitel', date: '03.11.2026', items: [
+      ['Neu', 'Inselreich: Fähigkeiten anderer Spieler sind jetzt sichtbar – Feuerbälle, Blitze, Eisringe, Wurzeln und mehr'],
+      ['Umstellung', 'Inselreich: Fortgeschrittene Waffen, Rüstungen, Boote und Fähigkeiten brauchen eine bestimmte Stufe (🔒 zeigt, ab wann)'],
+      ['Umstellung', 'Inselreich: Bosse kämpfen erst ab einer Stufe – Höhlentroll ab 5, Sandwurm 9, Frostwyrm 11, Riesenfrosch 12, Sporenkönigin 14, Feuerdrache 16'],
+      ['Neu', 'Inselreich: Drei Lehrkapitel für Fortgeschrittene bei Lotsin Anna – ab Stufe 5, 8 und 12'],
+      ['Neu', 'Inselreich: Der erste Sieg über jeden Boss gibt einen Skillpunkt extra'],
+    ] },
     { id: 28, title: 'Inselreich: Neue Gegner und stärkere Bosse', date: '03.11.2026', items: [
       ['Neu', 'Inselreich: Sechs neue Gegner mit eigenem Verhalten – Wildschweine stürmen los, Kaktuswächter schießen Dornen, Eisgeister teleportieren sich, Dschungelschlangen schlängeln, Feuerkobolde werfen Feuerbälle und Sporenboviste explodieren'],
       ['Neu', 'Inselreich: Jeder Boss hat jetzt einen Spezialangriff: Felswurf, Eingraben, Eisatem, Riesensprung, Feuersalve oder Brut'],

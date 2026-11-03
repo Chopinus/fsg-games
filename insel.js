@@ -1217,6 +1217,8 @@
     while (prog.xp >= xpNeed(prog.lvl)) {
       prog.xp -= xpNeed(prog.lvl); prog.lvl++; prog.pts++;
       say(`🌟 Stufe ${prog.lvl}! Du hast einen Skillpunkt bekommen (K)`);
+      { const nc = CHAPTERS.find(c => c.lv === prog.lvl); if (nc && !tutActive()) setTimeout(() => { say(`📜 Neues Lehrkapitel „${nc.n}“ – frag Lotsin Anna!`); tutBox(); }, 3000); }
+      { const unl = RECIPES.filter(r => r.lv === prog.lvl).map(r => r.i + ' ' + r.n).concat(Object.values(ABIL).filter(a => a.lv === prog.lvl).map(a => a.i + ' ' + a.n)); if (unl.length) addLog(`🔓 Ab jetzt freigeschaltet: ${unl.join(', ')}`); }
       addLog(`<b>Stufe ${prog.lvl} erreicht!</b> Öffne mit 🌟 den Skilltree.`);
       for (let i = 0; i < 30; i++) { const a = Math.random() * Math.PI * 2, s2 = 2 + Math.random() * 4; parts.push({ x: me.x, y: me.y - 0.6, z: 0, vx: Math.cos(a) * s2, vy: Math.sin(a) * s2, t: 0, life: 0.9, col: i % 2 ? '#ffd27a' : '#e0b8ff', sz: 2 }); }
       me.hp = maxHp();
@@ -1569,7 +1571,7 @@
     if (lonely && !seaFoes.some(f => f.k === 'pirat') && Math.random() < (isNight() || storm() > 0 ? 0.02 : 0.008)) { const p = spawnAt(16); if (p) { seaFoes.push({ k: 'pirat', x: p[0], y: p[1], hp: 6, t: 0, cd: 3, h: 0, flash: 0 }); say('🏴‍☠️ Piraten! ' + (gear('kanone') ? 'Feuer mit F, Klick oder ⚔️!' : 'Ohne Kanone hilft nur Flucht – die Werft baut eine.')); } }
   }
   function sinkFoe(f) {
-    f.dead = true;
+    f.dead = true; tutEv('sink', f.k);
     for (let i = 0; i < 18; i++) { const a = Math.random() * Math.PI * 2; parts.push({ x: f.x, y: f.y, z: 0, vx: Math.cos(a) * 4, vy: Math.sin(a) * 4, t: 0, life: 0.7, col: i % 2 ? '#8a5a34' : '#dff4ff', sz: 3 }); }
     if (f.k === 'pirat') { me.coins += 40; texts.push({ x: boat.x, y: boat.y - 1.6, s: '+40 🪙', t: 0, col: '#ffd27a' }); gainXP(50, boat.x, boat.y - 2); newMap(); st().piraten = (st().piraten || 0) + 1; say('🏴‍☠️ Piratenschiff versenkt!'); }
     else { me.coins += 6; gainXP(12, boat.x, boat.y - 2); say('🦈 Der Hai ist abgetaucht'); }
@@ -1694,7 +1696,7 @@
       if (race.i === 0) race.t0 = Date.now();
       race.i++; shake = 2;
       for (let i = 0; i < 12; i++) parts.push({ x: bx, y: by, z: 0, vx: (Math.random() - 0.5) * 4, vy: -Math.random() * 4, t: 0, life: 0.6, col: i % 2 ? '#ffd27a' : '#fff', sz: 2 });
-      if (race.i >= 6) { const ms = Date.now() - race.t0; race = null; say(`🏁 Ziel! ${(ms / 1000).toFixed(1)} Sekunden`); gainXP(40, boat.x, boat.y - 2); me.coins += 20; save(); if (typeof send === 'function') send({ t: 'i_race', ms }); st().regatta = (st().regatta || 0) + 1; }
+      if (race.i >= 6) { const ms = Date.now() - race.t0; race = null; say(`🏁 Ziel! ${(ms / 1000).toFixed(1)} Sekunden`); gainXP(40, boat.x, boat.y - 2); me.coins += 20; save(); if (typeof send === 'function') send({ t: 'i_race', ms }); tutEv('race'); st().regatta = (st().regatta || 0) + 1; }
       else say(`Boje ${race.i} geschafft! Weiter zu Boje ${race.i + 1}`);
     }
   }
@@ -1805,7 +1807,7 @@
   ];
   const tutActive = () => prog.tut != null && prog.tut < TUT.length;
   function tutEv(ty, key) {
-    if (!tutActive()) return; const s = TUT[prog.tut];
+    if (!tutActive()) { chapterEv(ty, key); return; } const s = TUT[prog.tut];
     if (s.ev && (s.ev === ty || s.ev === ty + ':' + key)) tutNext();
   }
   function tutPoll() { if (tutActive() && !titleOn) { const s = TUT[prog.tut]; if (s.poll && s.poll()) tutNext(); } }
@@ -1817,7 +1819,8 @@
   }
   function tutBox() {
     if (!hud.tut) return;
-    if (!tutActive() || titleOn) { hud.tut.hidden = true; return; }
+    if (titleOn) { hud.tut.hidden = true; return; }
+    if (!tutActive()) { const c = activeChapter(); if (!c) { hud.tut.hidden = true; return; } const i = chp()[c.id] || 0, s2 = c.steps[i]; hud.tut.hidden = false; hud.tut.innerHTML = `<b>📜 ${c.n} ${i + 1}/${c.steps.length}</b><span>${s2.g}</span><small>${s2.tip}</small>`; return; }
     const s = TUT[prog.tut]; hud.tut.hidden = false;
     hud.tut.innerHTML = `<b>🧭 Tutorial ${prog.tut + 1}/${TUT.length}</b><span>${s.g}</span><small>${s.tip}</small>`;
   }
@@ -1830,7 +1833,8 @@
     ['🏡 Eigene Base', 'Bruno gibt dir einen Bauplatz südlich vom Dorf. Dort baust du mit 🔨 Böden, Wände, Truhen, ein Bett, Felder und Ställe. Alles bleibt gespeichert und alle sehen es.'],
     ['⛵ Boot, Wind und Schnellreise', 'Dein Boot wartet am Steg. Mit Segel bist du schnell, quer zum Wind am schnellsten. Mit 🧭 Reisen (Taste R) springst du vom Boot oder von einem Steg zwischen dem Hafen Lindmark und dem Steg in der Inselmitte hin und her.'],
     ['🦈 Gefahren auf See', 'Im tiefen Wasser jagen Haie, auf offener See lauern Piratenschiffe, und manchmal zieht ein Sturm auf. Mit der Bootskanone aus der Werft wehrst du dich.'],
-    ['🕳️ Höhlen und Bosse', 'Große Inseln haben Höhlen mit einem Boss. Bosse lassen seltene Materialien und oft eine Schatzkarte fallen. Mit der Schaufel gräbst du den Schatz am roten X aus.'],
+    ['🕳️ Höhlen und Bosse', 'Bosse gibt es in der Kristallhöhle auf der Startinsel (Höhlentroll, ab Stufe 5) und in den Höhlen großer Inseln: Sandwurm in der Wüste (ab 9), Frostwyrm im Schnee (ab 11), Riesenfrosch im Dschungel (ab 12), Sporenkönigin im Pilzwald (ab 14) und Feuerdrache auf Vulkaninseln (ab 16). Sie bringen viele Münzen und EP, Herzen, drei seltene Boss-Materialien für die besten Waffen, Rüstungen, Segel und Boote, oft eine Schatzkarte – und beim ersten Sieg einen Skillpunkt extra. Nach 10 Minuten kommen sie wieder.'],
+    ['🔒 Stufen', 'Fortgeschrittene Waffen, Rüstungen, Boote, Fähigkeiten und Bosse brauchen eine bestimmte Stufe. Was gesperrt ist, zeigt ein 🔒 mit der nötigen Stufe. Ab Stufe 5, 8 und 12 gibt es bei Anna neue Lehrkapitel.'],
     ['🌙 Tag und Nacht', 'Nachts wird es dunkel, und es kommen mehr und stärkere Gegner. Fackeln und Laternen machen Licht.'],
     ['🎣 Angeln', 'Mit einer Angel von Hein angelst du am Wasser (G). Jede Inselart und Tageszeit hat andere Fische – sie landen im Fischbuch.'],
     ['👥 Zusammen spielen', 'Auf einer Insel und in einer Höhle kämpft ihr gegen dieselben Gegner. Im Rucksack kannst du Geschenke machen und eine Crew gründen. Bei Greta gibt es die Regatta mit Bestenliste.'],
@@ -1839,6 +1843,7 @@
   npcBody.lotse = () => {
     const a = prog.tut ?? 0, done = a >= TUT.length;
     return (done ? '<p>Du kennst dich schon richtig gut aus! Wenn du etwas vergessen hast, lies einfach hier nach:</p>' : `<div class="is-tutnow"><b>Dein nächster Schritt (${a + 1}/${TUT.length})</b><span>${TUT[a].g}</span><small>${TUT[a].tip}</small></div><p class="is-npcsub">Hier kannst du alles nachlesen:</p>`)
+      + `<h4 class="is-h4">📜 Lehrkapitel für Fortgeschrittene</h4><div class="is-shop">${CHAPTERS.map(c => { const i = chp()[c.id] || 0, dn = i >= c.steps.length, lk = prog.lvl < c.lv; return `<div><i>${dn ? '✅' : lk ? '🔒' : '📜'}</i><span><b>${c.n}</b><small>${lk ? `ab Stufe ${c.lv}` : dn ? 'geschafft' : `Schritt ${i + 1}/${c.steps.length}: ${c.steps[i].g}`} · Belohnung 🪙 ${c.reward}</small></span></div>`; }).join('')}</div>`
       + `<div class="is-faq">${FAQ.map(([q, tx]) => `<details><summary>${q}</summary><p>${tx}</p></details>`).join('')}</div>`
       + `<div style="margin-top:10px">${done ? '<button class="is-ext" data-ext="tutreset">Tutorial neu starten</button>' : '<button class="is-ext" data-ext="tutskip">Tutorial überspringen</button>'}</div>`;
   };
@@ -1852,22 +1857,22 @@
     natur: { n: 'Heilerin Mara', i: '🌿', col: 2, hat: 'blumen', t: 'Heilung und Natur', hi: ['Die Insel heilt dich, wenn du sie lässt.', 'Wurzeln halten fester als jede Kette.'] },
   };
   const ABIL = {
-    feuerball: { s: 'magie', n: 'Feuerball', i: '🔥', lv: 2, pr: 60, cd: 4, rng: 9, d: 'Ein Feuerball fliegt in Zielrichtung und explodiert. Schaden in einer Fläche.' },
-    frost: { s: 'magie', n: 'Frostnova', i: '❄️', lv: 4, pr: 140, cd: 9, rng: 0, area: 3, d: 'Ein Eisring um dich herum: Schaden, und alle Gegner frieren kurz ein.' },
-    blitz: { s: 'magie', n: 'Kettenblitz', i: '⚡', lv: 7, pr: 260, cd: 7, rng: 7, d: 'Ein Blitz springt von Gegner zu Gegner – mit jeder Stufe einer mehr.' },
-    wirbel: { s: 'schwert', n: 'Wirbelklinge', i: '🌀', lv: 2, pr: 60, cd: 5, rng: 0, area: 2.3, d: 'Ein Drehhieb, der alle Gegner um dich trifft und wegschleudert.' },
-    ansturm: { s: 'schwert', n: 'Sturmangriff', i: '💨', lv: 4, pr: 140, cd: 6, rng: 4.5, d: 'Du sprintest nach vorn und triffst alles auf dem Weg. Gut zum Ausweichen!' },
-    erdstoss: { s: 'schwert', n: 'Erdstoß', i: '💥', lv: 7, pr: 260, cd: 10, rng: 0, area: 2.8, d: 'Ein Schlag auf den Boden: viel Schaden in der Nähe, Gegner sind betäubt.' },
-    pfeil: { s: 'bogen', n: 'Kraftpfeil', i: '🏹', lv: 2, pr: 60, cd: 2.5, rng: 11, d: 'Ein weiter Pfeil, der durch alle Gegner hindurchfliegt.' },
-    faecher: { s: 'bogen', n: 'Pfeilfächer', i: '🎯', lv: 4, pr: 140, cd: 6, rng: 8, d: 'Fünf Pfeile auf einmal im Fächer.' },
-    gift: { s: 'bogen', n: 'Giftpfeil', i: '🧪', lv: 7, pr: 260, cd: 8, rng: 10, d: 'Vergiftet den Gegner: Schaden über mehrere Sekunden.' },
-    heilung: { s: 'natur', n: 'Heilung', i: '💚', lv: 2, pr: 60, cd: 12, rng: 0, d: 'Heilt ein Herz – mit jeder Stufe eins mehr.' },
-    wurzeln: { s: 'natur', n: 'Wurzelfalle', i: '🌱', lv: 4, pr: 140, cd: 10, rng: 5, area: 2.2, d: 'Wurzeln wachsen am Zielort aus dem Boden und halten Gegner fest.' },
-    rinde: { s: 'natur', n: 'Rindenhaut', i: '🌳', lv: 7, pr: 260, cd: 20, rng: 0, d: 'Deine Haut wird zu Rinde: Für ein paar Sekunden blockst du jeden zweiten Treffer.' },
+    feuerball: { s: 'magie', n: 'Feuerball', i: '🔥', lv: 3, pr: 60, cd: 4, rng: 9, d: 'Ein Feuerball fliegt in Zielrichtung und explodiert. Schaden in einer Fläche.' },
+    frost: { s: 'magie', n: 'Frostnova', i: '❄️', lv: 8, pr: 140, cd: 9, rng: 0, area: 3, d: 'Ein Eisring um dich herum: Schaden, und alle Gegner frieren kurz ein.' },
+    blitz: { s: 'magie', n: 'Kettenblitz', i: '⚡', lv: 14, pr: 260, cd: 7, rng: 7, d: 'Ein Blitz springt von Gegner zu Gegner – mit jeder Stufe einer mehr.' },
+    wirbel: { s: 'schwert', n: 'Wirbelklinge', i: '🌀', lv: 3, pr: 60, cd: 5, rng: 0, area: 2.3, d: 'Ein Drehhieb, der alle Gegner um dich trifft und wegschleudert.' },
+    ansturm: { s: 'schwert', n: 'Sturmangriff', i: '💨', lv: 8, pr: 140, cd: 6, rng: 4.5, d: 'Du sprintest nach vorn und triffst alles auf dem Weg. Gut zum Ausweichen!' },
+    erdstoss: { s: 'schwert', n: 'Erdstoß', i: '💥', lv: 14, pr: 260, cd: 10, rng: 0, area: 2.8, d: 'Ein Schlag auf den Boden: viel Schaden in der Nähe, Gegner sind betäubt.' },
+    pfeil: { s: 'bogen', n: 'Kraftpfeil', i: '🏹', lv: 3, pr: 60, cd: 2.5, rng: 11, d: 'Ein weiter Pfeil, der durch alle Gegner hindurchfliegt.' },
+    faecher: { s: 'bogen', n: 'Pfeilfächer', i: '🎯', lv: 8, pr: 140, cd: 6, rng: 8, d: 'Fünf Pfeile auf einmal im Fächer.' },
+    gift: { s: 'bogen', n: 'Giftpfeil', i: '🧪', lv: 14, pr: 260, cd: 8, rng: 10, d: 'Vergiftet den Gegner: Schaden über mehrere Sekunden.' },
+    heilung: { s: 'natur', n: 'Heilung', i: '💚', lv: 3, pr: 60, cd: 12, rng: 0, d: 'Heilt ein Herz – mit jeder Stufe eins mehr.' },
+    wurzeln: { s: 'natur', n: 'Wurzelfalle', i: '🌱', lv: 8, pr: 140, cd: 10, rng: 5, area: 2.2, d: 'Wurzeln wachsen am Zielort aus dem Boden und halten Gegner fest.' },
+    rinde: { s: 'natur', n: 'Rindenhaut', i: '🌳', lv: 14, pr: 260, cd: 20, rng: 0, d: 'Deine Haut wird zu Rinde: Für ein paar Sekunden blockst du jeden zweiten Treffer.' },
   };
   const abRank = id => (prog.ab && prog.ab[id]) || 0;
   const abCost = (id, r) => Math.round(ABIL[id].pr * (r === 0 ? 1 : 1.5 * (r + 1)));
-  const abNeed = (id, r) => ABIL[id].lv + 3 * r;
+  const abNeed = (id, r) => ABIL[id].lv + 4 * r;
   const abEq = () => (prog.abEq = prog.abEq || [null, null, null]);
   const cds = {};
   let spells = [], rings = [], bolts = [], roots = [];
@@ -1894,6 +1899,7 @@
     const l = Math.hypot(ax, ay) || 1; ax /= l; ay /= l;
     me.fx = ax; me.fy = ay; me.dir = Math.abs(ax) > Math.abs(ay) ? (ax < 0 ? 1 : 2) : (ay < 0 ? 3 : 0);
     cds[id] = A.cd * (1 - 0.1 * (r - 1)); me.cast = { t: 0.35, i: A.i };
+    if (id !== 'blitz' && id !== 'wurzeln') sendCast(id, ax, ay);
     const sx = me.x + ax * 0.6, sy = me.y + ay * 0.6, P = (n, col, sp = 3, life = 0.5, x = me.x, y = me.y) => { for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, v = Math.random() * sp; parts.push({ x, y: y - 0.4, z: 0, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0, life, col, sz: 2 }); } };
     if (id === 'feuerball') spells.push({ k: 'feuer', x: sx, y: sy, vx: ax * 10, vy: ay * 10, t: 0, life: 0.9, dmg: 2 + r, aoe: 1.5 + 0.2 * r });
     else if (id === 'pfeil') spells.push({ k: 'pfeil', x: sx, y: sy, vx: ax * 17, vy: ay * 17, t: 0, life: 0.65, dmg: 2 + r, pierce: 1, hit: new Set() });
@@ -1913,10 +1919,11 @@
         dmgFoe(best, 2 + r, 0, 0, 0.3); from = { x: best.x, y: best.y - 0.5 };
       }
       if (!hit.size) bolts.push({ x0: me.x, y0: me.y - 0.6, x1: me.x + ax * 4, y1: me.y + ay * 4, t: 0, life: 0.25, seed: Math.random() * 99 });
+      sendCast(id, ax, ay, { b: bolts.slice(-n).map(b => [+b.x0.toFixed(2), +b.y0.toFixed(2), +b.x1.toFixed(2), +b.y1.toFixed(2)]) });
       flash = Math.max(flash, 0.08);
     }
     else if (id === 'heilung') { me.hp = Math.min(maxHp(), me.hp + 2 * (1 + r)); P(20, '#7aff9a', 2.5, 0.8); texts.push({ x: me.x, y: me.y - 1.6, s: '+' + (1 + r) + ' ♥', t: 0, col: '#7aff9a' }); rings.push({ x: me.x, y: me.y, r: 1.4, t: 0, life: 0.6, col: '120,255,150' }); }
-    else if (id === 'wurzeln') { const [tx, ty] = tgt ? [tgt.x, tgt.y] : [me.x + ax * A.rng, me.y + ay * A.rng]; const R0 = A.area; const life = 2.5 + 0.5 * r; roots.push({ x: tx, y: ty, r: R0, t: 0, life }); for (const e of foesNear(tx, ty, R0)) dmgFoe(e, 1, 0, 0, life); }
+    else if (id === 'wurzeln') { const [tx, ty] = tgt ? [tgt.x, tgt.y] : [me.x + ax * A.rng, me.y + ay * A.rng]; const R0 = A.area; const life = 2.5 + 0.5 * r; roots.push({ x: tx, y: ty, r: R0, t: 0, life }); sendCast(id, ax, ay, { tx: +tx.toFixed(2), ty: +ty.toFixed(2) }); for (const e of foesNear(tx, ty, R0)) dmgFoe(e, 1, 0, 0, life); }
     else if (id === 'rinde') { buff.rinde = 6 + 2 * r; P(16, '#8a6a3a', 2, 0.7); say('🌳 Rindenhaut!'); }
     renderAbil();
   }
@@ -1935,7 +1942,7 @@
       const s = spells[i]; s.t += dt; s.x += s.vx * dt; s.y += s.vy * dt;
       if (s.k === 'feuer' && Math.random() < 0.9) parts.push({ x: s.x, y: s.y - 0.6, z: 0, vx: (Math.random() - 0.5), vy: (Math.random() - 0.5), t: 0, life: 0.35, col: Math.random() < 0.5 ? '#ffb13a' : '#ff5a2a', sz: 2 });
       let hitE = null;
-      for (const e of enemies) { if (e.dead || (s.hit && s.hit.has(e))) continue; if (Math.hypot(e.x - s.x, e.y - s.y) < (e.d.boss ? 1.4 : e.d.big ? 0.9 : 0.7)) { hitE = e; break; } }
+      if (!s.vis) for (const e of enemies) { if (e.dead || (s.hit && s.hit.has(e))) continue; if (Math.hypot(e.x - s.x, e.y - s.y) < (e.d.boss ? 1.4 : e.d.big ? 0.9 : 0.7)) { hitE = e; break; } }
       const end = s.t > s.life || wall(s.x, s.y);
       if (hitE) {
         const l = Math.hypot(s.vx, s.vy) || 1;
@@ -1956,7 +1963,7 @@
   function explode(s) {
     rings.push({ x: s.x, y: s.y, r: s.aoe, t: 0, life: 0.35, col: '255,150,50', fire: 1 }); shake = Math.max(shake, 4);
     for (let i = 0; i < 18; i++) { const a = Math.random() * Math.PI * 2, v = 1 + Math.random() * 4; parts.push({ x: s.x, y: s.y - 0.4, z: 0, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0, life: 0.5, col: i % 3 ? '#ff9a2a' : '#ffe07a', sz: 3 }); }
-    for (const e of foesNear(s.x, s.y, s.aoe)) { const dx = e.x - s.x, dy = e.y - s.y, d = Math.hypot(dx, dy) || 1; dmgFoe(e, s.dmg, dx / d, dy / d); }
+    if (!s.vis) for (const e of foesNear(s.x, s.y, s.aoe)) { const dx = e.x - s.x, dy = e.y - s.y, d = Math.hypot(dx, dy) || 1; dmgFoe(e, s.dmg, dx / d, dy / d); }
   }
   function drawSpells(ox, oy, u, t) {
     for (const rt of roots) { const x = ox + rt.x * u, y = oy + rt.y * u, k = Math.min(1, rt.t * 4), fade = Math.min(1, (rt.life - rt.t) * 2);
@@ -1978,6 +1985,7 @@
       if (e.frz > 0) { ctx.fillStyle = 'rgba(160,220,255,.35)'; ctx.beginPath(); ctx.ellipse(x, y - 0.4 * u, 0.55 * u, 0.5 * u, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#e8f8ff'; for (let i = 0; i < 3; i++) ctx.fillRect(x + (i - 1) * 4 * S, y - 0.9 * u - (i % 2) * 2 * S, S, 3 * S); }
       if (e.psn) { ctx.fillStyle = 'rgba(120,210,70,.8)'; ctx.beginPath(); ctx.arc(x + Math.sin(t / 200) * 3 * S, y - 1.1 * u - (t / 10 % 8) * S * 0.5, 1.4 * S, 0, Math.PI * 2); ctx.fill(); } }
     if (me.cast && !me.inBoat) { ctx.font = `${Math.round(7 * S)}px system-ui`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.globalAlpha = Math.min(1, me.cast.t * 4); ctx.fillText(me.cast.i, ox + me.x * u, oy + me.y * u - 2.2 * u); ctx.globalAlpha = 1; }
+    for (const o of others.values()) { if (o.cast && o.cast.t > 0) { o.cast.t -= 1 / 60; ctx.font = `${Math.round(7 * S)}px system-ui`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(o.cast.i, ox + o.x * u, oy + o.y * u - 2.6 * u); } if (o.rinde > 0 && !o.inBoat) { o.rinde -= 1 / 60; ctx.strokeStyle = 'rgba(160,110,60,.7)'; ctx.lineWidth = 2 * S; ctx.beginPath(); ctx.ellipse(ox + o.x * u, oy + o.y * u - 0.6 * u, 0.6 * u, 0.85 * u, 0, 0, Math.PI * 2); ctx.stroke(); } }
     if (buff.rinde > 0 && !me.inBoat) { ctx.strokeStyle = 'rgba(160,110,60,.7)'; ctx.lineWidth = 2 * S; ctx.beginPath(); ctx.ellipse(ox + me.x * u, oy + me.y * u - 0.6 * u, 0.6 * u, 0.85 * u, 0, 0, Math.PI * 2); ctx.stroke(); }
     drawAim(ox, oy, u);
   }
@@ -1996,10 +2004,10 @@
       <div class="is-shop">${Object.entries(ABIL).filter(([, A]) => A.s === sk2).map(([id, A]) => {
         const r = abRank(id), need = abNeed(id, r), cost = abCost(id, r), max = r >= 3, lvOk = prog.lvl >= need;
         const btn = max ? '<button class="is-ext" disabled>Meister</button>' : `<button class="is-ext" data-ext="ablearn" data-k="${id}" ${lvOk && me.coins >= cost ? '' : 'disabled'}>${r ? 'Stufe ' + (r + 1) : 'Lernen'} · 🪙 ${cost}</button>`;
-        return `<div class="is-abrow"><i>${A.i}</i><span><b>${A.n}${r ? ` <em>Stufe ${r}/3</em>` : ''}</b><small>${A.d} · Abklingzeit ${A.cd} s${!max && !lvOk ? ` · <u>ab Spieler-Stufe ${need}</u>` : ''}</small>${r ? `<span class="is-abeq">${[0, 1, 2].map(i => `<button data-ext="abeq" data-k="${id}" data-s="${i}" class="${eq[i] === id ? 'on' : ''}">${i + 1}</button>`).join('')}</span>` : ''}</span>${btn}</div>`;
+        return `<div class="is-abrow"><i>${A.i}</i><span><b>${A.n}${r ? ` <em>Stufe ${r}/3</em>` : ''}</b><small>${A.d} · Abklingzeit ${A.cd} s${!max && !lvOk ? ` · <u>🔒 ab Spieler-Stufe ${need}</u>` : ''}</small>${r ? `<span class="is-abeq">${[0, 1, 2].map(i => `<button data-ext="abeq" data-k="${id}" data-s="${i}" class="${eq[i] === id ? 'on' : ''}">${i + 1}</button>`).join('')}</span>` : ''}</span>${btn}</div>`;
       }).join('')}</div>`;
   };
-  npcExt.ablearn = b => { const id = b.dataset.k, r = abRank(id), cost = abCost(id, r); if (r >= 3 || prog.lvl < abNeed(id, r) || me.coins < cost) return; me.coins -= cost; prog.ab = prog.ab || {}; prog.ab[id] = r + 1; const eq = abEq(); if (!r && !eq.includes(id)) { const f = eq.indexOf(null); if (f >= 0) eq[f] = id; } saveProg(); save(); say(`${ABIL[id].i} ${ABIL[id].n} ${r ? 'verbessert auf Stufe ' + (r + 1) : 'gelernt!'}`); gainXP(10, me.x, me.y - 2); renderNpc(); renderAbil(); };
+  npcExt.ablearn = b => { const id = b.dataset.k, r = abRank(id), cost = abCost(id, r); if (r >= 3 || prog.lvl < abNeed(id, r) || me.coins < cost) return; me.coins -= cost; prog.ab = prog.ab || {}; prog.ab[id] = r + 1; tutEv(r ? 'learn2' : 'learn', id); if (r === 1) tutEv('learn2', id); const eq = abEq(); if (!r && !eq.includes(id)) { const f = eq.indexOf(null); if (f >= 0) eq[f] = id; } saveProg(); save(); say(`${ABIL[id].i} ${ABIL[id].n} ${r ? 'verbessert auf Stufe ' + (r + 1) : 'gelernt!'}`); gainXP(10, me.x, me.y - 2); renderNpc(); renderAbil(); };
   npcExt.abeq = b => { const id = b.dataset.k, s2 = +b.dataset.s, eq = abEq(); const old = eq.indexOf(id); if (old >= 0) eq[old] = null; if (old !== s2) eq[s2] = id; saveProg(); renderNpc(); renderAbil(); };
   // Zielen wie bei Brawl Stars: links laufen, rechts zielen und loslassen
   const aim = { on: false, id: null, kind: null, x0: 0, y0: 0, dx: 0, dy: 0 };
@@ -2419,6 +2427,7 @@
     renderCraft();
   }
   const recState = r => {
+    if (r.lv && prog.lvl < r.lv && !(r.gear && gear(r.gear) >= r.tier) && !(r.boat && (prog.boats || []).includes(r.boat))) return 'lock';
     if (r.gear && gear(r.gear) >= r.tier) return gear(r.gear) === r.tier ? 'have' : 'better';
     if (r.boat && (prog.boats || []).includes(r.boat)) return 'have';
     return Object.entries(r.cost).every(([k, v]) => (bag[k] || 0) >= v) ? 'ok' : 'miss';
@@ -2431,7 +2440,7 @@
     else if (r.kit) { prog.kit = prog.kit || {}; prog.kit[r.kit] = kit(r.kit) + n; }
     else if (r.boat) { prog.boats = prog.boats || []; prog.boats.push(r.boat); prog.bs = r.boat; sendMeta(); }
     else bag[r.item] = (bag[r.item] || 0) + 1;
-    saveBag(); saveProg();
+    saveBag(); saveProg(); tutEv('make', r.id);
     say(`${r.i} ${r.n} hergestellt!`); shake = 2;
     for (let i = 0; i < 18; i++) { const a = Math.random() * Math.PI * 2; parts.push({ x: me.x, y: me.y - 0.8, z: 0, vx: Math.cos(a) * 3, vy: Math.sin(a) * 3, t: 0, life: 0.6, col: i % 2 ? '#ffd27a' : '#ffffff', sz: 2 }); }
     gainXP(r.gear ? 15 : 3, me.x, me.y - 2);
@@ -2446,7 +2455,7 @@
       <div class="is-crlist">${list.map(r => {
         const st = recState(r);
         const cost = Object.entries(r.cost).map(([k, v]) => `<span class="${(bag[k] || 0) >= v ? 'ok' : 'no'}">${RES[k][1]} ${Math.min(bag[k] || 0, v)}/${v}</span>`).join('');
-        const btn = st === 'have' ? '<button class="is-make" disabled>✓ Hast du</button>' : st === 'better' ? '<button class="is-make" disabled>Schon Besseres</button>' : `<button class="is-make" data-make="${r.id}" ${st === 'ok' ? '' : 'disabled'}>Herstellen</button>${r.kit && st === 'ok' && Object.entries(r.cost).every(([k, v]) => (bag[k] || 0) >= v * 5) ? `<button class="is-make" data-make="${r.id}" data-n="5">5×</button>` : ''}`;
+        const btn = st === 'lock' ? `<button class="is-make" disabled>🔒 Ab Stufe ${r.lv}</button>` : st === 'have' ? '<button class="is-make" disabled>✓ Hast du</button>' : st === 'better' ? '<button class="is-make" disabled>Schon Besseres</button>' : `<button class="is-make" data-make="${r.id}" ${st === 'ok' ? '' : 'disabled'}>Herstellen</button>${r.kit && st === 'ok' && Object.entries(r.cost).every(([k, v]) => (bag[k] || 0) >= v * 5) ? `<button class="is-make" data-make="${r.id}" data-n="5">5×</button>` : ''}`;
         return `<div class="is-rec ${st}"><i>${r.i}</i><div><b>${r.n}</b>${r.item && bag[r.item] ? ` <small>(hast ${bag[r.item]})</small>` : ''}${r.kit && kit(r.kit) ? ` <small>(hast ${kit(r.kit)})</small>` : ''}<p>${r.d}</p><div class="is-cost">${cost}</div></div>${btn}</div>`;
       }).join('')}</div></div>`;
   }
@@ -2784,6 +2793,56 @@
       if (Math.random() < 0.1 + fuse * 0.5) parts.push({ x: e.x + (Math.random() - 0.5) * 0.6, y: e.y - 0.7, z: 0, vx: (Math.random() - 0.5), vy: -1, t: 0, life: 0.6, col: '#d8b8f0', sz: 2 });
     }
   }
+  /* ---------- Stufen-Sperren, Lehrkapitel und sichtbare Fähigkeiten anderer ---------- */
+  const LV_REQ = { eisschwert: 6, obsidianklinge: 12, drachenklinge: 18, obsidianaxt: 8, stachelpanzer: 7, drachenpanzer: 16, eishelm: 8, obsidianschild: 12, wollsegel: 5, seidensegel: 10, sturmsegel: 16, kanone: 6, rumpf: 4, fernrohr: 5, kuerbiskuchen: 6, karottensuppe: 4, elixier: 5, feuertrank: 7, fischsuppe: 5, b_floss: 2, b_schwan: 5, b_wikinger: 10, b_pirat: 14, b_koenig: 18, m_amboss: 6, m_laterne: 4, m_statue: 10, m_schafe: 4, m_huehner: 3, m_werkbank: 3, m_kochtopf: 3 };
+  for (const r of RECIPES) if (LV_REQ[r.id]) r.lv = LV_REQ[r.id];
+  const BOSS_LV = { troll: 5, sandwurm: 9, frostwyrm: 11, riesenfrosch: 12, sporenkoenigin: 14, feuerdrache: 16 };
+  const CHAPTERS = [
+    { id: 'hoehle', n: 'Höhlenforscher', lv: 5, reward: 80, steps: [
+      { ev: 'learn', g: 'Lerne eine Fähigkeit bei einem Lehrer', tip: 'Die vier Lehrer stehen nördlich vom Dorfplatz.' },
+      { ev: 'cave', g: 'Betritt eine Höhle', tip: 'Die Kristallhöhle liegt im Norden der Startinsel (Schnellreise zum Steg Inselmitte).' },
+      { ev: 'boss', g: 'Besiege einen Boss', tip: 'Der Höhlentroll wartet ganz hinten in der Kristallhöhle. Beim ersten Sieg über einen Boss gibt es einen Skillpunkt extra!' }] },
+    { id: 'see', n: 'Seefahrer', lv: 8, reward: 120, steps: [
+      { ev: 'make:kanone', g: 'Baue die Bootskanone in der Werft', tip: 'Holz, Stein und Glut – Glut gibt es auf Vulkaninseln.' },
+      { ev: 'sink', g: 'Versenke einen Hai oder ein Piratenschiff', tip: 'Haie jagen im tiefen Wasser, Piraten lauern auf offener See weit weg von Inseln.' },
+      { ev: 'race', g: 'Segle eine Regatta', tip: 'Hafenmeisterin Greta startet die Regatta vor dem Hafen.' }] },
+    { id: 'meister', n: 'Meisterprüfung', lv: 12, reward: 200, steps: [
+      { ev: 'treasure', g: 'Grab einen Schatz aus', tip: 'Schatzkarten lassen Bosse, Piraten und manche Gegner fallen. Mit der Schaufel am roten X graben (E).' },
+      { ev: 'learn2', g: 'Verbessere eine Fähigkeit auf Stufe 2', tip: 'Bei den Lehrern im Dorf – dafür brauchst du eine höhere Stufe.' },
+      { ev: 'boss2', g: 'Besiege einen Boss in einer Inselhöhle', tip: 'Sandwurm (Wüste), Frostwyrm (Schnee), Riesenfrosch (Dschungel), Sporenkönigin (Pilz) oder Feuerdrache (Vulkan).' }] },
+  ];
+  const chp = () => (prog.chp = prog.chp || {});
+  const activeChapter = () => (tutActive() ? null : CHAPTERS.find(c => prog.lvl >= c.lv && (chp()[c.id] || 0) < c.steps.length) || null);
+  function chapterEv(ty, key) {
+    const c = activeChapter(); if (!c) return; const i = chp()[c.id] || 0, s = c.steps[i];
+    if (s.ev !== ty && s.ev !== ty + ':' + key) return;
+    chp()[c.id] = i + 1; me.coins += 10; gainXP(20, me.x, me.y - 1.6);
+    if (i + 1 >= c.steps.length) { me.coins += c.reward; say(`🎓 Lehrkapitel „${c.n}“ geschafft! +${c.reward} Münzen`); addLog(`🎓 Lehrkapitel <b>${c.n}</b> abgeschlossen.`); }
+    else setTimeout(() => say('✅ Geschafft! Als Nächstes: ' + c.steps[i + 1].g), 250);
+    saveProg(); save(); tutBox();
+  }
+  function firstBoss(k) { st().bossK = st().bossK || {}; if (st().bossK[k]) return; prog.pts++; setTimeout(() => say(`🌟 Erster Sieg über den ${EDEF[k].name}: +1 Skillpunkt!`), 1800); addLog(`🏆 Erster Sieg über <b>${EDEF[k].name}</b> – ein Skillpunkt extra.`); }
+  // sichtbare Fähigkeiten: an andere schicken und deren Effekte nur anzeigen
+  function sendCast(id, ax, ay, extra) { if (typeof send === 'function' && myId) send({ t: 'i_cast', a: id, x: +me.x.toFixed(2), y: +me.y.toFixed(2), ax: +ax.toFixed(3), ay: +ay.toFixed(3), c: me.inCave ? caveSpec.idx : -1, ...(extra || {}) }); }
+  function castFx(m) {
+    if ((me.inCave ? caveSpec.idx : -1) !== m.c) return;
+    const A = ABIL[m.a]; if (!A) return;
+    const o = others.get(m.from), x = m.x, y = m.y, ax = m.ax, ay = m.ay;
+    if (o) o.cast = { t: 0.5, i: A.i };
+    texts.push({ x, y: y - 2.2, s: A.i, t: 0, col: '#fff' });
+    const sx = x + ax * 0.6, sy = y + ay * 0.6, P = (n, col) => { for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, v = Math.random() * 3; parts.push({ x, y: y - 0.4, z: 0, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0, life: 0.5, col, sz: 2 }); } };
+    if (m.a === 'feuerball') spells.push({ k: 'feuer', x: sx, y: sy, vx: ax * 10, vy: ay * 10, t: 0, life: 0.9, aoe: 1.6, vis: 1 });
+    else if (m.a === 'pfeil' || m.a === 'gift') spells.push({ k: m.a === 'gift' ? 'gift' : 'pfeil', x: sx, y: sy, vx: ax * 16, vy: ay * 16, t: 0, life: 0.65, vis: 1 });
+    else if (m.a === 'faecher') { const a0 = Math.atan2(ay, ax); for (let i = -2; i <= 2; i++) spells.push({ k: 'pfeil', x: sx, y: sy, vx: Math.cos(a0 + i * 0.2) * 15, vy: Math.sin(a0 + i * 0.2) * 15, t: 0, life: 0.55, vis: 1 }); }
+    else if (m.a === 'frost') { rings.push({ x, y, r: 3.3, t: 0, life: 0.5, col: '170,230,255', ice: 1 }); P(20, '#cfefff'); }
+    else if (m.a === 'wirbel') rings.push({ x, y, r: 2.5, t: 0, life: 0.35, col: '255,255,255', spin: 1 });
+    else if (m.a === 'erdstoss') { rings.push({ x, y, r: 3, t: 0, life: 0.55, col: '200,150,90', quake: 1 }); P(20, '#a8865a'); if (Math.hypot(me.x - x, me.y - y) < 8) shake = Math.max(shake, 4); }
+    else if (m.a === 'ansturm') { for (let i = 0; i < 14; i++) { const f = i / 14; parts.push({ x: x + ax * 4.5 * f, y: y + ay * 4.5 * f - 0.3, z: 0, vx: 0, vy: 0, t: 0, life: 0.5, col: 'dust', sz: 3 }); } }
+    else if (m.a === 'blitz') { for (const b of (m.b || []).slice(0, 6)) bolts.push({ x0: b[0], y0: b[1], x1: b[2], y1: b[3], t: 0, life: 0.3, seed: Math.random() * 99 }); }
+    else if (m.a === 'heilung') { rings.push({ x, y, r: 1.4, t: 0, life: 0.6, col: '120,255,150' }); P(16, '#7aff9a'); }
+    else if (m.a === 'wurzeln') roots.push({ x: m.tx ?? x + ax * 5, y: m.ty ?? y + ay * 5, r: 2.2, t: 0, life: 3, vis: 1 });
+    else if (m.a === 'rinde') { if (o) o.rinde = 8; P(14, '#8a6a3a'); }
+  }
   function mkEnemy(k, x, y) { const d = EDEF[k], nh = !me.inCave && isNight() ? Math.ceil(d.hp * 1.5) : d.hp; return { id: enemySeq++, k, d, x, y, hx: x, hy: y, hp: nh, max: nh, vx: 0, vy: 0, t: Math.random(), hop: 0, flash: 0, stun: 0, cd: 1, wind: 0, awake: false, back: 0, lunge: 0, fx: 1 }; }
   // Was ein abgebauter Gegenstand bringt: [Schläge, () => Beute]
   const HARV = {
@@ -2849,7 +2908,7 @@
     if (e.lastBy && e.lastBy !== myId) { if (typeof send === 'function') send({ t: 'i_kill', to: e.lastBy, k: e.k, x: e.x, y: e.y }); return; } // Beute für den anderen Spieler
     for (let i = 0; i < 14; i++) { const a = Math.random() * Math.PI * 2, s = 1 + Math.random() * 3; parts.push({ x: e.x, y: e.y - 0.3, z: 0, vx: Math.cos(a) * s, vy: Math.sin(a) * s, t: 0, life: 0.6, col: i % 3 ? '#e8e8f0' : '#bfbfd0', sz: 3 }); }
     const n = Math.round((D.coins[0] + Math.floor(Math.random() * (D.coins[1] - D.coins[0] + 1))) * (1 + 0.25 * sk('glueck')));
-    gainXP(XP_FOE[e.k] || 5, e.x, e.y - 1.4); qEvent('kill', e.k); st().kills = (st().kills || 0) + 1; if (D.boss) { st().bossK = st().bossK || {}; st().bossK[e.k] = 1; }
+    gainXP(XP_FOE[e.k] || 5, e.x, e.y - 1.4); qEvent('kill', e.k); st().kills = (st().kills || 0) + 1; if (D.boss) { firstBoss(e.k); st().bossK = st().bossK || {}; st().bossK[e.k] = 1; tutEv('boss', e.k); if (e.k !== 'troll') tutEv('boss2', e.k); }
     if (sk('heil')) me.hp = Math.min(maxHp(), me.hp + 1);
     for (let i = 0; i < n; i++) drop(e.x, e.y, 'coin');
     if (D.loot && !D.boss && Math.random() < 0.7) drop(e.x, e.y, D.loot);
@@ -2879,7 +2938,7 @@
   function digTreasure() {
     const m = (prog.maps || []).find(q => Math.hypot(q.x - me.x, q.y - (me.y - 0.3)) < 1.4); if (!m) return false;
     if (!gear('schaufel')) { say('Hier liegt ein Schatz! Du brauchst eine Schaufel (Werkbank).'); return true; }
-    prog.maps.splice(prog.maps.indexOf(m), 1); saveProg();
+    prog.maps.splice(prog.maps.indexOf(m), 1); saveProg(); tutEv('treasure');
     shake = 5; say('💰 Schatz ausgegraben!');
     const rare = ['eiskristall', 'obsidian', 'glut', 'sporen', 'stachel', 'fell', 'drachenschuppe'];
     for (let i = 0; i < 25 + Math.floor(Math.random() * 25); i++) drop(m.x, m.y, 'coin');
@@ -2918,7 +2977,8 @@
     const sp = caveSpec, fo = sp.foes;
     for (const [x, y] of C.slimes) enemies.push(mkEnemy(sp.key === 'start' ? (h2(x, y, 340) < 0.25 ? 'bigslime' : 'slime') : fo[Math.floor(h2(x, y, 341) * fo.length)], x + 0.5, y + 0.6));
     for (const [x, y] of C.bats) enemies.push(mkEnemy(sp.fly || 'bat', x + 0.5, y + 0.6));
-    if (Date.now() - (cs().boss || 0) > 10 * 60e3) enemies.push(mkEnemy(sp.boss, C.boss[0], C.boss[1]));
+    if (prog.lvl < (BOSS_LV[sp.boss] || 0)) setTimeout(() => say(`🔒 ${EDEF[sp.boss].name} schläft noch – er kämpft erst gegen Abenteurer ab Stufe ${BOSS_LV[sp.boss]}`), 2600);
+    else if (Date.now() - (cs().boss || 0) > 10 * 60e3) enemies.push(mkEnemy(sp.boss, C.boss[0], C.boss[1]));
     items.length = 0;
   }
   // Gegner auf den Inseln tauchen in der Nähe auf (nicht auf der Heimatinsel) und verschwinden weit weg wieder
@@ -3012,7 +3072,7 @@
       caveSpec = spec; me.caveKey = spec.key; me.caveRet = spec.ent ? [spec.ent.x, spec.ent.y] : null;
       const C = buildCave(spec);
       me.inCave = 1; me.x = C.EX + 0.5; me.y = C.EY - 0.4; me.dir = 3; me.kx = me.ky = 0;
-      spawnEnemies(); mapDirty = true;
+      spawnEnemies(); mapDirty = true; tutEv('cave', spec.key);
       say(spec.key === 'start' ? 'Kristallhöhle – Vorsicht, hier leben Schleime, Fledermäuse und ein Höhlentroll!' : `${spec.name} – hier haust ${EDEF[spec.boss].name === 'Sporenkönigin' ? 'die' : 'der'} ${EDEF[spec.boss].name}!`);
       lastSent = '';
     });
@@ -3561,7 +3621,7 @@
       for (const pl of T.plots) if (inV(pl.x + 1, pl.y + 0.6)) ents.push({ y: pl.y + 0.6, f: () => drawPlotSign(pl, ox, oy, u) });
     }
     for (const st of stations()) if (st.x > mx0 && st.x < mx1 && st.y > my0 && st.y < my1) ents.push({ y: st.y, f: () => drawObj({ k: 'st', st: st.k, x: st.x, y: st.y }, ox, oy, u, t) });
-    for (const { e: E } of entsNear(me.x, me.y)) if (E.x > mx0 && E.x < mx1 && E.y > my0 && E.y < my1 + 2) ents.push({ y: E.y, f: () => drawObj({ k: 'ent', x: E.x, y: E.y }, ox, oy, u, t) });
+    for (const { spec, e: E } of entsNear(me.x, me.y)) if (E.x > mx0 && E.x < mx1 && E.y > my0 && E.y < my1 + 2) ents.push({ y: E.y, f: () => { drawObj({ k: 'ent', x: E.x, y: E.y }, ox, oy, u, t); if (Math.hypot(me.x - E.x, me.y - E.y) < 7 && spec) { const bl = BOSS_LV[spec.boss] || 0, done = st().bossK && st().bossK[spec.boss]; nameTag(ox + E.x * u, oy + (E.y - 3) * u, `${spec.name} · ${EDEF[spec.boss].name}${done ? ' ✓' : ''}${prog.lvl < bl ? ' · 🔒 ab Stufe ' + bl : ''}`, prog.lvl >= bl); } } });
     ents.push({ y: boat.y, f: () => drawBoat(sx(boat.x), sy(boat.y), boat.h, boat.sail, me.col, me.inBoat ? boat.v : 0, t / 1000, me.inBoat, prog.bc, prog.bs, prog.hat) });
     for (const o of others.values()) ents.push({ y: o.by, f: () => drawBoat(sx(o.bx), sy(o.by), o.bh, o.sail, o.col, o.inBoat && o.moving ? 2 : 0, t / 1000, o.inBoat, o.meta && o.meta.bc, o.meta && o.meta.bs, o.meta && o.meta.hat) });
     for (const e of enemies) ents.push({ y: e.y, f: () => drawEnemy(e, ox, oy, u, t) });
@@ -3776,9 +3836,10 @@
       return;
     }
     if (m.t === 'i_fx') { applyFx(m); return; }
+    if (m.t === 'i_cast') { castFx(m); return; }
     if (m.t === 'i_hit') { const e = enemies.find(q => q.id === m.id && !q.remote && !q.dead); if (e) { hitEnemy(e, m.dmg, m.nx, m.ny, m.from); if (m.fz && !e.dead) { e.frz = Math.max(e.frz || 0, e.d.boss ? m.fz * 0.4 : m.fz); e.stun = Math.max(e.stun || 0, e.frz); } } return; }
     if (m.t === 'i_kill') { const D = EDEF[m.k]; if (!D) return; const n = Math.round((D.coins[0] + Math.floor(Math.random() * (D.coins[1] - D.coins[0] + 1))) * (1 + 0.25 * sk('glueck'))); for (let i = 0; i < n; i++) drop(m.x, m.y, 'coin'); if (D.loot && Math.random() < 0.7) drop(m.x, m.y, D.loot); gainXP(XP_FOE[m.k] || 5, m.x, m.y - 1.4); qEvent('kill', m.k); st().kills = (st().kills || 0) + 1;
-      if (D.boss) { st().bossK = st().bossK || {}; st().bossK[m.k] = 1; st().bosse = (st().bosse || 0) + 1; for (let i = 0; i < 3; i++) drop(m.x, m.y, 'heart'); for (let i = 0; i < (D.lootN || 0); i++) drop(m.x, m.y, D.loot); if (Math.random() < 0.5) drop(m.x, m.y, 'karte'); if (me.inCave) { cs().boss = Date.now(); saveCave(); } say(`🏆 Du hast den ${D.name} besiegt!`); saveProg(); }
+      if (D.boss) { firstBoss(m.k); tutEv('boss', m.k); if (m.k !== 'troll') tutEv('boss2', m.k); st().bossK = st().bossK || {}; st().bossK[m.k] = 1; st().bosse = (st().bosse || 0) + 1; for (let i = 0; i < 3; i++) drop(m.x, m.y, 'heart'); for (let i = 0; i < (D.lootN || 0); i++) drop(m.x, m.y, D.loot); if (Math.random() < 0.5) drop(m.x, m.y, 'karte'); if (me.inCave) { cs().boss = Date.now(); saveCave(); } say(`🏆 Du hast den ${D.name} besiegt!`); saveProg(); }
       return; }
     if (m.t === 'i_gift') { if (m.k === 'muenzen') me.coins += m.n; else bag[m.k] = (bag[m.k] || 0) + m.n; saveBag(); save(); say(`🎁 ${m.from} schenkt dir ${m.n} ${m.k === 'muenzen' ? 'Münzen' : (RES[m.k] || [m.k])[0]}!`); if (bagOpen) renderBag(); return; }
     if (m.t === 'i_crew') { if (m.err) { say(m.err); return; } crew = { code: m.code, n: m.n, names: m.names || [] }; if (bagOpen) renderBag(); return; }
