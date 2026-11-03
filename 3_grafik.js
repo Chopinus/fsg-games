@@ -298,6 +298,14 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 14, title: 'Inselreich (Prototyp)', date: '03.11.2026', items: [
+      ['Neu', 'Inselreich: Eine offene Pixelwelt aus Inseln für alle zusammen. Laufen, ins Boot steigen und mit dem Wind segeln'],
+      ['Neu', 'Inselreich: Andere Spieler in der Nähe sehen, Chat mit Sprechblasen, Karte mit entdeckten Inseln, Steuerung fürs Handy'],
+    ] },
+    { id: 13, title: 'Würfelwelt mit Freunden', date: '03.11.2026', items: [
+      ['Neu', 'Würfelwelt: Lade Freunde in deine Welt ein (Menü → Freunde einladen). Ihr seht euch, baut zusammen und könnt chatten'],
+      ['Neu', 'Würfelwelt: Neue Welten haben echte Wälder mit Lichtungen, Birken, große Eichen, Büsche, Felsbrocken und Blumenwiesen'],
+    ] },
     { id: 12, title: 'Neu im Game Hub', date: '02.11.2026', items: [
       ['Neu', 'Casino Aurum: Blackjack, Roulette, Texas Hold\'em, Pferderennen und Spielautomat – nur mit Spieljetons, allein gegen Bots oder mit Freunden'],
       ['Neu', 'Würfelwelt Überleben: Monster in der Nacht, Hunger, Werkzeuge, Tiere, Fackeln und Betten'],

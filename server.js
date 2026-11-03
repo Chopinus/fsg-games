@@ -19,6 +19,7 @@ const GAMES = {
   spion: require('./spion.js'),
   kniffel: require('./kniffel.js'),
   casino: require('./casino.js'),
+  welt: require('./welt_mp.js'),
 };
 // Umzug: Ist auf diesem Render-Dienst die Umgebungsvariable MOVED_TO gesetzt (z. B. https://onegame.onrender.com),
 // zeigt jede Seite nur noch den Umzugs-Hinweis. Spielstände werden dann hier weder geladen noch gespeichert,
@@ -49,7 +50,7 @@ const IDLE_MS = 30 * 60 * 1000; // Räume ohne verbundene Spieler verschwinden n
 
 const STATIC = {
   '/': 'index.html', '/index.html': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css',
-  '/mini.js': 'mini.js', '/ritter.js': 'ritter.js', '/spiele2.js': 'spiele2.js', '/welt.js': 'welt.js', '/casino_ui.js': 'casino_ui.js',
+  '/mini.js': 'mini.js', '/ritter.js': 'ritter.js', '/spiele2.js': 'spiele2.js', '/welt.js': 'welt.js', '/casino_ui.js': 'casino_ui.js', '/insel.js': 'insel.js',
 };
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
 
@@ -244,6 +245,7 @@ function handle(c, m) {
     return;
   }
   if (!c.pid) return;
+  if (typeof m.t === 'string' && m.t.startsWith('i_')) { ISL.handle(c, m); return; } // Inselreich
   if (m.t === 'name') {
     c.name = clean(m.name);
     const r = rooms.get(c.room);
@@ -298,12 +300,15 @@ function handle(c, m) {
   if (m.t === 'act') {
     if (!r.players.some(p => p.id === c.pid) || !m.a || typeof m.a !== 'object') return;
     const err = G.act(r, c.pid, m.a);
+    if (err && typeof err === 'object') { if (err.reply) send(c, { t: 'cast', d: err.reply }); return; } // Antwort nur an diesen Spieler
     if (err === 'quiet') return;
     if (err === 'soon') { pushSoon(r); return; } // häufige Live-Updates gebündelt senden
     if (typeof err === 'string') send(c, { t: 'err', msg: err });
     pushRoom(r);
   }
 }
+
+const ISL = require('./insel_srv.js')(send); // Inselreich: offene Welt für alle
 
 wss.on('connection', ws => {
   const c = { ws, pid: null, name: '', room: null, alive: true };
@@ -317,6 +322,7 @@ wss.on('connection', ws => {
   });
   ws.on('close', () => {
     clients.delete(c);
+    ISL.drop(c);
     const r = rooms.get(c.room);
     if (r) pushRoom(r);
   });
