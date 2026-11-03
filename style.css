@@ -1640,3 +1640,7 @@ html.rl-appmode,html.rl-appmode body{overflow:hidden;overscroll-behavior:none}
 .cz-art{display:block;width:56px;height:56px;border-radius:50%;position:relative;background:radial-gradient(circle,#c8332c 0 48%,#fff 48% 53%,#c8332c 53%);box-shadow:0 4px 0 #6e1410,0 8px 14px rgba(0,0,0,.4)}
 .cz-art::before{content:"";position:absolute;inset:0;border-radius:50%;background:repeating-conic-gradient(#fff 0 12deg,transparent 12deg 45deg);-webkit-mask:radial-gradient(circle,transparent 64%,#000 65% 86%,transparent 87%);mask:radial-gradient(circle,transparent 64%,#000 65% 86%,transparent 87%)}
 .cz-art::after{content:"★";position:absolute;inset:0;display:grid;place-items:center;color:#ffe9a8;font-size:20px;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+/* Inselreich-Kachel: Insel mit Palme im Meer */
+.is-art{display:block;width:56px;height:56px;border-radius:12px;position:relative;overflow:hidden;background:linear-gradient(#7cc8ef,#2a6fb0 60%,#1d4f8a);box-shadow:0 4px 10px rgba(0,0,0,.35)}
+.is-art::before{content:"";position:absolute;left:8px;right:8px;bottom:8px;height:16px;border-radius:50%;background:radial-gradient(ellipse at 50% 30%,#6dbb4f 0 45%,#e8d39a 47% 70%,#4fa3cf 72%)}
+.is-art::after{content:"";position:absolute;left:30px;top:14px;width:3px;height:22px;background:#8a5a34;transform:rotate(8deg);box-shadow:-6px -3px 0 3px #3f8f3a,5px -4px 0 3px #4f9a3c}

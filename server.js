@@ -50,7 +50,7 @@ const IDLE_MS = 30 * 60 * 1000; // Räume ohne verbundene Spieler verschwinden n
 
 const STATIC = {
   '/': 'index.html', '/index.html': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css',
-  '/mini.js': 'mini.js', '/ritter.js': 'ritter.js', '/spiele2.js': 'spiele2.js', '/welt.js': 'welt.js', '/casino_ui.js': 'casino_ui.js',
+  '/mini.js': 'mini.js', '/ritter.js': 'ritter.js', '/spiele2.js': 'spiele2.js', '/welt.js': 'welt.js', '/casino_ui.js': 'casino_ui.js', '/insel.js': 'insel.js',
 };
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
 
@@ -245,6 +245,7 @@ function handle(c, m) {
     return;
   }
   if (!c.pid) return;
+  if (typeof m.t === 'string' && m.t.startsWith('i_')) { ISL.handle(c, m); return; } // Inselreich
   if (m.t === 'name') {
     c.name = clean(m.name);
     const r = rooms.get(c.room);
@@ -307,6 +308,8 @@ function handle(c, m) {
   }
 }
 
+const ISL = require('./insel_srv.js')(send); // Inselreich: offene Welt für alle
+
 wss.on('connection', ws => {
   const c = { ws, pid: null, name: '', room: null, alive: true };
   clients.add(c);
@@ -319,6 +322,7 @@ wss.on('connection', ws => {
   });
   ws.on('close', () => {
     clients.delete(c);
+    ISL.drop(c);
     const r = rooms.get(c.room);
     if (r) pushRoom(r);
   });
