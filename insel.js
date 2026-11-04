@@ -2044,7 +2044,7 @@
     ['🕳️ Höhlen und Bosse', 'Bosse gibt es in der Kristallhöhle auf der Startinsel (Höhlentroll, ab Stufe 6) und in den Höhlen großer Inseln: Sandwurm in der Wüste (ab 11), Frostwyrm im Schnee (ab 13), Riesenfrosch im Dschungel (ab 14), Sporenkönigin im Pilzwald (ab 17) und Feuerdrache auf Vulkaninseln (ab 20). Sie bringen viele Münzen und EP, Herzen, drei seltene Boss-Materialien für die besten Waffen, Rüstungen, Segel und Boote, oft eine Schatzkarte – und beim ersten Sieg einen Skillpunkt extra. Nach 10 Minuten kommen sie wieder.'],
     ['☁️ Speichern', 'Gespeichert wird automatisch auf diesem Gerät. Melde dich im Titelbildschirm mit Name und Passwort an (dasselbe Konto wie im Ritterlauf), dann wird dein Stand auch online gesichert und du spielst auf jedem Gerät weiter – samt deinem Haus.'],
     ['🔒 Stufen', 'Fortgeschrittene Waffen, Rüstungen, Boote, Fähigkeiten und Bosse brauchen eine bestimmte Stufe. Was gesperrt ist, zeigt ein 🔒 mit der nötigen Stufe. Ab Stufe 6, 10 und 15 gibt es bei Anna neue Lehrkapitel.'],
-    ['🌙 Tag und Nacht', 'Nachts wird es dunkel, und es kommen mehr und stärkere Gegner. Fackeln und Laternen machen Licht.'],
+    ['🌙 Tag und Nacht', 'Nachts wird es etwas dunkler, und es kommen mehr und stärkere Gegner.'],
     ['🎣 Angeln', 'Mit einer Angel von Hein angelst du am Wasser (G). Jede Inselart und Tageszeit hat andere Fische – sie landen im Fischbuch.'],
     ['👥 Zusammen spielen', 'Auf einer Insel und in einer Höhle kämpft ihr gegen dieselben Gegner. Im Rucksack kannst du Geschenke machen und eine Crew gründen. Bei Greta gibt es die Regatta mit Bestenliste.'],
     ['🎩 Aussehen und Erfolge', 'Erfolge geben Titel für dein Namensschild. Haustiere sammeln für dich ein. Mila verkauft Hüte, Bootsfarben und Boote in anderen Formen.'],
@@ -3962,22 +3962,8 @@
       ctx.fillStyle = gr; ctx.fillRect(px - rr, py - rr, rr * 2, rr * 2);
     }
     const dk = darkness();
-    if (dk > 0.02) {
-      const lw = lc.width, lh = lc.height, L4 = 4;
-      lg.globalCompositeOperation = 'source-over'; lg.fillStyle = `rgba(8,12,42,${dk})`; lg.fillRect(0, 0, lw, lh);
-      lg.globalCompositeOperation = 'destination-out';
-      const light = (x, y, r, a) => { const px = (ox + x * u) / L4, py = (oy + y * u) / L4, rr = r * u / L4; if (px < -rr || py < -rr || px > lw + rr || py > lh + rr) return; const gr = lg.createRadialGradient(px, py, 0, px, py, rr); gr.addColorStop(0, `rgba(0,0,0,${a})`); gr.addColorStop(0.55, `rgba(0,0,0,${a * 0.6})`); gr.addColorStop(1, 'rgba(0,0,0,0)'); lg.fillStyle = gr; lg.fillRect(px - rr, py - rr, rr * 2, rr * 2); };
-      const fl = Math.sin(t / 90) * 0.15;
-      light(me.x, me.y - 0.5, 5.5 + fl, 1);
-      for (const o of others.values()) if (!o.cave) light(o.x, o.y - 0.5, 4, 0.9);
-      for (const st of stations()) if (st.k !== 'werk') light(st.x, st.y - 0.6, 3.2 + fl, 0.85);
-      for (const { e: E } of entsNear(me.x, me.y)) light(E.x, E.y - 1.8, 3.5 + fl, 0.85);
-      if (WORLD.size) for (let cy = Math.floor((me.y - 22) / 16); cy <= Math.floor((me.y + 22) / 16); cy++) for (let cx = Math.floor((me.x - 30) / 16); cx <= Math.floor((me.x + 30) / 16); cx++) { const set = WIDX.get(cx + ',' + cy); if (set) for (const key of set) { const v = WORLD.get(key), o = v && v[1]; if (o && PIECES[o] && (PIECES[o].light || o === 'amboss' || o === 'kochtopf')) { const [lx, ly] = key.split(',').map(Number); light(lx + 0.5, ly + 0.3, o === 'laterne' ? 5 : 4 + fl, 0.95); } } }
-      if (nearBig(me.x, me.y)) {
-        const T = town(); for (const hs of T.houses) light(hs.x, hs.y - 1.2, 3.2, 0.8); light(T.V.x, T.V.y, 3, 0.6);
-
-      }
-      ctx.imageSmoothingEnabled = true; ctx.drawImage(lc, 0, 0, lw * L4, lh * L4); ctx.imageSmoothingEnabled = false;
+    if (dk > 0.02) { // Nacht: alles gleichmäßig etwas dunkler und bläulicher – keine schwarzen Flächen, man sieht überall gleich gut
+      ctx.fillStyle = `rgba(14,22,66,${(dk * 0.5).toFixed(3)})`; ctx.fillRect(0, 0, W, H);
       ctx.fillStyle = 'rgba(255,255,255,.8)'; for (let i = 0; i < 24 && dk > 0.4; i++) { const a2 = h2(i, 3, 980), b2 = h2(i, 4, 980); if (Math.sin(t / 700 + i) > 0.3) ctx.fillRect(a2 * W, b2 * H * 0.5, S, S); }
     }
     // Stimmung je Insel: Schnee, Asche und Glut, Sporen, Glühwürmchen
