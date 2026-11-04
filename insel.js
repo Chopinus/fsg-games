@@ -61,7 +61,7 @@
   const skLv = (s, r) => (s.lv ? s.lv[Math.min(r, s.lv.length - 1)] : 1);
   const SKILL = Object.fromEntries(SKILLS.map(s => [s.id, s]));
   const XP_FOE = { slime: 5, bigslime: 10, sandslime: 5, frostslime: 7, fireslime: 8, frog: 5, sporling: 6, bat: 6, moth: 6, scorpion: 8, wolf: 10, golem: 40, troll: 100 };
-  const xpNeed = l => Math.round(18 * Math.pow(l, 1.4));
+  const xpNeed = l => Math.round(22 * Math.pow(l, 1.75));
   // Werkstationen auf der Heimatinsel und was man dort herstellen kann
   const STATIONS = { hand: ['✋', 'Handwerk', 'Ohne Werkbank, direkt aus dem Rucksack: Hier stellst du die fünf Werkbänke her. Aufstellen kannst du sie mit 🔨 Bauen – bei deinem Haus auf der Heimatinsel und unterwegs auf jeder Insel.'], werk: ['🗡️', 'Waffen- und Werkzeugbank', 'Werkzeuge und Waffen – vom Steinschwert bis zur Drachenklinge'], schmiede: ['🛡️', 'Rüstungsschmiede', 'Rüstungen, Helme und Schilde'], koch: ['🍲', 'Küche', 'Essen und Trinken, das heilt oder dich stärker macht'], werft: ['⚓', 'Werft', 'Bootsteile wie Segel, Rumpf und Kanone – und ganz neue Boote'], tischler: ['🪑', 'Tischlerei', 'Möbel, Truhen, Betten, Ställe, Deko und Absteckpfähle für dein Haus. Was du hier herstellst, stellst du mit 🔨 Bauen auf der Heimatinsel auf.'] };
   const RECIPES = [
@@ -112,7 +112,7 @@
   const GEAR_NAME = { schwert: ['Holzschwert', 'Steinschwert', 'Eisschwert', 'Obsidianklinge', 'Drachenklinge'], axt: ['', 'Steinaxt', 'Obsidianaxt'], hacke: ['', 'Steinspitzhacke', 'Eisspitzhacke', 'Obsidianspitzhacke'], angel: ['', 'Angel', 'Profi-Angel'], ruestung: ['', 'Fellrüstung', 'Stachelpanzer', 'Drachenpanzer'], segel: ['', 'Fasersegel', 'Wollsegel', 'Sporenseide-Segel', 'Sturmsegel'], schaufel: ['', 'Schaufel'], kanone: ['', 'Bootskanone'], helm: ['', 'Lederkappe', 'Eishelm'], schild: ['', 'Holzschild', 'Obsidianschild'], rumpf: ['', 'Verstärkter Rumpf'], fernrohr: ['', 'Fernrohr'] };
   // Spielstand-Version: Ältere Stände (vor freiem Bauen, Werkbänken zum Aufstellen und neuer Balance) beginnen neu auf der Heimatinsel.
   // Der alte Stand bleibt unter insel.alt im Gerät liegen.
-  const SAVE_V = 3, SKEYS0 = ['insel.xp', 'insel.bag', 'insel.found', 'insel.cave', 'insel.save'];
+  const SAVE_V = 4, SKEYS0 = ['insel.xp', 'insel.bag', 'insel.found', 'insel.cave', 'insel.save'];
   let wasReset = false, WORLD = new Map();
   try {
     const sv = JSON.parse(localStorage.getItem('insel.save') || 'null'), xp0 = localStorage.getItem('insel.xp');

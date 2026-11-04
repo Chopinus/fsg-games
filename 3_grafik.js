@@ -298,6 +298,10 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 33, title: 'Inselreich: Neustart mit neuer Balance', date: '04.11.2026', items: [
+      ['Neu', 'Inselreich: Alle Spielstände und Bauten wurden zurückgesetzt – alle beginnen neu im Dorf auf der Heimatinsel'],
+      ['Verbessert', 'Inselreich: Stufen brauchen mehr EP, damit man nicht so schnell durch den Skillbaum kommt'],
+    ] },
     { id: 32, title: 'Inselreich: Angriff rundum, Ausrüstung, neuer Skillbaum', date: '04.11.2026', items: [
       ['Neu', 'Inselreich: Du schlägst jetzt in jede Richtung – zur Maus, zum Ziel-Joystick oder zum nächsten Gegner, genau so weit wie die Anzeige'],
       ['Neu', 'Inselreich: Ausrüstung im Rucksack – Schwert, Axt, Spitzhacke, Schaufel, Rüstung, Helm, Schild und mehr selbst anlegen'],

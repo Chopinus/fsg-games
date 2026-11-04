@@ -24,14 +24,14 @@ module.exports = function (send, konten) {
   // ---------- Bauten: frei auf der Heimatinsel, Werkbänke überall, Absteckpfähle schützen ein Gebiet ----------
   // w: { "x,y": [Boden, Gegenstand, Besitzer-id, Name] } in Weltfeldern, g: Felder { "x,y": [Samen, gepflanzt] }, a: Ställe { "x,y": zuletzt geerntet }
   // st: Truhen-Inhalt je Spieler, ap: Konto -> Spieler-id (Bauten ziehen mit aufs neue Gerät), seen: Spieler-id -> zuletzt da
-  // gespeichert wird { v: 2, w, g, a, st, ap, seen, crews, top } – ältere Dateien mit festen Bauplätzen werden nicht übernommen
+  // gespeichert wird { v: 3, w, g, a, st, ap, seen, crews, top } – ältere Dateien (v < 3) werden nicht übernommen (Neustart 04.11.2026)
   let W = {}, G = {}, A = {}, ST = {}, AP = {}, SEEN = {}, crews = {}, top = [], sha = null, dirty = false, timer = null, loaded = false;
   const CR = 6, CMAX = 3, PER = 900, TOTAL = 40000;
   const PROTECT = new Set(['werkbank', 'amboss', 'kochtopf', 'werftbank', 'tischlerbank', 'pfahl', 'truhe', 'bett']);
   const unpack = j => {
     if (!j || typeof j !== 'object') return;
     crews = j.crews || {}; top = j.top || [];
-    if (j.v === 2) { W = j.w || {}; G = j.g || {}; A = j.a || {}; ST = j.st || {}; AP = j.ap || {}; SEEN = j.seen || {}; }
+    if (j.v === 3) { W = j.w || {}; G = j.g || {}; A = j.a || {}; ST = j.st || {}; AP = j.ap || {}; SEEN = j.seen || {}; }
   };
   (async () => {
     try {
@@ -52,7 +52,7 @@ module.exports = function (send, konten) {
   })();
   async function flush() {
     if (!dirty) return; dirty = false;
-    const text = JSON.stringify({ v: 2, w: W, g: G, a: A, st: ST, ap: AP, seen: SEEN, crews, top });
+    const text = JSON.stringify({ v: 3, w: W, g: G, a: A, st: ST, ap: AP, seen: SEEN, crews, top });
     try {
       if (durable) {
         for (let i = 0; i < 2; i++) {
