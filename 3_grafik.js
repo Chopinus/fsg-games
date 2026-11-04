@@ -298,6 +298,10 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 34, title: 'Inselreich: Größere Bedienung', date: '04.11.2026', items: [
+      ['Verbessert', 'Inselreich: Knöpfe, Fenster und Texte wachsen jetzt mit dem Bildschirm – auf einem großen Monitor etwa doppelt so groß'],
+      ['Neu', 'Inselreich: Im Titelbildschirm stellst du mit 🔍 Größe ein, ob alles noch größer oder kleiner sein soll'],
+    ] },
     { id: 33, title: 'Inselreich: Neustart mit neuer Balance', date: '04.11.2026', items: [
       ['Neu', 'Inselreich: Alle Spielstände und Bauten wurden zurückgesetzt – alle beginnen neu im Dorf auf der Heimatinsel'],
       ['Verbessert', 'Inselreich: Stufen brauchen mehr EP, damit man nicht so schnell durch den Skillbaum kommt'],
