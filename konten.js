@@ -492,6 +492,50 @@ function tokenKey(name, token) {
   return acc && (acc.tokens || []).includes(sha256(String(token || ''))) ? key : null;
 }
 
+
+// ---------- Casino-Geldrangliste ----------
+// Jedes Gerät meldet seinen Jetonstand (die Jetons liegen im Gerät). Gespeichert wird je Gerät ein Eintrag mit Name, Jetons und Zeitpunkt.
+const CZ_FILE = 'casino-rangliste.json', CZ_LOCAL = path.join(__dirname, 'casino-rangliste.local.json');
+let cz = {}, czSha = null, czDirty = false, czTimer = null;
+const czLast = new Map();
+async function czLoad() {
+  try {
+    if (durable) { const res = await gh('GET', null, CZ_FILE); if (res.status === 200) { const j = await res.json(); czSha = j.sha; cz = JSON.parse(Buffer.from(j.content || '', 'base64').toString('utf8') || '{}'); } }
+    else if (fs.existsSync(CZ_LOCAL)) cz = JSON.parse(fs.readFileSync(CZ_LOCAL, 'utf8'));
+  } catch (e) { console.error('Casino-Rangliste laden:', e); }
+}
+async function czFlush() {
+  if (!czDirty) return; czDirty = false;
+  const text = JSON.stringify(cz);
+  try {
+    if (durable) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const res = await gh('PUT', { message: 'Casino-Rangliste aktualisiert', content: Buffer.from(text).toString('base64'), ...(czSha ? { sha: czSha } : {}) }, CZ_FILE);
+        if (res.ok) { czSha = (await res.json()).content.sha; return; }
+        if (res.status === 409 || res.status === 422) { const g = await gh('GET', null, CZ_FILE); if (g.ok) czSha = (await g.json()).sha; continue; }
+        console.error('Casino-Rangliste speichern:', res.status); break;
+      }
+      czDirty = true;
+    } else fs.writeFileSync(CZ_LOCAL, text);
+  } catch (e) { czDirty = true; console.error('Casino-Rangliste speichern:', e); }
+}
+function czMark() { czDirty = true; if (!czTimer) czTimer = setTimeout(() => { czTimer = null; czFlush(); }, 60000); }
+function czTop(id) {
+  const old = Date.now() - 30 * 864e5;
+  const all = Object.entries(cz).filter(([, e]) => e.t > old).sort((a, b) => b[1].c - a[1].c);
+  const rank = id ? all.findIndex(([k]) => k === id) + 1 : 0;
+  return { top: all.slice(0, 20).map(([k, e]) => ({ n: e.n, c: e.c, me: k === id })), rank, players: all.length };
+}
+function czAction(action, body) {
+  const key = String(body.key || ''); const id = key.length >= 8 && key.length <= 64 ? sha256('cz' + key).slice(0, 16) : '';
+  if (action === 'casino_top') return [200, czTop(id)];
+  if (!id) return [400, { error: 'Ungültig' }];
+  const n = String(body.name || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 16), c = Math.max(0, Math.min(1e12, Math.floor(Number(body.chips) || 0)));
+  if (!n) return [200, czTop(id)];
+  if (Date.now() - (czLast.get(id) || 0) > 4000) { czLast.set(id, Date.now()); const cur = cz[id]; if (!cur || cur.c !== c || cur.n !== n || Date.now() - cur.t > 3600e3) { cz[id] = { n, c, t: Date.now() }; czMark(); } }
+  return [200, czTop(id)];
+}
+
 // Bremse gegen Passwort-Raten: höchstens 12 falsche Versuche pro Minute und IP
 const fails = new Map();
 const recent = ip => (fails.get(ip) || []).filter(x => Date.now() - x < 60000);
@@ -543,6 +587,7 @@ async function handle(action, body, ip) {
     return [200, { token }];
   }
   if (action === 'board') return [200, board()];
+  if (action === 'casino_top' || action === 'casino_report') return czAction(action, body);
   if (action === 'insel_load' || action === 'insel_save') {
     if (!acc || !(acc.tokens || []).includes(sha256(String(body.token || '')))) return [401, { error: 'Bitte melde dich neu an.' }];
     return islAction(action, key, acc, body);
@@ -587,9 +632,9 @@ function board() {
   return boardCache;
 }
 
-load(); chatLoad(); wbLoad(); gLoad(); islLoad();
+load(); chatLoad(); wbLoad(); gLoad(); islLoad(); czLoad();
 // Render beendet den Dienst mit SIGTERM – vorher noch speichern
-process.on('SIGTERM', async () => { await flush(); await chatFlush(); await wbFlush(); await gFlush(); await islFlush(); process.exit(0); });
-process.on('SIGINT', async () => { await flush(); await chatFlush(); await wbFlush(); await gFlush(); await islFlush(); process.exit(0); });
+process.on('SIGTERM', async () => { await flush(); await chatFlush(); await wbFlush(); await gFlush(); await islFlush(); await czFlush(); process.exit(0); });
+process.on('SIGINT', async () => { await flush(); await chatFlush(); await wbFlush(); await gFlush(); await islFlush(); await czFlush(); process.exit(0); });
 
 module.exports = { handle, flush, durable, tokenKey };

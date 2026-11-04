@@ -298,6 +298,17 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 31, title: 'Inselreich: Freies Bauen, Werkbänke zum Aufstellen und neue Balance', date: '04.11.2026', items: [
+      ['Neu', 'Inselreich: Neue Version – alle beginnen neu im Dorf auf der Heimatinsel, mit dem Tutorial von Lotsin Anna'],
+      ['Neu', 'Inselreich: Bau dein Haus, wo du willst – auf der ganzen Heimatinsel. Feste Bauplätze gibt es nicht mehr'],
+      ['Neu', 'Inselreich: Absteckpfahl aus der Tischlerei schützt 13 × 13 Felder vor anderen Spielern (höchstens 3 Pfähle)'],
+      ['Neu', 'Inselreich: Die fünf Werkbänke stellst du selbst her (Rucksack → Handwerk) und überall auf – auch unterwegs auf jeder Insel'],
+      ['Neu', 'Inselreich: Fähigkeiten kosten jetzt Münzen und Material – die mittleren brauchen Trollzähne, die starken Trophäen der Inselbosse'],
+      ['Neu', 'Inselreich: Gefahrenstufen ★ – je weiter draußen eine Insel liegt, desto stärker die Gegner und desto besser die Beute'],
+      ['Neu', 'Inselreich: Haie greifen nur noch an, wenn du ohne Boot schwimmst. Piraten lauern erst weit draußen'],
+      ['Neu', 'Casino: Geldrangliste in der Lobby'],
+      ['Verbessert', 'Inselreich: Neue Balance bei EP, Bossen und Preisen für einen angenehmeren Fortschritt'],
+    ] },
     { id: 30, title: 'Inselreich: Spielstand online speichern', date: '03.11.2026', items: [
       ['Neu', 'Inselreich: Spielstand mit Name und Passwort online sichern – dasselbe Konto wie im Ritterlauf. So spielst du auf jedem Gerät weiter'],
       ['Neu', 'Inselreich: Wer im Ritterlauf angemeldet ist, ist es automatisch auch im Inselreich'],

@@ -6,7 +6,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const TICK = 200, NEAR = 48, CHAT_NEAR = 1e9, PLOTS = 15, PLOT_W = 10;
+const TICK = 200, NEAR = 48, CHAT_NEAR = 1e9;
 const num = (v, d = 0) => (Number.isFinite(+v) ? +v : d);
 const clean = (s, n) => String(s ?? '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, n);
 const KEY = /^[a-z_]{2,20}$/;
@@ -21,53 +21,65 @@ const gh = (method, body) => fetch(`https://api.github.com/repos/${REPO}/content
 module.exports = function (send, konten) {
   const P = new Map(); // Verbindung -> Spieler
   let tick = 0;
-  // ---------- Bauplätze ----------
-  // id -> { o: Spieler-id, n: Name, it: { "x,y": [Boden, Gegenstand] }, c: { Rohstoff: Anzahl }, g: { "x,y": [Samen, gepflanzt] }, a: { "x,y": zuletzt geerntet }, t }
-  // gespeichert wird { plots, crews, top } (ältere Dateien enthalten nur die Bauplätze)
-  let plots = {}, crews = {}, top = [], sha = null, dirty = false, timer = null, loaded = false;
-  const unpack = j => { if (j && j.plots) { plots = j.plots || {}; crews = j.crews || {}; top = j.top || []; } else plots = j || {}; };
+  // ---------- Bauten: frei auf der Heimatinsel, Werkbänke überall, Absteckpfähle schützen ein Gebiet ----------
+  // w: { "x,y": [Boden, Gegenstand, Besitzer-id, Name] } in Weltfeldern, g: Felder { "x,y": [Samen, gepflanzt] }, a: Ställe { "x,y": zuletzt geerntet }
+  // st: Truhen-Inhalt je Spieler, ap: Konto -> Spieler-id (Bauten ziehen mit aufs neue Gerät), seen: Spieler-id -> zuletzt da
+  // gespeichert wird { v: 2, w, g, a, st, ap, seen, crews, top } – ältere Dateien mit festen Bauplätzen werden nicht übernommen
+  let W = {}, G = {}, A = {}, ST = {}, AP = {}, SEEN = {}, crews = {}, top = [], sha = null, dirty = false, timer = null, loaded = false;
+  const CR = 6, CMAX = 3, PER = 900, TOTAL = 40000;
+  const PROTECT = new Set(['werkbank', 'amboss', 'kochtopf', 'werftbank', 'tischlerbank', 'pfahl', 'truhe', 'bett']);
+  const unpack = j => {
+    if (!j || typeof j !== 'object') return;
+    crews = j.crews || {}; top = j.top || [];
+    if (j.v === 2) { W = j.w || {}; G = j.g || {}; A = j.a || {}; ST = j.st || {}; AP = j.ap || {}; SEEN = j.seen || {}; }
+  };
   (async () => {
     try {
       if (durable) {
         const r = await gh('GET');
-        if (r.status === 200) { const j = await r.json(); sha = j.sha; unpack(JSON.parse(Buffer.from(j.content || '', 'base64').toString('utf8') || '{}')); }
+        if (r.status === 200) {
+          const j = await r.json(); sha = j.sha; let text = j.content ? Buffer.from(j.content, 'base64').toString('utf8') : '';
+          if (!text && j.size > 0) { const raw = await fetch(`https://api.github.com/repos/${REPO}/contents/${FILE}`, { headers: { Authorization: `Bearer ${TOKEN}`, Accept: 'application/vnd.github.raw', 'User-Agent': 'fsg-spiele', 'X-GitHub-Api-Version': '2022-11-28' } }); if (raw.ok) text = await raw.text(); }
+          unpack(JSON.parse(text || '{}'));
+        }
       } else if (fs.existsSync(LOCAL)) unpack(JSON.parse(fs.readFileSync(LOCAL, 'utf8')));
-    } catch (e) { console.error('Inselreich-Basen laden:', e); }
-    // verlassene Bauplätze nach 45 Tagen freigeben
-    for (const [id, p] of Object.entries(plots)) if (Date.now() - (p.t || 0) > 45 * 864e5) delete plots[id];
+    } catch (e) { console.error('Inselreich-Bauten laden:', e); }
+    // Bauten von Spielern, die 60 Tage nicht da waren, verschwinden wieder
+    const old = Date.now() - 60 * 864e5;
+    for (const [k, v] of Object.entries(W)) if (SEEN[v[2]] && SEEN[v[2]] < old) { delete W[k]; delete G[k]; delete A[k]; }
     loaded = true;
-    console.log(`Inselreich: ${Object.keys(plots).length} Basen geladen (${durable ? 'GitHub' : 'lokal'})`);
+    console.log(`Inselreich: ${Object.keys(W).length} gebaute Felder geladen (${durable ? 'GitHub' : 'lokal'})`);
   })();
   async function flush() {
     if (!dirty) return; dirty = false;
-    const text = JSON.stringify({ plots, crews, top });
+    const text = JSON.stringify({ v: 2, w: W, g: G, a: A, st: ST, ap: AP, seen: SEEN, crews, top });
     try {
       if (durable) {
         for (let i = 0; i < 2; i++) {
-          const r = await gh('PUT', { message: 'Inselreich-Basen', content: Buffer.from(text).toString('base64'), ...(sha ? { sha } : {}) });
+          const r = await gh('PUT', { message: 'Inselreich-Bauten', content: Buffer.from(text).toString('base64'), ...(sha ? { sha } : {}) });
           if (r.ok) { sha = (await r.json()).content.sha; return; }
           if (r.status === 409 || r.status === 422) { const g = await gh('GET'); if (g.ok) sha = (await g.json()).sha; continue; }
-          console.error('Inselreich-Basen speichern:', r.status); break;
+          console.error('Inselreich-Bauten speichern:', r.status); break;
         }
         dirty = true;
       } else fs.writeFileSync(LOCAL, text);
-    } catch (e) { dirty = true; console.error('Inselreich-Basen speichern:', e); }
+    } catch (e) { dirty = true; console.error('Inselreich-Bauten speichern:', e); }
   }
   function touch() { dirty = true; if (!timer) timer = setTimeout(() => { timer = null; flush(); }, 20000); }
-  function mark(id) {
-    if (plots[id]) plots[id].t = Date.now();
-    dirty = true; if (!timer) timer = setTimeout(() => { timer = null; flush(); }, 20000);
-    const msg = { t: 'i_plot', id, p: plots[id] || null };
-    for (const c of P.keys()) send(c, msg);
-  }
+  let CL = null;
+  const claimsL = () => CL || (CL = Object.entries(W).filter(([, v]) => v[1] === 'pfahl').map(([k, v]) => { const [x, y] = k.split(',').map(Number); return { x, y, o: v[2] }; }));
+  const mates = (a, b) => { if (a === b) return true; const cc = Object.values(crews).find(cr => cr.m.includes(a)); return !!cc && cc.m.includes(b); };
+  const claimBlock = (pid, x, y) => claimsL().find(q => !mates(q.o, pid) && Math.abs(x - q.x) <= CR && Math.abs(y - q.y) <= CR);
+  const bcast = msg => { for (const c of P.keys()) send(c, msg); };
+  function bset(k, v) { if (v) W[k] = v; else { delete W[k]; delete G[k]; delete A[k]; } CL = null; touch(); bcast({ t: 'i_b', k, v: W[k] || null, g: G[k] || null, a: A[k] || null }); }
+  const tileXY = m => { const x = Math.floor(num(m.x, NaN)), y = Math.floor(num(m.y, NaN)); return Number.isFinite(x) && Number.isFinite(y) && Math.abs(x) < 1e5 && Math.abs(y) < 1e5 ? [x, y, x + ',' + y] : null; };
+  const worldMsg = c => ({ t: 'i_world', w: W, g: G, a: A, s: ST[c.pid] || {}, ready: loaded });
   const onExit = () => { if (dirty) flush().finally(() => process.exit(0)); else process.exit(0); };
   process.once('SIGTERM', onExit); process.once('SIGINT', onExit);
   const connOf = pid => { for (const [c, q] of P) if (q.id === pid) return c; return null; };
   const near = (me, r) => [...P.entries()].filter(([, q]) => q !== me && Math.hypot(q.s[0] - me.s[0], q.s[1] - me.s[1]) < r).map(([c]) => c);
   const crewOf = pid => Object.entries(crews).find(([, cr]) => cr.m.includes(pid));
   function crewState(c) { const cc = crewOf(c.pid); send(c, { t: 'i_crew', code: cc ? cc[0] : null, n: cc ? cc[1].n : null, names: cc ? cc[1].m.map(pid => cc[1].names[pid] || '?') : [] }); }
-  const tileKey = (x, y) => { x = Math.floor(num(x, -1)); y = Math.floor(num(y, -1)); return x >= 0 && y >= 0 && x < PLOT_W && y < PLOT_W ? x + ',' + y : null; };
-  const own = (c, id) => { const p = plots[id]; return p && p.o === c.pid ? p : null; };
 
   // Aussehen: Hut, Titel, Haustier, Bootsfarbe
   const meta = m => (m && typeof m === 'object' ? { hat: clean(m.hat, 12), title: clean(m.title, 20), pet: clean(m.pet, 12), bc: clean(m.bc, 10), bs: clean(m.bs, 10), ab: clean(m.ab, 12) } : null);
@@ -82,19 +94,25 @@ module.exports = function (send, konten) {
     if (m.t === 'i_join') {
       const s = state(m.s); if (!s) return;
       P.set(c, { id: c.pid, name: clean(m.name, 16) || 'Gast', col: Math.floor(num(m.col)) % 8, s, last: Date.now(), meta: meta(m.m) });
-      // Angemeldet (gleiches Konto wie im Ritterlauf)? Dann gehört der Bauplatz dem Konto und zieht mit aufs neue Gerät um.
-      c.acc = null;
+      // Angemeldet (gleiches Konto wie im Ritterlauf)? Dann gehören die Bauten dem Konto und ziehen mit aufs neue Gerät um.
+      c.acc = null; SEEN[c.pid] = Date.now(); touch();
+      let moved = false;
       if (konten && konten.tokenKey && m.acc && typeof m.acc === 'object') {
         const k = konten.tokenKey(clean(m.acc.n, 20), String(m.acc.tk || '').slice(0, 64));
         if (k) {
-          c.acc = k;
-          const mine = Object.entries(plots).find(([, p]) => p.acc === k), here = Object.entries(plots).find(([, p]) => p.o === c.pid);
-          if (mine && mine[1].o !== c.pid && !here) { mine[1].o = c.pid; mark(+mine[0]); }
-          else if (!mine && here) { here[1].acc = k; mark(+here[0]); }
+          c.acc = k; const old = AP[k];
+          if (old && old !== c.pid) {
+            for (const v of Object.values(W)) if (v[2] === old) v[2] = c.pid;
+            if (ST[old]) { const t = ST[c.pid] || {}; for (const [r, n] of Object.entries(ST[old])) t[r] = (t[r] || 0) + n; ST[c.pid] = t; delete ST[old]; }
+            for (const cr of Object.values(crews)) { const i = cr.m.indexOf(old); if (i >= 0 && !cr.m.includes(c.pid)) { cr.m[i] = c.pid; cr.names[c.pid] = cr.names[old]; } if (i >= 0) delete cr.names[old]; cr.m = cr.m.filter(x => x !== old); }
+            CL = null; moved = true;
+          }
+          AP[k] = c.pid; touch();
         }
       }
       send(c, { t: 'i_hi', id: c.pid, n: P.size });
-      send(c, { t: 'i_plots', plots, ready: loaded });
+      if (moved) { for (const o of P.keys()) if (o !== c) send(o, worldMsg(o)); }
+      send(c, worldMsg(c));
       crewState(c); send(c, { t: 'i_top', top });
       return;
     }
@@ -118,33 +136,40 @@ module.exports = function (send, konten) {
     if (m.t === 'i_crew_leave') { const cc = crewOf(c.pid); if (!cc) return; const [code, cr] = cc; cr.m = cr.m.filter(x => x !== c.pid); delete cr.names[c.pid]; if (!cr.m.length) delete crews[code]; touch(); crewState(c); for (const pid of cr.m) { const o = connOf(pid); if (o) crewState(o); } return; }
     // Regatta-Bestenliste
     if (m.t === 'i_race') { const ms = Math.floor(num(m.ms)); if (ms < 20000 || ms > 30 * 60e3) return; const i = top.findIndex(e => e.n === me.name); if (i >= 0 && top[i].ms <= ms) { send(c, { t: 'i_top', top }); return; } if (i >= 0) top.splice(i, 1); top.push({ n: me.name, ms, t: Date.now() }); top.sort((a, b) => a.ms - b.ms); top = top.slice(0, 10); touch(); for (const o of P.keys()) send(o, { t: 'i_top', top }); return; }
-    // ---------- Basen ----------
-    const id = Math.floor(num(m.id, -1));
-    if (m.t === 'i_claim') {
-      if (id < 0 || id >= PLOTS || plots[id] || Object.values(plots).some(p => p.o === c.pid)) return;
-      plots[id] = { o: c.pid, n: me.name, it: {}, c: {}, g: {}, a: {}, t: Date.now(), ...(c.acc ? { acc: c.acc } : {}) }; mark(id); return;
+    // ---------- Bauten ----------
+    if (!loaded) { if (m.t === 'i_put') send(c, { t: 'i_no', m: 'Der Server lädt die Bauten noch – versuch es gleich noch mal', put: String(m.k) }); return; }
+    const T = tileXY(m);
+    if (m.t === 'i_chest') { // n > 0 einlagern, n < 0 herausnehmen – jeder hat seinen eigenen Truhen-Inhalt
+      const r = String(m.k), n = Math.floor(num(m.n)); if (!KEY.test(r) || !n || Math.abs(n) > 9999) return;
+      const box = ST[c.pid] = ST[c.pid] || {}, have = box[r] || 0; if (n < 0 && have < -n) return;
+      box[r] = have + n; if (!box[r]) delete box[r]; touch(); send(c, { t: 'i_stash', s: box }); return;
     }
-    const p = own(c, id); if (!p) return;
-    p.n = me.name;
-    if (m.t === 'i_unclaim') { delete plots[id]; mark(id); return; }
-    const k = tileKey(m.x, m.y);
+    if (!T) return;
+    const [x, y, key] = T, cur = W[key];
     if (m.t === 'i_put') { // Bauteil setzen: Ebene 0 Boden, 1 Gegenstand
-      if (!k || !KEY.test(String(m.k)) || Object.keys(p.it).length > 120) return;
-      const L = m.l ? 1 : 0, cur = p.it[k] || [null, null]; cur[L] = m.k; p.it[k] = cur; mark(id); return;
+      const k = String(m.k), L = m.l ? 1 : 0; if (!KEY.test(k)) return;
+      const no = msg => send(c, { t: 'i_no', m: msg, put: k, k: key, v: cur || null });
+      if (cur && cur[L]) return no('Hier steht schon etwas');
+      if (claimBlock(c.pid, x, y)) return no('Dieses Gebiet hat jemand anderes abgesteckt');
+      if (k === 'pfahl') {
+        if (claimsL().filter(q => q.o === c.pid).length >= CMAX) return no(`Du hast schon ${CMAX} Absteckpfähle`);
+        if (claimsL().some(q => !mates(q.o, c.pid) && Math.abs(q.x - x) <= 2 * CR && Math.abs(q.y - y) <= 2 * CR)) return no('Zu nah an einem fremden Gebiet');
+      }
+      if (!cur) { const all = Object.values(W); if (all.length >= TOTAL) return no('Die Welt ist voll gebaut – reiß erst etwas ab'); if (all.filter(v => v[2] === c.pid).length >= PER) return no(`Du hast schon ${PER} Felder bebaut – reiß erst etwas ab`); }
+      const v = cur ? cur.slice() : [null, null, c.pid, me.name]; v[L] = k; v[2] = c.pid; v[3] = me.name;
+      if (L === 1 && (k === 'huehner' || k === 'schafe')) A[key] = Date.now();
+      bset(key, v); return;
     }
     if (m.t === 'i_del') {
-      if (!k || !p.it[k]) return;
-      const L = m.l ? 1 : 0; p.it[k][L] = null; if (!p.it[k][0] && !p.it[k][1]) delete p.it[k];
-      delete p.g[k]; delete p.a[k]; mark(id); return;
+      if (!cur) return; const L = m.l ? 1 : 0, k = cur[L]; if (!k) return;
+      if (cur[2] !== c.pid && !mates(cur[2], c.pid) && (claimBlock(c.pid, x, y) || PROTECT.has(k))) { send(c, { t: 'i_no', m: 'Das gehört ' + cur[3], k: key, v: cur, del: k }); return; }
+      const v = cur.slice(); v[L] = null; if (L === 1) { delete G[key]; delete A[key]; }
+      bset(key, v[0] || v[1] ? v : null); return;
     }
-    if (m.t === 'i_chest') { // n > 0 einlagern, n < 0 herausnehmen
-      const r = String(m.k), n = Math.floor(num(m.n)); if (!KEY.test(r) || !n) return;
-      const have = p.c[r] || 0; if (n < 0 && have < -n) return;
-      p.c[r] = have + n; if (!p.c[r]) delete p.c[r]; mark(id); return;
-    }
-    if (m.t === 'i_plant') { if (!k || !KEY.test(String(m.k))) return; p.g[k] = [m.k, Date.now()]; mark(id); return; }
-    if (m.t === 'i_crop') { if (!k) return; delete p.g[k]; mark(id); return; }
-    if (m.t === 'i_collect') { if (!k) return; p.a[k] = Date.now(); mark(id); return; }
+    if (!cur || cur[1] !== (m.t === 'i_plant' || m.t === 'i_crop' ? 'feld' : cur[1]) || !mates(cur[2], c.pid)) return;
+    if (m.t === 'i_plant') { if (!KEY.test(String(m.k))) return; G[key] = [String(m.k), Date.now()]; bset(key, cur); return; }
+    if (m.t === 'i_crop') { delete G[key]; bset(key, cur); return; }
+    if (m.t === 'i_collect') { A[key] = Date.now(); bset(key, cur); return; }
   }
   function drop(c) { P.delete(c); }
   setInterval(() => {

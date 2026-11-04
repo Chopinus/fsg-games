@@ -11,7 +11,18 @@
   const WK = 'casino.jetons', DAY = 'casino.tag', HELP = 'casino.hilfe';
   const store = { get: k => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
   let wallet = store.get(WK) == null ? NaN : Number(store.get(WK)); if (!(wallet >= 0)) { wallet = 10000; store.set(WK, wallet); }
-  const setWallet = v => { wallet = Math.max(0, Math.min(1e12, Math.floor(v))); store.set(WK, wallet); document.querySelectorAll('[data-cz-wallet]').forEach(e => (e.textContent = fmtN(wallet))); };
+  const setWallet = v => { wallet = Math.max(0, Math.min(1e12, Math.floor(v))); store.set(WK, wallet); document.querySelectorAll('[data-cz-wallet]').forEach(e => (e.textContent = fmtN(wallet))); czReport(); };
+  /* ---------- Geldrangliste: jedes Gerät meldet seinen Jetonstand ---------- */
+  let czBoard = null, czTimer = null;
+  async function czApi(action, body) { try { const r = await fetch('/api/' + action, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); return r.ok ? await r.json() : null; } catch { return null; } }
+  function czReport(now) { clearTimeout(czTimer); czTimer = setTimeout(async () => { const n = typeof nick === 'function' ? nick() : ''; const r = await czApi(n ? 'casino_report' : 'casino_top', { key: store.get('fsg.key') || '', name: n, chips: wallet }); if (r) { czBoard = r; renderBoard(); } }, now ? 0 : 3000); }
+  function renderBoard() {
+    const el = q('#czBoard'); if (!el) return;
+    if (!czBoard) { set(el, '<p class="cz-note">Rangliste wird geladen …</p>'); return; }
+    const medal = i => ['🥇', '🥈', '🥉'][i] || (i + 1) + '.';
+    set(el, (czBoard.top.length ? czBoard.top.map((e, i) => `<div class="cz-rrow ${e.me ? 'me' : ''}"><b>${medal(i)}</b><span>${esc(e.n)}${e.me ? ' (du)' : ''}</span><em>${fmtN(e.c)}</em></div>`).join('') : '<p class="cz-note">Noch niemand auf der Liste.</p>')
+      + (czBoard.rank > 20 ? `<div class="cz-rrow me"><b>${czBoard.rank}.</b><span>Du</span><em>${fmtN(wallet)}</em></div>` : '') + `<p class="cz-note">${czBoard.players} Spieler in den letzten 30 Tagen · zählt die Jetons auf jedem Gerät</p>`);
+  }
   const today = () => new Date().toISOString().slice(0, 10);
 
   /* ---------- Aussehen ---------- */
@@ -43,6 +54,10 @@
   .cz-trow{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
   .cz-trow b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .cz-sec{font-family:Bungee,Figtree,sans-serif;font-weight:400;font-size:18px;color:#ffe9a8;margin:18px 0 8px}
+  .cz-board{display:flex;flex-direction:column;gap:5px;max-width:520px}
+  .cz-rrow{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:11px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+  .cz-rrow b{width:34px;font-size:16px}.cz-rrow span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cz-rrow em{font-style:normal;font-weight:800;color:var(--gold)}
+  .cz-rrow.me{background:rgba(232,196,106,.16);border-color:rgba(232,196,106,.5)}
   .cz-nick{display:flex;gap:8px;align-items:center;margin:8px 0}.cz-nick input{flex:1;padding:10px 12px;border-radius:10px;border:1px solid rgba(232,196,106,.35);background:#1a1218;color:#fff;font:inherit;font-size:16px}
   /* Jetons */
   .cz-chip{--c:#c8332c;position:relative;display:inline-grid;place-items:center;width:44px;height:44px;border-radius:50%;font-weight:900;font-size:12px;color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.6);cursor:pointer;border:0;padding:0;
@@ -216,11 +231,14 @@
       ${nick() ? '' : '<div class="cz-nick"><input id="czNick" maxlength="16" placeholder="Dein Name am Tisch"><button class="cz-btn small" data-cz="nick">Speichern</button></div>'}
       <div class="cz-games">${GAMES.map(g => `<div class="cz-game"><div class="art">${g.art()}</div><h3>${g.title}</h3><p>${g.text}</p>
         <div class="row"><button class="cz-btn small" data-cz-open="${g.kind}">Tisch eröffnen</button><button class="cz-btn small dark" data-cz-solo="${g.kind}">Allein mit Bots</button></div></div>`).join('')}</div>
+      <div class="cz-sec">🏆 Geldrangliste</div>
+      <div class="cz-board" id="czBoard"></div>
       <div class="cz-sec">Offene Tische</div>
       <div class="cz-tables">${open.length ? open.map(r => `<div class="cz-trow"><b>${esc(r.name)}</b><span class="cz-note">${r.players.length} ${r.players.length === 1 ? 'Spieler' : 'Spieler'}</span><button class="cz-btn small" data-cz-join="${r.id}">Hinsetzen</button></div>`).join('') : '<p class="cz-note">Gerade ist kein Tisch offen. Eröffne einen – deine Freunde sehen ihn dann hier und in der Runden-Liste.</p>'}</div>
       <p class="cz-note" style="margin-top:22px">Hier wird nur mit Spieljetons gespielt. Sie haben keinen Geldwert, lassen sich weder kaufen noch auszahlen und liegen nur auf deinem Gerät.</p>
     </div>`;
     const cvw = lobby.querySelector('[data-cz-artwheel]'); if (cvw) drawWheel(cvw, 0.4, null);
+    renderBoard(); if (!renderLobby.asked || Date.now() - renderLobby.asked > 20000) { renderLobby.asked = Date.now(); czReport(true); }
   }
   function needName() {
     const inp = q('#czNick'); if (inp && inp.value.trim()) { q('#nick').value = inp.value.trim(); q('#nick').dispatchEvent(new Event('change')); }

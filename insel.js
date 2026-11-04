@@ -44,9 +44,9 @@
   ];
   const SKILL = Object.fromEntries(SKILLS.map(s => [s.id, s]));
   const XP_FOE = { slime: 5, bigslime: 10, sandslime: 5, frostslime: 7, fireslime: 8, frog: 5, sporling: 6, bat: 6, moth: 6, scorpion: 8, wolf: 10, golem: 40, troll: 100 };
-  const xpNeed = l => Math.round(20 * Math.pow(l, 1.5));
+  const xpNeed = l => Math.round(18 * Math.pow(l, 1.4));
   // Werkstationen auf der Heimatinsel und was man dort herstellen kann
-  const STATIONS = { werk: ['🗡️', 'Waffen- und Werkzeugbank', 'Werkzeuge und Waffen – vom Steinschwert bis zur Drachenklinge'], schmiede: ['🛡️', 'Rüstungsschmiede', 'Rüstungen, Helme und Schilde'], koch: ['🍲', 'Küche', 'Essen und Trinken, das heilt oder dich stärker macht'], werft: ['⚓', 'Werft', 'Bootsteile wie Segel, Rumpf und Kanone – und ganz neue Boote'], tischler: ['🪑', 'Tischlerei', 'Möbel, Wände und Deko für deine Base. Was du hier baust, stellst du mit 🔨 Bauen auf deinen Bauplatz.'] };
+  const STATIONS = { hand: ['✋', 'Handwerk', 'Ohne Werkbank, direkt aus dem Rucksack: Hier stellst du die fünf Werkbänke her. Aufstellen kannst du sie mit 🔨 Bauen – bei deinem Haus auf der Heimatinsel und unterwegs auf jeder Insel.'], werk: ['🗡️', 'Waffen- und Werkzeugbank', 'Werkzeuge und Waffen – vom Steinschwert bis zur Drachenklinge'], schmiede: ['🛡️', 'Rüstungsschmiede', 'Rüstungen, Helme und Schilde'], koch: ['🍲', 'Küche', 'Essen und Trinken, das heilt oder dich stärker macht'], werft: ['⚓', 'Werft', 'Bootsteile wie Segel, Rumpf und Kanone – und ganz neue Boote'], tischler: ['🪑', 'Tischlerei', 'Möbel, Truhen, Betten, Ställe, Deko und Absteckpfähle für dein Haus. Was du hier herstellst, stellst du mit 🔨 Bauen auf der Heimatinsel auf.'] };
   const RECIPES = [
     { id: 'steinschwert', st: 'werk', i: '🗡️', n: 'Steinschwert', d: '+1 Schaden', cost: { holz: 3, stein: 5 }, gear: 'schwert', tier: 1 },
     { id: 'steinaxt', st: 'werk', i: '🪓', n: 'Steinaxt', d: 'Abbauen braucht einen Schlag weniger', cost: { holz: 3, stein: 3 }, gear: 'axt', tier: 1 },
@@ -90,6 +90,14 @@
   const ITEM_USE = { kraeutertee: 'Heilt ein Herz, 60 Sek. schneller', kokosmilch: 'Heilt zwei Herzen', feuertrank: '+1 Schaden für 2 Min.', brot: 'Heilt zwei Herzen', ruehrei: 'Heilt dich ganz', karottensuppe: '+1 Schaden und schneller für 2 Min.', kuerbiskuchen: '+2 Herzen für 3 Min.', saft: 'Heilt ein Herz', kuchen: 'Heilt dich ganz', suppe: '+1 Schaden für 90 Sek.', shake: 'Schneller für 90 Sek.', elixier: 'Stachelhaut für 90 Sek.' };
   const buff = { kraft: 0, tempo: 0, dorn: 0, herz: 0, rinde: 0 };
   const GEAR_NAME = { schwert: ['Holzschwert', 'Steinschwert', 'Eisschwert', 'Obsidianklinge', 'Drachenklinge'], axt: ['', 'Steinaxt', 'Obsidianaxt'], ruestung: ['', 'Fellrüstung', 'Stachelpanzer', 'Drachenpanzer'], segel: ['', 'Fasersegel', 'Wollsegel', 'Sporenseide-Segel', 'Sturmsegel'], schaufel: ['', 'Schaufel'], kanone: ['', 'Bootskanone'], helm: ['', 'Lederkappe', 'Eishelm'], schild: ['', 'Holzschild', 'Obsidianschild'], rumpf: ['', 'Verstärkter Rumpf'], fernrohr: ['', 'Fernrohr'] };
+  // Spielstand-Version: Ältere Stände (vor freiem Bauen, Werkbänken zum Aufstellen und neuer Balance) beginnen neu auf der Heimatinsel.
+  // Der alte Stand bleibt unter insel.alt im Gerät liegen.
+  const SAVE_V = 3, SKEYS0 = ['insel.xp', 'insel.bag', 'insel.found', 'insel.cave', 'insel.save'];
+  let wasReset = false, WORLD = new Map();
+  try {
+    const sv = JSON.parse(localStorage.getItem('insel.save') || 'null'), xp0 = localStorage.getItem('insel.xp');
+    if ((sv && (sv.v || 0) < SAVE_V) || (!sv && xp0)) { const bk = {}; for (const k of SKEYS0) { bk[k] = localStorage.getItem(k); localStorage.removeItem(k); } localStorage.setItem('insel.alt', JSON.stringify(bk)); wasReset = true; }
+  } catch {}
   let prog = { xp: 0, lvl: 1, pts: 0, sk: {}, gear: {} };
   try { const q = JSON.parse(localStorage.getItem('insel.xp') || 'null'); if (q && q.lvl) prog = Object.assign(prog, q); } catch {}
   const saveProg = () => { try { localStorage.setItem('insel.xp', JSON.stringify(prog)); } catch {} };
@@ -118,7 +126,7 @@
     glibber: ['Glibber', '💧', '#8ef07a'], stachel: ['Skorpionstachel', '🦂', '#d9a050'], fell: ['Wolfsfell', '🐺', '#c8ccd8'], glut: ['Glutsteine', '🔥', '#ff7a2a'], sporen: ['Sporen', '✨', '#c9a6ff'],
     kraeutertee: ['Kräutertee', '🍵', '#7ab060', 1], kokosmilch: ['Kokosmilch', '🥛', '#f4f0e8', 1], feuertrank: ['Feuertrank', '🔥', '#ff6a2a', 1],
     saft: ['Beerensaft', '🧃', '#d84a8a', 1], kuchen: ['Apfelkuchen', '🥧', '#e0a050', 1], suppe: ['Pilzsuppe', '🍲', '#c96a3a', 1], shake: ['Kokos-Shake', '🥤', '#f0e0a0', 1], elixier: ['Kaktus-Elixier', '🧪', '#5ad06a', 1],
-    wuestenperle: ['Wüstenperle', '🦪', '#f0e0c0'], frostherz: ['Frostherz', '💙', '#7fc8ff'], giftdruese: ['Giftdrüse', '🟢', '#5ad06a'], drachenschuppe: ['Drachenschuppe', '🐉', '#e04a2a'], koenigsspore: ['Königsspore', '🌟', '#e0a0ff'],
+    wuestenperle: ['Wüstenperle', '🦪', '#f0e0c0'], frostherz: ['Frostherz', '💙', '#7fc8ff'], giftdruese: ['Giftdrüse', '🟢', '#5ad06a'], drachenschuppe: ['Drachenschuppe', '🐉', '#e04a2a'], koenigsspore: ['Königsspore', '🌟', '#e0a0ff'], trollzahn: ['Trollzahn', '🦷', '#f0e8d0'],
     samen_weizen: ['Weizensamen', '🌰', '#c8a050'], samen_karotte: ['Karottensamen', '🌰', '#e07a30'], samen_kuerbis: ['Kürbissamen', '🌰', '#e8a040'],
     weizen: ['Weizen', '🌾', '#e0c050'], karotte: ['Karotten', '🥕', '#f07a20'], kuerbis: ['Kürbisse', '🎃', '#e87a20'], ei: ['Eier', '🥚', '#f4eee0'], wolle: ['Wolle', '🧶', '#f0ece4'],
     brot: ['Brot', '🍞', '#d8a050', 1], ruehrei: ['Rührei', '🍳', '#f4d040', 1], karottensuppe: ['Karottensuppe', '🥣', '#f08a30', 1], kuerbiskuchen: ['Kürbiskuchen', '🥮', '#e8902a', 1],
@@ -213,8 +221,7 @@
   function stations() {
     if (STPOS) return STPOS;
     let yw = 71; for (let r = 4; r < 50; r += 0.25) if (elev(70.5, 70.5 + r) < 0.02) { yw = 70.5 + r; break; }
-    STPOS = [{ k: 'werk', x: 66.5, y: 68.6 }, { k: 'schmiede', x: 74.5, y: 68.6 }, { k: 'koch', x: 70.5, y: 66.8 }, { k: 'werft', x: 70.5, y: yw - 0.9, wy: yw }, { k: 'tischler', x: 62.5, y: 68.6 }];
-    const WH = werkhof(); for (const [k, i] of [['werk', 0], ['schmiede', 1], ['koch', 2], ['tischler', 3], ['werft', 4]]) STPOS.push({ k, x: WH.x0 + 2.4 + i * 4.2, y: WH.y0 + 3.2, v: 1 });
+    STPOS = []; // Werkbänke stellt jeder selbst auf (🔨 Bauen) – auf der Heimatinsel und unterwegs
     return STPOS;
   }
   // Gegenstände: 1 Baum, 2 Palme, 3 Fels, 4 Blumen, 5 Gras, 6 Busch, 7 Tanne, 8 Kaktus, 9 toter Baum, 10 Dschungelbaum,
@@ -228,10 +235,10 @@
     [VULKAN]: { [FOREST]: [[9, .1], [13, .03]], [GRASS]: [[9, .03], [13, .03], [5, .03]], [SAND]: [[13, .02]], [HILL]: [[13, .06], [9, .02]], [ROCK]: [[13, .08]] },
     [PILZ]: { [FOREST]: [[15, .22], [19, .1]], [GRASS]: [[15, .05], [19, .08], [4, .04], [5, .05]], [SAND]: [[19, .03]], [HILL]: [[3, .04], [15, .05]], [ROCK]: [[3, .06]] },
   };
-  function objAt(tx, ty, t) {
+  function objAt(tx, ty, t) { return WORLD.size && WORLD.has(tx + ',' + ty) ? 0 : objNat(tx, ty, t); }
+  function objNat(tx, ty, t) {
     const b = TB;
     if (Math.abs(tx - 68) < 9 && ty >= 64 && ty <= 73) return 0; // Startplatz und Werkstätten frei
-    if (STPOS && Math.abs(tx - 70) < 4 && Math.abs(ty - STPOS[3].y) < 3) return 0; // vor der Werft frei
     const E = caveEnt(); if (Math.abs(tx - E.tx) <= 3 && ty >= E.ty - 4 && ty <= E.ty + 2) return 0; // vor der Höhle frei
     { const cx = Math.floor(tx / CELL), cy = Math.floor(ty / CELL); for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) { const isl = islCache.get((cx + i) + ',' + (cy + j)); if (isl && isl.b && isl.r >= 20) { const c = islandCave(isl); if (c && Math.abs(tx - c.ent.tx) <= 3 && ty >= c.ent.ty - 4 && ty <= c.ent.ty + 2) return 0; } } }
     if (inTownClear(tx, ty)) return 0;
@@ -248,7 +255,8 @@
   const isCut = (tx, ty) => (cut.get(tx + ',' + ty) || 0) > Date.now();
   function walkable(x, y) {
     if (inMid(x, y)) return true;
-    if (nearBig(x, y)) { const ta = townAt(x, y); if (ta === 4) return true; if (townBlocked(x, y)) return false; if (ta === 3 && baseSolid(x, y)) return false; }
+    if (WORLD.size) { const wv = WORLD.get(Math.floor(x) + ',' + Math.floor(y)); if (wv && wv[1] && PIECES[wv[1]] && PIECES[wv[1]].solid) return false; }
+    if (nearBig(x, y)) { const ta = townAt(x, y); if (ta === 4) return true; if (townBlocked(x, y)) return false; }
     const e = elev(x, y); if (e < 0 && cls(e) !== W_SHALLOW) return false;
     if (clsB(e, EB) === LAVA) return false;
     const tx = Math.floor(x), ty = Math.floor(y), o = objAt(tx, ty, tileAt(tx, ty));
@@ -292,12 +300,9 @@
     const V = { x: BIG.x + 30, y: BIG.y };
     let shore = V.x + 60; for (let x = V.x + 10; x < V.x + 200; x += 0.25) if (elev(x, V.y) < 0.02) { shore = x; break; }
     const PX0 = V.x - 38, PY0 = V.y + 17, PW = 10, PG = 13; // Bauplätze 10×10, 5 Spalten, 3 Reihen
-    const plots = [];
-    for (let r = 0; r < 3; r++) for (let c = 0; c < 5; c++) plots.push({ id: r * 5 + c, x: PX0 + c * PG, y: PY0 + r * PG, w: PW, h: PW });
+    const plots = []; // feste Bauplätze gibt es nicht mehr: gebaut wird frei auf der ganzen Heimatinsel
     const roads = [
-      [V.x + 6, V.y, shore + 0.5, V.y], [V.x, V.y - 6, V.x, V.y - 24], [V.x - 6, V.y, V.x - 34, V.y], [V.x, V.y + 6, V.x, PY0 - 1.5],
-      [PX0 - 1.5, PY0 - 1.5, PX0 + 5 * PG - 1.5, PY0 - 1.5], [PX0 - 1.5, PY0 + PG - 1.5, PX0 + 5 * PG - 1.5, PY0 + PG - 1.5], [PX0 - 1.5, PY0 + 2 * PG - 1.5, PX0 + 5 * PG - 1.5, PY0 + 2 * PG - 1.5],
-      ...[0, 1, 2, 3, 4, 5].map(c => [PX0 + c * PG - 1.5, PY0 - 1.5, PX0 + c * PG - 1.5, PY0 + 3 * PG - 1.5]),
+      [V.x + 6, V.y, shore + 0.5, V.y], [V.x, V.y - 6, V.x, V.y - 24], [V.x - 6, V.y, V.x - 34, V.y], [V.x, V.y + 6, V.x, V.y + 16],
     ];
     const houses = [
       { k: 'hafen', x: V.x + 15, y: V.y - 4, wall: '#d8c8a8', roof: '#3b6aa8', sign: '⚓' },
@@ -310,8 +315,8 @@
     const npcs = [
       { k: 'hafen', n: 'Hafenmeisterin Greta', col: 1, hat: 'kapitaen', x: V.x + 15, y: V.y - 2.6, hi: ['Ahoi! Ich habe Aufträge für fleißige Abenteurer.', 'Jeden Tag gibt es neue Aufträge bei mir.'] },
       { k: 'markt', n: 'Händler Ole', col: 3, hat: 'none', x: V.x + 6, y: V.y - 8.6, hi: ['Frische Ware! Ich kaufe auch alles, was du findest.', 'Münzen gegen Rohstoffe, Rohstoffe gegen Münzen!'] },
-      { k: 'bau', n: 'Baumeister Bruno', col: 7, hat: 'bauhelm', x: V.x - 7, y: V.y - 8.6, hi: ['Du willst bauen? Südlich vom Dorfplatz sind Bauplätze frei.', 'Jeder bekommt einen eigenen Bauplatz.'] },
-      { k: 'hof', n: 'Bäuerin Frieda', col: 2, hat: 'stroh', x: V.x - 17, y: V.y - 2.6, hi: ['Mit Samen kannst du auf deinem Bauplatz Felder anlegen.', 'Hühner legen Eier, Schafe geben Wolle!'] },
+      { k: 'bau', n: 'Baumeister Bruno', col: 7, hat: 'bauhelm', x: V.x - 7, y: V.y - 8.6, hi: ['Bau dir dein Haus, wo du willst – die ganze Heimatinsel ist frei!', 'Mit einem Absteckpfahl schützt du dein Gebiet vor anderen.'] },
+      { k: 'hof', n: 'Bäuerin Frieda', col: 2, hat: 'stroh', x: V.x - 17, y: V.y - 2.6, hi: ['Mit Samen kannst du bei deinem Haus Felder anlegen.', 'Hühner legen Eier, Schafe geben Wolle!'] },
       { k: 'schneider', n: 'Schneiderin Mila', col: 5, hat: 'blumen', x: V.x - 16, y: V.y + 9.4, hi: ['Ein neuer Hut gefällig? Oder eine Farbe für dein Boot?', 'Wer gut aussieht, segelt schneller. Sagt man.'] },
       { k: 'magie', n: 'Magierin Selma', col: 5, hat: 'zauber', av: '🔮', x: V.x - 3.6, y: V.y - 17, hi: SCHOOLS.magie.hi },
       { k: 'schwert', n: 'Schwertmeister Konrad', col: 7, hat: 'wikinger', av: '⚔️', x: V.x + 3.6, y: V.y - 17, hi: SCHOOLS.schwert.hi },
@@ -320,9 +325,9 @@
       { k: 'lotse', n: 'Lotsin Anna', col: 4, hat: 'kapitaen', av: '🧭', x: V.x - 4.4, y: V.y - 1.9, hi: ['Willkommen in Lindmark! Ich zeige dir, wie hier alles läuft.', 'Frag mich ruhig, wenn du etwas nicht weißt.', 'Vom Hafen aus geht es raus zur Inselgruppe.'] },
       { k: 'angler', n: 'Angler Hein', col: 6, hat: 'fischer', x: shore - 4, y: V.y - 3.6, hi: ['Die besten Fische beißen nachts.', 'Jede Inselart hat ihre eigenen Fische.'] },
     ];
-    const walkers = [0, 1, 2, 3].map(i => ({ n: ['Lotte', 'Jakob', 'Emil', 'Rosa'][i], col: [0, 4, 6, 2][i], hat: ['none', 'stroh', 'none', 'blumen'][i], path: [[[V.x + 3, V.y + 3], [shore - 6, V.y + 0.8], [V.x + 3, V.y - 3], [V.x + 0.6, V.y - 21]], [[V.x - 3, V.y - 3], [V.x - 30, V.y + 0.8], [V.x - 3, V.y + 3], [V.x + 0.5, PY0 + 24]], [[V.x + 3, V.y - 3], [V.x + 0.6, V.y - 20], [V.x - 3, V.y - 3], [V.x - 3, V.y + 3]], [[V.x - 3, V.y + 3], [V.x + 0.6, PY0 + 11], [V.x + 3, V.y + 3], [shore - 8, V.y - 0.8]]][i], seg: 0, t: i * 7, x: [V.x + 3, V.x - 3, V.x + 3, V.x - 3][i], y: [V.y + 3, V.y - 3, V.y - 3, V.y + 3][i], dir: 0, lines: ['Schönes Wetter heute!', 'Warst du schon in der Kristallhöhle?', 'Im Westen soll es Berge geben.', 'Ich hab gehört, auf den Vulkaninseln gibt es Golems!', 'Die Hafenmeisterin sucht immer Hilfe.'] }));
+    const walkers = [0, 1, 2, 3].map(i => ({ n: ['Lotte', 'Jakob', 'Emil', 'Rosa'][i], col: [0, 4, 6, 2][i], hat: ['none', 'stroh', 'none', 'blumen'][i], path: [[[V.x + 3, V.y + 3], [shore - 6, V.y + 0.8], [V.x + 3, V.y - 3], [V.x + 0.6, V.y - 21]], [[V.x - 3, V.y - 3], [V.x - 30, V.y + 0.8], [V.x - 3, V.y + 3], [V.x + 0.5, V.y + 15]], [[V.x + 3, V.y - 3], [V.x + 0.6, V.y - 20], [V.x - 3, V.y - 3], [V.x - 3, V.y + 3]], [[V.x - 3, V.y + 3], [V.x + 0.6, V.y + 14], [V.x + 3, V.y + 3], [shore - 8, V.y - 0.8]]][i], seg: 0, t: i * 7, x: [V.x + 3, V.x - 3, V.x + 3, V.x - 3][i], y: [V.y + 3, V.y - 3, V.y - 3, V.y + 3][i], dir: 0, lines: ['Schönes Wetter heute!', 'Warst du schon in der Kristallhöhle?', 'Im Westen soll es Berge geben.', 'Ich hab gehört, auf den Vulkaninseln gibt es Golems!', 'Die Hafenmeisterin sucht immer Hilfe.'] }));
     const dock = { x0: shore - 1, x1: shore + 7, y0: V.y - 1.2, y1: V.y + 1.2 };
-    TOWN = { V, shore, plots, roads, houses, npcs, walkers, dock, bb: [PX0 - 6, V.y - 30, shore + 9, PY0 + 3 * PG + 3] };
+    TOWN = { V, shore, plots, roads, houses, npcs, walkers, dock, bb: [V.x - 40, V.y - 30, shore + 9, V.y + 20] };
     return TOWN;
   }
   const werkhof = () => { const V = { x: BIG.x + 30, y: BIG.y }; return { x0: V.x - 42, x1: V.x - 19, y0: V.y + 1.6, y1: V.y + 6.2 }; };
@@ -333,12 +338,10 @@
     const T = town(); if (x < T.bb[0] || x > T.bb[2] || y < T.bb[1] || y > T.bb[3]) return 0;
     if (x >= T.dock.x0 && x <= T.dock.x1 && y >= T.dock.y0 && y <= T.dock.y1) return 4;
     if (Math.hypot(x - T.V.x, y - T.V.y) < 5) return 1;
-    { const WH = werkhof(); if (x >= WH.x0 && x <= WH.x1 && y >= WH.y0 && y <= WH.y1) return 5; }
-    for (const p of T.plots) if (x >= p.x && x < p.x + p.w && y >= p.y && y < p.y + p.h) return 3;
     for (const r of T.roads) if (segD(x, y, r) < 1.1) return 2;
     return 0;
   }
-  const inTownClear = (tx, ty) => { if (!nearBig(tx, ty)) return false; const T = town(); if (tx < T.bb[0] - 2 || tx > T.bb[2] + 2 || ty < T.bb[1] - 2 || ty > T.bb[3] + 2) return false; if (townAt(tx + 0.5, ty + 0.5)) return true; if (Math.abs(tx + 0.5 - T.V.x) < 8 && ty + 0.5 > T.V.y - 26 && ty + 0.5 < T.V.y - 14) return true; { const WH = werkhof(); if (tx > WH.x0 - 3 && tx < WH.x1 + 2 && ty > WH.y0 - 4 && ty < WH.y1 + 2.5) return true; } for (const h of T.houses) if (Math.abs(tx + 0.5 - h.x) < 5 && ty + 0.5 > h.y - 5 && ty + 0.5 < h.y + 4) return true; for (const r of T.roads) if (segD(tx + 0.5, ty + 0.5, r) < 2.2) return true; return Math.hypot(tx + 0.5 - T.V.x, ty + 0.5 - T.V.y) < 9; };
+  const inTownClear = (tx, ty) => { if (!nearBig(tx, ty)) return false; const T = town(); if (tx < T.bb[0] - 2 || tx > T.bb[2] + 2 || ty < T.bb[1] - 2 || ty > T.bb[3] + 2) return false; if (townAt(tx + 0.5, ty + 0.5)) return true; if (Math.abs(tx + 0.5 - T.V.x) < 8 && ty + 0.5 > T.V.y - 26 && ty + 0.5 < T.V.y - 14) return true; for (const h of T.houses) if (Math.abs(tx + 0.5 - h.x) < 5 && ty + 0.5 > h.y - 5 && ty + 0.5 < h.y + 4) return true; for (const r of T.roads) if (segD(tx + 0.5, ty + 0.5, r) < 2.2) return true; return Math.hypot(tx + 0.5 - T.V.x, ty + 0.5 - T.V.y) < 9; };
   function townBlocked(x, y) {
     if (!nearBig(x, y)) return false;
     const T = town(); if (x < T.bb[0] - 3 || x > T.bb[2] + 3 || y < T.bb[1] - 6 || y > T.bb[3] + 3) return false;
@@ -720,6 +723,10 @@
   /* ---------- Kristallhöhle ---------- */
   let cave = null;
   const caves = new Map();
+  // Gefahrenstufe 0 bis 5 nach Abstand zur Mitte der Inselgruppe (Startinsel)
+  const zoneOf = (x, y) => Math.max(0, Math.min(5, Math.floor((Math.hypot(x - 70, y - 70) - 260) / 420) + 1));
+  const ZNAME = ['sicher', 'leicht', 'mittel', 'schwer', 'sehr schwer', 'gefährlich'];
+  const zStars = z => '★'.repeat(z) + '☆'.repeat(5 - z);
   const START_CAVE = { key: 'start', idx: 0, seed: SEED, b: -1, name: 'Kristallhöhle', boss: 'troll', foes: ['slime', 'bigslime'], fly: 'bat' };
   let caveSpec = START_CAVE;
   const CAVE_NAME = { 1: 'Sandgrube', 2: 'Eishöhle', 3: 'Dschungeltempel', 4: 'Vulkanschlund', 5: 'Pilzgrotte' };
@@ -735,7 +742,7 @@
       const a = i / 16 * Math.PI * 2 + h2(isl.cx, isl.cy, 77), tx = Math.round(isl.x + Math.cos(a) * r), ty = Math.round(isl.y + Math.sin(a) * r);
       let ok = true;
       for (let dy = -4; dy <= 2 && ok; dy++) for (let dx = -3; dx <= 3 && ok; dx++) { const t = tileAt(tx + dx, ty + dy); if (t < GRASS || t === LAVA) ok = false; }
-      if (ok) isl.cave = { key: 'c' + isl.cx + ',' + isl.cy, idx: 1 + ((Math.imul(isl.cx, 73856093) ^ Math.imul(isl.cy, 19349663)) >>> 0) % 900, seed: SEED + isl.cx * 1013 + isl.cy * 7919, b: isl.b, name: CAVE_NAME[isl.b], boss: CAVE_BOSS[isl.b], foes: BIOMES[isl.b].foes.filter(f => f !== 'golem'), fly: CAVE_FLY[isl.b], ent: { tx, ty, x: tx + 0.5, y: ty + 0.9 } };
+      if (ok) isl.cave = { key: 'c' + isl.cx + ',' + isl.cy, idx: 1 + ((Math.imul(isl.cx, 73856093) ^ Math.imul(isl.cy, 19349663)) >>> 0) % 900, seed: SEED + isl.cx * 1013 + isl.cy * 7919, b: isl.b, z: zoneOf(isl.x, isl.y), name: CAVE_NAME[isl.b], boss: CAVE_BOSS[isl.b], foes: BIOMES[isl.b].foes.filter(f => f !== 'golem'), fly: CAVE_FLY[isl.b], ent: { tx, ty, x: tx + 0.5, y: ty + 0.9 } };
     }
     EB = keepE; TB = keepT;
     return isl.cave;
@@ -934,7 +941,7 @@
     me.col = Math.floor(Math.random() * 8);
     return false;
   }
-  function save() { saveBag(); try { localStorage.setItem('insel.save', JSON.stringify({ caveKey: me.caveKey, x: me.x, y: me.y, inBoat: me.inBoat, inCave: me.inCave, col: me.col, coins: me.coins, hp: me.hp, boat: { x: boat.x, y: boat.y, h: boat.h, sail: boat.sail } })); } catch {} }
+  function save() { saveBag(); try { localStorage.setItem('insel.save', JSON.stringify({ v: SAVE_V, caveKey: me.caveKey, x: me.x, y: me.y, inBoat: me.inBoat, inCave: me.inCave, col: me.col, coins: me.coins, hp: me.hp, boat: { x: boat.x, y: boat.y, h: boat.h, sail: boat.sail } })); } catch {} }
 
   /* ---------- Spielstand online: gleiches Konto (Name + Passwort) wie im Ritterlauf ---------- */
   const SKEYS = { xp: 'insel.xp', bag: 'insel.bag', found: 'insel.found', cave: 'insel.cave', save: 'insel.save' };
@@ -974,7 +981,7 @@
     caveSaves = d.cave && typeof d.cave === 'object' ? d.cave : {};
     for (const k in buff) buff[k] = 0;
     if (open) {
-      hadSave = load(); if (!hadSave) { spawn(); prog.tut = 0; } else if (prog.tut == null) prog.tut = TUT.length;
+      hadSave = load(); if (!hadSave) { Object.assign(me, { inCave: 0, inBoat: 0, coins: 0, caveKey: 'start' }); spawn(); prog.tut = 0; me.hp = maxHp(); enemies = []; seaFoes = []; items.length = 0; saveProg(); save(); } else if (prog.tut == null) prog.tut = TUT.length;
       mapDirty = true; lastIsle = ''; pet.x = me.x; pet.y = me.y;
       if (me.inCave) enterSavedCave();
       sendMeta(); try { renderAbil(); } catch {} showTitle(); tutBox();
@@ -988,7 +995,7 @@
     cloudBusy = true;
     const r = await api('insel_save', { name: acct.name, token: acct.token, data: { ...core, t: Date.now() }, base: acct.updated || 0, force: force === 'keep' }, keepalive);
     cloudBusy = false;
-    if (r.conflict) { cloudAsk(r, 'Auf einem anderen Gerät wurde weitergespielt.'); return; }
+    if (r.conflict) { if (!r.data || !r.data.save || (r.data.save.v || 0) < SAVE_V) { acct.updated = r.updated; setAcct(acct); cloudSave('keep'); return; } cloudAsk(r, 'Auf einem anderen Gerät wurde weitergespielt.'); return; }
     if (r.error) { if (/anmelden/i.test(r.error)) { setAcct(null); cloudMsg = 'Du wurdest abgemeldet. Bitte melde dich neu an.'; } renderCloud(); return; }
     cloudLast = str; cloudAt = Date.now(); acct.updated = r.updated; setAcct(acct); renderCloud();
   }
@@ -997,7 +1004,7 @@
     const r = await api('insel_load', { name: acct.name, token: acct.token });
     if (r.error) { if (/anmelden/i.test(r.error)) { setAcct(null); cloudMsg = 'Bitte melde dich neu an.'; } else cloudMsg = r.error; renderCloud(); return; }
     acct.name = r.name || acct.name; setAcct(acct);
-    if (!r.data) { await cloudSave(true); cloudMsg = 'Dein Spielstand ist jetzt online gesichert.'; renderCloud(); return; }
+    if (!r.data || !r.data.save || (r.data.save.v || 0) < SAVE_V) { acct.updated = r.updated || 0; setAcct(acct); await cloudSave('keep'); cloudMsg = r.data ? 'Neue Version: Dein neuer Stand ist jetzt online gesichert.' : 'Dein Spielstand ist jetzt online gesichert.'; renderCloud(); return; }
     if (r.updated === acct.updated) { cloudAt = r.updated; renderCloud(); return; } // nichts Neues online, hier wird normal weitergespeichert
     if (coreStr(r.data) === coreStr(snapCore())) { acct.updated = r.updated; setAcct(acct); cloudLast = coreStr(r.data); cloudAt = r.updated; renderCloud(); return; }
     if (!localReal()) { acct.updated = r.updated; setAcct(acct); cloudAt = r.updated; applySnap(r.data); cloudMsg = '☁️ Online-Spielstand geladen'; renderCloud(); say('☁️ Dein Spielstand wurde geladen'); return; }
@@ -1432,7 +1439,7 @@
   }
   let nearSt = null, craftOpen = null;
   /* ---------- Dorfbewohner: Händler, Aufträge ---------- */
-  const PRICE = { wuestenperle: 25, frostherz: 25, giftdruese: 25, drachenschuppe: 30, koenigsspore: 25, weizen: 2, karotte: 3, kuerbis: 6, ei: 3, wolle: 5, brot: 6, ruehrei: 10, karottensuppe: 10, kuerbiskuchen: 14, holz: 1, stein: 1, faser: 1, beere: 1, apfel: 2, kokos: 3, banane: 3, kaktus: 3, pilz: 3, eis: 3, glibber: 2, stachel: 5, fell: 5, glut: 6, sporen: 4, obsidian: 8, eiskristall: 12, saft: 3, kuchen: 8, suppe: 6, shake: 8, elixier: 8 };
+  const PRICE = { trollzahn: 20, wuestenperle: 25, frostherz: 25, giftdruese: 25, drachenschuppe: 30, koenigsspore: 25, weizen: 2, karotte: 3, kuerbis: 6, ei: 3, wolle: 5, brot: 6, ruehrei: 10, karottensuppe: 10, kuerbiskuchen: 14, holz: 1, stein: 1, faser: 1, beere: 1, apfel: 2, kokos: 3, banane: 3, kaktus: 3, pilz: 3, eis: 3, glibber: 2, stachel: 5, fell: 5, glut: 6, sporen: 4, obsidian: 8, eiskristall: 12, saft: 3, kuchen: 8, suppe: 6, shake: 8, elixier: 8 };
   const SHOP = [['saft', 15], ['kuchen', 40], ['fell', 22], ['stachel', 22], ['glut', 30], ['sporen', 18], ['obsidian', 38], ['eiskristall', 48]];
   const FOE_NAME = { slime: 'Schleime', sandslime: 'Sandschleime', frostslime: 'Frostschleime', fireslime: 'Feuerschleime', frog: 'Giftfrösche', sporling: 'Sporlinge', bat: 'Fledermäuse', moth: 'Glühfalter', scorpion: 'Skorpione', wolf: 'Eiswölfe' };
   const today = () => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
@@ -1481,16 +1488,18 @@
     renderNpc();
   }
   const npcExt = {
-    claim: () => { const free = town().plots.find(p => !PLOTS[p.id]); if (!free) { say('Gerade ist kein Bauplatz frei'); return; } send({ t: 'i_claim', id: free.id }); say(`🏡 Bauplatz Nr. ${free.id + 1} gehört jetzt dir! Geh hin und tippe auf 🔨 Bauen.`); },
-    unclaim: b => { if (!b.dataset.sure) { b.dataset.sure = 1; b.textContent = 'Wirklich? Alles darauf geht verloren'; return; } send({ t: 'i_unclaim', id: myPlotId() }); prog.bed = null; saveProg(); say('Bauplatz aufgegeben'); },
+    pfahlinfo: () => { buildSel = 'pfahl'; toggleNpc(); say('📍 Absteckpfähle stellst du in der 🪑 Tischlerei her und mit 🔨 Bauen auf.'); },
+
     seed: b => { const [k, pr] = SEEDSHOP.find(s => s[0] === b.dataset.k) || []; if (k && me.coins >= pr) { me.coins -= pr; bag[k] = (bag[k] || 0) + 1; saveBag(); save(); say(`${RES[k][0]} gekauft`); renderNpc(); } else say('Dafür hast du nicht genug Münzen'); },
   };
-  const SEEDSHOP = [['samen_weizen', 6], ['samen_karotte', 10], ['samen_kuerbis', 16]]; // spätere Etappen hängen hier Aktionen an (Bauplätze, Samen, Hüte ...)
+  const SEEDSHOP = [['samen_weizen', 6], ['samen_karotte', 10], ['samen_kuerbis', 16]]; // spätere Etappen hängen hier Aktionen an (Samen, Hüte ...)
   const npcBody = {
-    bau: () => { const id = myPlotId(), free = town().plots.filter(p => !PLOTS[p.id]).length;
-      return id >= 0 ? `<p>Dein Bauplatz ist <b>Nr. ${id + 1}</b> südlich vom Dorfplatz (dein Name steht auf dem Schild). Stell dich drauf und tippe auf <b>🔨 Bauen</b>. Alles, was du baust, sehen auch die anderen – und es bleibt gespeichert.</p><p>Tipps: Eine <b>Truhe</b> lagert Rohstoffe sicher, im <b>Bett</b> wachst du nach einer Ohnmacht auf, auf <b>Feldern</b> wachsen Samen, <b>Hühner</b> und <b>Schafe</b> geben Eier und Wolle.</p><button class="is-ext" data-ext="unclaim">Bauplatz aufgeben</button>`
-        : `<p>Hier bekommt jeder Abenteurer einen eigenen Bauplatz (10 × 10 Felder) für eine Base mit Haus, Truhen, Feldern und Tieren. Frei sind noch <b>${free}</b> von ${town().plots.length}.</p><button class="is-ext" data-ext="claim" ${free && myId ? '' : 'disabled'}>🏡 Bauplatz nehmen</button>`; },
-    hof: () => `<p>Samen pflanzt du auf einem <b>Feld</b> auf deinem Bauplatz. Danach heißt es warten – auch wenn du nicht spielst, wächst alles weiter.</p><div class="is-shop">${SEEDSHOP.map(([k, pr]) => `<div><i>${RES[SEEDS[k][0]][1]}</i><span><b>${RES[k][0]}</b><small>wächst in ${Math.round(SEEDS[k][1] / 60)} Min. zu ${RES[SEEDS[k][0]][0]}${bag[k] ? ` · hast ${bag[k]}` : ''}</small></span><button class="is-ext" data-ext="seed" data-k="${k}" ${me.coins >= pr ? '' : 'disabled'}>🪙 ${pr}</button></div>`).join('')}</div><p class="is-npcsub">Hühnerstall und Schafweide baust du selbst auf deinem Bauplatz.</p>`,
+    bau: () => { const mineN = claims().filter(c => c.o === myId).length, n = [...WORLD.values()].filter(v => v[2] === myId).length;
+      return `<p>Auf der <b>ganzen Heimatinsel</b> kannst du bauen, wo du willst – nur nicht im Dorf, auf den Wegen und an den Stegen. Geh an eine schöne Stelle und tippe auf <b>🔨 Bauen</b> (Taste B). Böden und Wände kosten Rohstoffe, Möbel, Truhen, Betten, Ställe und Pfähle stellst du vorher in der <b>🪑 Tischlerei</b> her.</p>
+        <p><b>📍 Absteckpfahl:</b> Er schützt <b>${2 * CLAIM_R + 1} × ${2 * CLAIM_R + 1} Felder</b> rund um sich. Dort können nur du und deine Crew bauen und abreißen. Jeder darf höchstens <b>${CLAIM_MAX} Pfähle</b> aufstellen. Ohne Pfahl dürfen andere deine Wände und Böden abreißen – Werkbänke, Truhen, Betten und Pfähle aber nie.</p>
+        <p><b>Werkbänke</b> stellst du im 🎒 Rucksack unter <b>✋ Handwerk</b> her. Aufstellen darfst du sie überall – auch unterwegs auf jeder Insel. Abbauen und mitnehmen geht jederzeit.</p>
+        <p class="is-npcsub">Du hast ${n} Felder bebaut und ${mineN} von ${CLAIM_MAX} Pfählen aufgestellt.</p><button class="is-ext" data-ext="pfahlinfo">📍 Pfahl zum Bauen auswählen</button>`; },
+    hof: () => `<p>Samen pflanzt du auf einem <b>Feld</b> bei deinem Haus. Danach heißt es warten – auch wenn du nicht spielst, wächst alles weiter.</p><div class="is-shop">${SEEDSHOP.map(([k, pr]) => `<div><i>${RES[SEEDS[k][0]][1]}</i><span><b>${RES[k][0]}</b><small>wächst in ${Math.round(SEEDS[k][1] / 60)} Min. zu ${RES[SEEDS[k][0]][0]}${bag[k] ? ` · hast ${bag[k]}` : ''}</small></span><button class="is-ext" data-ext="seed" data-k="${k}" ${me.coins >= pr ? '' : 'disabled'}>🪙 ${pr}</button></div>`).join('')}</div><p class="is-npcsub">Hühnerstall und Schafweide stellst du in der 🪑 Tischlerei her und baust sie bei deinem Haus auf.</p>`,
   }; // und eigene Inhalte je Bewohner
   /* ---------- Angeln ---------- */
   // [Name, Symbol, Farbe, Bedingung, Größe in cm, Preis]
@@ -1650,7 +1659,8 @@
       ${(prog.pets || []).length ? `<h4 class="is-h4">🐾 Haustiere</h4><div class="is-cosgrid">${['', ...prog.pets].map(k => `<button class="is-cos ${(prog.pet || '') === k ? 'on' : ''}" data-pet="${k}"><i class="em">${k ? PETS[k][1] : '✖️'}</i><b>${k ? PETS[k][0] : 'Keins'}</b></button>`).join('')}</div>` : ''}`;
   }
   /* ---------- Gefahren auf See: Haie, Piraten, Bootskanone ---------- */
-  let seaFoes = [], shots = [], seaT = 0, flash = 0;
+  let seaFoes = [], shots = [], seaT = 0, flash = 0, swimT = 0;
+  const swimming = () => !me.inBoat && !me.inCave && elev(me.x, me.y) < -0.03;
   const stormAt = t => { const v = Math.sin(t / 377) * Math.sin(t / 233 + 1); return v > 0.55 ? Math.min(1, (v - 0.55) / 0.15) : 0; };
   const storm = () => stormAt(Date.now() / 1000);
   function fireCannon() {
@@ -1667,22 +1677,26 @@
       const s = shots[i]; s.t += dt; s.x += s.vx * dt; s.y += s.vy * dt;
       let hit = false;
       if (s.own) for (const f of seaFoes) if (!f.dead && Math.hypot(f.x - s.x, f.y - s.y) < (f.k === 'pirat' ? 1.3 : 0.9)) { f.hp--; f.flash = 0.2; hit = true; texts.push({ x: f.x, y: f.y - 1, s: '-1', t: 0, col: '#ffe08a' }); if (f.hp <= 0) sinkFoe(f); break; }
-      if (!s.own && me.inBoat && Math.hypot(boat.x - s.x, boat.y - s.y) < 0.9) { hit = true; hurt(1, s.x, s.y, null, true); }
+      if (!s.own && me.inBoat && Math.hypot(boat.x - s.x, boat.y - s.y) < 0.9) { hit = true; hurt(s.dmg || 1, s.x, s.y, null, true); }
       if (hit || s.t > 1.4 || (!sailable(s.x, s.y) && s.t > 0.2)) { for (let j = 0; j < 6; j++) parts.push({ x: s.x, y: s.y, z: 0, vx: (Math.random() - 0.5) * 3, vy: -Math.random() * 3, t: 0, life: 0.45, col: hit ? '#ff9a3a' : '#dff4ff', sz: 2 }); shots.splice(i, 1); }
     }
+    const swim = swimming();
     for (const f of seaFoes) {
       f.t += dt; f.flash = Math.max(0, f.flash - dt);
-      const dx = boat.x - f.x, dy = boat.y - f.y, d = Math.hypot(dx, dy);
-      if (d > 30 || (!me.inBoat && d > 14)) { f.dead = true; continue; }
+      const hai = f.k === 'hai', px = hai ? me.x : boat.x, py = hai ? me.y : boat.y, dx = px - f.x, dy = py - f.y, d = Math.hypot(dx, dy);
+      if (hai ? d > 24 : d > 30 || (!me.inBoat && d > 14)) { f.dead = true; continue; }
       let tx, ty, sp;
-      if (f.k === 'hai') {
-        f.cd -= dt;
-        if (f.cd <= 0 && me.inBoat && boat.v < 2.2) { tx = boat.x; ty = boat.y; sp = 4.5; if (d < 1.1) { hurt(1, f.x, f.y, null, true); f.cd = 3; shake = 4; } }
-        else { const a = f.t * 0.8 + f.ph; tx = boat.x + Math.cos(a) * 3.5; ty = boat.y + Math.sin(a) * 3.5; sp = 3.2; }
+      if (hai) { // Haie jagen nur, wer ohne Boot im Wasser schwimmt
+        if (!swim) { f.gone = (f.gone || 0) + dt; tx = f.x - dx; ty = f.y - dy; sp = 3; if (f.gone > 3) f.dead = true; }
+        else {
+          f.gone = 0; f.cd -= dt;
+          if (f.cd <= 0) { tx = px; ty = py; sp = 4.4; if (d < 0.9) { hurt(1 + Math.floor((f.z || 0) / 2), f.x, f.y, null, true); f.cd = 2.6; shake = 4; } }
+          else { const a = f.t * 0.9 + f.ph; tx = px + Math.cos(a) * 3.2; ty = py + Math.sin(a) * 3.2; sp = 3.4; }
+        }
       } else {
         const a = Math.atan2(dy, dx) + 1.2; tx = boat.x - Math.cos(a) * 6; ty = boat.y - Math.sin(a) * 6; sp = 2.4;
         f.cd -= dt;
-        if (f.cd <= 0 && d < 10 && me.inBoat) { f.cd = 3.2; const lead = d / 7, px = boat.x + Math.cos(boat.h) * boat.v * lead, py = boat.y + Math.sin(boat.h) * boat.v * lead, ang = Math.atan2(py - f.y, px - f.x); shots.push({ x: f.x, y: f.y, vx: Math.cos(ang) * 7, vy: Math.sin(ang) * 7, t: 0, own: 0 }); for (let j = 0; j < 5; j++) parts.push({ x: f.x, y: f.y, z: 0, vx: Math.cos(ang) * 2, vy: Math.sin(ang) * 2, t: 0, life: 0.5, col: '#cfcfcf', sz: 3 }); }
+        if (f.cd <= 0 && d < 10 && me.inBoat) { f.cd = Math.max(1.8, 3.2 - 0.25 * (f.z || 0)); const lead = d / 7, qx = boat.x + Math.cos(boat.h) * boat.v * lead, qy = boat.y + Math.sin(boat.h) * boat.v * lead, ang = Math.atan2(qy - f.y, qx - f.x); shots.push({ x: f.x, y: f.y, vx: Math.cos(ang) * 7, vy: Math.sin(ang) * 7, t: 0, own: 0, dmg: 1 + ((f.z || 0) >= 4 ? 1 : 0) }); for (let j = 0; j < 5; j++) parts.push({ x: f.x, y: f.y, z: 0, vx: Math.cos(ang) * 2, vy: Math.sin(ang) * 2, t: 0, life: 0.5, col: '#cfcfcf', sz: 3 }); }
       }
       const ex = tx - f.x, ey = ty - f.y, el = Math.hypot(ex, ey) || 1, nx = f.x + ex / el * sp * dt, ny = f.y + ey / el * sp * dt;
       if (sailable(nx, ny)) { f.x = nx; f.y = ny; }
@@ -1691,17 +1705,23 @@
     seaFoes = seaFoes.filter(f => !f.dead);
     // neue Gefahren nur auf See
     seaT += dt; if (seaT < 1) return; seaT = 0;
-    if (!me.inBoat || me.inCave) return;
-    const deep = elev(boat.x, boat.y) < -0.9, lonely = !nearestIsland(boat.x, boat.y);
-    const spawnAt = r => { for (let k = 0; k < 8; k++) { const a = Math.random() * Math.PI * 2, x = boat.x + Math.cos(a) * r, y = boat.y + Math.sin(a) * r; if (elev(x, y) < -0.5) return [x, y]; } return null; };
-    if (deep && !seaFoes.some(f => f.k === 'hai') && Math.random() < (isNight() ? 0.06 : 0.035)) { const p = spawnAt(10); if (p) { seaFoes.push({ k: 'hai', x: p[0], y: p[1], hp: 3, t: 0, cd: 4, ph: Math.random() * 6, h: 0, flash: 0 }); say('🦈 Ein Hai! Fahr schnell weiter – oder feuer mit der Kanone.'); } }
-    if (lonely && !seaFoes.some(f => f.k === 'pirat') && Math.random() < (isNight() || storm() > 0 ? 0.02 : 0.008)) { const p = spawnAt(16); if (p) { seaFoes.push({ k: 'pirat', x: p[0], y: p[1], hp: 6, t: 0, cd: 3, h: 0, flash: 0 }); say('🏴‍☠️ Piraten! ' + (gear('kanone') ? 'Feuer mit F, Klick oder ⚔️!' : 'Ohne Kanone hilft nur Flucht – die Werft baut eine.')); } }
+    if (me.inCave) return;
+    const spawnAt = (cx, cy, r, deepE) => { for (let k = 0; k < 14; k++) { const a = Math.random() * Math.PI * 2, x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r; if (elev(x, y) < deepE) return [x, y]; } return null; };
+    swimT = swim ? swimT + 1 : 0;
+    if (swimT >= 2 && !seaFoes.some(f => f.k === 'hai') && (swimT >= 6 || Math.random() < (isNight() ? 0.5 : 0.3))) {
+      const z = nearBig(me.x, me.y) ? 0 : zoneOf(me.x, me.y), p = spawnAt(me.x, me.y, 6 + Math.random() * 5, -0.1) || spawnAt(me.x, me.y, 9 + Math.random() * 4, -0.05);
+      if (p) { seaFoes.push({ k: 'hai', x: p[0], y: p[1], hp: 3 + z, max: 3 + z, z, t: 0, cd: 2.5, ph: Math.random() * 6, h: 0, flash: 0 }); say('🦈 Ein Hai! Schnell raus aus dem Wasser – oder schlag ihn mit dem Schwert.'); }
+    }
+    if (!me.inBoat) return;
+    const lonely = !nearestIsland(boat.x, boat.y), pz = zoneOf(boat.x, boat.y);
+    if (lonely && pz >= 2 && Math.hypot(boat.x - BIG.x, boat.y - BIG.y) > 480 && !seaFoes.some(f => f.k === 'pirat') && Math.random() < (isNight() || storm() > 0 ? 0.02 : 0.008) * (1 + 0.3 * (pz - 2))) { const p = spawnAt(boat.x, boat.y, 16, -0.5); if (p) { seaFoes.push({ k: 'pirat', x: p[0], y: p[1], hp: 6 + 3 * pz, max: 6 + 3 * pz, z: pz, t: 0, cd: 3, h: 0, flash: 0 }); say('🏴‍☠️ Piraten! ' + (gear('kanone') ? 'Feuer mit F, Klick oder ⚔️!' : 'Ohne Kanone hilft nur Flucht – die Werft baut eine.')); } }
   }
   function sinkFoe(f) {
     f.dead = true; tutEv('sink', f.k);
     for (let i = 0; i < 18; i++) { const a = Math.random() * Math.PI * 2; parts.push({ x: f.x, y: f.y, z: 0, vx: Math.cos(a) * 4, vy: Math.sin(a) * 4, t: 0, life: 0.7, col: i % 2 ? '#8a5a34' : '#dff4ff', sz: 3 }); }
-    if (f.k === 'pirat') { me.coins += 40; texts.push({ x: boat.x, y: boat.y - 1.6, s: '+40 🪙', t: 0, col: '#ffd27a' }); gainXP(50, boat.x, boat.y - 2); newMap(); st().piraten = (st().piraten || 0) + 1; say('🏴‍☠️ Piratenschiff versenkt!'); }
-    else { me.coins += 6; gainXP(12, boat.x, boat.y - 2); say('🦈 Der Hai ist abgetaucht'); }
+    const fz = f.z || 0;
+    if (f.k === 'pirat') { const c = 40 + 30 * Math.max(0, fz - 2); me.coins += c; texts.push({ x: boat.x, y: boat.y - 1.6, s: `+${c} 🪙`, t: 0, col: '#ffd27a' }); gainXP(50 + 25 * Math.max(0, fz - 2), boat.x, boat.y - 2); newMap(); if (fz >= 3) { for (let i = 0; i < fz - 2; i++) { const r = RARE[Math.floor(Math.random() * RARE.length)]; bag[r] = (bag[r] || 0) + 1; texts.push({ x: boat.x, y: boat.y - 2.2 - i * 0.5, s: '+1 ' + RES[r][1], t: 0, col: '#fff' }); } saveBag(); } st().piraten = (st().piraten || 0) + 1; say('🏴‍☠️ Piratenschiff versenkt!'); }
+    else { me.coins += 6 + 3 * fz; gainXP(12 + 6 * fz, me.x, me.y - 2); say('🦈 Der Hai ist abgetaucht'); }
     save();
   }
   function drawSea(ox, oy, u, t) {
@@ -1723,7 +1743,7 @@
         ctx.fillStyle = '#111'; ctx.beginPath(); ctx.moveTo(-10 * S, -17 * S); ctx.quadraticCurveTo(0, -20 * S + Math.sin(t / 300) * 2 * S, 10 * S, -17 * S); ctx.lineTo(9 * S, -5 * S); ctx.lineTo(-9 * S, -5 * S); ctx.closePath(); ctx.fill();
         ctx.fillStyle = '#f4f4f4'; ctx.fillRect(-2 * S, -14 * S, 4 * S, 3 * S); ctx.fillRect(-3 * S, -10 * S, 6 * S, 1 * S); ctx.fillStyle = '#111'; ctx.fillRect(-1.2 * S, -13 * S, S, S); ctx.fillRect(0.4 * S, -13 * S, S, S);
         ctx.restore();
-        const bw = 16 * S; ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(x - bw / 2, y - 26 * S, bw, 2.5 * S); ctx.fillStyle = '#ff5a4a'; ctx.fillRect(x - bw / 2, y - 26 * S, bw * f.hp / 6, 2.5 * S);
+        const bw = 16 * S; ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(x - bw / 2, y - 26 * S, bw, 2.5 * S); ctx.fillStyle = '#ff5a4a'; ctx.fillRect(x - bw / 2, y - 26 * S, bw * f.hp / (f.max || 6), 2.5 * S);
       }
     }
     for (const s of shots) { const x = ox + s.x * u, y = oy + s.y * u - Math.sin(s.t / 1.4 * Math.PI) * 8 * S; shadow(ox + s.x * u, oy + s.y * u, 2 * S, 0.3); ctx.fillStyle = '#1a1a1a'; ctx.beginPath(); ctx.arc(x, y, 2.2 * S, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#666'; ctx.fillRect(x - S, y - S, S, S); }
@@ -1841,7 +1861,7 @@
   /* ---------- Schnellreise zwischen Hafen Lindmark und Steg Inselmitte ---------- */
   function seaSpot(x, y) { for (let r = 0; r < 8; r += 0.5) for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2, px = x + Math.cos(a) * r, py = y + Math.sin(a) * r; if (sailable(px, py) && sailable(px + 1, py) && sailable(px - 1, py)) return [px, py]; } return [x, y]; }
   const DEST = [
-    { k: 'hafen', n: 'Hafen Lindmark', i: '⚓', sub: 'Heimatinsel mit Dorf, Händlern und Bauplätzen', spot: () => { const T = town(); return [...seaSpot(T.dock.x1 + 1.8, T.V.y), 0]; } },
+    { k: 'hafen', n: 'Hafen Lindmark', i: '⚓', sub: 'Heimatinsel mit Dorf und Händlern – hier baust du dein Haus', spot: () => { const T = town(); return [...seaSpot(T.dock.x1 + 1.8, T.V.y), 0]; } },
     { k: 'mitte', n: 'Steg Inselmitte', i: '🪵', sub: 'Startinsel mitten in der Inselgruppe', spot: () => { const M = mid(); return [...seaSpot(M.x0 - 1.8, M.y), Math.PI]; } },
   ];
   const destNear = () => DEST.find(d => { const [x, y] = d.spot(); return Math.hypot(me.x - x, me.y - y) < 14; });
@@ -1902,16 +1922,22 @@
     const d = document.createElement('div'); d.className = 'is-title'; root.appendChild(d);
     d.innerHTML = `<div class="is-tbox"><div class="is-logo"><span class="is-tboat">⛵</span><h1>Inselreich</h1><p>Segeln · Sammeln · Bauen · Kämpfen</p></div>
       <button class="is-tplay" data-tplay>▶ ${hadSave ? 'Weiterspielen' : 'Abenteuer beginnen'}</button>
+      ${wasReset ? '<div class="is-cmsg">🆕 Neue Version: Alle beginnen neu im Dorf auf der Heimatinsel – mit freiem Bauen, Werkbänken zum Aufstellen und neuer Balance.</div>' : ''}
       <div class="is-tcloud"></div>
-      <div class="is-trow"><button data-thelp>🎮 Steuerung</button><button data-tback>✕ Zurück zum Hub</button></div>
-      <div class="is-thelp" hidden><b>Am PC:</b> WASD laufen · Leertaste oder Klick angreifen · E sprechen, benutzen, Boot · R Schnellreise · G angeln · I Rucksack · K Skills · C Crew · T Chat · M Karte<br><b>Am Handy:</b> Links irgendwo hinziehen = laufen · rechts tippen oder ziehen = angreifen und zielen · Knöpfe unten rechts für alles andere</div>
+      <div class="is-trow"><button data-tnew>🔄 Neues Spiel</button><button data-thelp>🎮 Steuerung</button><button data-tback>✕ Zurück zum Hub</button></div>
+      <div class="is-thelp" hidden><b>Am PC:</b> WASD laufen · Leertaste oder Klick angreifen · E sprechen, benutzen, Boot · B bauen · R Schnellreise · G angeln · I Rucksack · K Skills · C Crew · T Chat · M Karte<br><b>Am Handy:</b> Links irgendwo hinziehen = laufen · rechts tippen oder ziehen = angreifen und zielen · Knöpfe unten rechts für alles andere</div>
       <small>Du spielst als <b>${escH(me.name)}</b> · ${online} Spieler online</small></div>`;
     renderCloud();
     d.onclick = e => { if (e.target.closest('[data-clogin]')) { cloudForm = true; cloudMsg = ''; renderCloud(); return; }
       const cd = e.target.closest('[data-cdo]'); if (cd) { if (cd.dataset.cdo === 'x') { cloudForm = false; cloudMsg = ''; renderCloud(); } else if (cd.dataset.cdo === 'create') cloudLogin(true); return; }
       if (e.target.closest('[data-clogout]')) { cloudSave(); setAcct(null); cloudMsg = 'Abgemeldet. Dein Stand bleibt auf diesem Gerät.'; renderCloud(); return; }
       if (e.target.closest('.is-tcloud')) return;
+      const tn = e.target.closest('[data-tnew]'); if (tn) { if (!tn.dataset.sure) { tn.dataset.sure = 1; tn.textContent = '⚠️ Wirklich? Alles fängt neu an'; return; } newGame(); return; }
       if (e.target.closest('[data-tplay]')) { if (cloudAskD) return; startPlay(); } else if (e.target.closest('[data-thelp]')) { const h = d.querySelector('.is-thelp'); h.hidden = !h.hidden; } else if (e.target.closest('[data-tback]')) close(); };
+  }
+  function newGame() {
+    try { const bk = {}; for (const k of SKEYS0) bk[k] = localStorage.getItem(k); localStorage.setItem('insel.alt', JSON.stringify(bk)); } catch {}
+    wasReset = false; applySnap({ v: 1 }); say('🔄 Neues Spiel: Du startest im Dorf Lindmark auf der Heimatinsel');
   }
   function startPlay() {
     const d = root.querySelector('.is-title'); if (d) { d.classList.add('out'); setTimeout(() => d.remove(), 600); }
@@ -1926,16 +1952,19 @@
     { ev: 'talk:lotse', g: 'Sprich mit Lotsin Anna am Dorfplatz', tip: 'Stell dich neben sie und drück E (am Handy 🛠️).' },
     { ev: 'talk:markt', g: 'Schau bei Händler Ole vorbei', tip: 'Sein Stand mit 🪙 steht nördlich vom Brunnen. Bei Ole kaufst du Waren und verkaufst alles, was du sammelst.' },
     { ev: 'harvest:baum', g: 'Fälle einen Baum', tip: 'Stell dich vor einen Baum und greif mehrmals an (Leertaste, Klick oder ⚔️). Felsen und Büsche gehen genauso.' },
+    { ev: 'harvest:fels', g: 'Bau einen Felsen ab', tip: 'Graue Felsen geben Steine. Du findest sie rund ums Dorf auf der Heimatinsel.' },
     { ev: 'bag', g: 'Öffne deinen Rucksack', tip: 'Taste I oder 🎒. Dort liegen Rohstoffe und Essen – und deine Erfolge und Crew.' },
+    { ev: 'make:m_werkbank', g: 'Stell dir eine Werkbank her', tip: 'Im Rucksack unten auf ✋ Handwerk tippen. Die Waffen- und Werkzeugbank kostet 8 Holz und 4 Steine.' },
+    { ev: 'place:werkbank', g: 'Stell die Werkbank auf', tip: 'Tippe auf 🔨 Bauen (Taste B), wähle die Werkbank und stell sie vor dir ab. Werkbänke darfst du überall aufstellen – auch unterwegs auf jeder Insel.' },
+    { ev: 'craft:werk', g: 'Benutze deine Werkbank', tip: 'Stell dich davor und drück E (am Handy 🛠️). Hier entstehen Schwerter, Äxte, die Schaufel und mehr.' },
     { ev: 'skills', g: 'Schau dir den Skillbaum an', tip: 'Taste K oder 🌟. Für jede Stufe gibt es einen Punkt: links Kampf, rechts Sammeln, oben Seefahrt.' },
     { ev: 'talk:hafen', g: 'Hol dir die Tagesaufträge bei Hafenmeisterin Greta', tip: 'Greta steht am Haus mit dem ⚓ im Osten. Jeden Tag gibt es drei neue Aufträge mit Münzen und EP.' },
-    { ev: 'talk:bau', g: 'Frag Baumeister Bruno nach einem Bauplatz', tip: 'Bruno (🔨) steht nördlich vom Brunnen. Südlich vom Dorf kannst du dir eine eigene Base bauen.' },
-    { ev: 'craft', g: 'Öffne eine Werkbank im Werkhof', tip: 'Der Werkhof liegt westlich vom Dorfplatz am Weg: Waffen und Werkzeug, Rüstungen, Küche, Tischlerei und Werft. Stell dich davor und drück E.' },
-    { ev: 'talk:schwert', g: 'Besuch die Lehrer nördlich vom Dorfplatz', tip: 'Magie, Schwertkunst, Fernkampf und Heilung: Sprich zum Beispiel mit Schwertmeister Konrad. Fähigkeiten lernst du für Münzen ab Stufe 2.' },
-    { poll: () => me.inBoat, g: 'Geh zum Steg im Osten und steig in dein Boot', tip: 'Dein Boot liegt am Steg hinter Gretas Haus. Stell dich daneben und drück E oder ⚓.' },
+    { ev: 'talk:bau', g: 'Frag Baumeister Bruno, wie das Bauen geht', tip: 'Bruno (🔨) steht nördlich vom Brunnen. Dein Haus baust du, wo du willst – mit einem 📍 Absteckpfahl schützt du dein Gebiet.' },
+    { ev: 'talk:schwert', g: 'Besuch die Lehrer nördlich vom Dorfplatz', tip: 'Magie, Schwertkunst, Fernkampf und Heilung: Sprich zum Beispiel mit Schwertmeister Konrad. Fähigkeiten lernst du ab Stufe 3 für Münzen und Material.' },
+    { poll: () => me.inBoat, g: 'Geh zum Steg im Osten und steig in dein Boot', tip: 'Dein Boot liegt am Steg hinter Gretas Haus. Stell dich daneben und drück E oder ⚓. Ohne Boot im Meer schwimmen ist gefährlich – dort jagen Haie!' },
     { poll: () => me.inBoat && boat.sail, g: 'Setz das Segel', tip: 'Leertaste oder ⛵. Quer zum Wind bist du am schnellsten, gegen den Wind kommst du kaum voran.' },
     { ev: 'travel:mitte', g: 'Reise zum Steg in der Inselmitte', tip: 'Im Boot: Taste R oder 🧭 Reisen. So kommst du jederzeit zwischen dem Hafen und der Inselgruppe hin und her.' },
-    { poll: () => !me.inBoat && !me.inCave && !!(nearestIsland(me.x, me.y) || {}).home, g: 'Geh auf der Startinsel an Land', tip: 'Fahr an den Steg und drück E oder ⚓.' },
+    { poll: () => !me.inBoat && !me.inCave && !!(nearestIsland(me.x, me.y) || {}).home, g: 'Geh auf der Startinsel an Land', tip: 'Fahr an den Steg und drück E oder ⚓. Je weiter du von hier hinausfährst, desto stärker werden Gegner – und desto besser die Beute (★ neben dem Inselnamen).' },
     { ev: 'kill', g: 'Besiege einen Gegner', tip: 'Im Norden der Startinsel liegt die Kristallhöhle voller Schleime. Jede Inselart hat eigene Gegner – und in großen Höhlen wartet ein Boss.' },
   ];
   const tutActive = () => prog.tut != null && prog.tut < TUT.length;
@@ -1959,15 +1988,16 @@
   }
   const FAQ = [
     ['🎮 Steuerung', 'Am PC: WASD laufen, Leertaste oder Klick angreifen, E sprechen/benutzen/Boot, R Schnellreise, G angeln, I Rucksack, K Skills, C Crew, T Chat, M Karte. Am Handy: auf der linken Seite irgendwo hinziehen zum Laufen, auf der rechten Seite tippen oder ziehen zum Angreifen; die Knöpfe unten rechts machen den Rest.'],
-    ['🪓 Sammeln und Herstellen', 'Bäume, Felsen, Büsche und Pflanzen geben Rohstoffe. Jede Inselart hat eigene. Im Werkhof im Dorf und auf der Startinsel gibt es fünf Werkbänke: 🗡️ Waffen und Werkzeug, 🛡️ Rüstungen, 🍲 Küche, 🪑 Tischlerei (Möbel, Wände, Deko) und ⚓ Werft (Bootsteile und neue Boote).'],
-    ['✨ Fähigkeiten', 'Nördlich vom Dorfplatz unterrichten Magierin Selma, Schwertmeister Konrad, Bogenschützin Liv und Heilerin Mara. Bei ihnen lernst du für Münzen aktive Fähigkeiten wie Feuerball, Sturmangriff, Pfeilfächer oder Heilung und verbesserst sie bis Stufe 3. Drei davon legst du auf deine Plätze: am PC Tasten 1–3, am Handy die runden Knöpfe rechts (tippen oder zum Zielen ziehen).'],
+    ['🪓 Sammeln und Werkbänke', 'Bäume, Felsen, Büsche und Pflanzen geben Rohstoffe. Jede Inselart hat eigene. Die fünf Werkbänke stellst du selbst her (🎒 Rucksack → ✋ Handwerk) und mit 🔨 Bauen auf: 🗡️ Waffen und Werkzeug, 🍲 Küche, 🪑 Tischlerei (Möbel, Deko, Pfähle), 🛡️ Rüstungsschmiede und ⚓ Werft. Aufstellen darfst du sie bei deinem Haus und unterwegs auf jeder Insel – und mit 🧹 Abreißen wieder einpacken.'],
+    ['✨ Fähigkeiten', 'Nördlich vom Dorfplatz unterrichten Magierin Selma, Schwertmeister Konrad, Bogenschützin Liv und Heilerin Mara. Bei ihnen lernst du für Münzen und Material (die mittleren brauchen 🦷 Trollzähne, die starken Trophäen der Inselbosse) aktive Fähigkeiten wie Feuerball, Sturmangriff, Pfeilfächer oder Heilung und verbesserst sie bis Stufe 3. Drei davon legst du auf deine Plätze: am PC Tasten 1–3, am Handy die runden Knöpfe rechts (tippen oder zum Zielen ziehen).'],
     ['🌟 Stufen und Skills', 'Für fast alles bekommst du EP. Jede neue Stufe bringt einen Skillpunkt. Im Skillbaum erscheinen neue Felder erst, wenn du ein Nachbarfeld gelernt hast.'],
     ['📜 Aufträge und Händler', 'Greta hat jeden Tag drei Aufträge. Bei Ole kaufst und verkaufst du, bei Frieda gibt es Samen und Haustiere, bei Mila Hüte und Farben, bei Hein Angeln.'],
-    ['🏡 Eigene Base', 'Bruno gibt dir einen Bauplatz südlich vom Dorf. Dort baust du mit 🔨 Böden, Wände, Truhen, ein Bett, Felder und Ställe. Alles bleibt gespeichert und alle sehen es.'],
+    ['🏡 Dein Haus', 'Auf der ganzen Heimatinsel darfst du bauen, wo du willst (nur nicht im Dorf und auf Wegen). Mit 🔨 Bauen setzt du Böden, Wände, Truhen, ein Bett, Felder und Ställe. Ein 📍 Absteckpfahl aus der Tischlerei schützt 13 × 13 Felder: dort bauen nur du und deine Crew (höchstens 3 Pfähle). Alles bleibt gespeichert und alle sehen es.'],
     ['⛵ Boot, Wind und Schnellreise', 'Dein Boot wartet am Steg. Mit Segel bist du schnell, quer zum Wind am schnellsten. Mit 🧭 Reisen (Taste R) springst du vom Boot oder von einem Steg zwischen dem Hafen Lindmark und dem Steg in der Inselmitte hin und her.'],
-    ['🦈 Gefahren auf See', 'Im tiefen Wasser jagen Haie, auf offener See lauern Piratenschiffe, und manchmal zieht ein Sturm auf. Mit der Bootskanone aus der Werft wehrst du dich.'],
+    ['🦈 Gefahren auf See', 'Haie kommen, wenn du ohne Boot im Meer schwimmst – raus aus dem Wasser oder mit dem Schwert wehren. Piratenschiffe lauern erst weit draußen auf offener See (ab ★★), und manchmal zieht ein Sturm auf. Mit der Bootskanone aus der Werft wehrst du dich.'],
+    ['★ Gefahrenstufen', 'Neben dem Inselnamen zeigen Sterne, wie gefährlich es dort ist. Je weiter eine Insel von der Startinsel in der Mitte entfernt liegt, desto mehr Leben und Schaden haben die Gegner – und desto mehr Münzen, EP, Rohstoffe und seltene Beute gibt es. Auch Bosse und Piraten werden draußen stärker.'],
     ['🕳️ Höhlen und Bosse', 'Bosse gibt es in der Kristallhöhle auf der Startinsel (Höhlentroll, ab Stufe 5) und in den Höhlen großer Inseln: Sandwurm in der Wüste (ab 9), Frostwyrm im Schnee (ab 11), Riesenfrosch im Dschungel (ab 12), Sporenkönigin im Pilzwald (ab 14) und Feuerdrache auf Vulkaninseln (ab 16). Sie bringen viele Münzen und EP, Herzen, drei seltene Boss-Materialien für die besten Waffen, Rüstungen, Segel und Boote, oft eine Schatzkarte – und beim ersten Sieg einen Skillpunkt extra. Nach 10 Minuten kommen sie wieder.'],
-    ['☁️ Speichern', 'Gespeichert wird automatisch auf diesem Gerät. Melde dich im Titelbildschirm mit Name und Passwort an (dasselbe Konto wie im Ritterlauf), dann wird dein Stand auch online gesichert und du spielst auf jedem Gerät weiter – samt Bauplatz.'],
+    ['☁️ Speichern', 'Gespeichert wird automatisch auf diesem Gerät. Melde dich im Titelbildschirm mit Name und Passwort an (dasselbe Konto wie im Ritterlauf), dann wird dein Stand auch online gesichert und du spielst auf jedem Gerät weiter – samt deinem Haus.'],
     ['🔒 Stufen', 'Fortgeschrittene Waffen, Rüstungen, Boote, Fähigkeiten und Bosse brauchen eine bestimmte Stufe. Was gesperrt ist, zeigt ein 🔒 mit der nötigen Stufe. Ab Stufe 5, 8 und 12 gibt es bei Anna neue Lehrkapitel.'],
     ['🌙 Tag und Nacht', 'Nachts wird es dunkel, und es kommen mehr und stärkere Gegner. Fackeln und Laternen machen Licht.'],
     ['🎣 Angeln', 'Mit einer Angel von Hein angelst du am Wasser (G). Jede Inselart und Tageszeit hat andere Fische – sie landen im Fischbuch.'],
@@ -1991,21 +2021,30 @@
     natur: { n: 'Heilerin Mara', i: '🌿', col: 2, hat: 'blumen', t: 'Heilung und Natur', hi: ['Die Insel heilt dich, wenn du sie lässt.', 'Wurzeln halten fester als jede Kette.'] },
   };
   const ABIL = {
-    feuerball: { s: 'magie', n: 'Feuerball', i: '🔥', lv: 3, pr: 60, cd: 4, rng: 9, d: 'Ein Feuerball fliegt in Zielrichtung und explodiert. Schaden in einer Fläche.' },
-    frost: { s: 'magie', n: 'Frostnova', i: '❄️', lv: 8, pr: 140, cd: 9, rng: 0, area: 3, d: 'Ein Eisring um dich herum: Schaden, und alle Gegner frieren kurz ein.' },
-    blitz: { s: 'magie', n: 'Kettenblitz', i: '⚡', lv: 14, pr: 260, cd: 7, rng: 7, d: 'Ein Blitz springt von Gegner zu Gegner – mit jeder Stufe einer mehr.' },
-    wirbel: { s: 'schwert', n: 'Wirbelklinge', i: '🌀', lv: 3, pr: 60, cd: 5, rng: 0, area: 2.3, d: 'Ein Drehhieb, der alle Gegner um dich trifft und wegschleudert.' },
-    ansturm: { s: 'schwert', n: 'Sturmangriff', i: '💨', lv: 8, pr: 140, cd: 6, rng: 4.5, d: 'Du sprintest nach vorn und triffst alles auf dem Weg. Gut zum Ausweichen!' },
-    erdstoss: { s: 'schwert', n: 'Erdstoß', i: '💥', lv: 14, pr: 260, cd: 10, rng: 0, area: 2.8, d: 'Ein Schlag auf den Boden: viel Schaden in der Nähe, Gegner sind betäubt.' },
-    pfeil: { s: 'bogen', n: 'Kraftpfeil', i: '🏹', lv: 3, pr: 60, cd: 2.5, rng: 11, d: 'Ein weiter Pfeil, der durch alle Gegner hindurchfliegt.' },
-    faecher: { s: 'bogen', n: 'Pfeilfächer', i: '🎯', lv: 8, pr: 140, cd: 6, rng: 8, d: 'Fünf Pfeile auf einmal im Fächer.' },
-    gift: { s: 'bogen', n: 'Giftpfeil', i: '🧪', lv: 14, pr: 260, cd: 8, rng: 10, d: 'Vergiftet den Gegner: Schaden über mehrere Sekunden.' },
-    heilung: { s: 'natur', n: 'Heilung', i: '💚', lv: 3, pr: 60, cd: 12, rng: 0, d: 'Heilt ein Herz – mit jeder Stufe eins mehr.' },
-    wurzeln: { s: 'natur', n: 'Wurzelfalle', i: '🌱', lv: 8, pr: 140, cd: 10, rng: 5, area: 2.2, d: 'Wurzeln wachsen am Zielort aus dem Boden und halten Gegner fest.' },
-    rinde: { s: 'natur', n: 'Rindenhaut', i: '🌳', lv: 14, pr: 260, cd: 20, rng: 0, d: 'Deine Haut wird zu Rinde: Für ein paar Sekunden blockst du jeden zweiten Treffer.' },
+    feuerball: { s: 'magie', n: 'Feuerball', i: '🔥', lv: 3, pr: 80, cd: 4, rng: 9, d: 'Ein Feuerball fliegt in Zielrichtung und explodiert. Schaden in einer Fläche.' },
+    frost: { s: 'magie', n: 'Frostnova', i: '❄️', lv: 8, pr: 220, cd: 9, rng: 0, area: 3, d: 'Ein Eisring um dich herum: Schaden, und alle Gegner frieren kurz ein.' },
+    blitz: { s: 'magie', n: 'Kettenblitz', i: '⚡', lv: 14, pr: 450, cd: 7, rng: 7, d: 'Ein Blitz springt von Gegner zu Gegner – mit jeder Stufe einer mehr.' },
+    wirbel: { s: 'schwert', n: 'Wirbelklinge', i: '🌀', lv: 3, pr: 80, cd: 5, rng: 0, area: 2.3, d: 'Ein Drehhieb, der alle Gegner um dich trifft und wegschleudert.' },
+    ansturm: { s: 'schwert', n: 'Sturmangriff', i: '💨', lv: 8, pr: 220, cd: 6, rng: 4.5, d: 'Du sprintest nach vorn und triffst alles auf dem Weg. Gut zum Ausweichen!' },
+    erdstoss: { s: 'schwert', n: 'Erdstoß', i: '💥', lv: 14, pr: 450, cd: 10, rng: 0, area: 2.8, d: 'Ein Schlag auf den Boden: viel Schaden in der Nähe, Gegner sind betäubt.' },
+    pfeil: { s: 'bogen', n: 'Kraftpfeil', i: '🏹', lv: 3, pr: 80, cd: 2.5, rng: 11, d: 'Ein weiter Pfeil, der durch alle Gegner hindurchfliegt.' },
+    faecher: { s: 'bogen', n: 'Pfeilfächer', i: '🎯', lv: 8, pr: 220, cd: 6, rng: 8, d: 'Fünf Pfeile auf einmal im Fächer.' },
+    gift: { s: 'bogen', n: 'Giftpfeil', i: '🧪', lv: 14, pr: 450, cd: 8, rng: 10, d: 'Vergiftet den Gegner: Schaden über mehrere Sekunden.' },
+    heilung: { s: 'natur', n: 'Heilung', i: '💚', lv: 3, pr: 80, cd: 12, rng: 0, d: 'Heilt ein Herz – mit jeder Stufe eins mehr.' },
+    wurzeln: { s: 'natur', n: 'Wurzelfalle', i: '🌱', lv: 8, pr: 220, cd: 10, rng: 5, area: 2.2, d: 'Wurzeln wachsen am Zielort aus dem Boden und halten Gegner fest.' },
+    rinde: { s: 'natur', n: 'Rindenhaut', i: '🌳', lv: 14, pr: 450, cd: 20, rng: 0, d: 'Deine Haut wird zu Rinde: Für ein paar Sekunden blockst du jeden zweiten Treffer.' },
   };
   const abRank = id => (prog.ab && prog.ab[id]) || 0;
-  const abCost = (id, r) => Math.round(ABIL[id].pr * (r === 0 ? 1 : 1.5 * (r + 1)));
+  const abCost = (id, r) => Math.round(ABIL[id].pr * (1 + r));
+  // Material je Lehrer und Fähigkeit (leicht, mittel, stark): die mittleren brauchen Trollzähne, die starken Trophäen der Inselbosse
+  const AB_MATS = {
+    magie: [{ glibber: 8, pilz: 4 }, { trollzahn: 2, eiskristall: 3, sporen: 4 }, { frostherz: 2, glut: 6, eiskristall: 4 }],
+    schwert: [{ stein: 12, fell: 3 }, { trollzahn: 2, stachel: 6, stein: 10 }, { wuestenperle: 2, obsidian: 6 }],
+    bogen: [{ holz: 12, faser: 8 }, { trollzahn: 2, fell: 4, faser: 10 }, { giftdruese: 2, kaktus: 8, stachel: 4 }],
+    natur: [{ beere: 8, apfel: 4 }, { trollzahn: 2, banane: 6, pilz: 6 }, { koenigsspore: 2, sporen: 8, faser: 8 }],
+  };
+  const abPrice = (id, r) => { const t = Math.max(0, [3, 8, 14].indexOf(ABIL[id].lv)), f = [1, 1.5, 2][r] || 2; return { c: abCost(id, r), m: Object.fromEntries(Object.entries(AB_MATS[ABIL[id].s][t]).map(([k, v]) => [k, Math.ceil(v * f)])) }; };
+  const abCan = (id, r) => { const P = abPrice(id, r); return me.coins >= P.c && Object.entries(P.m).every(([k, v]) => (bag[k] || 0) >= v); };
   const abNeed = (id, r) => ABIL[id].lv + 4 * r;
   const abEq = () => (prog.abEq = prog.abEq || [null, null, null]);
   const cds = {};
@@ -2133,15 +2172,16 @@
   // Lehrer
   for (const sk2 of Object.keys(SCHOOLS)) npcBody[sk2] = () => {
     const S2 = SCHOOLS[sk2], eq = abEq();
-    return `<p>Bei mir lernst du <b>${S2.t}</b>. Lerne eine Fähigkeit und leg sie auf einen der drei Plätze. ${coarse ? 'Tippe auf den runden Knopf rechts – oder zieh ihn, um zu zielen.' : 'Benutze sie mit den Tasten <b>1</b>, <b>2</b> und <b>3</b> (sie zielen zur Maus oder auf den nächsten Gegner).'}</p>
+    return `<p>Bei mir lernst du <b>${S2.t}</b>. Jede Fähigkeit kostet Münzen und Material – für die mittleren brauchst du 🦷 Trollzähne vom Höhlentroll, für die starken eine Trophäe von einem Inselboss. Lerne eine Fähigkeit und leg sie auf einen der drei Plätze. ${coarse ? 'Tippe auf den runden Knopf rechts – oder zieh ihn, um zu zielen.' : 'Benutze sie mit den Tasten <b>1</b>, <b>2</b> und <b>3</b> (sie zielen zur Maus oder auf den nächsten Gegner).'}</p>
       <div class="is-abslots">${eq.map((id, i) => `<div><b>Platz ${i + 1}</b>${id ? `${ABIL[id].i} ${ABIL[id].n}` : '<i>leer</i>'}</div>`).join('')}</div>
       <div class="is-shop">${Object.entries(ABIL).filter(([, A]) => A.s === sk2).map(([id, A]) => {
-        const r = abRank(id), need = abNeed(id, r), cost = abCost(id, r), max = r >= 3, lvOk = prog.lvl >= need;
-        const btn = max ? '<button class="is-ext" disabled>Meister</button>' : `<button class="is-ext" data-ext="ablearn" data-k="${id}" ${lvOk && me.coins >= cost ? '' : 'disabled'}>${r ? 'Stufe ' + (r + 1) : 'Lernen'} · 🪙 ${cost}</button>`;
-        return `<div class="is-abrow"><i>${A.i}</i><span><b>${A.n}${r ? ` <em>Stufe ${r}/3</em>` : ''}</b><small>${A.d} · Abklingzeit ${A.cd} s${!max && !lvOk ? ` · <u>🔒 ab Spieler-Stufe ${need}</u>` : ''}</small>${r ? `<span class="is-abeq">${[0, 1, 2].map(i => `<button data-ext="abeq" data-k="${id}" data-s="${i}" class="${eq[i] === id ? 'on' : ''}">${i + 1}</button>`).join('')}</span>` : ''}</span>${btn}</div>`;
+        const r = abRank(id), need = abNeed(id, r), max = r >= 3, lvOk = prog.lvl >= need, P = max ? null : abPrice(id, r);
+        const costH = P ? `<div class="is-cost"><span class="${me.coins >= P.c ? 'ok' : 'no'}">🪙 ${P.c}</span>${Object.entries(P.m).map(([k, v]) => `<span class="${(bag[k] || 0) >= v ? 'ok' : 'no'}">${RES[k][1]} ${Math.min(bag[k] || 0, v)}/${v}</span>`).join('')}</div>` : '';
+        const btn = max ? '<button class="is-ext" disabled>Meister</button>' : `<button class="is-ext" data-ext="ablearn" data-k="${id}" ${lvOk && abCan(id, r) ? '' : 'disabled'}>${r ? 'Stufe ' + (r + 1) : 'Lernen'}</button>`;
+        return `<div class="is-abrow"><i>${A.i}</i><span><b>${A.n}${r ? ` <em>Stufe ${r}/3</em>` : ''}</b><small>${A.d} · Abklingzeit ${A.cd} s${!max && !lvOk ? ` · <u>🔒 ab Spieler-Stufe ${need}</u>` : ''}</small>${costH}${r ? `<span class="is-abeq">${[0, 1, 2].map(i => `<button data-ext="abeq" data-k="${id}" data-s="${i}" class="${eq[i] === id ? 'on' : ''}">${i + 1}</button>`).join('')}</span>` : ''}</span>${btn}</div>`;
       }).join('')}</div>`;
   };
-  npcExt.ablearn = b => { const id = b.dataset.k, r = abRank(id), cost = abCost(id, r); if (r >= 3 || prog.lvl < abNeed(id, r) || me.coins < cost) return; me.coins -= cost; prog.ab = prog.ab || {}; prog.ab[id] = r + 1; tutEv(r ? 'learn2' : 'learn', id); if (r === 1) tutEv('learn2', id); const eq = abEq(); if (!r && !eq.includes(id)) { const f = eq.indexOf(null); if (f >= 0) eq[f] = id; } saveProg(); save(); say(`${ABIL[id].i} ${ABIL[id].n} ${r ? 'verbessert auf Stufe ' + (r + 1) : 'gelernt!'}`); gainXP(10, me.x, me.y - 2); renderNpc(); renderAbil(); };
+  npcExt.ablearn = b => { const id = b.dataset.k, r = abRank(id); if (r >= 3 || prog.lvl < abNeed(id, r) || !abCan(id, r)) return; const P = abPrice(id, r); me.coins -= P.c; for (const [k, v] of Object.entries(P.m)) bag[k] -= v; saveBag(); prog.ab = prog.ab || {}; prog.ab[id] = r + 1; tutEv(r ? 'learn2' : 'learn', id); if (r === 1) tutEv('learn2', id); const eq = abEq(); if (!r && !eq.includes(id)) { const f = eq.indexOf(null); if (f >= 0) eq[f] = id; } saveProg(); save(); say(`${ABIL[id].i} ${ABIL[id].n} ${r ? 'verbessert auf Stufe ' + (r + 1) : 'gelernt!'}`); gainXP(10, me.x, me.y - 2); renderNpc(); renderAbil(); };
   npcExt.abeq = b => { const id = b.dataset.k, s2 = +b.dataset.s, eq = abEq(); const old = eq.indexOf(id); if (old >= 0) eq[old] = null; if (old !== s2) eq[s2] = id; saveProg(); renderNpc(); renderAbil(); };
   // Zielen wie bei Brawl Stars: links laufen, rechts zielen und loslassen
   const aim = { on: false, id: null, kind: null, x0: 0, y0: 0, dx: 0, dy: 0 };
@@ -2295,8 +2335,8 @@
     }
     toggleBoat();
   }
-  let extraInteract = null, extraNear = null; // Bauplatz, Felder, Truhen
-  /* ---------- Eigene Basen auf den Bauplätzen (auf dem Server gespeichert) ---------- */
+  let extraInteract = null, extraNear = null; // Bauteile, Felder, Truhen in der Nähe
+  /* ---------- Bauen: frei auf der Heimatinsel, Werkbänke überall, Absteckpfähle schützen ein Gebiet (auf dem Server gespeichert) ---------- */
   const PIECES = {
     boden_holz: { n: 'Holzboden', i: '🟫', l: 0, cost: { holz: 2 } },
     boden_stein: { n: 'Steinboden', i: '⬜', l: 0, cost: { stein: 2 } },
@@ -2311,81 +2351,119 @@
     truhe: { n: 'Truhe', i: '📦', l: 1, solid: 1, cost: { holz: 8 }, use: 'Truhe öffnen' },
     bett: { n: 'Bett', i: '🛏️', l: 1, solid: 1, cost: { holz: 6, faser: 6 }, use: 'Schlafen' },
     tisch: { n: 'Tisch', i: '🍽️', l: 1, solid: 1, cost: { holz: 4 } },
-    stuhl: { n: 'Stuhl', i: '🪑', l: 1, cost: { holz: 2 } },
+    stuhl: { n: 'Stuhl', i: '💺', l: 1, cost: { holz: 2 } },
     blumen: { n: 'Blumenbeet', i: '🌷', l: 1, cost: { faser: 1, beere: 1 } },
     feld: { n: 'Feld', i: '🌱', l: 1, cost: { holz: 1, stein: 1 }, use: 'Feld' },
     huehner: { n: 'Hühnerstall', i: '🐔', l: 1, solid: 1, cost: { holz: 10, stein: 4 }, use: 'Eier holen', prod: ['ei', 480] },
-    schafe: { n: 'Schafweide', i: '🐑', l: 1, solid: 1, cost: { holz: 12, faser: 6 }, use: 'Scheren', prod: ['wolle', 720] },
-    werkbank: { n: 'Werkbank', i: '🪚', l: 1, solid: 1, cost: { holz: 10, stein: 6 }, station: 'werk', use: 'Werkbank' },
-    amboss: { n: 'Amboss', i: '⚒️', l: 1, solid: 1, cost: { stein: 12, obsidian: 2 }, station: 'schmiede', use: 'Schmiede' },
-    kochtopf: { n: 'Kochstelle', i: '🍲', l: 1, solid: 1, cost: { stein: 6, holz: 4 }, station: 'koch', use: 'Kochstelle' },
+    schafe: { n: 'Schafweide', i: '🐑', l: 1, solid: 1, cost: { holz: 12, faser: 6, wolle: 2 }, use: 'Scheren', prod: ['wolle', 720] },
     flagge: { n: 'Flagge', i: '🚩', l: 1, solid: 1, cost: { holz: 2, faser: 4 } },
     statue: { n: 'Statue', i: '🗿', l: 1, solid: 1, cost: { stein: 10, obsidian: 4 } },
+    pfahl: { n: 'Absteckpfahl', i: '📍', l: 1, solid: 1, cost: { holz: 10, stein: 6, faser: 4 }, use: 'Gebiet', claim: 1 },
+    // die fünf Werkbänke: im Rucksack (✋ Handwerk) herstellen, mit 🔨 Bauen aufstellen – auch unterwegs auf jeder Insel
+    werkbank: { n: 'Waffen- und Werkzeugbank', i: '🗡️', l: 1, solid: 1, cost: { holz: 8, stein: 4 }, station: 'werk', use: 'Werkbank' },
+    kochtopf: { n: 'Küche', i: '🍲', l: 1, solid: 1, cost: { stein: 6, holz: 4, beere: 2 }, station: 'koch', use: 'Küche' },
+    tischlerbank: { n: 'Tischlerei', i: '🪑', l: 1, solid: 1, cost: { holz: 14, stein: 4, faser: 4 }, station: 'tischler', use: 'Tischlerei' },
+    amboss: { n: 'Rüstungsschmiede', i: '🛡️', l: 1, solid: 1, cost: { stein: 14, holz: 6, fell: 2 }, station: 'schmiede', use: 'Schmiede' },
+    werftbank: { n: 'Werft', i: '⚓', l: 1, solid: 1, cost: { holz: 20, stein: 8, faser: 8 }, station: 'werft', use: 'Werft' },
   };
   const needKit = k => PIECES[k] && PIECES[k].l === 1 && k !== 'feld';
   const kit = k => (prog.kit && prog.kit[k]) || 0;
-  for (const [k, p] of Object.entries(PIECES)) if (needKit(k)) RECIPES.push({ id: 'm_' + k, st: 'tischler', i: p.i, n: p.n, d: p.station ? 'Eine eigene ' + STATIONS[p.station][1] + ' für deine Base' : p.use ? 'Bauteil für deine Base · ' + p.use : 'Bauteil für deine Base', cost: p.cost, kit: k });
+  for (const [k, p] of Object.entries(PIECES)) if (needKit(k)) RECIPES.push({ id: 'm_' + k, st: p.station ? 'hand' : 'tischler', i: p.i, n: p.n, d: p.station ? STATIONS[p.station][2] + ' · aufstellen mit 🔨 Bauen' : p.claim ? `Schützt 13 × 13 Felder rund um den Pfahl: dort bauen und abreißen nur du und deine Crew (höchstens 3 Pfähle)` : p.use ? 'Bauteil für dein Haus · ' + p.use : 'Bauteil für dein Haus', cost: p.cost, kit: k });
   const SEEDS = { samen_weizen: ['weizen', 300], samen_karotte: ['karotte', 480], samen_kuerbis: ['kuerbis', 720] };
-  let PLOTS = {}, buildOn = false, buildSel = 'boden_holz', buildCur = null, chestOpen = null, baseNear = null;
-  const myPlotId = () => { for (const [id, p] of Object.entries(PLOTS)) if (p && p.o === myId) return +id; return -1; };
-  function plotAt(x, y) { if (!nearBig(x, y)) return null; for (const p of town().plots) if (x >= p.x && x < p.x + p.w && y >= p.y && y < p.y + p.h) return p; return null; }
-  function baseSolid(x, y) {
-    const pl = plotAt(x, y); if (!pl || !PLOTS[pl.id]) return false;
-    const it = PLOTS[pl.id].it[Math.floor(x - pl.x) + ',' + Math.floor(y - pl.y)];
-    return !!(it && it[1] && PIECES[it[1]] && PIECES[it[1]].solid);
+  const CLAIM_R = 6, CLAIM_MAX = 3;
+  let WIDX = new Map(), WG = {}, WA = {}, STASH = {}, worldReady = false, buildOn = false, buildSel = 'werkbank', buildCur = null, chestOpen = false, baseNear = null, CLAIMS = null;
+  const wkey = (x, y) => x + ',' + y, cidxOf = (x, y) => Math.floor(x / 16) + ',' + Math.floor(y / 16);
+  function wset(k, v) { // v = [Boden, Gegenstand, Besitzer-id, Name] oder null
+    const [x, y] = k.split(',').map(Number), ci = cidxOf(x, y);
+    if (v) { WORLD.set(k, v); let s2 = WIDX.get(ci); if (!s2) WIDX.set(ci, (s2 = new Set())); s2.add(k); } else { WORLD.delete(k); const s2 = WIDX.get(ci); if (s2) s2.delete(k); delete WG[k]; delete WA[k]; }
+    chunks.delete(Math.floor(x / CH) + ',' + Math.floor(y / CH)); CLAIMS = null;
   }
+  const claims = () => CLAIMS || (CLAIMS = [...WORLD].filter(([, v]) => v[1] === 'pfahl').map(([k, v]) => { const [x, y] = k.split(',').map(Number); return { x, y, o: v[2], n: v[3] }; }));
+  const claimAt = (x, y) => claims().find(c => Math.abs(x - c.x) <= CLAIM_R && Math.abs(y - c.y) <= CLAIM_R) || null;
+  const friendOf = (o, n) => o === myId || !!(crew && crew.code && (crew.names || []).includes(n));
+  const onHome = (x, y) => nearBig(x, y) && elev(x + 0.5, y + 0.5) >= 0;
   const affordable = cost => Object.entries(cost).every(([k, v]) => (bag[k] || 0) >= v);
+  const ownerCol = v => { const o = others.get(v[2]); return o ? o.col : v[2] === myId ? me.col : (h2(String(v[2]).length, (v[3] || '').length, 5) * 8) | 0; };
+  const bedOk = () => { if (!prog.bed) return false; const v = WORLD.get(wkey(Math.floor(prog.bed.x - 0.5), Math.floor(prog.bed.y - 1.5))); return !!(v && v[1] === 'bett' && v[2] === myId); };
+  // Darf hier gebaut werden? Leerer Text = ja, sonst der Grund
+  function canPlace(tx, ty, k) {
+    const pc = PIECES[k]; if (!pc) return 'Wähle ein Bauteil';
+    if (me.inCave || me.inBoat) return 'Hier kannst du nicht bauen';
+    if (!worldReady) return 'Die Bauten werden noch geladen';
+    const e = elev(tx + 0.5, ty + 0.5); if (e < 0 || clsB(e, EB) === LAVA) return 'Nur auf festem Boden';
+    if (!pc.station && !onHome(tx, ty)) return 'Häuser, Möbel und Pfähle nur auf der Heimatinsel – Werkbänke überall';
+    if (inTownClear(tx, ty) || townAt(tx + 0.5, ty + 0.5) || inMid(tx + 0.5, ty + 0.5)) return 'Nicht im Dorf, auf Wegen oder an Stegen';
+    for (const { e: E } of entsNear(tx, ty)) if (Math.abs(tx + 0.5 - E.x) < 4 && Math.abs(ty + 0.5 - E.y) < 4) return 'Zu nah am Höhleneingang';
+    const c = claimAt(tx, ty); if (c && !friendOf(c.o, c.n)) return `Dieses Gebiet hat ${c.n} abgesteckt`;
+    if (pc.claim) {
+      if (claims().filter(q => q.o === myId).length >= CLAIM_MAX) return `Du hast schon ${CLAIM_MAX} Absteckpfähle`;
+      if (claims().some(q => !friendOf(q.o, q.n) && Math.abs(q.x - tx) <= 2 * CLAIM_R && Math.abs(q.y - ty) <= 2 * CLAIM_R)) return 'Zu nah an einem fremden Gebiet';
+    }
+    const cur = WORLD.get(wkey(tx, ty));
+    if (cur && cur[pc.l]) return 'Hier steht schon etwas';
+    if (!cur) { const nat = objNat(tx, ty, tileAt(tx, ty)); if (solid(nat) && !isCut(tx, ty)) return 'Da steht ein Baum oder Felsen – bau ihn erst ab'; }
+    if (pc.solid && Math.floor(me.x) === tx && Math.floor(me.y) === ty) return 'Du stehst im Weg';
+    return '';
+  }
+  function canRemove(tx, ty) {
+    if (!worldReady) return 'Die Bauten werden noch geladen';
+    const v = WORLD.get(wkey(tx, ty)); if (!v) return 'Hier steht nichts';
+    if (friendOf(v[2], v[3])) return '';
+    const k = v[1] || v[0], c = claimAt(tx, ty);
+    if (c && !friendOf(c.o, c.n)) return `Das gehört ${v[3]} – das Gebiet ist abgesteckt`;
+    if (PIECES[k] && (PIECES[k].station || PIECES[k].claim || k === 'truhe' || k === 'bett')) return `Das gehört ${v[3]}`;
+    return '';
+  }
+  const refund = k => { if (needKit(k)) { prog.kit = prog.kit || {}; prog.kit[k] = kit(k) + 1; saveProg(); } else for (const [r, v] of Object.entries(PIECES[k] ? PIECES[k].cost : {})) bag[r] = (bag[r] || 0) + Math.floor(v / 2); };
+  const puff = (tx, ty, col) => { for (let i = 0; i < 8; i++) parts.push({ x: tx + 0.5, y: ty + 0.6, z: 0, vx: (Math.random() - 0.5) * 4, vy: (Math.random() - 0.5) * 4, t: 0, life: 0.5, col, sz: 2 }); };
   function placeAt(tx, ty) {
-    const id = myPlotId(); if (id < 0) return;
-    const pl = town().plots[id], lx = tx - pl.x, ly = ty - pl.y;
-    if (lx < 0 || ly < 0 || lx >= pl.w || ly >= pl.h) { say('Nur auf deinem eigenen Bauplatz'); return; }
-    const P2 = PLOTS[id], key = lx + ',' + ly, cur = P2.it[key] || [null, null];
+    const key = wkey(tx, ty), cur = WORLD.get(key);
     if (buildSel === 'abriss') {
-      const L = cur[1] ? 1 : cur[0] ? 0 : -1; if (L < 0) return;
-      const k = cur[L];
-      if (k === 'truhe' && Object.keys(P2.c || {}).length) { say('Räum die Truhe zuerst aus'); return; }
-      if (needKit(k)) { prog.kit = prog.kit || {}; prog.kit[k] = kit(k) + 1; saveProg(); } else for (const [r, v] of Object.entries(PIECES[k] ? PIECES[k].cost : {})) bag[r] = (bag[r] || 0) + Math.floor(v / 2);
-      cur[L] = null; P2.it[key] = cur; if (!cur[0] && !cur[1]) delete P2.it[key];
-      saveBag(); send({ t: 'i_del', id, x: lx, y: ly, l: L }); if (k === 'bett' && prog.bed) { prog.bed = null; saveProg(); }
-      for (let i = 0; i < 8; i++) parts.push({ x: tx + 0.5, y: ty + 0.6, z: 0, vx: (Math.random() - 0.5) * 4, vy: (Math.random() - 0.5) * 4, t: 0, life: 0.5, col: '#c9b08a', sz: 2 });
-      return;
+      const err = canRemove(tx, ty); if (err) { say(err); return; }
+      const L = cur[1] ? 1 : 0, k = cur[L];
+      if (cur[2] === myId) { if (k === 'truhe' && Object.keys(STASH).length && [...WORLD.values()].filter(v => v[1] === 'truhe' && v[2] === myId).length <= 1) { say('Räum deine letzte Truhe zuerst aus'); return; } refund(k); }
+      else say(`Bauteil von ${cur[3]} abgerissen`);
+      const nv = cur.slice(); nv[L] = null; wset(key, nv[0] || nv[1] ? nv : null);
+      saveBag(); send({ t: 'i_del', x: tx, y: ty, l: L }); if (k === 'bett' && !bedOk()) { prog.bed = null; saveProg(); }
+      puff(tx, ty, '#c9b08a'); renderBuild(); return;
     }
     const pc = PIECES[buildSel]; if (!pc) return;
-    if (cur[pc.l]) { say('Hier steht schon etwas'); return; }
-    if (pc.solid && Math.floor(me.x) === tx && Math.floor(me.y) === ty) { say('Du stehst im Weg'); return; }
-    if (needKit(buildSel)) { if (!kit(buildSel)) { say(`${pc.n} musst du erst in der 🪑 Tischlerei herstellen`); return; } prog.kit[buildSel]--; saveProg(); }
+    const err = canPlace(tx, ty, buildSel); if (err) { say(err); return; }
+    if (needKit(buildSel)) { if (!kit(buildSel)) { say(`${pc.n} musst du erst herstellen – ${pc.station ? 'im 🎒 Rucksack unter ✋ Handwerk' : 'in der 🪑 Tischlerei'}`); return; } prog.kit[buildSel]--; saveProg(); }
     else { if (!affordable(pc.cost)) { say('Dafür fehlen dir Rohstoffe'); return; } for (const [r, v] of Object.entries(pc.cost)) bag[r] -= v; }
-    cur[pc.l] = buildSel; P2.it[key] = cur; saveBag();
-    send({ t: 'i_put', id, x: lx, y: ly, k: buildSel, l: pc.l });
-    if (pc.prod) send({ t: 'i_collect', id, x: lx, y: ly });
-    for (let i = 0; i < 8; i++) parts.push({ x: tx + 0.5, y: ty + 0.6, z: 0, vx: (Math.random() - 0.5) * 4, vy: (Math.random() - 0.5) * 4, t: 0, life: 0.5, col: '#fff3c0', sz: 2 });
-    gainXP(1, tx + 0.5, ty); st().built = (st().built || 0) + 1;
+    const nv = cur ? cur.slice() : [null, null, myId, me.name]; nv[pc.l] = buildSel; nv[2] = myId; nv[3] = me.name; wset(key, nv); saveBag();
+    if (pc.prod) WA[key] = Date.now();
+    send({ t: 'i_put', x: tx, y: ty, k: buildSel, l: pc.l });
+    puff(tx, ty, '#fff3c0'); gainXP(1, tx + 0.5, ty); st().built = (st().built || 0) + 1; tutEv('place', buildSel);
+    if (pc.claim) say(`📍 Abgesteckt! ${2 * CLAIM_R + 1} × ${2 * CLAIM_R + 1} Felder rund um den Pfahl kannst jetzt nur noch du (und deine Crew) verändern.`);
+    else if (pc.station) say(`${pc.i} ${pc.n} steht! Stell dich davor und drück E (am Handy 🛠️).`);
     renderBuild();
   }
   function toggleBuild(on) {
     buildOn = on ?? !buildOn;
     let bar = root.querySelector('.is-build'); if (bar) bar.remove();
     if (!buildOn) return;
+    if (!onHome(Math.floor(me.x), Math.floor(me.y)) && !PIECES[buildSel].station && buildSel !== 'abriss') buildSel = 'werkbank';
     bar = document.createElement('div'); bar.className = 'is-build'; root.appendChild(bar);
     bar.onclick = e => { const b = e.target.closest('[data-pc]'); if (b) { buildSel = b.dataset.pc; renderBuild(); return; } if (e.target.closest('[data-bdone]')) toggleBuild(false); };
     renderBuild();
   }
   function renderBuild() {
     const bar = root.querySelector('.is-build'); if (!bar) return;
-    const pc = PIECES[buildSel];
-    const info = buildSel === 'abriss' ? 'Tippe auf ein Bauteil, um es abzureißen (Bauteile kommen zurück, Böden geben halbe Rohstoffe)' : needKit(buildSel) ? `${pc.i} ${pc.n}: ${kit(buildSel) ? `<em class="ok">hast ${kit(buildSel)}</em>` : '<em class="no">erst in der 🪑 Tischlerei herstellen</em>'}` : `${pc.i} ${pc.n}: ${Object.entries(pc.cost).map(([k, v]) => `<em class="${(bag[k] || 0) >= v ? 'ok' : 'no'}">${RES[k][1]}${v}</em>`).join(' ')}`;
-    bar.innerHTML = `<div class="is-bhead"><b>🔨 Bauen</b><span>${info}${buildSel === 'abriss' ? '' : ' · ' + (coarse ? 'tippe aufs Feld' : 'klick aufs Feld oder Leertaste')}</span><button data-bdone>Fertig</button></div>
-      <div class="is-bpieces"><button data-pc="abriss" class="${buildSel === 'abriss' ? 'on' : ''}"><i>🧹</i>Abreißen</button>${Object.entries(PIECES).map(([k, p]) => { const ok = needKit(k) ? kit(k) > 0 : affordable(p.cost); return `<button data-pc="${k}" class="${buildSel === k ? 'on' : ''} ${ok ? '' : 'no'}"><i>${p.i}</i>${p.n}${needKit(k) ? `<sup>${kit(k)}</sup>` : ''}</button>`; }).join('')}</div>`;
+    const pc = PIECES[buildSel], home = onHome(Math.floor(me.x), Math.floor(me.y));
+    const why = buildCur && !buildCur[2] && buildCur[3] ? ` · <em class="no">${buildCur[3]}</em>` : '';
+    const info = buildSel === 'abriss' ? 'Tippe auf ein Bauteil, um es abzureißen (deine Bauteile kommen zurück, Böden geben halbe Rohstoffe)' : needKit(buildSel) ? `${pc.i} ${pc.n}: ${kit(buildSel) ? `<em class="ok">hast ${kit(buildSel)}</em>` : `<em class="no">erst ${pc.station ? 'im Rucksack (✋ Handwerk)' : 'in der 🪑 Tischlerei'} herstellen</em>`}` : `${pc.i} ${pc.n}: ${Object.entries(pc.cost).map(([k, v]) => `<em class="${(bag[k] || 0) >= v ? 'ok' : 'no'}">${RES[k][1]}${v}</em>`).join(' ')}`;
+    const list = Object.entries(PIECES).filter(([, p]) => home || p.station);
+    bar.innerHTML = `<div class="is-bhead"><b>🔨 Bauen</b><span>${info}${why}${buildSel === 'abriss' ? '' : ' · ' + (coarse ? 'tippe aufs Feld' : 'klick aufs Feld oder Leertaste')}</span><button data-bdone>Fertig</button></div>
+      <div class="is-bpieces"><button data-pc="abriss" class="${buildSel === 'abriss' ? 'on' : ''}"><i>🧹</i>Abreißen</button>${list.map(([k, p]) => { const ok = needKit(k) ? kit(k) > 0 : affordable(p.cost); return `<button data-pc="${k}" class="${buildSel === k ? 'on' : ''} ${ok ? '' : 'no'}"><i>${p.i}</i>${p.n}${needKit(k) ? `<sup>${kit(k)}</sup>` : ''}</button>`; }).join('')}</div>${home ? '' : '<small class="is-bnote">Unterwegs kannst du nur Werkbänke aufstellen. Häuser baust du auf der Heimatinsel.</small>'}`;
   }
-  // Was ist in der Nähe der eigenen Base benutzbar?
+  // Was ist in der Nähe benutzbar? (eigene und fremde Bauteile)
   function findBaseNear() {
-    const id = myPlotId(); if (id < 0) return null;
-    const pl = town().plots[id], P2 = PLOTS[id]; if (!P2 || Math.abs(me.x - pl.x - 5) > 8 || Math.abs(me.y - pl.y - 5) > 8) return null;
-    let best = null, bd = 1.45;
-    for (const [key, [, o]] of Object.entries(P2.it)) {
-      if (!o || !PIECES[o] || !PIECES[o].use) continue;
-      const [lx, ly] = key.split(',').map(Number), d = Math.hypot(me.x - (pl.x + lx + 0.5), me.y - (pl.y + ly + 0.8));
-      if (d < bd) { bd = d; best = { id, key, k: o, x: pl.x + lx, y: pl.y + ly, lx, ly }; }
+    if (!WORLD.size) return null;
+    let best = null, bd = 1.45; const fx = Math.floor(me.x), fy = Math.floor(me.y);
+    for (let y = fy - 2; y <= fy + 2; y++) for (let x = fx - 2; x <= fx + 2; x++) {
+      const v = WORLD.get(wkey(x, y)); if (!v || !v[1] || !PIECES[v[1]] || !PIECES[v[1]].use) continue;
+      const d = Math.hypot(me.x - (x + 0.5), me.y - (y + 0.8)); if (d < bd) { bd = d; best = { key: wkey(x, y), k: v[1], x, y, o: v[2], n: v[3] }; }
     }
     return best;
   }
@@ -2393,55 +2471,56 @@
   extraInteract = () => {
     if (buildOn) return false;
     const b = baseNear; if (!b) return false;
-    const P2 = PLOTS[b.id], pc = PIECES[b.k];
+    const pc = PIECES[b.k], mine = friendOf(b.o, b.n);
     if (pc.station) { toggleCraft(pc.station); return true; }
-    if (b.k === 'truhe') { toggleChest(b.id); return true; }
+    if (pc.claim) { say(`📍 Gebiet von ${b.n}: ${2 * CLAIM_R + 1} × ${2 * CLAIM_R + 1} Felder, nur ${b.o === myId ? 'du und deine Crew dürfen' : b.n + ' und Crew dürfen'} hier bauen`); return true; }
+    if (!mine) { say(`${pc.i} Das gehört ${b.n}`); return true; }
+    if (b.k === 'truhe') { toggleChest(); return true; }
     if (b.k === 'bett') { prog.bed = { x: b.x + 0.5, y: b.y + 1.5 }; saveProg(); me.hp = maxHp(); say('🛏️ Gut geschlafen! Hier wachst du jetzt auf, wenn du ohnmächtig wirst.'); return true; }
     if (b.k === 'feld') {
-      const g = P2.g[b.key];
+      const g = WG[b.key];
       if (g) {
         const [seed, at] = g, [crop, sec] = SEEDS[seed] || ['weizen', 300], left = sec * 1000 - (Date.now() - at);
         if (left > 0) { say(`${RES[crop][1]} wächst noch ${Math.ceil(left / 60000)} Min.`); return true; }
         const n = 2 + Math.floor(Math.random() * 2); for (let i = 0; i < n; i++) drop(b.x + 0.5, b.y + 0.6, crop);
         if (Math.random() < 0.4) drop(b.x + 0.5, b.y + 0.6, seed);
-        delete P2.g[b.key]; send({ t: 'i_crop', id: b.id, x: b.lx, y: b.ly }); gainXP(3, b.x + 0.5, b.y); qEvent('harvest', 'ernte'); st().ernte = (st().ernte || 0) + 1; return true;
+        delete WG[b.key]; send({ t: 'i_crop', x: b.x, y: b.y }); gainXP(3, b.x + 0.5, b.y); qEvent('harvest', 'ernte'); st().ernte = (st().ernte || 0) + 1; return true;
       }
-      const seed = Object.keys(SEEDS).find(s => bag[s] > 0);
+      const seed = Object.keys(SEEDS).find(s2 => bag[s2] > 0);
       if (!seed) { say('Du hast keine Samen. Bäuerin Frieda im Dorf verkauft welche.'); return true; }
-      bag[seed]--; saveBag(); P2.g[b.key] = [seed, Date.now()]; send({ t: 'i_plant', id: b.id, x: b.lx, y: b.ly, k: seed });
+      bag[seed]--; saveBag(); WG[b.key] = [seed, Date.now()]; send({ t: 'i_plant', x: b.x, y: b.y, k: seed });
       say(`${RES[seed][1]} gepflanzt – fertig in ${Math.round(SEEDS[seed][1] / 60)} Min.`); return true;
     }
     if (pc.prod) {
-      const [res, sec] = pc.prod, last = P2.a[b.key] || Date.now(), n = Math.min(3, Math.floor((Date.now() - last) / (sec * 1000)));
+      const [res, sec] = pc.prod, last = WA[b.key] || Date.now(), n = Math.min(3, Math.floor((Date.now() - last) / (sec * 1000)));
       if (!n) { say(`Noch nichts da – alle ${Math.round(sec / 60)} Min. gibt es ${RES[res][0]}`); return true; }
       for (let i = 0; i < n; i++) drop(b.x + 0.5, b.y + 0.8, res);
-      P2.a[b.key] = Date.now(); send({ t: 'i_collect', id: b.id, x: b.lx, y: b.ly }); gainXP(2 * n, b.x + 0.5, b.y); return true;
+      WA[b.key] = Date.now(); send({ t: 'i_collect', x: b.x, y: b.y }); gainXP(2 * n, b.x + 0.5, b.y); return true;
     }
     return false;
   };
-  function toggleChest(id) {
+  // Truhen: jeder hat seinen eigenen Inhalt, egal an welcher seiner Truhen
+  function toggleChest(on) {
     const old = root.querySelector('.is-chest'); if (old) old.remove();
-    if (id == null || chestOpen === id) { chestOpen = null; return; }
-    chestOpen = id;
+    chestOpen = on ?? !chestOpen; if (!chestOpen) return;
     const d = document.createElement('div'); d.className = 'is-chest'; root.appendChild(d);
     d.onclick = e => {
-      if (e.target === d || e.target.closest('[data-close]')) { toggleChest(); return; }
+      if (e.target === d || e.target.closest('[data-close]')) { toggleChest(false); return; }
       const b = e.target.closest('[data-mv]'); if (!b) return;
-      const k = b.dataset.k, P2 = PLOTS[chestOpen]; if (!P2) return;
-      let n = +b.dataset.mv;
-      if (n > 0) n = b.dataset.all ? bag[k] || 0 : Math.min(1, bag[k] || 0); else n = b.dataset.all ? -(P2.c[k] || 0) : -Math.min(1, P2.c[k] || 0);
+      const k = b.dataset.k; let n = +b.dataset.mv;
+      if (n > 0) n = b.dataset.all ? bag[k] || 0 : Math.min(1, bag[k] || 0); else n = b.dataset.all ? -(STASH[k] || 0) : -Math.min(1, STASH[k] || 0);
       if (!n) return;
-      bag[k] = (bag[k] || 0) - n; P2.c[k] = (P2.c[k] || 0) + n; if (!P2.c[k]) delete P2.c[k];
-      saveBag(); send({ t: 'i_chest', id: chestOpen, k, n }); renderChest();
+      bag[k] = (bag[k] || 0) - n; STASH[k] = (STASH[k] || 0) + n; if (!STASH[k]) delete STASH[k];
+      saveBag(); send({ t: 'i_chest', k, n }); renderChest();
     };
     renderChest();
   }
   function renderChest() {
-    const d = root.querySelector('.is-chest'), P2 = PLOTS[chestOpen]; if (!d || !P2) return;
+    const d = root.querySelector('.is-chest'); if (!d) return;
     const row = (k, n, dir) => `<div><i>${RES[k][1]}</i><span>${RES[k][0]}<b>${n}</b></span><button data-mv="${dir}" data-k="${k}">${dir > 0 ? '→' : '←'} 1</button><button data-mv="${dir}" data-k="${k}" data-all="1">${dir > 0 ? '→' : '←'} alle</button></div>`;
-    const mine = Object.keys(RES).filter(k => bag[k] > 0), box = Object.keys(P2.c || {}).filter(k => RES[k] && P2.c[k] > 0);
-    d.innerHTML = `<div class="is-chbox"><h3>📦 Truhe <button class="is-btn" data-close>✕</button></h3><p class="is-npcsub">Was in der Truhe liegt, ist sicher auf dem Server gespeichert – auch wenn du das Gerät wechselst.</p>
-      <div class="is-chcols"><div><h4>🎒 Rucksack</h4>${mine.map(k => row(k, bag[k], 1)).join('') || '<p>leer</p>'}</div><div><h4>📦 Truhe</h4>${box.map(k => row(k, P2.c[k], -1)).join('') || '<p>leer</p>'}</div></div></div>`;
+    const mine = Object.keys(RES).filter(k => bag[k] > 0), box = Object.keys(STASH).filter(k => RES[k] && STASH[k] > 0);
+    d.innerHTML = `<div class="is-chbox"><h3>📦 Truhe <button class="is-btn" data-close>✕</button></h3><p class="is-npcsub">Alle deine Truhen teilen sich einen Inhalt – sicher auf dem Server gespeichert, auch wenn du das Gerät wechselst.</p>
+      <div class="is-chcols"><div><h4>🎒 Rucksack</h4>${mine.map(k => row(k, bag[k], 1)).join('') || '<p>leer</p>'}</div><div><h4>📦 Truhe</h4>${box.map(k => row(k, STASH[k], -1)).join('') || '<p>leer</p>'}</div></div></div>`;
   }
   // Bauteile zeichnen (im Raster des Bauplatzes)
   function drawFloor(k, x, y, u) {
@@ -2500,21 +2579,26 @@
       if (n > 0) { ctx.font = `${Math.round(6 * S)}px system-ui`; ctx.textAlign = 'center'; ctx.fillText(RES[pc.prod[0]][1] + (n > 1 ? '×' + n : ''), x + u / 2, y - 8 * S); }
       return;
     }
+    if (k === 'pfahl') { shadow(x + u / 2, y + u, 4 * S, 0.25); P(7, -12, 2.4, 27, '#6b4426'); P(7, -12, 1, 27, '#8a5a34'); const wv = Math.sin(t / 260) * 1.2; ctx.fillStyle = SHIRTS[owner % 8]; ctx.beginPath(); ctx.moveTo(x + 9.4 * S, y - 12 * S); ctx.lineTo(x + (17 + wv) * S, y - 9 * S); ctx.lineTo(x + 9.4 * S, y - 5.5 * S); ctx.fill(); P(5, 13, 6.5, 2, '#5a3a20'); return; }
     if (PIECES[k] && PIECES[k].station) { const sp = SPR.st[PIECES[k].station], w = sp.w * S * 0.6, h = sp.h * S * 0.6; shadow(x + u / 2, y + u, 7 * S, 0.22); ctx.drawImage(sp.trunk, x + u / 2 - w / 2, y + u - h, w, h); if (sp.fire) flame(x + u / 2 - w / 2 + sp.fire[0] * S * 0.6, y + u - h + sp.fire[1] * S * 0.6, t, 0.5); return; }
     if (k === 'flagge') { P(3, -14, 1.5, 29, '#6b4426'); const wv = Math.sin(t / 200) * 1.5; ctx.fillStyle = SHIRTS[owner % 8]; ctx.beginPath(); ctx.moveTo(x + 4.5 * S, y - 13 * S); ctx.lineTo(x + (15 + wv) * S, y - 10 * S); ctx.lineTo(x + 4.5 * S, y - 6 * S); ctx.fill(); return; }
     if (k === 'statue') { shadow(x + u / 2, y + u, 8 * S, 0.25); P(2, 8, 12, 7, '#8d8a84'); P(2, 8, 12, 1, '#b8b4ac'); P(5, -8, 6, 16, '#d8b040'); P(4, -12, 8, 5, '#e8c850'); P(6, -11, 1, 1, '#5a3a10'); P(9, -11, 1, 1, '#5a3a10'); P(3, -3, 2, 6, '#d8b040'); P(11, -3, 2, 6, '#d8b040'); return; }
   }
-  function drawBases(ents, ox, oy, u, t) {
-    const T = town();
-    for (const pl of T.plots) {
-      const P2 = PLOTS[pl.id]; if (!P2) continue;
-      const sx = ox + pl.x * u, sy = oy + pl.y * u; if (sx > W + u || sy > H + u * 2 || sx + pl.w * u < -u || sy + pl.h * u < -u * 2) continue;
-      const owner = (others.get(P2.o) || {}).col ?? (P2.o === myId ? me.col : pl.id % 8);
-      for (const [key, [f, o]] of Object.entries(P2.it)) {
-        const [lx, ly] = key.split(',').map(Number), x = sx + lx * u, y = sy + ly * u;
+  function drawBases(ents, ox, oy, u, t, mx0, mx1, my0, my1) {
+    if (!WORLD.size && !buildOn) return;
+    const P2 = { g: WG, a: WA };
+    for (let cy = Math.floor((my0 - 2) / 16); cy <= Math.floor((my1 + 2) / 16); cy++) for (let cx = Math.floor((mx0 - 2) / 16); cx <= Math.floor((mx1 + 2) / 16); cx++) {
+      const set = WIDX.get(cx + ',' + cy); if (!set) continue;
+      for (const key of set) {
+        const v = WORLD.get(key); if (!v) continue; const [f, o] = v, [lx, ly] = key.split(',').map(Number), x = ox + lx * u, y = oy + ly * u, owner = ownerCol(v);
         if (f) drawFloor(f, x, y, u);
-        if (o) ents.push({ y: pl.y + ly + (o === 'teppich' ? 0 : 0.95), f: () => drawPiece(o, x, y, u, t, P2, key, owner) });
+        if (o) ents.push({ y: ly + (o === 'teppich' ? 0 : 0.95), f: () => drawPiece(o, x, y, u, t, P2, key, owner) });
       }
+    }
+    if (buildOn) { // abgesteckte Gebiete sichtbar machen
+      for (const c of claims()) { if (c.x + CLAIM_R < mx0 - 1 || c.x - CLAIM_R > mx1 + 1 || c.y + CLAIM_R < my0 - 1 || c.y - CLAIM_R > my1 + 1) continue;
+        const v = WORLD.get(wkey(c.x, c.y)), col = SHIRTS[(v ? ownerCol(v) : 0) % 8], x = ox + (c.x - CLAIM_R) * u, y = oy + (c.y - CLAIM_R) * u, w = (2 * CLAIM_R + 1) * u;
+        ents.push({ y: -1e9, f: () => { ctx.fillStyle = col + '22'; ctx.fillRect(x, y, w, w); ctx.strokeStyle = col; ctx.lineWidth = 1.5 * S; ctx.setLineDash([4 * S, 3 * S]); ctx.strokeRect(x, y, w, w); ctx.setLineDash([]); nameTag(x + w / 2, y + 2 * S, '📍 ' + c.n, true); } }); }
     }
     if (buildOn && buildCur) {
       const x = ox + buildCur[0] * u, y = oy + buildCur[1] * u, ok = buildCur[2];
@@ -2522,16 +2606,16 @@
     }
   }
   // Bauen: Zielfeld vor dem Spieler, am PC unter der Maus
-  let mouseTile = null;
+  let mouseTile = null, lastWhy = '';
   function updateBuildCursor() {
     if (!buildOn) { buildCur = null; return; }
-    const id = myPlotId(); if (id < 0) { toggleBuild(false); return; }
-    const pl = town().plots[id];
+    if (me.inBoat || me.inCave) { toggleBuild(false); return; }
     let tx, ty;
     if (mouseTile && !coarse) [tx, ty] = mouseTile;
     else { const v = DIRV[me.dir]; tx = Math.floor(me.x + v[0] * 0.9); ty = Math.floor(me.y - 0.2 + v[1] * 0.9); }
-    const ok = tx >= pl.x && ty >= pl.y && tx < pl.x + pl.w && ty < pl.y + pl.h;
-    buildCur = [tx, ty, ok];
+    const why = buildSel === 'abriss' ? canRemove(tx, ty) : canPlace(tx, ty, buildSel);
+    buildCur = [tx, ty, !why, why];
+    if (why !== lastWhy) { lastWhy = why; renderBuild(); }
   }
 
   function useItem(k) {
@@ -2551,7 +2635,7 @@
     const old = root.querySelector('.is-craft'); if (old) old.remove();
     if (!st || craftOpen === st) { craftOpen = null; return; }
     if (bagOpen) toggleBag(); if (skillOpen) toggleSkills();
-    craftOpen = st; tutEv('craft');
+    craftOpen = st; tutEv('craft', st);
     const d = document.createElement('div'); d.className = 'is-craft'; root.appendChild(d);
     d.onclick = e => {
       if (e.target === d || e.target.closest('[data-close]')) { toggleCraft(); return; }
@@ -2602,6 +2686,7 @@
     const d = document.createElement('div'); d.className = 'is-bag';
     root.appendChild(d); d.onclick = e => { if (e.target === d || e.target.closest('[data-close]')) { toggleBag(); return; } const u = e.target.closest('[data-eat]'); if (u) useItem(u.dataset.eat);
       const tb = e.target.closest('[data-btab]'); if (tb) { bagTab = tb.dataset.btab; renderBag(); }
+      if (e.target.closest('[data-hand]')) { toggleBag(); toggleCraft('hand'); return; }
       const tl = e.target.closest('[data-title]'); if (tl) { prog.title = tl.dataset.title; saveProg(); sendMeta(); renderBag(); }
       const gf = e.target.closest('[data-gift]'); if (gf) { const fr = nearestOther(), k = gf.dataset.gift; if (fr) { if (k === 'muenzen') { if (me.coins < 10) return; me.coins -= 10; send({ t: 'i_gift', to: fr[0], k, n: 10 }); } else if (bag[k] > 0) { bag[k]--; saveBag(); send({ t: 'i_gift', to: fr[0], k, n: 1 }); } save(); say(`🎁 Geschenk an ${fr[1].name} geschickt`); renderBag(); } }
       const cr = e.target.closest('[data-crew]'); if (cr) { const a = cr.dataset.crew; if (a === 'new') send({ t: 'i_crew_new', n: (d.querySelector('[data-crewname]') || {}).value || '' }); else if (a === 'join') send({ t: 'i_crew_join', code: (d.querySelector('[data-crewcode]') || {}).value || '' }); else send({ t: 'i_crew_leave' }); }
@@ -2616,7 +2701,8 @@
     const body = bagTab === 'crew' ? crewHTML() : bagTab === 'ach' ? achHTML() : (friend ? `<div class="is-gift">🎁 <b>${escH(friend[1].name)}</b> ist in der Nähe – tippe bei einem Gegenstand auf 🎁, um ihn zu verschenken. <button class="is-ext" data-gift="muenzen" ${me.coins >= 10 ? '' : 'disabled'}>🪙 10 schenken</button></div>` : '') + `<div class="is-bagsum">🪙 ${me.coins} Münzen · ${have.reduce((a, k) => a + bag[k], 0)} Rohstoffe</div>
       ${have.length ? `<div class="is-baggrid">${have.map(k => `<div class="${RES[k][3] ? 'eat' : ''}"><i>${RES[k][1]}</i><b>${bag[k]}</b><span>${RES[k][0]}</span>${RES[k][3] ? `<button class="is-eat" data-eat="${k}" title="${ITEM_USE[k]}">Benutzen</button>` : ''}${friend ? `<button class="is-eat gift" data-gift="${k}">🎁</button>` : ''}</div>`).join('')}</div>` : '<p>Noch leer. Schlag Bäume, Felsen, Büsche, Kakteen oder Pilze, um Rohstoffe zu sammeln. Auf jeder Inselart gibt es andere!</p>'}
       <div class="is-gear"><b>Ausrüstung:</b> ${GEAR_NAME.schwert[gear('schwert')]}${Object.keys(GEAR_NAME).filter(g => g !== 'schwert' && gear(g)).map(g => ' · ' + GEAR_NAME[g][gear(g)]).join('')}${gear('angel') ? ' · ' + (gear('angel') > 1 ? 'Profi-Angel' : 'Angel') : ''}</div>
-      <small>Auf der Startinsel stehen Werkbank, Schmiede, Kochstelle und am Südufer die Werft. Im Dorf auf der Heimatinsel kannst du handeln und bauen.</small>`;
+      <button class="is-ext is-handw" data-hand>✋ Handwerk: Werkbänke herstellen</button>
+      <small>Werkbänke stellst du hier unter ✋ Handwerk her und mit 🔨 Bauen auf – bei deinem Haus auf der Heimatinsel oder unterwegs. Häuser baust du überall auf der Heimatinsel.</small>`;
     d.innerHTML = `<div class="is-bagbox"><h3>🎒 Rucksack <button class="is-btn" data-close>✕</button></h3>${tabs}${body}</div>`;
   }
   function fade(fn) {
@@ -2652,7 +2738,7 @@
   }
   function joyUp(e) {
     if (aimEnd(e)) return;
-    if (buildOn && joy.tap && Math.hypot(e.clientX - joy.tap.x, e.clientY - joy.tap.y) < 12 && Date.now() - joy.tap.t < 350) { const [tx, ty] = joy.tap.tt, pl = town().plots[myPlotId()]; if (pl && tx >= pl.x && ty >= pl.y && tx < pl.x + pl.w && ty < pl.y + pl.h) placeAt(tx, ty); }
+    if (buildOn && joy.tap && Math.hypot(e.clientX - joy.tap.x, e.clientY - joy.tap.y) < 12 && Date.now() - joy.tap.t < 350) { const [tx, ty] = joy.tap.tt; placeAt(tx, ty); }
     joy.tap = null;
     if (!joy.on || e.pointerId !== joy.id) return; joy.on = false; joy.dx = joy.dy = 0; hud.joy.style.display = 'none'; }
   function onKey(e) {
@@ -2731,12 +2817,12 @@
     scorpion: { ai: 'chase', hp: 3, dmg: 1, sp: 2.4, c: ['#5a3010', '#d08a3a'], loot: 'stachel', coins: [2, 3] },
     wolf: { ai: 'chase', hp: 4, dmg: 1, sp: 3.1, c: ['#4a5060', '#c8ccd8'], loot: 'fell', coins: [2, 4], wolf: 1 },
     golem: { ai: 'slam', hp: 10, dmg: 2, sp: 1.0, r: 1.6, wake: 7, loot: 'glut', coins: [6, 10] },
-    troll: { ai: 'slam', hp: 24, dmg: 2, sp: 1.35, r: 1.9, wake: 9, coins: [30, 30], boss: 1, name: 'Höhlentroll' },
-    sandwurm: { ai: 'slam', hp: 40, dmg: 2, sp: 1.2, r: 2, wake: 9, coins: [40, 50], boss: 1, name: 'Sandwurm', loot: 'wuestenperle', lootN: 3, look: 'wurm', c: ['#8a6a3a', '#c8a060'] },
-    frostwyrm: { ai: 'slam', hp: 45, dmg: 2, sp: 1.3, r: 2, wake: 9, coins: [40, 50], boss: 1, name: 'Frostwyrm', loot: 'frostherz', lootN: 3, look: 'wyrm', c: ['#3a6a9a', '#a8e4ff'] },
-    riesenfrosch: { ai: 'slam', hp: 38, dmg: 2, sp: 1.5, r: 2.2, wake: 9, coins: [40, 50], boss: 1, name: 'Riesenfrosch', loot: 'giftdruese', lootN: 3, look: 'frosch', c: ['#0f4a3a', '#3ad0a0'] },
-    feuerdrache: { ai: 'slam', hp: 55, dmg: 3, sp: 1.3, r: 2.2, wake: 10, coins: [60, 70], boss: 1, name: 'Feuerdrache', loot: 'drachenschuppe', lootN: 3, look: 'wyrm', c: ['#8a1a0a', '#ff7a2a'] },
-    sporenkoenigin: { ai: 'slam', hp: 42, dmg: 2, sp: 1.2, r: 2.1, wake: 9, coins: [40, 50], boss: 1, name: 'Sporenkönigin', loot: 'koenigsspore', lootN: 3, look: 'koenigin', c: ['#5a1a6a', '#d06ae0'] },
+    troll: { ai: 'slam', hp: 30, dmg: 2, sp: 1.35, r: 1.9, wake: 9, coins: [30, 40], boss: 1, name: 'Höhlentroll', loot: 'trollzahn', lootN: 2 },
+    sandwurm: { ai: 'slam', hp: 55, dmg: 2, sp: 1.2, r: 2, wake: 9, coins: [40, 50], boss: 1, name: 'Sandwurm', loot: 'wuestenperle', lootN: 3, look: 'wurm', c: ['#8a6a3a', '#c8a060'] },
+    frostwyrm: { ai: 'slam', hp: 62, dmg: 2, sp: 1.3, r: 2, wake: 9, coins: [40, 50], boss: 1, name: 'Frostwyrm', loot: 'frostherz', lootN: 3, look: 'wyrm', c: ['#3a6a9a', '#a8e4ff'] },
+    riesenfrosch: { ai: 'slam', hp: 55, dmg: 2, sp: 1.5, r: 2.2, wake: 9, coins: [40, 50], boss: 1, name: 'Riesenfrosch', loot: 'giftdruese', lootN: 3, look: 'frosch', c: ['#0f4a3a', '#3ad0a0'] },
+    feuerdrache: { ai: 'slam', hp: 80, dmg: 3, sp: 1.3, r: 2.2, wake: 10, coins: [60, 70], boss: 1, name: 'Feuerdrache', loot: 'drachenschuppe', lootN: 3, look: 'wyrm', c: ['#8a1a0a', '#ff7a2a'] },
+    sporenkoenigin: { ai: 'slam', hp: 62, dmg: 2, sp: 1.2, r: 2.1, wake: 9, coins: [40, 50], boss: 1, name: 'Sporenkönigin', loot: 'koenigsspore', lootN: 3, look: 'koenigin', c: ['#5a1a6a', '#d06ae0'] },
   };
   /* ---------- Neue Gegnerarten, Geschosse der Gegner und Boss-Spezialangriffe ---------- */
   Object.assign(EDEF, {
@@ -2928,17 +3014,17 @@
     }
   }
   /* ---------- Stufen-Sperren, Lehrkapitel und sichtbare Fähigkeiten anderer ---------- */
-  const LV_REQ = { eisschwert: 6, obsidianklinge: 12, drachenklinge: 18, obsidianaxt: 8, stachelpanzer: 7, drachenpanzer: 16, eishelm: 8, obsidianschild: 12, wollsegel: 5, seidensegel: 10, sturmsegel: 16, kanone: 6, rumpf: 4, fernrohr: 5, kuerbiskuchen: 6, karottensuppe: 4, elixier: 5, feuertrank: 7, fischsuppe: 5, b_floss: 2, b_schwan: 5, b_wikinger: 10, b_pirat: 14, b_koenig: 18, m_amboss: 6, m_laterne: 4, m_statue: 10, m_schafe: 4, m_huehner: 3, m_werkbank: 3, m_kochtopf: 3 };
+  const LV_REQ = { eisschwert: 6, obsidianklinge: 12, drachenklinge: 18, obsidianaxt: 8, stachelpanzer: 7, drachenpanzer: 16, eishelm: 8, obsidianschild: 12, wollsegel: 5, seidensegel: 10, sturmsegel: 16, kanone: 6, rumpf: 4, fernrohr: 5, kuerbiskuchen: 6, karottensuppe: 4, elixier: 5, feuertrank: 7, fischsuppe: 5, b_floss: 2, b_schwan: 5, b_wikinger: 10, b_pirat: 14, b_koenig: 18, m_amboss: 4, m_werftbank: 4, m_tischlerbank: 2, m_kochtopf: 2, m_pfahl: 3, m_laterne: 4, m_statue: 10, m_schafe: 4, m_huehner: 3 };
   for (const r of RECIPES) if (LV_REQ[r.id]) r.lv = LV_REQ[r.id];
   const BOSS_LV = { troll: 5, sandwurm: 9, frostwyrm: 11, riesenfrosch: 12, sporenkoenigin: 14, feuerdrache: 16 };
   const CHAPTERS = [
     { id: 'hoehle', n: 'Höhlenforscher', lv: 5, reward: 80, steps: [
-      { ev: 'learn', g: 'Lerne eine Fähigkeit bei einem Lehrer', tip: 'Die vier Lehrer stehen nördlich vom Dorfplatz.' },
+      { ev: 'learn', g: 'Lerne eine Fähigkeit bei einem Lehrer', tip: 'Die vier Lehrer stehen nördlich vom Dorfplatz. Jede Fähigkeit kostet Münzen und Material.' },
       { ev: 'cave', g: 'Betritt eine Höhle', tip: 'Die Kristallhöhle liegt im Norden der Startinsel (Schnellreise zum Steg Inselmitte).' },
       { ev: 'boss', g: 'Besiege einen Boss', tip: 'Der Höhlentroll wartet ganz hinten in der Kristallhöhle. Beim ersten Sieg über einen Boss gibt es einen Skillpunkt extra!' }] },
     { id: 'see', n: 'Seefahrer', lv: 8, reward: 120, steps: [
-      { ev: 'make:kanone', g: 'Baue die Bootskanone in der Werft', tip: 'Holz, Stein und Glut – Glut gibt es auf Vulkaninseln.' },
-      { ev: 'sink', g: 'Versenke einen Hai oder ein Piratenschiff', tip: 'Haie jagen im tiefen Wasser, Piraten lauern auf offener See weit weg von Inseln.' },
+      { ev: 'make:kanone', g: 'Baue die Bootskanone in einer Werft', tip: 'Die Werft stellst du im Rucksack unter ✋ Handwerk her. Die Kanone braucht Holz, Stein und Glut – Glut gibt es auf Vulkaninseln.' },
+      { ev: 'sink', g: 'Besiege einen Hai oder ein Piratenschiff', tip: 'Haie greifen an, wenn du ohne Boot schwimmst – dein Schwert hilft. Piraten lauern erst weit draußen (ab ★★) auf offener See.' },
       { ev: 'race', g: 'Segle eine Regatta', tip: 'Hafenmeisterin Greta startet die Regatta vor dem Hafen.' }] },
     { id: 'meister', n: 'Meisterprüfung', lv: 12, reward: 200, steps: [
       { ev: 'treasure', g: 'Grab einen Schatz aus', tip: 'Schatzkarten lassen Bosse, Piraten und manche Gegner fallen. Mit der Schaufel am roten X graben (E).' },
@@ -2977,7 +3063,7 @@
     else if (m.a === 'wurzeln') roots.push({ x: m.tx ?? x + ax * 5, y: m.ty ?? y + ay * 5, r: 2.2, t: 0, life: 3, vis: 1 });
     else if (m.a === 'rinde') { if (o) o.rinde = 8; P(14, '#8a6a3a'); }
   }
-  function mkEnemy(k, x, y) { const d = EDEF[k], nh = !me.inCave && isNight() ? Math.ceil(d.hp * 1.5) : d.hp; return { id: enemySeq++, k, d, x, y, hx: x, hy: y, hp: nh, max: nh, vx: 0, vy: 0, t: Math.random(), hop: 0, flash: 0, stun: 0, cd: 1, wind: 0, awake: false, back: 0, lunge: 0, fx: 1 }; }
+  function mkEnemy(k, x, y) { const z = me.inCave ? caveSpec.z || 0 : zoneOf(x, y), D0 = EDEF[k], d = z ? { ...D0, dmg: D0.dmg + Math.floor(z / 2) } : D0, base = Math.ceil(D0.hp * (1 + 0.45 * z)), nh = !me.inCave && isNight() ? Math.ceil(base * 1.3) : base; return { id: enemySeq++, k, d, z, x, y, hx: x, hy: y, hp: nh, max: nh, vx: 0, vy: 0, t: Math.random(), hop: 0, flash: 0, stun: 0, cd: 1, wind: 0, awake: false, back: 0, lunge: 0, fx: 1 }; }
   // Was ein abgebauter Gegenstand bringt: [Schläge, () => Beute]
   const HARV = {
     1: [3, v => ['holz', 'holz', ...(v === 1 ? ['apfel', 'apfel'] : [])]], 2: [3, () => ['holz', ...(Math.random() < 0.7 ? ['kokos'] : [])]], 3: [4, () => ['stein', 'stein']],
@@ -2998,6 +3084,7 @@
       if (e.remote) { const dmg = dmgRoll(); e.flash = 0.15; texts.push({ x: e.x, y: e.y - 1, s: '-' + dmg, t: 0, col: '#ffe08a' }); if (typeof send === 'function') send({ t: 'i_hit', to: hostId, id: e.id, dmg, nx: ex / (d || 1), ny: ey / (d || 1) }); any = true; continue; }
       hitEnemy(e, dmgRoll(), ex / (d || 1), ey / (d || 1), myId); any = true;
     }
+    for (const f of seaFoes) if (f.k === 'hai' && !f.dead && Math.hypot(f.x - me.x, f.y - (me.y - 0.3)) < 1.8) { const dmg = Math.max(1, Math.round(dmgRoll() / 2)); f.hp -= dmg; f.flash = 0.2; f.cd = Math.max(f.cd, 1.4); texts.push({ x: f.x, y: f.y - 1, s: '-' + dmg, t: 0, col: '#ffe08a' }); if (f.hp <= 0) sinkFoe(f); any = true; }
     if (any || me.inCave) return;
     if (digTreasure()) return;
     // Rohstoffe abbauen: nächster Gegenstand in Schlagrichtung
@@ -3017,7 +3104,8 @@
     if (n < need) { hits.set(key, n); texts.push({ x: tx + 0.5, y: ty - 0.6, s: '●'.repeat(n) + '○'.repeat(need - n), t: 0, col: '#ffffff' }); return; }
     hits.delete(key); cut.set(key, Date.now() + 5 * 60e3);
     const got = loot(objVar(o, h2(tx, ty, SEED + 90), t)); if (sk('holz') && TREES.has(o)) got.push('holz');
-    for (const k of got) { drop(tx + 0.5, ty + 0.6, k); if (Math.random() < 0.3 * sk('ernte')) drop(tx + 0.5, ty + 0.6, k); }
+    const hz = nearBig(tx, ty) ? 0 : zoneOf(tx, ty);
+    for (const k of got) { drop(tx + 0.5, ty + 0.6, k); if (Math.random() < 0.3 * sk('ernte') + 0.12 * hz) drop(tx + 0.5, ty + 0.6, k); }
     if (sk('schatz') && Math.random() < 0.2) for (let i = 0; i < 2 + Math.floor(Math.random() * 3); i++) drop(tx + 0.5, ty + 0.6, 'coin');
     gainXP(o === 12 || o === 13 ? 4 : o === 6 || o >= 16 ? 1 : 2, tx + 0.5, ty - 0.2);
     if (TREES.has(o)) { qEvent('harvest', 'baum'); st().trees = (st().trees || 0) + 1; } else if (o === 3 || (o >= 12 && o <= 14)) { qEvent('harvest', 'fels'); st().rocks = (st().rocks || 0) + 1; }
@@ -3041,8 +3129,8 @@
     e.dead = true;
     if (e.lastBy && e.lastBy !== myId) { if (typeof send === 'function') send({ t: 'i_kill', to: e.lastBy, k: e.k, x: e.x, y: e.y }); return; } // Beute für den anderen Spieler
     for (let i = 0; i < 14; i++) { const a = Math.random() * Math.PI * 2, s = 1 + Math.random() * 3; parts.push({ x: e.x, y: e.y - 0.3, z: 0, vx: Math.cos(a) * s, vy: Math.sin(a) * s, t: 0, life: 0.6, col: i % 3 ? '#e8e8f0' : '#bfbfd0', sz: 3 }); }
-    const n = Math.round((D.coins[0] + Math.floor(Math.random() * (D.coins[1] - D.coins[0] + 1))) * (1 + 0.25 * sk('glueck')));
-    gainXP(XP_FOE[e.k] || 5, e.x, e.y - 1.4); qEvent('kill', e.k); st().kills = (st().kills || 0) + 1; if (D.boss) { firstBoss(e.k); st().bossK = st().bossK || {}; st().bossK[e.k] = 1; tutEv('boss', e.k); if (e.k !== 'troll') tutEv('boss2', e.k); }
+    const z = e.z || 0, n = Math.round((D.coins[0] + Math.floor(Math.random() * (D.coins[1] - D.coins[0] + 1))) * (1 + 0.25 * sk('glueck')) * (1 + 0.5 * z));
+    gainXP(Math.round((XP_FOE[e.k] || 5) * (1 + 0.4 * z)), e.x, e.y - 1.4); zoneLoot(e.x, e.y, D, z); qEvent('kill', e.k); st().kills = (st().kills || 0) + 1; if (D.boss) { firstBoss(e.k); st().bossK = st().bossK || {}; st().bossK[e.k] = 1; tutEv('boss', e.k); if (e.k !== 'troll') tutEv('boss2', e.k); }
     if (sk('heil')) me.hp = Math.min(maxHp(), me.hp + 1);
     for (let i = 0; i < n; i++) drop(e.x, e.y, 'coin');
     if (D.loot && !D.boss && Math.random() < 0.7) drop(e.x, e.y, D.loot);
@@ -3051,11 +3139,18 @@
       cs().boss = Date.now(); saveCave();
       say(`🏆 Du hast den ${D.name} besiegt!`); addLog(`<b>${D.name} besiegt!</b> Er kommt in 10 Minuten wieder.`);
       for (let i = 0; i < 3; i++) drop(e.x, e.y, 'heart');
-      for (let i = 0; i < (D.lootN || 0); i++) drop(e.x, e.y, D.loot);
+      for (let i = 0; i < (D.lootN || 0) + Math.floor(z / 2); i++) drop(e.x, e.y, D.loot);
       if (Math.random() < 0.5) drop(e.x, e.y, 'karte');
       prog.st = prog.st || {}; prog.st.bosse = (prog.st.bosse || 0) + 1; saveProg();
     }
     if (!me.inCave && !D.boss && Math.random() < 0.06) drop(e.x, e.y, 'karte'); else if (e.k === 'golem') say('🪨 Lavagolem besiegt!');
+  }
+  // weiter draußen: öfter Beute und manchmal etwas Seltenes
+  const RARE = ['eiskristall', 'obsidian', 'glut', 'sporen', 'stachel', 'fell', 'wolle'];
+  function zoneLoot(x, y, D, z) {
+    if (!z) return;
+    if (D.loot && !D.boss && Math.random() < 0.15 * z) drop(x, y, D.loot);
+    if (z >= 2 && Math.random() < 0.05 * z) drop(x, y, RARE[Math.floor(Math.random() * RARE.length)]);
   }
   function newMap() {
     prog.maps = prog.maps || [];
@@ -3075,7 +3170,7 @@
     prog.maps.splice(prog.maps.indexOf(m), 1); saveProg(); tutEv('treasure');
     shake = 5; say('💰 Schatz ausgegraben!');
     const rare = ['eiskristall', 'obsidian', 'glut', 'sporen', 'stachel', 'fell', 'drachenschuppe'];
-    for (let i = 0; i < 25 + Math.floor(Math.random() * 25); i++) drop(m.x, m.y, 'coin');
+    for (let i = 0, nz = zoneOf(m.x, m.y); i < (25 + Math.floor(Math.random() * 25)) * (1 + 0.4 * nz); i++) drop(m.x, m.y, 'coin');
     for (let i = 0; i < 3; i++) drop(m.x, m.y, rare[Math.floor(Math.random() * (rare.length - (Math.random() < 0.85 ? 1 : 0)))]);
     gainXP(40, m.x, m.y - 1); prog.st = prog.st || {}; prog.st.schatz = (prog.st.schatz || 0) + 1; mapDirty = true;
     return true;
@@ -3095,8 +3190,8 @@
       const inCave = me.inCave;
       setTimeout(() => fade(() => {
         seaFoes = []; shots = []; if (inCave) leaveCave(true); else respawnHome();
-        if (!inCave && prog.bed && myPlotId() >= 0) { me.x = prog.bed.x; me.y = prog.bed.y; }
-        me.hp = maxHp(); say(inCave ? 'Du bist ohnmächtig geworden … und wachst vor der Höhle wieder auf.' : (prog.bed && myPlotId() >= 0 ? 'Du bist ohnmächtig geworden … und wachst in deinem Bett wieder auf.' : 'Du bist ohnmächtig geworden … und wachst im Dorf Lindmark wieder auf.'));
+        if (!inCave && bedOk()) { me.x = prog.bed.x; me.y = prog.bed.y; }
+        me.hp = maxHp(); say(inCave ? 'Du bist ohnmächtig geworden … und wachst vor der Höhle wieder auf.' : (!inCave && bedOk() ? 'Du bist ohnmächtig geworden … und wachst in deinem Bett wieder auf.' : 'Du bist ohnmächtig geworden … und wachst im Dorf Lindmark wieder auf.'));
       }), 500);
     }
   }
@@ -3414,14 +3509,6 @@
     ctx.fillStyle = '#1a1a22'; ctx.fillText(t, x, y - 2.2 * S);
   }
   // Figur mit Schatten, Watten im Wasser, Schwerthieb
-  function drawPlotSign(pl, ox, oy, u) {
-    const x = ox + (pl.x + 1) * u, y = oy + (pl.y + 0.7) * u, own = plotOwner(pl.id);
-    ctx.fillStyle = '#5a3a20'; ctx.fillRect(x - S, y - 10 * S, 2 * S, 10 * S);
-    ctx.fillStyle = '#3a2414'; ctx.fillRect(x - 8.5 * S, y - 15.5 * S, 17 * S, 8 * S); ctx.fillStyle = own ? '#e8d4a8' : '#c8f0b8'; ctx.fillRect(x - 8 * S, y - 15 * S, 16 * S, 7 * S);
-    ctx.fillStyle = '#2a1608'; ctx.font = `700 ${Math.round(3.6 * S)}px system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(own ? (own.length > 9 ? own.slice(0, 8) + '…' : own) : 'Frei', x, y - 11.4 * S);
-  }
-  const plotOwner = id => (PLOTS[id] ? PLOTS[id].n : null);
   function drawPerson(x, y, col, dir, frame, wade, t, atkP, blink, whirl, tier, hat) {
     swordTier = tier || 0;
     const sp = charSprite(col, dir, frame), w = 16 * S, h = 24 * S, top = y - 23 * S;
@@ -3751,9 +3838,8 @@
       if (inV(T.V.x, T.V.y)) ents.push({ y: T.V.y + 0.4, f: () => drawFountain(ox, oy, u, t) });
       for (const n of T.npcs) if (inV(n.x, n.y)) ents.push({ y: n.y, f: () => { drawPerson(ox + n.x * u, oy + n.y * u, n.col, 0, 0, false, t, null, false, 0, 0, n.hat); nameTag(ox + n.x * u, oy + n.y * u - 1.75 * u, n.n, true); if (n.k === 'lotse' && tutActive() && prog.tut === 0) { ctx.font = `800 ${Math.round(9 * S)}px system-ui`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ffd24a'; ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5 * S; const by = oy + n.y * u - 2.9 * u + Math.sin(t / 220) * 2 * S; ctx.strokeText('!', ox + n.x * u, by); ctx.fillText('!', ox + n.x * u, by); } if (nearNpc === n) { ctx.font = `700 ${Math.round(4.6 * S)}px system-ui,sans-serif`; const tx2 = coarse ? 'Tippe 🛠️' : 'E – Sprechen', tw = ctx.measureText(tx2).width + 5 * S; ctx.fillStyle = 'rgba(14,22,40,.85)'; roundRect(ox + n.x * u - tw / 2, oy + n.y * u - 2.4 * u - 7 * S, tw, 7 * S, 2.5 * S); ctx.fill(); ctx.fillStyle = '#ffd27a'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(tx2, ox + n.x * u, oy + n.y * u - 2.4 * u - 3.5 * S); } } });
       for (const w of T.walkers) if (inV(w.x, w.y)) ents.push({ y: w.y, f: () => { drawPerson(ox + w.x * u, oy + w.y * u, w.col, w.dir, w.moving ? (Math.floor(w.t / 0.15) % 4) + 1 : 0, false, t, null, false, 0, 0, w.hat); if (w.say && Date.now() - w.say.t < 4000) bubble(ox + w.x * u, oy + w.y * u - 1.6 * u, w.say.m); } });
-      drawBases(ents, ox, oy, u, t);
-      for (const pl of T.plots) if (inV(pl.x + 1, pl.y + 0.6)) ents.push({ y: pl.y + 0.6, f: () => drawPlotSign(pl, ox, oy, u) });
     }
+    drawBases(ents, ox, oy, u, t, mx0, mx1, my0, my1);
     for (const st of stations()) if (st.x > mx0 && st.x < mx1 && st.y > my0 && st.y < my1) ents.push({ y: st.y, f: () => drawObj({ k: 'st', st: st.k, x: st.x, y: st.y }, ox, oy, u, t) });
     for (const { spec, e: E } of entsNear(me.x, me.y)) if (E.x > mx0 && E.x < mx1 && E.y > my0 && E.y < my1 + 2) ents.push({ y: E.y, f: () => { drawObj({ k: 'ent', x: E.x, y: E.y }, ox, oy, u, t); if (Math.hypot(me.x - E.x, me.y - E.y) < 7 && spec) { const bl = BOSS_LV[spec.boss] || 0, done = st().bossK && st().bossK[spec.boss]; nameTag(ox + E.x * u, oy + (E.y - 3) * u, `${spec.name} · ${EDEF[spec.boss].name}${done ? ' ✓' : ''}${prog.lvl < bl ? ' · 🔒 ab Stufe ' + bl : ''}`, prog.lvl >= bl); } } });
     ents.push({ y: boat.y, f: () => drawBoat(sx(boat.x), sy(boat.y), boat.h, boat.sail, me.col, me.inBoat ? boat.v : 0, t / 1000, me.inBoat, prog.bc, prog.bs, prog.hat) });
@@ -3785,9 +3871,10 @@
       for (const o of others.values()) if (!o.cave) light(o.x, o.y - 0.5, 4, 0.9);
       for (const st of stations()) if (st.k !== 'werk') light(st.x, st.y - 0.6, 3.2 + fl, 0.85);
       for (const { e: E } of entsNear(me.x, me.y)) light(E.x, E.y - 1.8, 3.5 + fl, 0.85);
+      if (WORLD.size) for (let cy = Math.floor((me.y - 22) / 16); cy <= Math.floor((me.y + 22) / 16); cy++) for (let cx = Math.floor((me.x - 30) / 16); cx <= Math.floor((me.x + 30) / 16); cx++) { const set = WIDX.get(cx + ',' + cy); if (set) for (const key of set) { const v = WORLD.get(key), o = v && v[1]; if (o && PIECES[o] && (PIECES[o].light || o === 'amboss' || o === 'kochtopf')) { const [lx, ly] = key.split(',').map(Number); light(lx + 0.5, ly + 0.3, o === 'laterne' ? 5 : 4 + fl, 0.95); } } }
       if (nearBig(me.x, me.y)) {
         const T = town(); for (const hs of T.houses) light(hs.x, hs.y - 1.2, 3.2, 0.8); light(T.V.x, T.V.y, 3, 0.6);
-        for (const pl of T.plots) { const P2 = PLOTS[pl.id]; if (!P2) continue; for (const [key, [, o]] of Object.entries(P2.it)) if (o && PIECES[o] && PIECES[o].light) { const [lx, ly] = key.split(',').map(Number); light(pl.x + lx + 0.5, pl.y + ly + 0.3, o === 'laterne' ? 5 : 4 + fl, 0.95); } }
+
       }
       ctx.imageSmoothingEnabled = true; ctx.drawImage(lc, 0, 0, lw * L4, lh * L4); ctx.imageSmoothingEnabled = false;
       ctx.fillStyle = 'rgba(255,255,255,.8)'; for (let i = 0; i < 24 && dk > 0.4; i++) { const a2 = h2(i, 3, 980), b2 = h2(i, 4, 980); if (Math.sin(t / 700 + i) > 0.3) ctx.fillRect(a2 * W, b2 * H * 0.5, S, S); }
@@ -3913,20 +4000,20 @@
       const place = isl ? isl.name : T_NAMES[cls(elev(me.x, me.y))] || 'Offenes Meer';
       if (isl && isl.b && lastIsle !== place) { qEvent('visit', isl.b); st().biomes = st().biomes || {}; if (!st().biomes[isl.b]) { st().biomes[isl.b] = 1; saveProg(); } }
       checkAch();
-      if (place !== lastIsle) { lastIsle = place; hud.isle.textContent = place; if (isl && discover(isl) && !isl.home) { say('🏝️ Neue Insel entdeckt: ' + place); gainXP(sk('entdecker') ? 50 : 25, me.x, me.y - 2); addLog(`Entdeckt: <b>${escH(place)}</b> (${found.size} Inseln bisher) – ${escH(isl.town ? 'Hier liegt das Dorf mit Händler, Hafenmeisterin und Bauplätzen für deine eigene Base' : BIOMES[isl.b].info)}`); } }
+      if (place !== lastIsle) { lastIsle = place; const zz = isl && !isl.town && !isl.home ? zoneOf(isl.x, isl.y) : 0; hud.isle.textContent = place + (zz ? ' · ' + zStars(zz) : ''); if (isl && discover(isl) && !isl.home) { say('🏝️ Neue Insel entdeckt: ' + place + (zz ? ` · Gefahr ${zStars(zz)} (${ZNAME[zz]})` : '')); gainXP(sk('entdecker') ? 50 : 25, me.x, me.y - 2); addLog(`Entdeckt: <b>${escH(place)}</b> (${found.size} Inseln bisher) – ${escH(isl.town ? 'Hier liegt das Dorf mit Händlern und Hafen – und auf der ganzen Insel darfst du dein eigenes Haus bauen' : BIOMES[isl.b].info)}`); } }
     }
     hud.on.textContent = online === 1 ? 'nur du bist online' : `${online} Spieler online`;
     hud.sail.hidden = !me.inBoat; hud.sail.classList.toggle('on', !!boat.sail);
     hud.boat.hidden = !!me.inCave; hud.travel.hidden = !canTravel(); if (travelOpen && !canTravel()) toggleTravel(); tutPoll();
-    const myP = myPlotId(), inMine = myP >= 0 && !me.inBoat && (() => { const pl = town().plots[myP]; return me.x > pl.x - 2 && me.x < pl.x + pl.w + 2 && me.y > pl.y - 2 && me.y < pl.y + pl.h + 2; })();
+    const inMine = !me.inBoat && !me.inCave && !titleOn && elev(me.x, me.y) >= -0.05;
     hud.build.hidden = !inMine;
     const canF = gear('angel') && !me.inCave && (fishing || waterAhead()); hud.fish.hidden = !canF; hud.fish.classList.toggle('on', !!fishing && fishing.ph === 'bite');
     hud.fish.querySelector('span').textContent = fishing ? (fishing.ph === 'bite' ? 'ZIEHEN!' : 'Warten …') : 'Angeln'; hud.build.classList.toggle('on', buildOn);
     if (!inMine && buildOn) toggleBuild(false);
     hud.use.hidden = !(nearSt || nearNpc || nearWalker || (extraNear && extraNear())) || !!me.inBoat || !!me.inCave;
-    if (chestOpen != null && (!baseNear || baseNear.k !== 'truhe')) toggleChest();
+    if (chestOpen && (!baseNear || baseNear.k !== 'truhe')) toggleChest(false);
     if (npcOpen && (!nearNpc || nearNpc.k !== npcOpen.k)) toggleNpc();
-    if (hud.use.hidden && craftOpen) toggleCraft();
+    if (hud.use.hidden && craftOpen && craftOpen !== 'hand') toggleCraft();
     if (buff.herz <= 0 && me.hp > maxHp()) me.hp = maxHp();
     hud.buffs.innerHTML = [['kraft', '🍲'], ['tempo', '🥤'], ['dorn', '🧪'], ['herz', '🥮'], ['rinde', '🌳']].filter(([k]) => buff[k] > 0).map(([k, i]) => `<b>${i}${Math.ceil(buff[k])}s</b>`).join('');
     hud.atk.hidden = coarse || (!!me.inBoat && !gear('kanone')); renderAbil();
@@ -3951,8 +4038,10 @@
   function join() { if (typeof send === 'function') send({ t: 'i_join', name: me.name, col: me.col, s: stateArr(), m: meta(), ...(acct ? { acc: { n: acct.name, tk: acct.token } } : {}) }); lastSent = ''; }
   function net(m) {
     if (m.t === 'i_hi') { myId = m.id; online = m.n; return; }
-    if (m.t === 'i_plots') { PLOTS = m.plots || {}; for (const k in PLOTS) if (!PLOTS[k]) delete PLOTS[k]; return; }
-    if (m.t === 'i_plot') { if (m.p) PLOTS[m.id] = m.p; else delete PLOTS[m.id]; if (chestOpen === m.id) renderChest(); if (npcOpen && npcOpen.k === 'bau') renderNpc(); return; }
+    if (m.t === 'i_world') { WORLD.clear(); WIDX.clear(); for (const [k, v] of Object.entries(m.w || {})) if (Array.isArray(v)) wset(k, v); WG = m.g || {}; WA = m.a || {}; STASH = m.s || {}; worldReady = m.ready !== false; chunks.clear(); CLAIMS = null; if (chestOpen) renderChest(); if (buildOn) renderBuild(); return; }
+    if (m.t === 'i_b') { wset(m.k, Array.isArray(m.v) ? m.v : null); if (m.g) WG[m.k] = m.g; else delete WG[m.k]; if (m.a) WA[m.k] = m.a; else delete WA[m.k]; if (npcOpen && npcOpen.k === 'bau') renderNpc(); return; }
+    if (m.t === 'i_stash') { STASH = m.s || {}; if (chestOpen) renderChest(); return; }
+    if (m.t === 'i_no') { say('🚫 ' + m.m); if (m.put && PIECES[m.put]) { refund(m.put); if (!needKit(m.put)) for (const [r, v] of Object.entries(PIECES[m.put].cost)) bag[r] = (bag[r] || 0) + v - Math.floor(v / 2); saveBag(); } if (m.del && needKit(m.del) && kit(m.del) > 0) { prog.kit[m.del]--; saveProg(); } if (m.k) wset(m.k, Array.isArray(m.v) ? m.v : null); if (buildOn) renderBuild(); return; }
     if (m.t === 'i_w') {
       online = m.n || online;
       const seen = new Set();
@@ -3972,7 +4061,7 @@
     if (m.t === 'i_fx') { applyFx(m); return; }
     if (m.t === 'i_cast') { castFx(m); return; }
     if (m.t === 'i_hit') { const e = enemies.find(q => q.id === m.id && !q.remote && !q.dead); if (e) { hitEnemy(e, m.dmg, m.nx, m.ny, m.from); if (m.fz && !e.dead) { e.frz = Math.max(e.frz || 0, e.d.boss ? m.fz * 0.4 : m.fz); e.stun = Math.max(e.stun || 0, e.frz); } } return; }
-    if (m.t === 'i_kill') { const D = EDEF[m.k]; if (!D) return; const n = Math.round((D.coins[0] + Math.floor(Math.random() * (D.coins[1] - D.coins[0] + 1))) * (1 + 0.25 * sk('glueck'))); for (let i = 0; i < n; i++) drop(m.x, m.y, 'coin'); if (D.loot && Math.random() < 0.7) drop(m.x, m.y, D.loot); gainXP(XP_FOE[m.k] || 5, m.x, m.y - 1.4); qEvent('kill', m.k); st().kills = (st().kills || 0) + 1;
+    if (m.t === 'i_kill') { const D = EDEF[m.k]; if (!D) return; const z = me.inCave ? caveSpec.z || 0 : zoneOf(m.x, m.y), n = Math.round((D.coins[0] + Math.floor(Math.random() * (D.coins[1] - D.coins[0] + 1))) * (1 + 0.25 * sk('glueck')) * (1 + 0.5 * z)); for (let i = 0; i < n; i++) drop(m.x, m.y, 'coin'); if (D.loot && Math.random() < 0.7) drop(m.x, m.y, D.loot); zoneLoot(m.x, m.y, D, z); gainXP(Math.round((XP_FOE[m.k] || 5) * (1 + 0.4 * z)), m.x, m.y - 1.4); qEvent('kill', m.k); st().kills = (st().kills || 0) + 1;
       if (D.boss) { firstBoss(m.k); tutEv('boss', m.k); if (m.k !== 'troll') tutEv('boss2', m.k); st().bossK = st().bossK || {}; st().bossK[m.k] = 1; st().bosse = (st().bosse || 0) + 1; for (let i = 0; i < 3; i++) drop(m.x, m.y, 'heart'); for (let i = 0; i < (D.lootN || 0); i++) drop(m.x, m.y, D.loot); if (Math.random() < 0.5) drop(m.x, m.y, 'karte'); if (me.inCave) { cs().boss = Date.now(); saveCave(); } say(`🏆 Du hast den ${D.name} besiegt!`); saveProg(); }
       return; }
     if (m.t === 'i_gift') { if (m.k === 'muenzen') me.coins += m.n; else bag[m.k] = (bag[m.k] || 0) + m.n; saveBag(); save(); say(`🎁 ${m.from} schenkt dir ${m.n} ${m.k === 'muenzen' ? 'Münzen' : (RES[m.k] || [m.k])[0]}!`); if (bagOpen) renderBag(); return; }
@@ -4016,6 +4105,6 @@
   }
   window.Insel = {
     open: openGame, close, net, isOpen: () => open, rejoin: () => { if (open) join(); },
-    _dbg: { mkE: (k, x, y) => mkEnemy(k, x, y), get foeShots() { return foeShots; }, cast, get spells() { return spells; }, ABIL, aimStart, aimEnd, get titleOn() { return titleOn; }, startPlay, travelTo, toggleTravel, mid, DEST, TUT, tutNext, zoneKey, get seaFoes() { return seaFoes; }, fireCannon, storm, buoys, get race() { return race; }, set race(v) { race = v; }, get remote() { return remote; }, zoneHost, get crew() { return crew; }, get raceTop() { return raceTop; }, fishAction, get fishing() { return fishing; }, set fishing(v) { fishing = v; }, catchFish, checkAch, sendMeta, islandCave, entsNear, newMap, darkness, get caveSpec() { return caveSpec; }, get PLOTS() { return PLOTS; }, myPlotId, placeAt, toggleBuild, get buildSel() { return buildSel; }, set buildSel(v) { buildSel = v; }, get baseNear() { return baseNear; }, toggleChest, town, BIG, quests, qEvent, toggleNpc, get nearNpc() { return nearNpc; }, interact, stations, toggleCraft, craft, useItem, buff, get nearSt() { return nearSt; }, get prog() { return prog; }, cloudSave, get acct() { return acct; }, gainXP, toggleSkills, me, boat, others, elev, tileAt, objAt, isCut, get bag() { return bag; }, wind, island, spawn, toggleBoat, toggleSail, caveEnt, enterCave, leaveCave, attack, get enemies() { return enemies; }, get cave() { return cave; } },
+    _dbg: { mkE: (k, x, y) => mkEnemy(k, x, y), get foeShots() { return foeShots; }, cast, get spells() { return spells; }, ABIL, aimStart, aimEnd, get titleOn() { return titleOn; }, startPlay, travelTo, toggleTravel, mid, DEST, TUT, tutNext, zoneKey, get seaFoes() { return seaFoes; }, fireCannon, storm, buoys, get race() { return race; }, set race(v) { race = v; }, get remote() { return remote; }, zoneHost, get crew() { return crew; }, get raceTop() { return raceTop; }, fishAction, get fishing() { return fishing; }, set fishing(v) { fishing = v; }, catchFish, checkAch, sendMeta, islandCave, entsNear, newMap, darkness, get caveSpec() { return caveSpec; }, get WORLD() { return WORLD; }, swimming, get swimT() { return swimT; }, zoneOf, canPlace, canRemove, toggleChest, get STASH() { return STASH; }, claims, placeAt, toggleBuild, get buildSel() { return buildSel; }, set buildSel(v) { buildSel = v; }, get baseNear() { return baseNear; }, toggleChest, town, BIG, quests, qEvent, toggleNpc, get nearNpc() { return nearNpc; }, interact, stations, toggleCraft, craft, useItem, buff, get nearSt() { return nearSt; }, get prog() { return prog; }, cloudSave, get acct() { return acct; }, gainXP, toggleSkills, me, boat, others, elev, tileAt, objAt, isCut, get bag() { return bag; }, wind, island, spawn, toggleBoat, toggleSail, caveEnt, enterCave, leaveCave, attack, get enemies() { return enemies; }, get cave() { return cave; } },
   };
 })();
