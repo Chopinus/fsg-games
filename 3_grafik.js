@@ -298,6 +298,15 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 32, title: 'Inselreich: Angriff rundum, Ausrüstung, neuer Skillbaum', date: '04.11.2026', items: [
+      ['Neu', 'Inselreich: Du schlägst jetzt in jede Richtung – zur Maus, zum Ziel-Joystick oder zum nächsten Gegner, genau so weit wie die Anzeige'],
+      ['Neu', 'Inselreich: Ausrüstung im Rucksack – Schwert, Axt, Spitzhacke, Schaufel, Rüstung, Helm, Schild und mehr selbst anlegen'],
+      ['Neu', 'Inselreich: Neue Spitzhacken. Das passende Werkzeug nimmst du automatisch in die Hand: Axt am Baum, Spitzhacke am Felsen, Schwert gegen Gegner'],
+      ['Neu', 'Inselreich: Größerer Skillbaum mit 36 Feldern – viele brauchen eine bestimmte Stufe, starke Felder kosten mehrere Punkte'],
+      ['Verbessert', 'Inselreich: Gegner haben mehr Leben, nichts fällt mehr mit einem Schlag. Seltene Rohstoffe und Inseln weiter draußen sind härter abzubauen'],
+      ['Verbessert', 'Inselreich: Fasern gibt es jetzt auch auf der Heimatinsel (Büsche, Händler Ole) und sie haben ein eigenes Symbol 🌿'],
+      ['Verbessert', 'Inselreich: Höhere Stufen für Waffen, Rüstungen, Boote, Fähigkeiten und Bosse'],
+    ] },
     { id: 31, title: 'Inselreich: Freies Bauen, Werkbänke zum Aufstellen und neue Balance', date: '04.11.2026', items: [
       ['Neu', 'Inselreich: Neue Version – alle beginnen neu im Dorf auf der Heimatinsel, mit dem Tutorial von Lotsin Anna'],
       ['Neu', 'Inselreich: Bau dein Haus, wo du willst – auf der ganzen Heimatinsel. Feste Bauplätze gibt es nicht mehr'],
