@@ -124,6 +124,58 @@ function openInsel(btn) {
   sc.onerror = () => { done(); toast('Inselreich konnte nicht geladen werden.'); sc.remove(); };
   document.head.appendChild(sc);
 }
+// Ritterlauf wird erst geladen, wenn jemand ihn startet (spart Datenvolumen: der Code ist über 1 MB groß)
+function openRitter(btn) {
+  if (window.Ritter) { Ritter.open(); return; }
+  if (openRitter.busy) return;
+  openRitter.busy = true; const t0 = btn ? btn.textContent : ''; if (btn) { btn.disabled = true; btn.textContent = 'Lädt …'; }
+  const done = () => { openRitter.busy = false; if (btn) { btn.disabled = false; btn.textContent = t0; } };
+  const sc = document.createElement('script'); sc.src = 'ritter.js';
+  sc.onload = () => { done(); if (window.Ritter) Ritter.open(); };
+  sc.onerror = () => { done(); toast('Ritterlauf konnte nicht geladen werden.'); sc.remove(); };
+  document.head.appendChild(sc);
+}
+/* ---------- Ein Konto für alle Spiele (Name + Passwort, gespeichert auf dem Server) ---------- */
+const AK = 'fsg.konto';
+let konto = null, kontoForm = false, kontoMsg = '';
+try { konto = JSON.parse(store.get(AK) || 'null'); } catch {}
+if (!konto || !konto.token) { konto = null; // schon im Ritterlauf oder Inselreich angemeldet? Dann gilt das Konto jetzt überall
+  for (const k of ['fsg.ritter.konto', 'insel.konto']) { try { const a = JSON.parse(store.get(k) || 'null'); if (a && a.name && a.token) { konto = { name: a.name, token: a.token }; store.set(AK, JSON.stringify(konto)); break; } } catch {} }
+}
+async function kontoApi(action, body) {
+  try { const r = await fetch('/api/' + action, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); const j = await r.json().catch(() => ({})); return r.ok ? j : { ...j, error: j.error || 'Der Server antwortet gerade nicht.' }; }
+  catch { return { error: 'Keine Verbindung zum Server.' }; }
+}
+function renderAcct() {
+  const el = $('#acct'); if (!el) return;
+  if (konto) { el.innerHTML = `<div class="acct-on"><span>👤 Angemeldet als <b>${esc(konto.name)}</b><small>Ein Konto für alle Spiele – dein Fortschritt im Ritterlauf und im Inselreich wird online gesichert.</small></span><button class="btn small ghost" data-acct="out">Abmelden</button></div>`; return; }
+  if (!kontoForm) { el.innerHTML = `<button class="btn small ghost acct-open" data-acct="open">👤 Anmelden oder Konto anlegen</button><small class="acct-hint">Ein Konto für alle Spiele: Spielstände auf jedem Gerät weiterspielen.</small>${kontoMsg ? `<small class="acct-msg">${esc(kontoMsg)}</small>` : ''}`; return; }
+  el.innerHTML = `<form class="acct-form" id="acctForm" autocomplete="on"><b>👤 Konto für alle Spiele</b>
+    <input name="n" maxlength="20" placeholder="Kontoname" autocomplete="username"><input name="p" type="password" maxlength="60" placeholder="Passwort (mind. 4 Zeichen)" autocomplete="current-password">
+    <div class="acct-row"><button class="btn small" type="submit">Anmelden</button><button class="btn small ghost" type="button" data-acct="new">Neu anlegen</button><button class="btn small ghost" type="button" data-acct="x">✕</button></div>${kontoMsg ? `<small class="acct-msg">${esc(kontoMsg)}</small>` : ''}</form>`;
+  const f = $('#acctForm'); f.onsubmit = e => { e.preventDefault(); kontoLogin(false); }; setTimeout(() => f.n.focus(), 30);
+}
+async function kontoLogin(create) {
+  const f = $('#acctForm'); if (!f) return; const n = f.n.value.trim(), pw = f.p.value;
+  if (!n || !pw) { kontoMsg = 'Gib Kontoname und Passwort ein.'; renderAcct(); return; }
+  f.querySelectorAll('button').forEach(b => (b.disabled = true));
+  const r = await kontoApi(create ? 'create' : 'login', create ? { name: n, pass: pw, data: {} } : { name: n, pass: pw });
+  if (r.error) { kontoMsg = r.error; renderAcct(); const g = $('#acctForm'); if (g) g.n.value = n; return; }
+  konto = { name: r.name, token: r.token }; store.set(AK, JSON.stringify(konto)); kontoForm = false; kontoMsg = '';
+  if (!nick()) { $('#nick').value = r.name.slice(0, 16); $('#nick').dispatchEvent(new Event('change')); }
+  toast(create ? `Konto ${r.name} angelegt – es gilt für alle Spiele` : `Willkommen, ${r.name}!`); renderAcct();
+}
+function kontoLogout() {
+  konto = null; store.set(AK, null); store.set('fsg.ritter.konto', null); store.set('insel.konto', JSON.stringify({ out: 1 }));
+  kontoMsg = 'Abgemeldet. Deine Spielstände bleiben auf diesem Gerät.'; renderAcct();
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-acct]'); if (!b) return; const a = b.dataset.acct;
+  if (a === 'open') { kontoForm = true; kontoMsg = ''; renderAcct(); } else if (a === 'x') { kontoForm = false; kontoMsg = ''; renderAcct(); }
+  else if (a === 'new') kontoLogin(true); else if (a === 'out') kontoLogout();
+});
+// Wenn ein Spiel sich an- oder abmeldet, Anzeige im Hub nachziehen
+window.addEventListener('fsg-konto', () => { try { konto = JSON.parse(store.get(AK) || 'null'); } catch { konto = null; } renderAcct(); });
 // Würfelwelt wird erst geladen, wenn jemand sie startet (spart Datenvolumen)
 function openWelt(btn, then) {
   const go = () => { if (!window.Welt) return; if (then) then(); else window.Welt.open(); };
@@ -136,7 +188,7 @@ function openWelt(btn, then) {
   sc.onerror = () => { openWelt.busy = false; openWelt.q = []; if (btn) { btn.disabled = false; btn.textContent = 'Spielen'; } toast('Würfelwelt konnte nicht geladen werden.'); sc.remove(); };
   document.body.appendChild(sc);
 }
-$('#tiles').addEventListener('click', e => { if (e.target.closest('[data-solo]')) { window.Ritter.open(); return; } const ww = e.target.closest('[data-welt]'); if (ww) { openWelt(ww); return; } if (e.target.closest('[data-casino]')) { loadCasino(() => Casino.openLobby()); return; } const isl = e.target.closest('[data-insel]'); if (isl) { if (needNick()) openInsel(isl); return; } const b = e.target.closest('[data-create]'); if (b && needNick()) send({ t: 'create', game: b.dataset.create }); });
+$('#tiles').addEventListener('click', e => { const so = e.target.closest('[data-solo]'); if (so) { openRitter(so); return; } const ww = e.target.closest('[data-welt]'); if (ww) { openWelt(ww); return; } if (e.target.closest('[data-casino]')) { loadCasino(() => Casino.openLobby()); return; } const isl = e.target.closest('[data-insel]'); if (isl) { if (needNick()) openInsel(isl); return; } const b = e.target.closest('[data-create]'); if (b && needNick()) send({ t: 'create', game: b.dataset.create }); });
 $('#rooms').addEventListener('click', e => { const b = e.target.closest('[data-join]'); if (b && needNick()) send({ t: 'join', room: b.dataset.join }); });
 $('#nick').addEventListener('change', () => { const n = nick(); if (n) { store.set('fsg.nick', n); send({ t: 'name', name: n }); } });
 
@@ -443,5 +495,6 @@ $('#room').addEventListener('click', e => {
 
 /* ---------- Start ---------- */
 $('#nick').value = store.get('fsg.nick') || '';
+renderAcct();
 renderTiles();
 connect();

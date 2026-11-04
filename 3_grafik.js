@@ -298,6 +298,11 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 35, title: 'Ein Konto für alle Spiele', date: '04.11.2026', items: [
+      ['Neu', 'Hub: Melde dich einmal im Hub an – das Konto gilt für Ritterlauf, Inselreich und alle weiteren Spiele'],
+      ['Verbessert', 'Hub: Die Seite lädt viel schneller, Ritterlauf wird erst beim Starten geladen'],
+      ['Verbessert', 'Musik braucht nur noch gut 40 % so viel Datenvolumen'],
+    ] },
     { id: 34, title: 'Inselreich: Größere Bedienung', date: '04.11.2026', items: [
       ['Verbessert', 'Inselreich: Knöpfe, Fenster und Texte wachsen jetzt mit dem Bildschirm – auf einem großen Monitor etwa doppelt so groß'],
       ['Neu', 'Inselreich: Im Titelbildschirm stellst du mit 🔍 Größe ein, ob alles noch größer oder kleiner sein soll'],

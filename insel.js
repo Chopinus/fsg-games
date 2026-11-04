@@ -973,7 +973,13 @@
     if (a && a.name && a.token) acct = a;
     else if (!a) { const r = JSON.parse(localStorage.getItem('fsg.ritter.konto') || 'null'); if (r && r.name && r.token) acct = { name: r.name, token: r.token, updated: 0, rl: 1 }; }
   } catch {}
-  const setAcct = a => { acct = a; try { localStorage.setItem('insel.konto', JSON.stringify(a || { out: 1 })); } catch {} };
+  const setAcct = a => { acct = a; try { localStorage.setItem('insel.konto', JSON.stringify(a || { out: 1 })); if (a) localStorage.setItem('fsg.konto', JSON.stringify({ name: a.name, token: a.token })); else localStorage.removeItem('fsg.konto'); } catch {} try { window.dispatchEvent(new Event('fsg-konto')); } catch {} };
+  // ein Konto für alle Spiele: beim Öffnen gilt, was im Hub angemeldet ist
+  function hubKonto() {
+    let h = null; try { h = JSON.parse(localStorage.getItem('fsg.konto') || 'null'); } catch {}
+    if (!h || !h.name || !h.token) { if (acct) { acct = null; try { localStorage.setItem('insel.konto', JSON.stringify({ out: 1 })); } catch {} } return; }
+    if (!acct || acct.name.toLowerCase() !== h.name.toLowerCase() || acct.token !== h.token) { acct = { name: h.name, token: h.token, updated: acct && acct.name.toLowerCase() === h.name.toLowerCase() ? acct.updated : 0 }; try { localStorage.setItem('insel.konto', JSON.stringify(acct)); } catch {} }
+  }
   async function api(action, body, keepalive) {
     try {
       const res = await fetch('/api/' + action, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), keepalive: !!keepalive });
@@ -1055,12 +1061,12 @@
       const t = cloudAt ? new Date(cloudAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : '';
       el.innerHTML = `<div class="is-con">☁️ Online gesichert als <b>${escH(acct.name)}</b>${t ? ` · zuletzt ${t} Uhr` : ''} <button data-clogout>Abmelden</button></div>${msg}`;
     } else if (cloudForm) {
-      el.innerHTML = `<form class="is-cform" autocomplete="on"><b>☁️ Spielstand online sichern</b><small>Dasselbe Konto wie im Ritterlauf – oder leg ein neues an.</small>
+      el.innerHTML = `<form class="is-cform" autocomplete="on"><b>☁️ Spielstand online sichern</b><small>Ein Konto für alle Spiele im Hub – oder leg ein neues an.</small>
         <input name="n" placeholder="Name" maxlength="20" autocomplete="username"><input name="p" type="password" placeholder="Passwort (mind. 4 Zeichen)" maxlength="60" autocomplete="current-password">
         <div><button type="submit" data-cdo="login">Anmelden</button><button type="button" data-cdo="create">Neu anlegen</button><button type="button" data-cdo="x">✕</button></div>${msg}</form>`;
       const f = el.querySelector('form'); f.onsubmit = e => { e.preventDefault(); cloudLogin(false); };
       setTimeout(() => f.n.focus(), 30);
-    } else el.innerHTML = `<button class="is-clog" data-clogin>☁️ Spielstand online sichern</button><small class="is-chint">Mit Name und Passwort auf jedem Gerät weiterspielen – wie im Ritterlauf</small>${msg}`;
+    } else el.innerHTML = `<button class="is-clog" data-clogin>☁️ Spielstand online sichern</button><small class="is-chint">Mit deinem Hub-Konto auf jedem Gerät weiterspielen</small>${msg}`;
   }
   async function cloudLogin(create) {
     const f = root.querySelector('.is-cform'); if (!f) return;
@@ -4182,7 +4188,7 @@
       if (me.caveKey && me.caveKey !== 'start') { const [cx, cy] = me.caveKey.slice(1).split(',').map(Number), sp = islandCave(island(cx, cy)); if (sp) caveSpec = sp; }
       buildCave(caveSpec); spawnEnemies();
     }
-    join(); cloudMsg = ''; cloudLast = '';
+    hubKonto(); join(); cloudMsg = ''; cloudLast = '';
     addLog('Willkommen im <b>Inselreich</b>!');
     if (tutActive()) addLog('<b>Lotsin Anna</b> am Dorfplatz erklärt dir alles Wichtige.'); else if (!found.has(BIG.name)) addLog('Weit im <b>Westen</b> liegt die große <b>Heimatinsel</b> mit dem Dorf Lindmark. Segle hin – oder nimm 🧭 Reisen vom Boot aus!');
     showTitle(); tutBox(); cloudSync();

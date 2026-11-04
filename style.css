@@ -1644,3 +1644,11 @@ html.rl-appmode,html.rl-appmode body{overflow:hidden;overscroll-behavior:none}
 .is-art{display:block;width:56px;height:56px;border-radius:12px;position:relative;overflow:hidden;background:linear-gradient(#7cc8ef,#2a6fb0 60%,#1d4f8a);box-shadow:0 4px 10px rgba(0,0,0,.35)}
 .is-art::before{content:"";position:absolute;left:8px;right:8px;bottom:8px;height:16px;border-radius:50%;background:radial-gradient(ellipse at 50% 30%,#6dbb4f 0 45%,#e8d39a 47% 70%,#4fa3cf 72%)}
 .is-art::after{content:"";position:absolute;left:30px;top:14px;width:3px;height:22px;background:#8a5a34;transform:rotate(8deg);box-shadow:-6px -3px 0 3px #3f8f3a,5px -4px 0 3px #4f9a3c}
+
+/* Konto für alle Spiele */
+.acct{display:flex;flex-direction:column;gap:6px}
+.acct-on{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.acct-on span{display:flex;flex-direction:column;gap:2px}.acct-on small,.acct-hint{color:#b8aecc;font-size:13px}
+.acct-open{align-self:flex-start}.acct-msg{color:#ffd27a;font-weight:700;font-size:13px}
+.acct-form{display:flex;flex-direction:column;gap:8px;background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:12px}
+.acct-row{display:flex;gap:8px;flex-wrap:wrap}

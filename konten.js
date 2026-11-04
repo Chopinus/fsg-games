@@ -566,6 +566,10 @@ async function handle(action, body, ip) {
     const token = newToken(acc); markDirty();
     return [200, { name: acc.name, token, data: acc.data, updated: acc.updated, durable, tester: isTester(key) }];
   }
+  if (action === 'session') { // angemeldet bleiben: Konto aus dem Hub in einem Spiel übernehmen
+    if (!acc || !(acc.tokens || []).includes(sha256(String(body.token || '')))) return [401, { error: 'Bitte melde dich neu an.' }];
+    return [200, { name: acc.name, data: acc.data || null, updated: acc.updated || 0, durable, tester: isTester(key) }];
+  }
   if (action === 'save') {
     if (!acc || !acc.tokens.includes(sha256(String(body.token || '')))) return [401, { error: 'Bitte melde dich neu an.' }];
     const data = cleanData(body.data);

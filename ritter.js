@@ -2379,7 +2379,7 @@
 
   // ---------- Musik: Streaming, Überblendung, Wiedereinstieg an der letzten Stelle ----------
   const SFX_V = 1; // bei neuen Effekt-Dateien erhöhen
-  const MUSIC_V = 1; // bei neuen Musikdateien erhöhen, damit Browser sie neu laden
+  const MUSIC_V = 2; // bei neuen Musikdateien erhöhen, damit Browser sie neu laden
   const MUS = window.MUS = (() => {
     const LISTS = { lobby: ['lobby1', 'lobby2'], feldzug: ['feldzug1', 'feldzug2'], boss: ['boss'], albtraum: ['albtraum1', 'albtraum2'], wf: ['weltenfresser'], tempel: ['tempel'], defeat: ['niederlage'] };
     const RESUME = { lobby: 1, feldzug: 1, albtraum: 1, tempel: 1 };

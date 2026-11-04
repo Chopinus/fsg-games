@@ -42,7 +42,7 @@
     modal(`<span class="rl-mic">⚔</span><h2>Ritterlauf ${GAME_VERSION}</h2><p>Mit dem Start von Version ${GAME_VERSION} beginnen <b>alle neu</b>. Die Testphase ist vorbei, und dein Spielstand wurde zurückgesetzt. Dein Name und Passwort bleiben erhalten.</p><p class="note">Danke fürs Testen und viel Spaß beim neuen Abenteuer!</p>
       <div class="row" style="justify-content:center"><button class="btn" data-m="ok">Los geht’s</button></div>`);
   }
-  const setAcct = a => { acct = a; if (a && a.tester && S && !S.tst) { S.tst = 1; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} } try { a ? localStorage.setItem(AKEY, JSON.stringify(a)) : localStorage.removeItem(AKEY); } catch {} };
+  const setAcct = (a, quiet) => { acct = a; if (a && a.tester && S && !S.tst) { S.tst = 1; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} } try { a ? localStorage.setItem(AKEY, JSON.stringify(a)) : localStorage.removeItem(AKEY); if (a) localStorage.setItem('fsg.konto', JSON.stringify({ name: a.name, token: a.token })); else if (!quiet) localStorage.removeItem('fsg.konto'); } catch {} try { window.dispatchEvent(new Event('fsg-konto')); } catch {} }; // ein Konto für alle Spiele
   async function api(action, body, keepalive) {
     try {
       const res = await fetch('/api/' + action, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), keepalive: !!keepalive });
@@ -215,7 +215,7 @@
   }
   function open() {
     if (UPD.pending) { active = true; updApply(true); return; }
-    seasonCheck();
+    seasonCheck(); hubAcct();
     active = true; bgPreload(); frStart(); gdStart(); loginAsked = false; setTimeout(() => wbFetch(true), 2500); clearInterval(WBC.timer); WBC.timer = setInterval(() => { if (active && !document.hidden) wbFetch(); }, 300000);
     $('#hub').hidden = true; $('#room').hidden = true; $('#solo').hidden = false;
     if (!STRIP.on) { $('#solo').classList.add('rl-app'); document.documentElement.classList.add('rl-appmode'); }
@@ -1685,6 +1685,17 @@
         <div class="numrow"><input id="rlIn" placeholder="XXXX-XXXX-…" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="btn" data-rl="load">Code laden</button></div></details>
       <h3>Neu anfangen</h3><button class="btn ${confirm === 'reset' ? 'danger' : 'ghost'} small" data-rl="reset">${confirm === 'reset' ? 'Wirklich alles löschen? Tippen zum Bestätigen' : 'Spielstand komplett löschen'}</button></div>`;
     return html;
+  }
+  // Ein Konto für alle Spiele: Anmeldung aus dem Hub übernehmen (bzw. Abmeldung)
+  async function hubAcct() {
+    let h = null; try { h = JSON.parse(localStorage.getItem('fsg.konto') || 'null'); } catch {}
+    if (!h || !h.name || !h.token) { if (acct) { setAcct(null, true); panel(); } return; } // im Hub abgemeldet
+    if (acct && acct.name && acct.name.toLowerCase() === h.name.toLowerCase()) return;
+    const r = await api('session', { name: h.name, token: h.token }); if (r.error) return;
+    setAcct({ name: r.name, token: h.token, updated: r.updated, tester: !!r.tester });
+    if (r.data && r.data.v) { adopt(r.data); if (r.tester) S.tst = 1; cloudMsg = `Geladen – zuletzt gespeichert um ${timeStr(r.updated)}`; toast(`Angemeldet als ${r.name} – Spielstand geladen`); }
+    else { cloudDirty = true; cloudSave(true); toast(`Angemeldet als ${r.name} – dein Spielstand wird jetzt online gesichert`); }
+    panel();
   }
   function adopt(data) {
     S = migrate(data); delete S.reset; run = null;
