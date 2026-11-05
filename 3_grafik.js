@@ -298,6 +298,11 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 39, title: 'Casino: Glücksrad', date: '05.11.2026', items: [
+      ['Neu', 'Casino: Glücksrad mit Feldern von ×0,1 bis ×10 – je breiter das Feld, desto öfter bleibt es stehen'],
+      ['Verbessert', 'Casino: Alle Bankschulden wurden einmal gelöscht'],
+      ['Verbessert', 'Casino: Der Gewinn-Effekt kommt beim Automaten und beim Glücksrad erst, wenn sie stehen bleiben'],
+    ] },
     { id: 38, title: 'Casino: Shop für Gewinn-Effekte und mehr', date: '05.11.2026', items: [
       ['Neu', 'Casino: Im Shop kaufst du mit Jetons Gewinn-Effekte – Goldregen, Feuerwerk, Blitze, Diamanten, Regenbogen'],
       ['Neu', 'Casino: Gewinn-Sounds wie Fanfare, Glockenspiel, Jackpot-Sirene, Applaus und Königsfanfare'],

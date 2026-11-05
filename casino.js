@@ -8,6 +8,7 @@ const KINDS = {
   poker: { title: "Texas Hold'em", seats: 6, bots: 3 },
   rennen: { title: 'Pferderennen', seats: 8, bots: 2 },
   slots: { title: 'Spielautomat', seats: 8, bots: 0 },
+  rad: { title: 'Glücksrad', seats: 8, bots: 0 },
 };
 const BOT_NAMES = ['Bruno', 'Greta', 'Kalle', 'Mia', 'Otto', 'Lotte', 'Fritz', 'Rosi', 'Hugo', 'Elsa'];
 const MAXC = 1e12, BOT_CHIPS = 5000;
@@ -256,6 +257,24 @@ const SLOT = {
   view(s) { return { seats: s.seats.map(x => x && { name: x.name, bot: x.bot, win: x.win, slot: x.slot ? { id: x.slot.id, grid: x.slot.grid, wins: x.slot.wins, pay: x.slot.pay, bet: x.slot.bet } : null }) }; },
 };
 
+/* ================= Glücksrad ================= */
+// Felder mit Multiplikator von ×0,1 bis ×10. Die Breite eines Feldes ist genau seine Gewinnchance (w von 90). Rückfluss etwa 92 %.
+const RAD_SEGS = [[10, 1], [0.1, 5], [1.5, 3.5], [0.2, 4.5], [1, 5], [0.5, 4], [2, 2.5], [0.1, 5], [1.2, 4], [0.2, 4.5], [5, 2], [0.5, 4], [1, 5], [0.1, 5], [1.5, 3.5], [0.2, 4.5], [3, 3], [0.5, 4], [2, 2.5], [0.1, 5], [1.2, 4], [0.2, 4.5], [0.5, 4]];
+const RAD_W = RAD_SEGS.reduce((a, s) => a + s[1], 0);
+const RAD = {
+  start(r) { r.state.phase = 'free'; },
+  act(r, x, a) {
+    if (a.type !== 'spin') return;
+    const bet = clampChips(a.amount); if (bet < 10) return 'Mindesteinsatz 10.'; if (bet > x.chips) return 'Nicht genug Jetons.';
+    let v = Math.random() * RAD_W, i = 0; for (; i < RAD_SEGS.length - 1; i++) { v -= RAD_SEGS[i][1]; if (v <= 0) break; }
+    const m = RAD_SEGS[i][0], pay = Math.floor(bet * m);
+    x.chips = clampChips(x.chips - bet + pay); x.win = pay - bet;
+    x.rad = { id: (x.rad ? x.rad.id : 0) + 1, i, m, pay, bet, off: Math.random() };
+    if (m >= 5) log(r.state, `${x.name} dreht ×${String(m).replace('.', ',')}: ${pay.toLocaleString('de-DE')}!`);
+  },
+  view(s) { return { segs: RAD_SEGS, seats: s.seats.map(x => x && { name: x.name, bot: x.bot, win: x.win, rad: x.rad || null }) }; },
+};
+
 /* ================= Texas Hold'em ================= */
 const RV = { 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9, T: 10, J: 11, Q: 12, K: 13, A: 14 };
 function eval5(c) {
@@ -390,7 +409,7 @@ const PK = {
   },
 };
 
-const GAME = { blackjack: BJ, roulette: RL, poker: PK, rennen: RACE, slots: SLOT };
+const GAME = { blackjack: BJ, roulette: RL, poker: PK, rennen: RACE, slots: SLOT, rad: RAD };
 
 module.exports = {
   title: 'Casino', min: 1, seats: 8,

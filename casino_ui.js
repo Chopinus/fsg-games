@@ -86,6 +86,7 @@
   }
   /* ---------- Bank: Kredit aufnehmen und zurückzahlen ---------- */
   const DEBT = 'casino.schuld', DEBT_MAX = 50000, LOANS = [1000, 5000, 10000];
+  if (store.get('casino.schuldv') !== '2') { store.set(DEBT, 0); store.set('casino.schuldv', '2'); } // Neustart 05.11.2026: alle Schulden gelöscht
   let debt = Math.max(0, Number(store.get(DEBT)) || 0);
   const setDebt = v => { debt = Math.max(0, Math.min(DEBT_MAX, Math.floor(v))); store.set(DEBT, debt); czReport(); };
   const net = () => Math.max(0, wallet - debt); // für die Rangliste zählt, was dir wirklich gehört
@@ -242,6 +243,11 @@
   .cz-horse b{font-size:14px}.cz-horse .od{font-weight:900;color:#ffe9a8;font-variant-numeric:tabular-nums}
   .cz-horse.place1{border-color:#ffe9a8;box-shadow:0 0 0 2px rgba(255,233,168,.4)}
   /* Spielautomat */
+  .cz-rad{max-width:640px;margin:0 auto;border-radius:26px;padding:16px;background:linear-gradient(180deg,#1a3a5a,#0a1a2c);box-shadow:0 0 0 4px #c8973e,0 0 0 8px #3a2212,0 20px 50px rgba(0,0,0,.6)}
+  .cz-rad .top{text-align:center;font-family:Bungee,Figtree,sans-serif;font-size:clamp(20px,5vw,30px);color:#ffe9a8;text-shadow:0 0 18px rgba(255,200,80,.6);margin-bottom:10px}
+  .cz-radw{position:relative;width:min(440px,82vw);aspect-ratio:1;margin:0 auto}.cz-radcv{width:100%;height:100%;display:block}
+  .cz-radptr{position:absolute;left:50%;top:-14px;transform:translateX(-50%);font-size:36px;color:#ffe9a8;text-shadow:0 2px 0 #7a4a12,0 0 10px rgba(255,200,80,.8);line-height:1}
+  @keyframes czSpinArt{to{transform:rotate(360deg)}}
   .cz-slot{max-width:640px;margin:0 auto;border-radius:26px;padding:16px;background:linear-gradient(180deg,#5b1020,#2c0710);box-shadow:0 0 0 4px #c8973e,0 0 0 8px #3a2212,0 20px 50px rgba(0,0,0,.6),inset 0 2px 0 rgba(255,255,255,.15)}
   .cz-slot .top{text-align:center;font-family:Bungee,Figtree,sans-serif;font-size:clamp(20px,5vw,30px);color:#ffe9a8;text-shadow:0 0 18px rgba(255,200,80,.6);margin-bottom:10px}
   .cz-reels{position:relative;display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:10px;border-radius:16px;background:linear-gradient(180deg,#120609,#2a0d14);box-shadow:inset 0 6px 18px rgba(0,0,0,.8)}
@@ -317,6 +323,7 @@
     { kind: 'roulette', title: 'Roulette', text: 'Europäisches Roulette mit einer Null. Setz auf Zahlen, Farben, Dutzende und Kolonnen.', art: () => `<canvas width="220" height="220" data-cz-artwheel style="width:110px;height:110px"></canvas>` },
     { kind: 'poker', title: "Texas Hold'em", text: 'Poker mit zwei eigenen und fünf gemeinsamen Karten. Bluffen, erhöhen, all-in gehen.', art: () => `<div style="display:flex;align-items:center;gap:10px">${cardsHTML(['Ad', 'Ac'], 'art2', true)}<div>${chipHTML(500, '', 'tabindex="-1"')}${chipHTML(100, '', 'tabindex="-1"')}</div></div>` },
     { kind: 'rennen', title: 'Pferderennen', text: 'Sechs Pferde, jede Runde neue Quoten. Wette auf Sieg oder Platz und fiebere mit.', art: () => `<div style="font-size:54px;filter:drop-shadow(0 4px 6px rgba(0,0,0,.5))">🏇</div>` },
+    { kind: 'rad', title: 'Glücksrad', text: 'Dreh das Rad! Jedes Feld multipliziert deinen Einsatz – von ×0,1 bis ×10. Je breiter das Feld, desto öfter bleibt es stehen.', art: () => `<div style="font-size:52px;filter:drop-shadow(0 4px 6px rgba(0,0,0,.5));animation:czSpinArt 6s linear infinite">🎡</div>` },
     { kind: 'slots', title: 'Spielautomat', text: '5 Walzen, 10 Gewinnlinien, Joker ersetzen alles. Drei Siebener bringen das große Glück.', art: () => `<div style="font-family:Bungee,sans-serif;font-size:40px;color:#ffe9a8;text-shadow:0 0 16px rgba(255,200,80,.7)">7 7 7</div>` },
   ];
   let lobby = null;
@@ -380,7 +387,7 @@
   function render(st, v) {
     css(); V = v; if (!v) return;
     deadline = v.left != null ? Date.now() + v.left : 0;
-    if (v.wallet != null) { const before = wallet; setWallet(v.wallet); if (v.mySeat >= 0 && v.wallet - before >= BIGWIN && before > 0) celebrate(v.wallet - before); }
+    if (v.wallet != null) { const before = wallet; setWallet(v.wallet); if (v.mySeat >= 0 && v.wallet - before >= BIGWIN && before > 0) { const w = v.wallet - before; setTimeout(() => celebrate(w), v.kind === 'rad' ? 4300 : v.kind === 'slots' ? 2300 : 0); } }
     // automatisch hinsetzen und eigene Jetons mitbringen
     if (v.mySeat < 0 && v.free > 0 && sitAsked !== room.id) { sitAsked = room.id; act({ type: 'sit', chips: wallet }); }
     const mode = 'cz-' + v.kind;
@@ -388,13 +395,13 @@
     const me = v.mySeat >= 0 ? v.seats[v.mySeat] : null;
     set(st.querySelector('.cz-info'), `<div class="cz-wallet">${chipHTML(1000, '', 'tabindex="-1"')}<div><small>DEINE JETONS${v.kind === 'poker' && me ? ' · AM TISCH ' + fmtN(me.stack) : ''}</small><b data-cz-wallet>${fmtN(wallet)}</b></div></div>
       <div class="cz-toprow">${v.mySeat < 0 ? `<span class="cz-badge">${v.free ? 'Du setzt dich …' : 'Alle Plätze besetzt – du schaust zu'}</span>` : ''}
-      ${v.host && v.kind !== 'slots' ? `<button class="cz-btn small dark" data-czt="botadd" ${v.free ? '' : 'disabled'}>+ Bot</button><button class="cz-btn small dark" data-czt="botdel">− Bot</button>` : ''}
+      ${v.host && v.kind !== 'slots' && v.kind !== 'rad' ? `<button class="cz-btn small dark" data-czt="botadd" ${v.free ? '' : 'disabled'}>+ Bot</button><button class="cz-btn small dark" data-czt="botdel">− Bot</button>` : ''}
       <button class="cz-btn small dark" data-czt="lobby">Casino</button></div>`);
     set(st.querySelector('.cz-log'), (v.log || []).slice(0, 5).map(l => `<span>${esc(l)}</span>`).join(''));
     const main = st.querySelector('.cz-main');
     if (v.phase === 'idle') { set(main, '<p class="cz-status">Der Tisch wird vorbereitet …</p>'); lastKind = null; return; }
     if (v.phase === 'paused') { set(main, '<div class="cz-felt" style="text-align:center;padding:40px 16px"><p class="cz-status">Der Tisch macht Pause, weil eine Weile niemand gespielt hat.</p><button class="cz-btn" data-czt="resume">Weiterspielen</button></div>'); lastKind = null; return; }
-    ({ blackjack: bj, roulette: rl, poker: pk, rennen: race, slots: slot })[v.kind](main, v, me);
+    ({ blackjack: bj, roulette: rl, poker: pk, rennen: race, slots: slot, rad: radUI })[v.kind](main, v, me);
   }
 
   /* ---------- Blackjack ---------- */
@@ -590,6 +597,60 @@
     setTimeout(() => { SL.spinning = false; showGrid(main, sres, true); if (sres.pay) snd('win'); else snd('card'); if (V) slot(main, V, V.mySeat >= 0 ? V.seats[V.mySeat] : null); }, 1100 + 4 * 280 + 120);
   }
 
+  /* ---------- Glücksrad ---------- */
+  const RD = { id: -1, spinning: false, bet: Number(store.get('casino.radbet')) || 100, ang: 0, segs: null };
+  const radCol = m => (m >= 10 ? ['#ffd24a', '#2a1608'] : m >= 5 ? ['#e8443a', '#fff'] : m >= 3 ? ['#c86aff', '#fff'] : m >= 2 ? ['#3a9aff', '#fff'] : m >= 1.5 ? ['#2fb3b0', '#fff'] : m >= 1 ? ['#3fa34d', '#fff'] : m >= 0.5 ? ['#5a4a6a', '#fff'] : ['#2a2230', '#cdbf9f']);
+  const mTxt = m => '×' + String(m).replace('.', ',');
+  function drawRad(cv, ang) {
+    const segs = RD.segs; if (!segs) return; const g = cv.getContext('2d'), DPR2 = Math.min(2, devicePixelRatio || 1), Sz = cv.clientWidth * DPR2; if (cv.width !== Sz) { cv.width = cv.height = Sz; }
+    const R = Sz / 2, tot = segs.reduce((a, s) => a + s[1], 0); g.clearRect(0, 0, Sz, Sz);
+    g.save(); g.translate(R, R); g.rotate(ang);
+    let a0 = -Math.PI / 2;
+    for (const [m, w] of segs) { const a1 = a0 + w / tot * Math.PI * 2, [bg, fg] = radCol(m);
+      g.fillStyle = bg; g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, R * 0.96, a0, a1); g.closePath(); g.fill(); g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 2 * DPR2; g.stroke();
+      const am = (a0 + a1) / 2; g.save(); g.rotate(am); g.fillStyle = fg; g.font = `800 ${Math.round(R * (w >= 3 ? 0.085 : 0.07))}px Bungee, Figtree, sans-serif`; g.textAlign = 'right'; g.textBaseline = 'middle'; g.fillText(mTxt(m), R * 0.88, 0); g.restore();
+      a0 = a1; }
+    g.restore();
+    g.strokeStyle = '#c8973e'; g.lineWidth = R * 0.05; g.beginPath(); g.arc(R, R, R * 0.96, 0, Math.PI * 2); g.stroke();
+    for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2 + ang; g.fillStyle = i % 2 ? '#ffe9a8' : '#fff7d8'; g.beginPath(); g.arc(R + Math.cos(a) * R * 0.96, R + Math.sin(a) * R * 0.96, R * 0.018, 0, Math.PI * 2); g.fill(); }
+    g.fillStyle = '#3a2212'; g.beginPath(); g.arc(R, R, R * 0.13, 0, Math.PI * 2); g.fill(); g.fillStyle = '#e8c46a'; g.beginPath(); g.arc(R, R, R * 0.09, 0, Math.PI * 2); g.fill();
+  }
+  function radUI(main, v, me) {
+    RD.segs = v.segs || RD.segs;
+    if (lastKind !== 'rad') {
+      lastKind = 'rad';
+      main.innerHTML = `<div class="cz-rad"><div class="top">✦ GLÜCKSRAD ✦</div><div class="cz-radw"><canvas class="cz-radcv"></canvas><div class="cz-radptr">▼</div></div><div class="cz-win"></div><div class="cz-bar"></div>
+        <div class="cz-paytable">${[...new Map(RD.segs.map(s => [s[0], 0])).keys()].sort((a, b) => b - a).map(m => { const w = RD.segs.filter(s => s[0] === m).reduce((a, s) => a + s[1], 0), tot = RD.segs.reduce((a, s) => a + s[1], 0); return `<div><b style="color:${m < 1 ? '#cdbf9f' : radCol(m)[0]}">${mTxt(m)}</b> · ${(w / tot * 100).toFixed(w / tot < 0.05 ? 1 : 0).replace('.', ',')} %</div>`; }).join('')}</div>
+        <p class="cz-note" style="text-align:center;margin-top:8px">Dein Einsatz wird mit dem Feld unter dem Pfeil malgenommen. Unter ×1 bekommst du nur einen Teil zurück.</p></div><div class="cz-others"></div>`;
+      RD.id = me && me.rad ? me.rad.id : -1; if (me && me.rad) RD.ang = radTarget(me.rad);
+      requestAnimationFrame(() => drawRad(main.querySelector('.cz-radcv'), RD.ang));
+    }
+    if (me && me.rad && me.rad.id !== RD.id) { RD.id = me.rad.id; radSpin(main, me.rad); }
+    if (!RD.spinning) set(main.querySelector('.cz-bar'), me ? `<div class="cz-chips">${[10, 50, 100, 500, 1000, 5000, 25000].map(b => `<button class="cz-btn small ${b === RD.bet ? '' : 'dark'}" data-czrb="${b}">${short(b)}</button>`).join('')}</div><button class="cz-btn red" data-czt="radspin" style="font-size:20px;padding:14px 34px" ${wallet >= RD.bet ? '' : 'disabled'}>DREHEN · ${fmtN(RD.bet)}</button>` : '<span class="cz-note">Setz dich hin, um zu drehen.</span>');
+    const others = v.seats.filter((x, i) => x && i !== v.mySeat && x.rad);
+    let oth = main.parentNode.querySelector('.cz-others'); if (oth) set(oth, others.length ? `<div class="cz-log">${others.map(x => `<span>${esc(x.name)}: ${mTxt(x.rad.m)} → ${fmtN(x.rad.pay)}</span>`).join('')}</div>` : '');
+  }
+  // Winkel, bei dem Feld i (mit zufälliger Stelle im Feld) unter dem Pfeil oben steht
+  function radTarget(r) {
+    const segs = RD.segs, tot = segs.reduce((a, s) => a + s[1], 0); let st = 0; for (let k = 0; k < r.i; k++) st += segs[k][1];
+    const mid = (st + segs[r.i][1] * (0.15 + 0.7 * (r.off ?? 0.5))) / tot * Math.PI * 2;
+    return -mid;
+  }
+  function radSpin(main, r) {
+    RD.spinning = true; set(main.querySelector('.cz-bar'), '<button class="cz-btn red" disabled style="font-size:20px;padding:14px 34px">…</button>');
+    const win = main.querySelector('.cz-win'); win.textContent = ''; win.classList.remove('big');
+    const cv = main.querySelector('.cz-radcv'), from = RD.ang, tgt = radTarget(r), base = from - (from % (Math.PI * 2));
+    let to = base + tgt; while (to < from + Math.PI * 2 * 5) to += Math.PI * 2;
+    const T0 = performance.now(), DUR = 4200; let lastSeg = -1;
+    const segAt = a => { const segs = RD.segs, tot = segs.reduce((x, s) => x + s[1], 0); let p = (((-a) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) / (Math.PI * 2) * tot, k = 0; for (; k < segs.length - 1; k++) { p -= segs[k][1]; if (p <= 0) break; } return k; };
+    (function step(now) {
+      const p = Math.min(1, (now - T0) / DUR), e = 1 - Math.pow(1 - p, 4); RD.ang = from + (to - from) * e; drawRad(cv, RD.ang);
+      const sg = segAt(RD.ang); if (sg !== lastSeg) { lastSeg = sg; if (p < 0.98) snd('tick'); }
+      if (p < 1) requestAnimationFrame(step);
+      else { RD.spinning = false; RD.ang = to % (Math.PI * 2); win.textContent = `${mTxt(r.m)} · ${r.pay ? '+ ' + fmtN(r.pay) : 'nichts'}`; win.classList.toggle('big', r.m >= 5); if (r.m >= 1) snd('win'); else snd('lose'); if (V && V.kind === 'rad') radUI(main, V, V.mySeat >= 0 ? V.seats[V.mySeat] : null); }
+    })(T0);
+  }
+
   /* ---------- Poker ---------- */
   const PPOS = [[50, 92], [10, 70], [10, 28], [50, 8], [90, 28], [90, 70]];
   let raiseTo = 0;
@@ -625,6 +686,7 @@
     let b = t.closest('[data-cz-chip]'); if (b) { chipSel = +b.dataset.czChip; store.set('casino.chip', chipSel); document.querySelectorAll('[data-cz-chip]').forEach(x => x.classList.toggle('sel', +x.dataset.czChip === chipSel)); snd('chip'); return; }
     b = t.closest('[data-rk]'); if (b && V.kind === 'roulette') { if (V.phase !== 'bet') return; if (chipSel > wallet) { toast('Nicht genug Jetons.'); return; } act({ type: 'bet', key: b.dataset.rk, amount: chipSel }); snd('chip'); return; }
     b = t.closest('[data-czb]'); if (b) { if (chipSel > wallet) { toast('Nicht genug Jetons.'); return; } act({ type: 'bet', key: b.dataset.czb, amount: chipSel }); snd('chip'); return; }
+    b = t.closest('[data-czrb]'); if (b) { RD.bet = +b.dataset.czrb; store.set('casino.radbet', RD.bet); radUI(q('#stage .cz-main'), V, V.mySeat >= 0 ? V.seats[V.mySeat] : null); return; }
     b = t.closest('[data-czs]'); if (b) { SL.bet = +b.dataset.czs; store.set('casino.slotbet', SL.bet); slot(q('#stage .cz-main'), V, V.mySeat >= 0 ? V.seats[V.mySeat] : null); return; }
     b = t.closest('[data-czt]'); if (!b || b.disabled) return;
     const a = b.dataset.czt;
@@ -633,6 +695,7 @@
     if (a === 'botdel') { act({ type: 'bot', add: false }); return; }
     if (a === 'bet') { if (chipSel > wallet) { toast('Nicht genug Jetons.'); return; } act({ type: 'bet', amount: chipSel }); snd('chip'); return; }
     if (a === 'spin') { if (SL.spinning) return; act({ type: 'spin', amount: SL.bet }); return; }
+    if (a === 'radspin') { if (RD.spinning) return; act({ type: 'spin', amount: RD.bet }); return; }
     if (a === 'raise') { act({ type: 'raise', to: raiseTo }); return; }
     if (['hit', 'stand', 'double', 'split'].includes(a)) snd('card');
     act({ type: a });
