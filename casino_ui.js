@@ -12,16 +12,38 @@
   const store = { get: k => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
   let wallet = store.get(WK) == null ? NaN : Number(store.get(WK)); if (!(wallet >= 0)) { wallet = 10000; store.set(WK, wallet); }
   const setWallet = v => { wallet = Math.max(0, Math.min(1e12, Math.floor(v))); store.set(WK, wallet); document.querySelectorAll('[data-cz-wallet]').forEach(e => (e.textContent = fmtN(wallet))); czReport(); };
+  /* ---------- Bank: Kredit aufnehmen und zurückzahlen ---------- */
+  const DEBT = 'casino.schuld', DEBT_MAX = 50000, LOANS = [1000, 5000, 10000];
+  let debt = Math.max(0, Number(store.get(DEBT)) || 0);
+  const setDebt = v => { debt = Math.max(0, Math.min(DEBT_MAX, Math.floor(v))); store.set(DEBT, debt); czReport(); };
+  const net = () => Math.max(0, wallet - debt); // für die Rangliste zählt, was dir wirklich gehört
   /* ---------- Geldrangliste: jedes Gerät meldet seinen Jetonstand ---------- */
   let czBoard = null, czTimer = null;
   async function czApi(action, body) { try { const r = await fetch('/api/' + action, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); return r.ok ? await r.json() : null; } catch { return null; } }
-  function czReport(now) { clearTimeout(czTimer); czTimer = setTimeout(async () => { const n = typeof nick === 'function' ? nick() : ''; const r = await czApi(n ? 'casino_report' : 'casino_top', { key: store.get('fsg.key') || '', name: n, chips: wallet }); if (r) { czBoard = r; renderBoard(); } }, now ? 0 : 3000); }
+  function czReport(now) { clearTimeout(czTimer); czTimer = setTimeout(async () => { const n = typeof nick === 'function' ? nick() : ''; const r = await czApi(n ? 'casino_report' : 'casino_top', { key: store.get('fsg.key') || '', name: n, chips: net() }); if (r) { czBoard = r; renderBoard(); } }, now ? 0 : 3000); }
+  let boardTab = 'cur';
   function renderBoard() {
     const el = q('#czBoard'); if (!el) return;
     if (!czBoard) { set(el, '<p class="cz-note">Rangliste wird geladen …</p>'); return; }
-    const medal = i => ['🥇', '🥈', '🥉'][i] || (i + 1) + '.';
-    set(el, (czBoard.top.length ? czBoard.top.map((e, i) => `<div class="cz-rrow ${e.me ? 'me' : ''}"><b>${medal(i)}</b><span>${esc(e.n)}${e.me ? ' (du)' : ''}</span><em>${fmtN(e.c)}</em></div>`).join('') : '<p class="cz-note">Noch niemand auf der Liste.</p>')
-      + (czBoard.rank > 20 ? `<div class="cz-rrow me"><b>${czBoard.rank}.</b><span>Du</span><em>${fmtN(wallet)}</em></div>` : '') + `<p class="cz-note">${czBoard.players} Spieler in den letzten 30 Tagen · zählt die Jetons auf jedem Gerät</p>`);
+    const B = (boardTab === 'ever' ? czBoard.ever : czBoard.cur) || { top: czBoard.top || [], rank: czBoard.rank, players: czBoard.players };
+    const top = B.top || [], pod = [top[1], top[0], top[2]], place = [2, 1, 3];
+    const podium = top.length ? `<div class="cz-podium">${pod.map((e, i) => e ? `<div class="cz-pod p${place[i]} ${e.me ? 'me' : ''}"><span class="cz-medal">${['🥈', '🥇', '🥉'][i]}</span><b>${esc(e.n)}</b><em>${fmtN(e.c)}</em><div class="cz-step">${place[i]}.</div></div>` : `<div class="cz-pod p${place[i]} empty"><div class="cz-step">${place[i]}.</div></div>`).join('')}</div>` : '<p class="cz-note">Noch niemand auf der Liste.</p>';
+    const rest = top.slice(3).map((e, i) => `<div class="cz-rrow ${e.me ? 'me' : ''}"><b>${i + 4}.</b><span>${esc(e.n)}${e.me ? ' (du)' : ''}</span><em>${fmtN(e.c)}</em></div>`).join('');
+    const mine = B.rank > top.length ? `<div class="cz-rrow me"><b>${B.rank}.</b><span>Du</span><em>${fmtN(B.mine || net())}</em></div>` : '';
+    set(el, `<div class="cz-tabs"><button class="cz-btn small ${boardTab === 'cur' ? '' : 'dark'}" data-cz-bt="cur">💰 Momentan</button><button class="cz-btn small ${boardTab === 'ever' ? '' : 'dark'}" data-cz-bt="ever">👑 Jemals am meisten</button></div>
+      <p class="cz-note">${boardTab === 'cur' ? 'Jetons, die du gerade hast – Bankschulden werden abgezogen. Zählt die letzten 30 Tage.' : 'Der höchste Jetonstand, den jemand je hatte (ohne Bankschulden).'}</p>
+      ${podium}<div class="cz-rlist">${rest}${mine}</div><p class="cz-note">${B.players || 0} Spieler · zählt die Jetons auf jedem Gerät</p>`);
+  }
+  function bankHTML() {
+    const room = DEBT_MAX - debt;
+    return `<div class="cz-bank"><div class="cz-bankrow"><div><small>DEINE JETONS</small><b>${fmtN(wallet)}</b></div><div><small>SCHULDEN BEI DER BANK</small><b class="${debt ? 'red' : ''}">${fmtN(debt)}</b></div><div><small>DIR GEHÖRT WIRKLICH</small><b>${fmtN(net())}</b></div></div>
+      <div class="cz-sec">🏦 Kredit aufnehmen</div>
+      <p class="cz-note">Die Bank leiht dir Jetons, so lange du willst – ohne Zinsen. Ab ${fmtN(DEBT_MAX)} Schulden gibt es nichts mehr, bis du etwas zurückzahlst. In der Rangliste zählen nur Jetons, die dir wirklich gehören.</p>
+      <div class="cz-toprow" style="justify-content:flex-start">${LOANS.map(n => `<button class="cz-btn small" data-cz-loan="${n}" ${n <= room ? '' : 'disabled'}>+ ${fmtN(n)} leihen</button>`).join('')}${room > 0 && room < LOANS[0] ? `<button class="cz-btn small" data-cz-loan="${room}">+ ${fmtN(room)} leihen</button>` : ''}</div>
+      ${room <= 0 ? '<p class="cz-note" style="color:#ff8a7a">Kreditrahmen ausgeschöpft – zahl zuerst etwas zurück.</p>' : `<p class="cz-note">Noch ${fmtN(room)} Kreditrahmen frei.</p>`}
+      <div class="cz-sec">💸 Zurückzahlen</div>
+      ${debt ? `<div class="cz-toprow" style="justify-content:flex-start">${[1000, 5000].filter(n => n < debt).map(n => `<button class="cz-btn small dark" data-cz-pay="${n}" ${wallet >= n ? '' : 'disabled'}>${fmtN(n)} zurück</button>`).join('')}<button class="cz-btn small dark" data-cz-pay="all" ${wallet > 0 ? '' : 'disabled'}>${wallet >= debt ? `Alles zurück (${fmtN(debt)})` : `So viel wie geht (${fmtN(wallet)})`}</button></div>` : '<p class="cz-note">Du hast keine Schulden. 🎉</p>'}
+    </div>`;
   }
   const today = () => new Date().toISOString().slice(0, 10);
 
@@ -54,7 +76,19 @@
   .cz-trow{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
   .cz-trow b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .cz-sec{font-family:Bungee,Figtree,sans-serif;font-weight:400;font-size:18px;color:#ffe9a8;margin:18px 0 8px}
-  .cz-board{display:flex;flex-direction:column;gap:5px;max-width:520px}
+  .cz-rlist{display:flex;flex-direction:column;gap:5px;max-width:560px}
+  .cz-ltabs,.cz-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 6px}
+  .cz-podium{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;align-items:end;max-width:560px;margin:14px 0 12px}
+  .cz-pod{display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;min-width:0}
+  .cz-pod b{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px}.cz-pod em{font-style:normal;font-weight:800;color:var(--gold);font-size:14px}
+  .cz-medal{font-size:34px;line-height:1}.cz-pod.p1 .cz-medal{font-size:44px}
+  .cz-step{width:100%;border-radius:12px 12px 4px 4px;display:grid;place-items:center;font-family:Bungee,Figtree,sans-serif;font-size:22px;color:#2a1608;margin-top:4px}
+  .cz-pod.p1 .cz-step{height:110px;background:linear-gradient(180deg,#ffe58a,#d9a52c)}.cz-pod.p2 .cz-step{height:80px;background:linear-gradient(180deg,#eef0f4,#a8adb8)}.cz-pod.p3 .cz-step{height:60px;background:linear-gradient(180deg,#f0b88a,#b0703a)}
+  .cz-pod.empty .cz-step{opacity:.35}.cz-pod.me b{color:var(--gold)}
+  .cz-bank{max-width:640px}.cz-bankrow{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0}
+  .cz-bankrow>div{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+  .cz-bankrow small{font-size:11px;letter-spacing:.5px;color:#cdbf9f}.cz-bankrow b{font-size:20px;color:var(--gold)}.cz-bankrow b.red{color:#ff8a7a}
+  @media (max-width:520px){.cz-bankrow{grid-template-columns:1fr}}
   .cz-rrow{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:11px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
   .cz-rrow b{width:34px;font-size:16px}.cz-rrow span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cz-rrow em{font-style:normal;font-weight:800;color:var(--gold)}
   .cz-rrow.me{background:rgba(232,196,106,.16);border-color:rgba(232,196,106,.5)}
@@ -216,6 +250,7 @@
     lobby.hidden = false; const hub = q('#hub'); if (hub) hub.hidden = true; renderLobby();
   }
   function closeLobby() { if (lobby) lobby.hidden = true; const hub = q('#hub'); if (hub && !room) hub.hidden = false; }
+  let lobbyTab = 'games';
   function renderLobby() {
     if (!lobby || lobby.hidden) return;
     const bonus = store.get(DAY) !== today(), helpOk = wallet < 100 && Date.now() - (Number(store.get(HELP)) || 0) > 3600e3;
@@ -224,17 +259,16 @@
       <div class="cz-head"><button class="cz-btn dark small" data-cz="back">‹ Hub</button>
         <div class="cz-logo">Casino Aurum<small>NUR SPIELGELD · KEIN ECHTES GELD</small></div>
         <div class="cz-wallet">${chipHTML(1000, '', 'tabindex="-1"')}<div><small>DEINE JETONS</small><b data-cz-wallet>${fmtN(wallet)}</b></div></div></div>
-      <div class="cz-toprow" style="justify-content:flex-start">
+      <div class="cz-ltabs">${[['games', '🎰 Spiele'], ['bank', '🏦 Bank' + (debt ? ' · ' + short(debt) : '')], ['board', '🏆 Rangliste']].map(([k, t]) => `<button class="cz-btn small ${lobbyTab === k ? '' : 'dark'}" data-cz-tab="${k}">${t}</button>`).join('')}</div>
+      ${lobbyTab === 'bank' ? bankHTML() : lobbyTab === 'board' ? '<div class="cz-sec">🏆 Rangliste</div><div id="czBoard"></div>' : `<div class="cz-toprow" style="justify-content:flex-start">
         ${bonus ? '<button class="cz-btn small" data-cz="bonus">🎁 Tagesbonus: 2.000 Jetons</button>' : '<span class="cz-note">Tagesbonus abgeholt – morgen gibt es neuen.</span>'}
         ${helpOk ? '<button class="cz-btn small dark" data-cz="help">Pleite? 1.000 Jetons Starthilfe</button>' : ''}
       </div>
       ${nick() ? '' : '<div class="cz-nick"><input id="czNick" maxlength="16" placeholder="Dein Name am Tisch"><button class="cz-btn small" data-cz="nick">Speichern</button></div>'}
       <div class="cz-games">${GAMES.map(g => `<div class="cz-game"><div class="art">${g.art()}</div><h3>${g.title}</h3><p>${g.text}</p>
         <div class="row"><button class="cz-btn small" data-cz-open="${g.kind}">Tisch eröffnen</button><button class="cz-btn small dark" data-cz-solo="${g.kind}">Allein mit Bots</button></div></div>`).join('')}</div>
-      <div class="cz-sec">🏆 Geldrangliste</div>
-      <div class="cz-board" id="czBoard"></div>
       <div class="cz-sec">Offene Tische</div>
-      <div class="cz-tables">${open.length ? open.map(r => `<div class="cz-trow"><b>${esc(r.name)}</b><span class="cz-note">${r.players.length} ${r.players.length === 1 ? 'Spieler' : 'Spieler'}</span><button class="cz-btn small" data-cz-join="${r.id}">Hinsetzen</button></div>`).join('') : '<p class="cz-note">Gerade ist kein Tisch offen. Eröffne einen – deine Freunde sehen ihn dann hier und in der Runden-Liste.</p>'}</div>
+      <div class="cz-tables">${open.length ? open.map(r => `<div class="cz-trow"><b>${esc(r.name)}</b><span class="cz-note">${r.players.length} ${r.players.length === 1 ? 'Spieler' : 'Spieler'}</span><button class="cz-btn small" data-cz-join="${r.id}">Hinsetzen</button></div>`).join('') : '<p class="cz-note">Gerade ist kein Tisch offen. Eröffne einen – deine Freunde sehen ihn dann hier und in der Runden-Liste.</p>'}</div>`}
       <p class="cz-note" style="margin-top:22px">Hier wird nur mit Spieljetons gespielt. Sie haben keinen Geldwert, lassen sich weder kaufen noch auszahlen und liegen nur auf deinem Gerät.</p>
     </div>`;
     const cvw = lobby.querySelector('[data-cz-artwheel]'); if (cvw) drawWheel(cvw, 0.4, null);
@@ -246,6 +280,10 @@
     try { localStorage.setItem('fsg.nick', nick()); } catch {} send({ t: 'name', name: nick() }); return true;
   }
   function onLobby(e) {
+    const tb = e.target.closest('[data-cz-tab]'); if (tb) { lobbyTab = tb.dataset.czTab; renderLobby(); if (lobbyTab === 'board') czReport(true); return; }
+    const bt = e.target.closest('[data-cz-bt]'); if (bt) { boardTab = bt.dataset.czBt; renderBoard(); return; }
+    const ln = e.target.closest('[data-cz-loan]'); if (ln) { const n = Math.min(+ln.dataset.czLoan, DEBT_MAX - debt); if (n > 0) { setDebt(debt + n); setWallet(wallet + n); snd('chip'); toast(`🏦 ${fmtN(n)} Jetons geliehen – Schulden jetzt ${fmtN(debt)}`); } renderLobby(); return; }
+    const py = e.target.closest('[data-cz-pay]'); if (py) { const n = py.dataset.czPay === 'all' ? Math.min(wallet, debt) : Math.min(+py.dataset.czPay, wallet, debt); if (n > 0) { setWallet(wallet - n); setDebt(debt - n); snd('chip'); toast(debt ? `💸 ${fmtN(n)} zurückgezahlt – noch ${fmtN(debt)} Schulden` : '🎉 Alle Schulden bezahlt!'); } renderLobby(); return; }
     const b = e.target.closest('[data-cz],[data-cz-open],[data-cz-solo],[data-cz-join]'); if (!b) return;
     if (b.dataset.cz === 'back') { closeLobby(); return; }
     if (b.dataset.cz === 'bonus') { store.set(DAY, today()); setWallet(wallet + 2000); snd('win'); toast('2.000 Jetons gutgeschrieben – viel Glück!'); renderLobby(); return; }

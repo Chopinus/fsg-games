@@ -298,6 +298,12 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 37, title: 'Casino: Bank und neue Rangliste', date: '05.11.2026', items: [
+      ['Neu', 'Casino: Bei der Bank leihst du dir Jetons ohne Zinsen – bis 50.000 Schulden, dann musst du erst zurückzahlen'],
+      ['Neu', 'Casino: Rangliste als eigener Reiter mit Siegertreppchen für Platz 1, 2 und 3'],
+      ['Neu', 'Casino: Zwei Ranglisten – wer gerade am meisten hat und wer jemals am meisten hatte (Schulden zählen nicht mit)'],
+      ['Behoben', 'Casino: Das Roulette-Feld wurde seit der letzten Version falsch angezeigt'],
+    ] },
     { id: 36, title: 'Inselreich: Angenehmere Nacht', date: '04.11.2026', items: [
       ['Verbessert', 'Inselreich: Nachts wird alles nur noch gleichmäßig etwas dunkler – keine schwarzen Flächen mehr, man sieht überall gut'],
     ] },
