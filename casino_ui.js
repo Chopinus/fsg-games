@@ -12,6 +12,78 @@
   const store = { get: k => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
   let wallet = store.get(WK) == null ? NaN : Number(store.get(WK)); if (!(wallet >= 0)) { wallet = 10000; store.set(WK, wallet); }
   const setWallet = v => { wallet = Math.max(0, Math.min(1e12, Math.floor(v))); store.set(WK, wallet); document.querySelectorAll('[data-cz-wallet]').forEach(e => (e.textContent = fmtN(wallet))); czReport(); };
+
+  /* ---------- Shop: Gewinn-Effekte, Gewinn-Sounds, Tischfarben und Abzeichen für Jetons ---------- */
+  const SHOP_ITEMS = {
+    fx: { t: '🎆 Gewinn-Effekte', d: 'Erscheinen bei großen Gewinnen (ab 2.500 Jetons) – je größer der Gewinn, desto mehr.', items: [
+      ['konfetti', '🎉', 'Konfetti', 0], ['gold', '🪙', 'Goldregen', 8000], ['feuerwerk', '🎆', 'Feuerwerk', 20000], ['blitz', '⚡', 'Blitzgewitter', 35000], ['diamant', '💎', 'Diamantenregen', 60000], ['regenbogen', '🌈', 'Regenbogen-Explosion', 100000]] },
+    sfx: { t: '🎺 Gewinn-Sounds', d: 'Spielen bei großen Gewinnen.', items: [
+      ['klingeln', '🔔', 'Klingeln', 0], ['fanfare', '🎺', 'Fanfare', 6000], ['glocken', '🛎️', 'Glockenspiel', 12000], ['jackpot', '🚨', 'Jackpot-Sirene', 25000], ['applaus', '👏', 'Applaus', 40000], ['koenig', '👑', 'Königsfanfare', 80000]] },
+    felt: { t: '🟩 Tischfarbe', d: 'Die Farbe des Spieltischs bei dir.', items: [
+      ['gruen', '🟩', 'Klassisch Grün', 0], ['blau', '🟦', 'Ozeanblau', 5000], ['rot', '🟥', 'Samtrot', 5000], ['lila', '🟪', 'Königslila', 10000], ['nacht', '⬛', 'Mitternacht', 15000], ['goldf', '🟨', 'Goldener Tisch', 50000]] },
+    badge: { t: '🏅 Abzeichen', d: 'Steht in der Rangliste vor deinem Namen – alle sehen es.', items: [
+      ['', '➖', 'Keins', 0], ['zylinder', '🎩', 'Zylinder', 5000], ['klee', '🍀', 'Glücksklee', 10000], ['hai', '🦈', 'Kartenhai', 20000], ['feuer', '🔥', 'Glückssträhne', 40000], ['dia', '💎', 'Diamant', 80000], ['krone', '👑', 'Casino-König', 150000]] },
+  };
+  const FELT = { gruen: ['#0f5a3a', '#083d27'], blau: ['#0f3e6a', '#082440'], rot: ['#6a1420', '#3e0810'], lila: ['#4a1a6a', '#2a0a40'], nacht: ['#1a1a22', '#08080c'], goldf: ['#7a5a14', '#3e2c08'] };
+  const BADGE = { zylinder: '🎩', klee: '🍀', hai: '🦈', feuer: '🔥', dia: '💎', krone: '👑' };
+  let SH = { own: ['konfetti', 'klingeln', 'gruen', ''], eq: { fx: 'konfetti', sfx: 'klingeln', felt: 'gruen', badge: '' } };
+  try { const q = JSON.parse(store.get('casino.shop') || 'null'); if (q && q.own) SH = { own: [...new Set([...SH.own, ...q.own])], eq: { ...SH.eq, ...(q.eq || {}) } }; } catch {}
+  const shopSave = () => store.set('casino.shop', JSON.stringify(SH));
+  setTimeout(() => feltApply(), 0);
+  function feltApply() { let st = document.getElementById('czFelt'); if (!st) { st = document.createElement('style'); st.id = 'czFelt'; document.head.appendChild(st); } const f = FELT[SH.eq.felt] || FELT.gruen; st.textContent = `.cz{--felt:${f[0]};--felt2:${f[1]}}`; }
+  function shopHTML() {
+    return `<p class="cz-note">Kaufen geht nur mit Jetons, die dir wirklich gehören – Bankschulden werden abgezogen. Du hast <b>${fmtN(net())}</b>.</p>` + Object.entries(SHOP_ITEMS).map(([cat, C]) => `<div class="cz-sec">${C.t}</div><p class="cz-note">${C.d}</p>
+      <div class="cz-shop">${C.items.map(([k, ic, n, pr]) => { const own = SH.own.includes(k) || !pr, on = SH.eq[cat] === k;
+        return `<div class="cz-item ${on ? 'on' : ''}"><span class="ic">${ic}</span><b>${n}</b><small>${pr ? fmtN(pr) + ' Jetons' : 'gratis'}</small>
+          <div class="row">${on ? '<button class="cz-btn small" disabled>✓ Aktiv</button>' : own ? `<button class="cz-btn small" data-cz-eq="${cat}" data-k="${k}">Benutzen</button>` : `<button class="cz-btn small" data-cz-buy="${cat}" data-k="${k}" ${net() >= pr ? '' : 'disabled'}>Kaufen</button>`}${cat === 'fx' || cat === 'sfx' ? `<button class="cz-btn small dark" data-cz-try="${cat}" data-k="${k}">▶</button>` : ''}</div></div>`; }).join('')}</div>`).join('');
+  }
+  // Sounds aus dem Browser (keine Dateien nötig)
+  function tone(f, t0, dur, type = 'square', vol = 0.07, f2) { const o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime + t0; o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0008, t + dur); o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + dur + 0.05); }
+  function noise(t0, dur, vol = 0.12) { const n = Math.floor(AC.sampleRate * dur), buf = AC.createBuffer(1, n, AC.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2) * (0.5 + 0.5 * Math.random()); const src = AC.createBufferSource(), g = AC.createGain(), f = AC.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1800; src.buffer = buf; g.gain.value = vol; src.connect(f); f.connect(g); g.connect(AC.destination); src.start(AC.currentTime + t0); }
+  function winSound(k, big) {
+    try {
+      AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume();
+      const N = [523, 659, 784, 1046, 1318, 1568];
+      if (k === 'fanfare') [[0, 523, 0.15], [0.15, 523, 0.1], [0.27, 523, 0.1], [0.4, 784, 0.5]].forEach(([t, f, d]) => { tone(f, t, d, 'sawtooth', 0.05); tone(f * 1.5, t, d, 'square', 0.025); });
+      else if (k === 'glocken') N.concat(big ? N.slice().reverse() : []).forEach((f, i) => tone(f * 2, i * 0.09, 0.6, 'sine', 0.08));
+      else if (k === 'jackpot') { for (let i = 0; i < (big ? 4 : 2); i++) tone(600, i * 0.45, 0.42, 'sawtooth', 0.04, 1400); N.forEach((f, i) => tone(f * 2, 0.9 + i * 0.07, 0.4, 'triangle', 0.06)); }
+      else if (k === 'applaus') { for (let i = 0; i < (big ? 60 : 35); i++) noise(Math.random() * (big ? 2.2 : 1.4), 0.08 + Math.random() * 0.08, 0.1); tone(784, 0, 0.3, 'triangle', 0.04); }
+      else if (k === 'koenig') [[0, 392], [0.2, 523], [0.4, 659], [0.6, 784], [0.9, 1046]].forEach(([t, f], i) => { tone(f, t, i === 4 ? 1.1 : 0.25, 'sawtooth', 0.05); tone(f / 2, t, i === 4 ? 1.1 : 0.25, 'square', 0.03); tone(f * 1.25, t, i === 4 ? 1.1 : 0.25, 'triangle', 0.03); });
+      else [0, 0.12, 0.24].forEach((t, i) => tone(N[i + 2] * 1.5, t, 0.3, 'square', 0.05));
+    } catch {}
+  }
+  // Effekte auf einer Leinwand über allem
+  function winFx(k, power) {
+    const cv = document.createElement('canvas'); cv.className = 'cz-fx'; document.body.appendChild(cv);
+    const DP = Math.min(2, devicePixelRatio || 1), W = cv.width = innerWidth * DP, H = cv.height = innerHeight * DP, g = cv.getContext('2d');
+    const P = [], n = Math.round(90 * power), T0 = performance.now(), LIFE = 2400 + 600 * power;
+    const cols = k === 'gold' ? ['#ffd24a', '#ffe58a', '#d9a52c'] : k === 'diamant' ? ['#bff4ff', '#7fe3f5', '#ffffff', '#c8b0ff'] : k === 'blitz' ? ['#fff', '#cfe8ff'] : ['#ff5a7a', '#ffd24a', '#5ad06a', '#5ab4ff', '#c86aff', '#ff9a3a'];
+    const burst = (x, y, m, sp) => { for (let i = 0; i < m; i++) { const a = Math.random() * Math.PI * 2, v = (0.3 + Math.random()) * sp; P.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - sp * 0.3, r: (2 + Math.random() * 3) * DP, c: cols[i % cols.length], rot: Math.random() * 6, life: 1 }); } };
+    if (k === 'feuerwerk') for (let i = 0; i < 3 + power * 2; i++) setTimeout(() => burst(W * (0.2 + Math.random() * 0.6), H * (0.15 + Math.random() * 0.35), 60, 7 * DP), i * 350);
+    else if (k === 'regenbogen') burst(W / 2, H / 2, n * 2, 12 * DP);
+    else if (k !== 'blitz') for (let i = 0; i < n; i++) P.push({ x: Math.random() * W, y: -Math.random() * H * 0.6, vx: (Math.random() - 0.5) * 2 * DP, vy: (2 + Math.random() * 3) * DP, r: (k === 'gold' ? 6 : k === 'diamant' ? 5 : 4) * DP * (0.7 + Math.random() * 0.6), c: cols[i % cols.length], rot: Math.random() * 6, spin: (Math.random() - 0.5) * 0.3, life: 1 });
+    const bolts = [];
+    (function frame(now) {
+      const tt = now - T0; g.clearRect(0, 0, W, H);
+      if (k === 'regenbogen' && tt < 900) { const R = tt / 900 * Math.hypot(W, H) * 0.6; ['#ff3a3a', '#ff9a2a', '#ffe02a', '#3ad06a', '#3a9aff', '#9a5aff'].forEach((c, i) => { g.strokeStyle = c; g.globalAlpha = 0.5 * (1 - tt / 900); g.lineWidth = 14 * DP; g.beginPath(); g.arc(W / 2, H / 2, Math.max(1, R - i * 16 * DP), 0, Math.PI * 2); g.stroke(); }); g.globalAlpha = 1; }
+      if (k === 'blitz') { if (Math.random() < 0.12 * power && tt < LIFE - 500) bolts.push({ x: Math.random() * W, t: now, seg: Array.from({ length: 9 }, () => (Math.random() - 0.5) * 80 * DP) }); g.fillStyle = `rgba(200,230,255,${bolts.some(b => now - b.t < 90) ? 0.18 : 0})`; g.fillRect(0, 0, W, H);
+        for (const b of bolts) { const a = 1 - (now - b.t) / 400; if (a <= 0) continue; g.strokeStyle = `rgba(255,255,255,${a})`; g.shadowColor = '#9ad8ff'; g.shadowBlur = 20 * DP; g.lineWidth = 4 * DP; g.beginPath(); let x = b.x; g.moveTo(x, 0); b.seg.forEach((d, i) => { x += d; g.lineTo(x, (i + 1) / 9 * H * 0.8); }); g.stroke(); g.shadowBlur = 0; } }
+      for (const q of P) { q.x += q.vx; q.y += q.vy; q.vy += (k === 'feuerwerk' || k === 'regenbogen' ? 0.12 : 0.04) * DP; q.vx *= 0.995; q.rot += q.spin || 0.1;
+        g.save(); g.translate(q.x, q.y); g.rotate(q.rot); g.fillStyle = q.c; g.globalAlpha = Math.max(0, 1 - tt / LIFE);
+        if (k === 'gold') { g.beginPath(); g.ellipse(0, 0, q.r, q.r * Math.abs(Math.cos(q.rot)) + 1, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#b8862e'; g.fillRect(-q.r * 0.3, -1, q.r * 0.6, 2); }
+        else if (k === 'diamant') { g.beginPath(); g.moveTo(0, -q.r); g.lineTo(q.r * 0.7, 0); g.lineTo(0, q.r); g.lineTo(-q.r * 0.7, 0); g.closePath(); g.fill(); g.fillStyle = '#fff'; g.fillRect(-1, -q.r * 0.6, 2, 2); }
+        else g.fillRect(-q.r, -q.r * 0.5, q.r * 2, q.r);
+        g.restore(); }
+      g.globalAlpha = 1;
+      if (tt < LIFE) requestAnimationFrame(frame); else cv.remove();
+    })(T0);
+  }
+  const BIGWIN = 2500;
+  function celebrate(won) {
+    const power = Math.min(3, 1 + won / 15000);
+    winFx(SH.eq.fx || 'konfetti', power); winSound(SH.eq.sfx || 'klingeln', won >= 20000);
+    toast(`🎉 Großer Gewinn: +${fmtN(won)} Jetons!`);
+  }
   /* ---------- Bank: Kredit aufnehmen und zurückzahlen ---------- */
   const DEBT = 'casino.schuld', DEBT_MAX = 50000, LOANS = [1000, 5000, 10000];
   let debt = Math.max(0, Number(store.get(DEBT)) || 0);
@@ -20,15 +92,15 @@
   /* ---------- Geldrangliste: jedes Gerät meldet seinen Jetonstand ---------- */
   let czBoard = null, czTimer = null;
   async function czApi(action, body) { try { const r = await fetch('/api/' + action, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); return r.ok ? await r.json() : null; } catch { return null; } }
-  function czReport(now) { clearTimeout(czTimer); czTimer = setTimeout(async () => { const n = typeof nick === 'function' ? nick() : ''; const r = await czApi(n ? 'casino_report' : 'casino_top', { key: store.get('fsg.key') || '', name: n, chips: net() }); if (r) { czBoard = r; renderBoard(); } }, now ? 0 : 3000); }
+  function czReport(now) { clearTimeout(czTimer); czTimer = setTimeout(async () => { const n = typeof nick === 'function' ? nick() : ''; const r = await czApi(n ? 'casino_report' : 'casino_top', { key: store.get('fsg.key') || '', name: n, chips: net(), badge: SH.eq.badge || '' }); if (r) { czBoard = r; renderBoard(); } }, now ? 0 : 3000); }
   let boardTab = 'cur';
   function renderBoard() {
     const el = q('#czBoard'); if (!el) return;
     if (!czBoard) { set(el, '<p class="cz-note">Rangliste wird geladen …</p>'); return; }
     const B = (boardTab === 'ever' ? czBoard.ever : czBoard.cur) || { top: czBoard.top || [], rank: czBoard.rank, players: czBoard.players };
     const top = B.top || [], pod = [top[1], top[0], top[2]], place = [2, 1, 3];
-    const podium = top.length ? `<div class="cz-podium">${pod.map((e, i) => e ? `<div class="cz-pod p${place[i]} ${e.me ? 'me' : ''}"><span class="cz-medal">${['🥈', '🥇', '🥉'][i]}</span><b>${esc(e.n)}</b><em>${fmtN(e.c)}</em><div class="cz-step">${place[i]}.</div></div>` : `<div class="cz-pod p${place[i]} empty"><div class="cz-step">${place[i]}.</div></div>`).join('')}</div>` : '<p class="cz-note">Noch niemand auf der Liste.</p>';
-    const rest = top.slice(3).map((e, i) => `<div class="cz-rrow ${e.me ? 'me' : ''}"><b>${i + 4}.</b><span>${esc(e.n)}${e.me ? ' (du)' : ''}</span><em>${fmtN(e.c)}</em></div>`).join('');
+    const podium = top.length ? `<div class="cz-podium">${pod.map((e, i) => e ? `<div class="cz-pod p${place[i]} ${e.me ? 'me' : ''}"><span class="cz-medal">${['🥈', '🥇', '🥉'][i]}</span><b>${e.b && BADGE[e.b] ? BADGE[e.b] + ' ' : ''}${esc(e.n)}</b><em>${fmtN(e.c)}</em><div class="cz-step">${place[i]}.</div></div>` : `<div class="cz-pod p${place[i]} empty"><div class="cz-step">${place[i]}.</div></div>`).join('')}</div>` : '<p class="cz-note">Noch niemand auf der Liste.</p>';
+    const rest = top.slice(3).map((e, i) => `<div class="cz-rrow ${e.me ? 'me' : ''}"><b>${i + 4}.</b><span>${e.b && BADGE[e.b] ? BADGE[e.b] + ' ' : ''}${esc(e.n)}${e.me ? ' (du)' : ''}</span><em>${fmtN(e.c)}</em></div>`).join('');
     const mine = B.rank > top.length ? `<div class="cz-rrow me"><b>${B.rank}.</b><span>Du</span><em>${fmtN(B.mine || net())}</em></div>` : '';
     set(el, `<div class="cz-tabs"><button class="cz-btn small ${boardTab === 'cur' ? '' : 'dark'}" data-cz-bt="cur">💰 Momentan</button><button class="cz-btn small ${boardTab === 'ever' ? '' : 'dark'}" data-cz-bt="ever">👑 Jemals am meisten</button></div>
       <p class="cz-note">${boardTab === 'cur' ? 'Jetons, die du gerade hast – Bankschulden werden abgezogen. Zählt die letzten 30 Tage.' : 'Der höchste Jetonstand, den jemand je hatte (ohne Bankschulden).'}</p>
@@ -77,6 +149,10 @@
   .cz-trow b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .cz-sec{font-family:Bungee,Figtree,sans-serif;font-weight:400;font-size:18px;color:#ffe9a8;margin:18px 0 8px}
   .cz-rlist{display:flex;flex-direction:column;gap:5px;max-width:560px}
+  .cz-shop{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:8px}
+  .cz-item{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:12px 10px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)}
+  .cz-item.on{border-color:var(--gold);background:rgba(232,196,106,.12)}.cz-item .ic{font-size:34px;line-height:1.1}.cz-item small{color:#cdbf9f}.cz-item .row{display:flex;gap:6px}
+  .cz-fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:99999}
   .cz-ltabs,.cz-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 6px}
   .cz-podium{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;align-items:end;max-width:560px;margin:14px 0 12px}
   .cz-pod{display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;min-width:0}
@@ -259,8 +335,8 @@
       <div class="cz-head"><button class="cz-btn dark small" data-cz="back">‹ Hub</button>
         <div class="cz-logo">Casino Aurum<small>NUR SPIELGELD · KEIN ECHTES GELD</small></div>
         <div class="cz-wallet">${chipHTML(1000, '', 'tabindex="-1"')}<div><small>DEINE JETONS</small><b data-cz-wallet>${fmtN(wallet)}</b></div></div></div>
-      <div class="cz-ltabs">${[['games', '🎰 Spiele'], ['bank', '🏦 Bank' + (debt ? ' · ' + short(debt) : '')], ['board', '🏆 Rangliste']].map(([k, t]) => `<button class="cz-btn small ${lobbyTab === k ? '' : 'dark'}" data-cz-tab="${k}">${t}</button>`).join('')}</div>
-      ${lobbyTab === 'bank' ? bankHTML() : lobbyTab === 'board' ? '<div class="cz-sec">🏆 Rangliste</div><div id="czBoard"></div>' : `<div class="cz-toprow" style="justify-content:flex-start">
+      <div class="cz-ltabs">${[['games', '🎰 Spiele'], ['shop', '🛍️ Shop'], ['bank', '🏦 Bank' + (debt ? ' · ' + short(debt) : '')], ['board', '🏆 Rangliste']].map(([k, t]) => `<button class="cz-btn small ${lobbyTab === k ? '' : 'dark'}" data-cz-tab="${k}">${t}</button>`).join('')}</div>
+      ${lobbyTab === 'shop' ? shopHTML() : lobbyTab === 'bank' ? bankHTML() : lobbyTab === 'board' ? '<div class="cz-sec">🏆 Rangliste</div><div id="czBoard"></div>' : `<div class="cz-toprow" style="justify-content:flex-start">
         ${bonus ? '<button class="cz-btn small" data-cz="bonus">🎁 Tagesbonus: 2.000 Jetons</button>' : '<span class="cz-note">Tagesbonus abgeholt – morgen gibt es neuen.</span>'}
         ${helpOk ? '<button class="cz-btn small dark" data-cz="help">Pleite? 1.000 Jetons Starthilfe</button>' : ''}
       </div>
@@ -280,6 +356,9 @@
     try { localStorage.setItem('fsg.nick', nick()); } catch {} send({ t: 'name', name: nick() }); return true;
   }
   function onLobby(e) {
+    const by = e.target.closest('[data-cz-buy]'); if (by) { const cat = by.dataset.czBuy, k = by.dataset.k, it = SHOP_ITEMS[cat].items.find(x => x[0] === k); if (!it || SH.own.includes(k) || net() < it[3]) return; setWallet(wallet - it[3]); SH.own.push(k); SH.eq[cat] = k; shopSave(); if (cat === 'felt') feltApply(); if (cat === 'badge') czReport(true); snd('win'); toast(`🛍️ ${it[2]} gekauft und aktiviert!`); if (cat === 'fx') winFx(k, 1.5); if (cat === 'sfx') winSound(k, false); renderLobby(); return; }
+    const eqb = e.target.closest('[data-cz-eq]'); if (eqb) { const cat = eqb.dataset.czEq; SH.eq[cat] = eqb.dataset.k; shopSave(); if (cat === 'felt') feltApply(); if (cat === 'badge') czReport(true); renderLobby(); return; }
+    const tr = e.target.closest('[data-cz-try]'); if (tr) { if (tr.dataset.czTry === 'fx') winFx(tr.dataset.k, 1.5); else winSound(tr.dataset.k, true); return; }
     const tb = e.target.closest('[data-cz-tab]'); if (tb) { lobbyTab = tb.dataset.czTab; renderLobby(); if (lobbyTab === 'board') czReport(true); return; }
     const bt = e.target.closest('[data-cz-bt]'); if (bt) { boardTab = bt.dataset.czBt; renderBoard(); return; }
     const ln = e.target.closest('[data-cz-loan]'); if (ln) { const n = Math.min(+ln.dataset.czLoan, DEBT_MAX - debt); if (n > 0) { setDebt(debt + n); setWallet(wallet + n); snd('chip'); toast(`🏦 ${fmtN(n)} Jetons geliehen – Schulden jetzt ${fmtN(debt)}`); } renderLobby(); return; }
@@ -301,7 +380,7 @@
   function render(st, v) {
     css(); V = v; if (!v) return;
     deadline = v.left != null ? Date.now() + v.left : 0;
-    if (v.wallet != null) setWallet(v.wallet);
+    if (v.wallet != null) { const before = wallet; setWallet(v.wallet); if (v.mySeat >= 0 && v.wallet - before >= BIGWIN && before > 0) celebrate(v.wallet - before); }
     // automatisch hinsetzen und eigene Jetons mitbringen
     if (v.mySeat < 0 && v.free > 0 && sitAsked !== room.id) { sitAsked = room.id; act({ type: 'sit', chips: wallet }); }
     const mode = 'cz-' + v.kind;

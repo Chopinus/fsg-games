@@ -298,6 +298,12 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 38, title: 'Casino: Shop für Gewinn-Effekte und mehr', date: '05.11.2026', items: [
+      ['Neu', 'Casino: Im Shop kaufst du mit Jetons Gewinn-Effekte – Goldregen, Feuerwerk, Blitze, Diamanten, Regenbogen'],
+      ['Neu', 'Casino: Gewinn-Sounds wie Fanfare, Glockenspiel, Jackpot-Sirene, Applaus und Königsfanfare'],
+      ['Neu', 'Casino: Eigene Tischfarben und Abzeichen, die alle in der Rangliste vor deinem Namen sehen'],
+      ['Neu', 'Casino: Bei großen Gewinnen ab 2.500 Jetons spielen dein Effekt und dein Sound – je größer der Gewinn, desto mehr'],
+    ] },
     { id: 37, title: 'Casino: Bank und neue Rangliste', date: '05.11.2026', items: [
       ['Neu', 'Casino: Bei der Bank leihst du dir Jetons ohne Zinsen – bis 50.000 Schulden, dann musst du erst zurückzahlen'],
       ['Neu', 'Casino: Rangliste als eigener Reiter mit Siegertreppchen für Platz 1, 2 und 3'],

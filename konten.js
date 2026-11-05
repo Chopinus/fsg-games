@@ -524,7 +524,7 @@ function czTop(id) {
   const old = Date.now() - 30 * 864e5;
   const live = Object.entries(cz).filter(([, e]) => e.t > old).sort((a, b) => b[1].c - a[1].c);
   const best = Object.entries(cz).sort((a, b) => (b[1].m || b[1].c) - (a[1].m || a[1].c));
-  const pack = (list, f) => ({ top: list.slice(0, 50).map(([k, e]) => ({ n: e.n, c: f(e), me: k === id })), rank: id ? list.findIndex(([k]) => k === id) + 1 : 0, mine: id && cz[id] ? f(cz[id]) : 0, players: list.length });
+  const pack = (list, f) => ({ top: list.slice(0, 50).map(([k, e]) => ({ n: e.n, c: f(e), b: e.b || '', me: k === id })), rank: id ? list.findIndex(([k]) => k === id) + 1 : 0, mine: id && cz[id] ? f(cz[id]) : 0, players: list.length });
   const cur = pack(live, e => e.c), ever = pack(best, e => e.m || e.c);
   return { top: cur.top.slice(0, 20), rank: cur.rank, players: cur.players, cur, ever }; // top/rank/players für ältere Seiten
 }
@@ -534,7 +534,8 @@ function czAction(action, body) {
   if (!id) return [400, { error: 'Ungültig' }];
   const n = String(body.name || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 16), c = Math.max(0, Math.min(1e12, Math.floor(Number(body.chips) || 0)));
   if (!n) return [200, czTop(id)];
-  if (Date.now() - (czLast.get(id) || 0) > 4000) { czLast.set(id, Date.now()); const cur = cz[id]; if (!cur || cur.c !== c || cur.n !== n || Date.now() - cur.t > 3600e3) { cz[id] = { n, c, m: Math.max(c, (cur && (cur.m || cur.c)) || 0), t: Date.now() }; czMark(); } }
+  const b = /^[a-z]{0,10}$/.test(String(body.badge || '')) ? String(body.badge || '') : '';
+  if (Date.now() - (czLast.get(id) || 0) > 4000) { czLast.set(id, Date.now()); const cur = cz[id]; if (!cur || cur.c !== c || cur.n !== n || (cur.b || '') !== b || Date.now() - cur.t > 3600e3) { cz[id] = { n, c, m: Math.max(c, (cur && (cur.m || cur.c)) || 0), b, t: Date.now() }; czMark(); } }
   return [200, czTop(id)];
 }
 
