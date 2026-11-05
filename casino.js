@@ -258,8 +258,8 @@ const SLOT = {
 };
 
 /* ================= Glücksrad ================= */
-// Felder mit Multiplikator von ×0,1 bis ×10. Die Breite eines Feldes ist genau seine Gewinnchance (w von 90). Rückfluss etwa 92 %.
-const RAD_SEGS = [[10, 1], [0.1, 5], [1.5, 3.5], [0.2, 4.5], [1, 5], [0.5, 4], [2, 2.5], [0.1, 5], [1.2, 4], [0.2, 4.5], [5, 2], [0.5, 4], [1, 5], [0.1, 5], [1.5, 3.5], [0.2, 4.5], [3, 3], [0.5, 4], [2, 2.5], [0.1, 5], [1.2, 4], [0.2, 4.5], [0.5, 4]];
+// Felder mit Multiplikator von ×0,1 bis ×10. Die Breite eines Feldes ist genau seine Gewinnchance (w von 100). Rückfluss etwa 97 %, fast jede zweite Drehung gewinnt.
+const RAD_SEGS = [[10, 0.8], [0.2, 5], [1.2, 6.75], [0.5, 4], [2, 2], [0.1, 6.5], [1.5, 5], [0.2, 5], [1.2, 6.75], [1, 5], [5, 1.2], [0.5, 4], [1.2, 6.75], [0.2, 5], [3, 2], [0.1, 6.5], [1.5, 5], [0.5, 4], [1.2, 6.75], [1, 5], [2, 2], [0.2, 5]];
 const RAD_W = RAD_SEGS.reduce((a, s) => a + s[1], 0);
 const RAD = {
   start(r) { r.state.phase = 'free'; },
