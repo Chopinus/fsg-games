@@ -520,11 +520,42 @@ function czSync(key, w) { // vom Tisch: aktueller Stand des Platzes
   w = Math.max(0, Math.min(1e12, Math.floor(Number(w) || 0)));
   if (z.w !== w) { z.w = w; z.m = Math.max(z.m || 0, w - (z.d || 0)); z.t = Date.now(); markDirty(); }
 }
+// ---------- Alte Stände zurückholen (einmalig) ----------
+// Vor dem Umzug auf den Server lagen die Jetons im Gerät; die alte Rangliste (casino-rangliste.json) hat je Gerät Name und Stand gemeldet.
+// Wer dort stand und ein Hub-Konto mit demselben Namen hat, bekommt einmalig den Teil über 10.000 zurück, den der Neustart genommen hat.
+// Gedeckelt bei 50.000. Wer je über 1 Mio. hatte, hat sehr wahrscheinlich geschummelt und bekommt nichts zurück.
+const CZ_OLD_FILE = 'casino-rangliste.json', CZ_OLD_LOCAL = path.join(__dirname, 'casino-rangliste.local.json');
+const CZ_REST_ID = 'r-2026-11-09-alt', CZ_REST_MAX = 50000, CZ_CHEAT = 1e6;
+let czOld = null; // Kontoschlüssel -> alter Stand
+async function czOldLoad() {
+  let raw = null;
+  try {
+    if (durable) { const res = await gh('GET', null, CZ_OLD_FILE); if (res.status === 200) { const j = await res.json(); raw = JSON.parse(Buffer.from(j.content || '', 'base64').toString('utf8') || '{}'); } }
+    else if (fs.existsSync(CZ_OLD_LOCAL)) raw = JSON.parse(fs.readFileSync(CZ_OLD_LOCAL, 'utf8'));
+  } catch (e) { console.error('Alte Casino-Rangliste laden:', e); }
+  if (!raw) { console.log('Alte Casino-Rangliste nicht gefunden – keine Rückgabe'); return; } // ohne Datei niemanden als erledigt markieren
+  const best = {}, cheat = new Set();
+  for (const e of Object.values(raw || {})) {
+    if (!e || !e.n) continue; const k = keyOf(cleanName(e.n)); if (!k) continue;
+    if ((Number(e.m) || 0) > CZ_CHEAT || (Number(e.c) || 0) > CZ_CHEAT) cheat.add(k);
+    best[k] = Math.max(best[k] || 0, Math.floor(Number(e.c) || 0));
+  }
+  for (const k of cheat) delete best[k];
+  czOld = best;
+  console.log(`Alte Casino-Stände: ${Object.keys(best).length} Namen, ${cheat.size} ausgeschlossen`);
+}
 function czState(key, acc) {
   const z = czAcc(key), now = Date.now();
-  // einmalige Gutschriften
+  // einmalige Gutschriften – nicht während man am Tisch sitzt, sonst überschreibt der Platz sie
   let gift = 0, why = ''; acc.gifts = acc.gifts || [];
-  for (const g of CZ_GIFTS) if (g.k === key && !acc.gifts.includes(g.id)) { acc.gifts.push(g.id); z.w += g.n; gift += g.n; why = g.why; markDirty(); }
+  if (!czSeated.has(key)) {
+    for (const g of CZ_GIFTS) if (g.k === key && !acc.gifts.includes(g.id)) { acc.gifts.push(g.id); z.w += g.n; gift += g.n; why = g.why; markDirty(); }
+    if (czOld && !acc.gifts.includes(CZ_REST_ID)) {
+      acc.gifts.push(CZ_REST_ID); markDirty();
+      const back = Math.min(CZ_REST_MAX, czOld[key] || 0) - CZ_START;
+      if (back > 0) { z.w += back; z.m = Math.max(z.m || 0, z.w - (z.d || 0)); gift += back; why = 'dein alter Stand von vor der Umstellung (bis 50.000)'; }
+    }
+  }
   return { name: acc.name, w: z.w, d: z.d || 0, m: z.m || 0, bonus: z.day !== czDay(), help: z.w < 100 && now - (z.help || 0) > 3600e3, own: z.own || [], eq: z.eq || {}, work: z.work || 0, seated: czSeated.has(key), gift, why };
 }
 function czTop(key) {
@@ -677,7 +708,7 @@ function board() {
   return boardCache;
 }
 
-load(); chatLoad(); wbLoad(); gLoad(); islLoad();
+load().finally(czOldLoad); chatLoad(); wbLoad(); gLoad(); islLoad();
 // Render beendet den Dienst mit SIGTERM – vorher noch speichern
 process.on('SIGTERM', async () => { await flush(); await chatFlush(); await wbFlush(); await gFlush(); await islFlush(); process.exit(0); });
 process.on('SIGINT', async () => { await flush(); await chatFlush(); await wbFlush(); await gFlush(); await islFlush(); process.exit(0); });
