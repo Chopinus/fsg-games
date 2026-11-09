@@ -298,6 +298,10 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 48, title: 'Casino: alte Jetons übers Gerät zurück', date: '09.11.2026', items: [
+      'Die alten Jetons werden jetzt über das Gerät zurückgegeben, auf dem du damals gespielt hast – egal, welchen Namen du im Casino benutzt hattest.',
+      'Öffne dafür das Casino auf diesem Gerät und melde dich mit deinem Konto an. Bis höchstens 50.000 Jetons, einmal pro Konto und Gerät.'
+    ] },
     { id: 47, title: 'Neu im Hub: Ideen & Vorschläge', date: '09.11.2026', items: [
       'Im Hub gibt es jetzt den Bereich „Ideen für die Spiele“: Schlag Verbesserungen für jedes Spiel vor – Balance, neue Funktionen, Fehler.',
       'Täglich gegen 18 Uhr werden neue Ideen geprüft und dann für alle sichtbar. Mit 👍 stimmst du für Ideen der anderen.',

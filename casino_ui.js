@@ -23,12 +23,12 @@
     return `<div class="cz-news"><div class="cz-news-box"><h3>🎰 Neu im Casino</h3>
       <p><b>Deine Jetons liegen jetzt bei deinem Hub-Konto</b> auf dem Server – nicht mehr auf dem Gerät. Du hast auf jedem Gerät denselben Stand, und er geht nicht mehr verloren.</p>
       <p><b>Neustart:</b> Weil sich viele über neue Konten Millionen erschummelt hatten, haben alle wieder bei 10.000 Jetons angefangen. Auch die Rangliste fängt neu an.</p>
-      <p><b>Alte Stände:</b> Wer in der alten Rangliste unter dem Namen seines Hub-Kontos stand, bekommt seinen alten Stand einmalig zurück – bis höchstens 50.000. Wer über 1 Million hatte, bekommt nichts zurück.</p>
+      <p><b>Alte Stände:</b> Wer vor der Umstellung Jetons hatte, bekommt seinen alten Stand einmalig zurück – bis höchstens 50.000. Öffne das Casino dafür auf dem <b>Gerät, auf dem du damals gespielt hast</b>, angemeldet mit deinem Konto. Wer über 1 Million hatte, bekommt nichts zurück.</p>
       ${g}<p class="cz-note">Spielen geht nur noch mit Hub-Konto. Pro Runde sind höchstens 50.000 Jetons Einsatz erlaubt.</p>
       <button class="cz-btn" data-cz="infook">Alles klar</button></div></div>`;
   }
   function sendKonto() { const k = konto(); if (typeof send === 'function') send(k ? { t: 'konto', name: k.name, token: k.token } : { t: 'konto' }); }
-  try { addEventListener('fsg-konto', () => { sendKonto(); CZ = null; if (lobby && !lobby.hidden) { czCall('cz_state').then(() => renderLobby()); renderLobby(); } }); } catch {}
+  try { addEventListener('fsg-konto', () => { sendKonto(); CZ = null; if (lobby && !lobby.hidden) { czGift(); renderLobby(); } }); } catch {}
   const showWallet = () => document.querySelectorAll('[data-cz-wallet]').forEach(e => (e.textContent = fmtN(wallet)));
   const setWallet = v => { wallet = Math.max(0, Math.min(1e12, Math.floor(v))); showWallet(); };
 
@@ -416,7 +416,16 @@
   ];
   let lobby = null;
   // Gutschriften (z. B. Ersatz nach einem Fehler) für das angemeldete Hub-Konto einmalig abholen
-  async function czGift() { await czCall('cz_state'); if (lobby && !lobby.hidden) renderLobby(); }
+  let claimTried = '';
+  async function czGift() {
+    await czCall('cz_state');
+    const k = konto(), dev = store.get('fsg.key');
+    if (k && dev && claimTried !== k.name) { // alten Stand dieses Geräts einmal abfragen
+      claimTried = k.name; const r = await czCall('cz_claim', { dev });
+      if (r && r.claimNo && typeof toast === 'function') toast(r.claimNo);
+    }
+    if (lobby && !lobby.hidden) renderLobby();
+  }
   function openLobby() {
     css(); sendKonto(); czGift();
     if (!lobby) { lobby = document.createElement('div'); lobby.id = 'czLobby'; lobby.className = 'cz'; document.body.appendChild(lobby); lobby.addEventListener('click', onLobby); }

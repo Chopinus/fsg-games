@@ -496,6 +496,7 @@ function tokenKey(name, token) {
 // ---------- Casino-Gutschriften (einmalig je Konto, Name in Kleinbuchstaben) ----------
 const CZ_GIFTS = [
   { id: 'g-2026-11-09-chop', k: 'chop', n: 14300, why: 'Ersatz für den Fehler beim Verlassen des Blackjack-Tischs' },
+  { id: 'g-2026-11-09-chop2', k: 'chop', n: 14300, why: 'Ersatz für den Fehler beim Verlassen des Blackjack-Tischs (kam vorher nicht beim Konto an)' },
 ];
 
 // ---------- Casino-Konto: Jetons liegen auf dem Server beim Hub-Konto (nicht mehr im Browser) ----------
@@ -527,6 +528,10 @@ function czSync(key, w) { // vom Tisch: aktueller Stand des Platzes
 const CZ_OLD_FILE = 'casino-rangliste.json', CZ_OLD_LOCAL = path.join(__dirname, 'casino-rangliste.local.json');
 const CZ_REST_ID = 'r-2026-11-09-alt', CZ_REST_MAX = 50000, CZ_CHEAT = 1e6;
 let czOld = null; // Kontoschlüssel -> alter Stand
+let czOldDev = null; // Geräte-Eintrag (sha256('cz'+Gerätekennung)) -> { n, c, m, t } aus der alten Rangliste
+// Zweite Runde: Rückgabe über das Gerät, auf dem die Jetons lagen (der Name in der alten Liste war oft nicht der Kontoname).
+const CZ_DEV_ID = 'r-2026-11-09-geraet';
+const czClaimed = () => new Set(Object.values(accounts).map(a => a.czClaim).filter(Boolean));
 async function czOldLoad() {
   let raw = null;
   try {
@@ -541,7 +546,7 @@ async function czOldLoad() {
     best[k] = Math.max(best[k] || 0, Math.floor(Number(e.c) || 0));
   }
   for (const k of cheat) delete best[k];
-  czOld = best;
+  czOld = best; czOldDev = raw;
   console.log(`Alte Casino-Stände: ${Object.keys(best).length} Namen, ${cheat.size} ausgeschlossen`);
 }
 function czState(key, acc) {
@@ -571,6 +576,20 @@ function czAction(action, key, acc, body) {
   if (!acc || !(acc.tokens || []).includes(sha256(String(body.token || '')))) return [401, { error: 'Bitte melde dich im Hub an, um im Casino zu spielen.' }];
   const z = czAcc(key), ok = () => { z.t = Date.now(); markDirty(); return [200, czState(key, acc)]; };
   if (action === 'cz_state') return [200, czState(key, acc)];
+  if (action === 'cz_claim') { // alten Stand dieses Geräts zurückholen (einmal pro Konto und pro Gerät)
+    const st = czState(key, acc); acc.gifts = acc.gifts || [];
+    if (!czOldDev || acc.gifts.includes(CZ_DEV_ID) || czSeated.has(key)) return [200, st];
+    const dk = String(body.dev || ''); if (!/^[a-f0-9]{32}$/.test(dk)) return [200, st];
+    const id = sha256('cz' + dk).slice(0, 16), e = czOldDev[id];
+    if (!e || czClaimed().has(id)) return [200, st];
+    if ((Number(e.m) || 0) > CZ_CHEAT || (Number(e.c) || 0) > CZ_CHEAT) { acc.gifts.push(CZ_DEV_ID); acc.czClaim = id; markDirty(); return [200, { ...st, claimNo: 'Auf diesem Gerät lagen über 1 Million Jetons – die werden nicht zurückgegeben.' }]; }
+    const prev = Math.max(0, Math.min(CZ_REST_MAX, (czOld && czOld[key]) || 0) - CZ_START); // schon über den Namen zurückbekommen
+    const back = Math.max(0, Math.min(CZ_REST_MAX, Math.floor(Number(e.c) || 0)) - CZ_START - prev);
+    if (back <= 0) return [200, st]; // nichts zu holen – Gerät nicht verbrauchen
+    acc.gifts.push(CZ_DEV_ID); acc.czClaim = id;
+    z.w += back; z.m = Math.max(z.m || 0, z.w - (z.d || 0)); z.t = Date.now(); markDirty();
+    return [200, { ...czState(key, acc), gift: (st.gift || 0) + back, why: `dein alter Stand auf diesem Gerät (${Math.min(CZ_REST_MAX, Math.floor(Number(e.c) || 0)).toLocaleString('de-DE')} Jetons, höchstens 50.000)` }];
+  }
   if (czSeated.has(key) && action !== 'cz_eq') return [409, { error: 'Du sitzt noch an einem Tisch. Steh zuerst auf.' }];
   if (action === 'cz_bonus') { if (z.day === czDay()) return [409, { error: 'Den Tagesbonus gibt es morgen wieder.' }]; z.day = czDay(); z.w += 2000; return ok(); }
   if (action === 'cz_help') { if (z.w >= 100 || Date.now() - (z.help || 0) < 3600e3) return [409, { error: 'Starthilfe gibt es nur, wenn du fast nichts mehr hast – höchstens einmal pro Stunde.' }]; z.help = Date.now(); z.w += 1000; return ok(); }
