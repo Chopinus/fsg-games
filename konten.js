@@ -509,6 +509,12 @@ const CZ_PRICES = {
   badge: { '': 0, zylinder: 5000, klee: 10000, hai: 20000, feuer: 40000, dia: 80000, krone: 150000 },
 };
 const CZ_JOBS = { mine: 1400, teller: 900, putzen: 2200 }; // so schnell kann man frühestens fertig sein (ms)
+// Einsatzlimit wächst mit dem Alter des Kontos: Neue Konten so lange neu anlegen, bis eins Glück hat, lohnt sich so nicht.
+// Konten von vor dieser Regel (ohne created) gelten als alt.
+const CZ_AGE_LIM = [[1, 1000], [2, 2500], [3, 5000], [5, 10000], [7, 25000]], CZ_LIM_MAX = 50000, CZ_BOARD_DAYS = 3;
+const czAgeDays = a => (a && a.created ? (Date.now() - a.created) / 864e5 : Infinity);
+function czLimit(key) { const d = czAgeDays(accounts[key]); for (const [days, n] of CZ_AGE_LIM) if (d < days) return { lim: n, next: CZ_AGE_LIM.find(x => x[0] > d && x[1] > n) ? accounts[key].created + days * 864e5 : 0, nextLim: (CZ_AGE_LIM.find(x => x[1] > n) || [0, CZ_LIM_MAX])[1] }; return { lim: CZ_LIM_MAX, next: 0, nextLim: 0 }; }
+const czMaxBet = key => czLimit(key).lim;
 const czSeated = new Map(); // Konto -> Raum, solange es an einem Tisch sitzt (nur im Speicher)
 const czDay = () => new Date(Date.now() + 3600e3).toISOString().slice(0, 10);
 function czAcc(key) {
@@ -561,10 +567,11 @@ function czState(key, acc) {
       if (back > 0) { z.w += back; z.m = Math.max(z.m || 0, z.w - (z.d || 0)); gift += back; why = 'dein alter Stand von vor der Umstellung (bis 50.000)'; }
     }
   }
-  return { name: acc.name, w: z.w, d: z.d || 0, m: z.m || 0, bonus: z.day !== czDay(), help: z.w < 100 && now - (z.help || 0) > 3600e3, own: z.own || [], eq: z.eq || {}, work: z.work || 0, seated: czSeated.has(key), gift, why };
+  const L = czLimit(key), young = czAgeDays(acc) < CZ_BOARD_DAYS;
+  return { lim: L.lim, limNext: L.next, limNextN: L.nextLim, boardFrom: young ? acc.created + CZ_BOARD_DAYS * 864e5 : 0, name: acc.name, w: z.w, d: z.d || 0, m: z.m || 0, bonus: z.day !== czDay(), help: z.w < 100 && now - (z.help || 0) > 3600e3, own: z.own || [], eq: z.eq || {}, work: z.work || 0, seated: czSeated.has(key), gift, why };
 }
 function czTop(key) {
-  const old = Date.now() - 30 * 864e5, all = Object.entries(accounts).filter(([, a]) => a.cz);
+  const old = Date.now() - 30 * 864e5, all = Object.entries(accounts).filter(([, a]) => a.cz && czAgeDays(a) >= CZ_BOARD_DAYS); // Rangliste erst ab 3 Tage altem Konto
   const live = all.filter(([, a]) => (a.cz.t || 0) > old).sort((a, b) => (b[1].cz.w - (b[1].cz.d || 0)) - (a[1].cz.w - (a[1].cz.d || 0)));
   const best = all.slice().sort((a, b) => (b[1].cz.m || 0) - (a[1].cz.m || 0));
   const pack = (list, f) => ({ top: list.slice(0, 50).map(([k, a]) => ({ n: a.name, c: f(a.cz), b: (a.cz.eq && a.cz.eq.badge) || '', me: k === key, adm: VS_ADMINS.includes(k) })), rank: key ? list.findIndex(([k]) => k === key) + 1 : 0, mine: key && accounts[key] && accounts[key].cz ? f(accounts[key].cz) : 0, players: list.length });
@@ -776,7 +783,7 @@ async function handle(action, body, ip) {
     if (wiped) data = { season: SEASON };
     if (Object.keys(accounts).length >= 5000) return [507, { error: 'Der Speicher ist voll.' }];
     const salt = crypto.randomBytes(16).toString('hex');
-    const a = accounts[key] = { name, salt, hash: hashPw(body.pass, salt), tokens: [], data, updated: Date.now(), season: SEASON, dev };
+    const a = accounts[key] = { name, salt, hash: hashPw(body.pass, salt), tokens: [], data, updated: Date.now(), season: SEASON, dev, created: Date.now() };
     createLimit(ip, true); const token = newToken(a); markDirty();
     return [200, { name, token, updated: a.updated, durable, tester: isTester(key), reset: wiped && testData(cleanData(body.data)) }];
   }
@@ -865,4 +872,4 @@ process.on('SIGINT', async () => { await flush(); await chatFlush(); await wbFlu
 
 const isAdmin = k => VS_ADMINS.includes(String(k || '').toLowerCase());
 const adminNames = () => VS_ADMINS.map(k => accounts[k] && accounts[k].name).filter(Boolean);
-module.exports = { handle, flush, durable, tokenKey, czAcc, czSync, czSeated, isAdmin, adminNames };
+module.exports = { handle, flush, durable, tokenKey, czAcc, czSync, czSeated, czMaxBet, isAdmin, adminNames };

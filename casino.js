@@ -18,6 +18,9 @@ const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = rnd(i 
 const clampChips = v => Math.max(0, Math.min(MAXC, Math.floor(Number(v) || 0)));
 const MAXBET = 50000; // Höchsteinsatz pro Runde und Tisch – verhindert, dass man mit All-in-Glück in Minuten Millionen macht
 let BANK = null; // vom Server gesetzt: Konto je Spieler und Jetons auf dem Server
+// Einsatzlimit je Platz: höchstens MAXBET, bei jungen Konten weniger (wächst mit dem Kontoalter)
+const limOf = x => Math.max(10, Math.min(MAXBET, x && x.acc && BANK && BANK.maxBet ? BANK.maxBet(x.acc) || MAXBET : MAXBET));
+const limMsg = x => { const l = limOf(x); return `Höchsteinsatz ${l.toLocaleString('de-DE')} pro Runde${l < MAXBET ? ' – das Limit steigt mit dem Alter deines Kontos' : ''}.`; };
 const roundBets = x => (x.bet || 0) + Object.values(x.bets || {}).reduce((a, b) => a + b, 0) + (x.hands || []).reduce((a, h) => a + (h.res ? 0 : h.bet || 0), 0);
 const deck = (n = 1) => { const d = []; for (let k = 0; k < n; k++) for (const s of 'shdc') for (const r of 'A23456789TJQK') d.push(r + s); return shuffle(d); };
 
@@ -130,7 +133,7 @@ const BJ = {
     const s = r.state;
     if (a.type === 'bet') {
       if (s.phase !== 'bet') return 'Warte auf die nächste Runde.';
-      const n = clampChips(a.amount); if (!n || n > x.chips) return 'Nicht genug Jetons.'; if (roundBets(x) + n > MAXBET) return 'Höchsteinsatz 50.000 pro Runde.';
+      const n = clampChips(a.amount); if (!n || n > x.chips) return 'Nicht genug Jetons.'; if (roundBets(x) + n > limOf(x)) return limMsg(x);
       x.chips -= n; x.bet += n; x.ready = false; return;
     }
     if (a.type === 'clear') { if (s.phase !== 'bet') return; x.chips += x.bet; x.bet = 0; x.ready = false; return; }
@@ -182,11 +185,11 @@ const RL = {
     const s = r.state;
     if (a.type === 'bet') {
       if (s.phase !== 'bet') return 'Nichts geht mehr – warte auf die nächste Runde.';
-      const key = String(a.key), n = clampChips(a.amount); if (!RL.keyOk(key) || !n) return; if (n > x.chips) return 'Nicht genug Jetons.'; if (roundBets(x) + n > MAXBET) return 'Höchsteinsatz 50.000 pro Runde.';
+      const key = String(a.key), n = clampChips(a.amount); if (!RL.keyOk(key) || !n) return; if (n > x.chips) return 'Nicht genug Jetons.'; if (roundBets(x) + n > limOf(x)) return limMsg(x);
       x.chips -= n; x.bets[key] = (x.bets[key] || 0) + n; x.ready = false; return;
     }
     if (a.type === 'clear') { if (s.phase !== 'bet') return; for (const v of Object.values(x.bets)) x.chips += v; x.bets = {}; return; }
-    if (a.type === 'rebet') { if (s.phase !== 'bet' || !x.last) return; for (const v of Object.values(x.bets)) x.chips += v; x.bets = {}; const tot = Object.values(x.last).reduce((p, v) => p + v, 0); if (tot > x.chips) return 'Nicht genug Jetons für denselben Einsatz.'; for (const [k, v] of Object.entries(x.last)) { x.bets[k] = v; x.chips -= v; } return; }
+    if (a.type === 'rebet') { if (s.phase !== 'bet' || !x.last) return; for (const v of Object.values(x.bets)) x.chips += v; x.bets = {}; const tot = Object.values(x.last).reduce((p, v) => p + v, 0); if (tot > x.chips) return 'Nicht genug Jetons für denselben Einsatz.'; if (tot > limOf(x)) return limMsg(x); for (const [k, v] of Object.entries(x.last)) { x.bets[k] = v; x.chips -= v; } return; }
     if (a.type === 'go') { if (s.phase !== 'bet' || !Object.keys(x.bets).length) return 'Setze zuerst.'; x.ready = true; const hs = humans(s); if (hs.every(h => h.ready || !Object.keys(h.bets).length) && hs.some(h => h.ready)) schedule(r, 500, () => RL.spinNow(r)); return; }
   },
   view(s) { return { result: s.phase === 'bet' ? null : s.result, spinId: s.spinId || 0, hist: s.hist, seats: s.seats.map(x => x && { name: x.name, bot: x.bot, bets: x.bets, ready: x.ready, win: x.win }) }; },
@@ -225,7 +228,7 @@ const RACE = {
   },
   act(r, x, a) {
     const s = r.state;
-    if (a.type === 'bet') { if (s.phase !== 'bet') return 'Das Rennen läuft schon.'; const key = String(a.key), n = clampChips(a.amount); if (!/^[sp][0-5]$/.test(key) || !n) return; if (n > x.chips) return 'Nicht genug Jetons.'; x.chips -= n; x.bets[key] = (x.bets[key] || 0) + n; x.ready = false; return; }
+    if (a.type === 'bet') { if (s.phase !== 'bet') return 'Das Rennen läuft schon.'; const key = String(a.key), n = clampChips(a.amount); if (!/^[sp][0-5]$/.test(key) || !n) return; if (n > x.chips) return 'Nicht genug Jetons.'; if (roundBets(x) + n > limOf(x)) return limMsg(x); x.chips -= n; x.bets[key] = (x.bets[key] || 0) + n; x.ready = false; return; }
     if (a.type === 'clear') { if (s.phase !== 'bet') return; for (const v of Object.values(x.bets)) x.chips += v; x.bets = {}; return; }
     if (a.type === 'go') { if (s.phase !== 'bet' || !Object.keys(x.bets).length) return 'Wette zuerst auf ein Pferd.'; x.ready = true; const hs = humans(s); if (hs.every(h => h.ready || !Object.keys(h.bets).length) && hs.some(h => h.ready)) schedule(r, 500, () => RACE.go(r)); return; }
   },
@@ -252,7 +255,7 @@ const SLOT = {
   },
   act(r, x, a) {
     if (a.type !== 'spin') return;
-    const bet = clampChips(a.amount); if (bet < 10) return 'Mindesteinsatz 10.'; if (bet > x.chips) return 'Nicht genug Jetons.'; if (bet > 25000) return 'Höchsteinsatz 25.000.';
+    const bet = clampChips(a.amount); if (bet < 10) return 'Mindesteinsatz 10.'; if (bet > x.chips) return 'Nicht genug Jetons.'; if (bet > Math.min(25000, limOf(x))) return `Höchsteinsatz ${Math.min(25000, limOf(x)).toLocaleString('de-DE')}${limOf(x) < 25000 ? ' – das Limit steigt mit dem Alter deines Kontos' : ''}.`;
     x.chips -= bet; const res = SLOT.spin(bet); x.chips = clampChips(x.chips + res.pay); x.win = res.pay - bet;
     x.slot = { id: (x.slot ? x.slot.id : 0) + 1, ...res, bet };
     if (res.pay >= bet * 15) log(r.state, `${x.name} knackt den Automaten: ${res.pay.toLocaleString('de-DE')}!`);
@@ -268,7 +271,7 @@ const RAD = {
   start(r) { r.state.phase = 'free'; },
   act(r, x, a) {
     if (a.type !== 'spin') return;
-    const bet = clampChips(a.amount); if (bet < 10) return 'Mindesteinsatz 10.'; if (bet > x.chips) return 'Nicht genug Jetons.'; if (bet > 25000) return 'Höchsteinsatz 25.000.';
+    const bet = clampChips(a.amount); if (bet < 10) return 'Mindesteinsatz 10.'; if (bet > x.chips) return 'Nicht genug Jetons.'; if (bet > Math.min(25000, limOf(x))) return `Höchsteinsatz ${Math.min(25000, limOf(x)).toLocaleString('de-DE')}${limOf(x) < 25000 ? ' – das Limit steigt mit dem Alter deines Kontos' : ''}.`;
     let v = Math.random() * RAD_W, i = 0; for (; i < RAD_SEGS.length - 1; i++) { v -= RAD_SEGS[i][1]; if (v <= 0) break; }
     const m = RAD_SEGS[i][0], pay = Math.floor(bet * m);
     x.chips = clampChips(x.chips - bet + pay); x.win = pay - bet;

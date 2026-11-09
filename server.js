@@ -37,6 +37,7 @@ if (konten && konten.czAcc) GAMES.casino.setBank({
   sync: (k, w) => konten.czSync(k, w),
   seated: konten.czSeated,
   isAdmin: k => konten.isAdmin(k),
+  maxBet: k => konten.czMaxBet(k),
   roomLive: (id, k) => { const r = rooms.get(id); return !!(r && r.state && (r.state.seats || []).some(x => x && x.acc === k)); },
 });
 const MOVED_HOST = MOVED.replace(/^https?:\/\//i, '');

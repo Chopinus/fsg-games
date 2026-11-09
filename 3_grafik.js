@@ -298,6 +298,11 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 52, title: 'Casino: Einsatzlimit für neue Konten', date: '09.11.2026', items: [
+      'Neue Konten haben ein kleineres Einsatzlimit, das mit dem Alter des Kontos wächst: 1.000 am ersten Tag, 2.500 am zweiten, 5.000 am dritten, 10.000 ab Tag 3, 25.000 ab Tag 5 und 50.000 ab einer Woche.',
+      'In der Casino-Rangliste erscheinen Konten erst, wenn sie 3 Tage alt sind.',
+      'Fehler behoben: Beim Pferderennen galt bisher gar kein Höchsteinsatz.'
+    ] },
     { id: 51, title: 'Admin-Schild', date: '09.11.2026', items: [
       'Der Admin (Chop) hat jetzt einen goldenen Namen mit einem roten Ⓐ oben rechts – im Hub, in Runden, im Casino, im Inselreich, im Ritterlauf und bei Kommentaren zu Ideen.',
       'So seht ihr, wenn er da ist, und könnt ihn direkt ansprechen. Das Schild hängt am Konto – niemand kann es sich über den Namen holen.'
