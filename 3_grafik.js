@@ -298,6 +298,10 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 53, title: 'Casino: kein Höchsteinsatz mehr', date: '09.11.2026', items: [
+      'Der Höchsteinsatz von 50.000 pro Runde ist weg – auch Spielautomat und Glücksrad haben keinen 25.000er-Deckel mehr.',
+      'Nur neue Konten haben in ihrer ersten Woche ein wachsendes Einsatzlimit (1.000 am 1. Tag bis 25.000 am 7. Tag), danach ist alles offen.'
+    ] },
     { id: 52, title: 'Casino: Einsatzlimit für neue Konten', date: '09.11.2026', items: [
       'Neue Konten haben ein kleineres Einsatzlimit, das mit dem Alter des Kontos wächst: 1.000 am 1. Tag, 2.500 am 2. Tag, 5.000 am 3. Tag, 10.000 am 4. und 5. Tag, 25.000 am 6. und 7. Tag und 50.000 ab einer Woche.',
       'In der Casino-Rangliste erscheinen Konten erst, wenn sie 3 Tage alt sind.',
