@@ -3586,13 +3586,14 @@
   }
   function nameTag(x, y, name, gold, adm) {
     ctx.font = `600 ${Math.round(4.2 * S)}px system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-    if (adm) { // Admin: goldener Name und rotes ADMIN-Schild
-      const tw = ctx.measureText(name).width; ctx.font = `800 ${Math.round(3.2 * S)}px system-ui,sans-serif`; const aw = ctx.measureText('ADMIN').width + 3 * S;
-      const w = tw + aw + 6 * S, x0 = x - w / 2;
-      ctx.fillStyle = 'rgba(14,22,40,.8)'; roundRect(x0, y - 6 * S, w, 6 * S, 2 * S); ctx.fill();
-      ctx.font = `700 ${Math.round(4.2 * S)}px system-ui,sans-serif`; ctx.textAlign = 'left'; ctx.fillStyle = '#ffd23f'; ctx.fillText(name, x0 + 2 * S, y - 0.7 * S);
-      ctx.fillStyle = '#d92b2b'; roundRect(x0 + tw + 3.5 * S, y - 5.2 * S, aw, 4.4 * S, 1.2 * S); ctx.fill();
-      ctx.font = `800 ${Math.round(3.2 * S)}px system-ui,sans-serif`; ctx.fillStyle = '#fff'; ctx.fillText('ADMIN', x0 + tw + 5 * S, y - 1.3 * S); ctx.textAlign = 'center';
+    if (adm) { // Admin: goldener Name und rotes Ⓐ oben rechts (wie ©)
+      const w = ctx.measureText(name).width + 4 * S;
+      ctx.fillStyle = 'rgba(14,22,40,.8)'; roundRect(x - w / 2, y - 6 * S, w, 6 * S, 2 * S); ctx.fill();
+      ctx.fillStyle = '#ffd23f'; ctx.fillText(name, x, y - 0.7 * S);
+      const cx = x + w / 2 + 0.6 * S, cy = y - 6.2 * S, r = 1.9 * S;
+      ctx.fillStyle = 'rgba(14,22,40,.8)'; ctx.beginPath(); ctx.arc(cx, cy, r + 0.4 * S, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#e5322d'; ctx.lineWidth = 0.55 * S; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+      ctx.font = `900 ${Math.round(2.6 * S)}px system-ui,sans-serif`; ctx.textBaseline = 'middle'; ctx.fillStyle = '#e5322d'; ctx.fillText('A', cx, cy + 0.15 * S);
       return;
     }
     const w = ctx.measureText(name).width + 4 * S;

@@ -59,8 +59,8 @@ function onMsg(m) {
 }
 
 /* ---------- Helfer ---------- */
-// Admin-Schild: goldener Name + rotes ADMIN. Der Server sagt, wer Admin ist (über das angemeldete Konto, nicht über den Namen).
-const admHTML = (name, adm) => (adm ? `<span class="adm-name">${esc(name)}</span><span class="adm-tag">ADMIN</span>` : esc(name));
+// Admin-Schild: goldener Name + rotes Ⓐ (wie ©) oben rechts. Der Server sagt, wer Admin ist (über das angemeldete Konto, nicht über den Namen).
+const admHTML = (name, adm) => (adm ? `<span class="adm-name">${esc(name)}</span><sup class="adm-tag" title="Admin">A</sup>` : esc(name));
 window.admHTML = admHTML;
 let FSG_ADMINS = []; // Anzeigenamen der Admin-Konten (Ritterlauf zeigt Kontonamen)
 fetch('/api/status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(r => r.json()).then(j => { FSG_ADMINS = (j && j.admins) || []; renderAcct(); admScan(); }).catch(() => {});

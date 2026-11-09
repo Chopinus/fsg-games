@@ -299,7 +299,7 @@
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
     { id: 51, title: 'Admin-Schild', date: '09.11.2026', items: [
-      'Der Admin (Chop) hat jetzt einen goldenen Namen mit rotem ADMIN-Schild – im Hub, in Runden, im Casino, im Inselreich, im Ritterlauf und bei Kommentaren zu Ideen.',
+      'Der Admin (Chop) hat jetzt einen goldenen Namen mit einem roten Ⓐ oben rechts – im Hub, in Runden, im Casino, im Inselreich, im Ritterlauf und bei Kommentaren zu Ideen.',
       'So seht ihr, wenn er da ist, und könnt ihn direkt ansprechen. Das Schild hängt am Konto – niemand kann es sich über den Namen holen.'
     ] },
     { id: 50, title: 'Ritterlauf: Puzzle abgeschafft', date: '09.11.2026', items: [
