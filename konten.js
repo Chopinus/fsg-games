@@ -567,7 +567,7 @@ function czTop(key) {
   const old = Date.now() - 30 * 864e5, all = Object.entries(accounts).filter(([, a]) => a.cz);
   const live = all.filter(([, a]) => (a.cz.t || 0) > old).sort((a, b) => (b[1].cz.w - (b[1].cz.d || 0)) - (a[1].cz.w - (a[1].cz.d || 0)));
   const best = all.slice().sort((a, b) => (b[1].cz.m || 0) - (a[1].cz.m || 0));
-  const pack = (list, f) => ({ top: list.slice(0, 50).map(([k, a]) => ({ n: a.name, c: f(a.cz), b: (a.cz.eq && a.cz.eq.badge) || '', me: k === key })), rank: key ? list.findIndex(([k]) => k === key) + 1 : 0, mine: key && accounts[key] && accounts[key].cz ? f(accounts[key].cz) : 0, players: list.length });
+  const pack = (list, f) => ({ top: list.slice(0, 50).map(([k, a]) => ({ n: a.name, c: f(a.cz), b: (a.cz.eq && a.cz.eq.badge) || '', me: k === key, adm: VS_ADMINS.includes(k) })), rank: key ? list.findIndex(([k]) => k === key) + 1 : 0, mine: key && accounts[key] && accounts[key].cz ? f(accounts[key].cz) : 0, players: list.length });
   const cur = pack(live, z => Math.max(0, z.w - (z.d || 0))), ever = pack(best, z => z.m || 0);
   return { top: cur.top.slice(0, 20), rank: cur.rank, players: cur.players, cur, ever };
 }
@@ -690,7 +690,7 @@ async function vsPull() {
 }
 const vsPublic = v => ['offen', 'angenommen', 'umgesetzt', 'abgelehnt'].includes(v.st);
 function vsView(v, key, admin) {
-  const o = { id: v.id, n: v.n, g: v.g, c: v.c, t: v.t, x: v.x, st: v.st, ts: v.ts, up: (v.votes || []).length, me: (v.votes || []).includes(key), mine: v.k === key };
+  const o = { id: v.id, n: v.n, g: v.g, c: v.c, t: v.t, x: v.x, st: v.st, ts: v.ts, up: (v.votes || []).length, me: (v.votes || []).includes(key), mine: v.k === key, adm: VS_ADMINS.includes(v.k) };
   if (v.reason && (o.mine || admin)) o.reason = v.reason;
   if (v.note) o.note = v.note;
   if (v.dn) { o.dn = v.dn; o.dnBy = v.dnBy || 'Admin'; }
@@ -760,7 +760,7 @@ const fail = ip => fails.set(ip, [...recent(ip), Date.now()]);
 async function handle(action, body, ip) {
   if (!ready) return [503, { error: 'Der Speicher startet noch. Versuch es in ein paar Sekunden noch mal.' }];
   const name = cleanName(body.name), key = keyOf(name), acc = accounts[key];
-  if (action === 'status') return [200, { durable, error: lastError || null, testers: TESTERS.length }];
+  if (action === 'status') return [200, { durable, error: lastError || null, testers: TESTERS.length, admins: VS_ADMINS.map(k => accounts[k] && accounts[k].name).filter(Boolean) }];
   if (action === 'create') {
     const lim = createLimit(ip); if (lim) return [429, { error: lim }];
     const dev = /^[a-f0-9]{32}$/.test(String(body._dev || '')) ? sha256('dev' + body._dev).slice(0, 24) : '';
@@ -863,4 +863,6 @@ load().finally(czOldLoad); vsLoad(); chatLoad(); wbLoad(); gLoad(); islLoad();
 process.on('SIGTERM', async () => { await flush(); await chatFlush(); await wbFlush(); await gFlush(); await islFlush(); await vsFlush(); process.exit(0); });
 process.on('SIGINT', async () => { await flush(); await chatFlush(); await wbFlush(); await gFlush(); await islFlush(); await vsFlush(); process.exit(0); });
 
-module.exports = { handle, flush, durable, tokenKey, czAcc, czSync, czSeated };
+const isAdmin = k => VS_ADMINS.includes(String(k || '').toLowerCase());
+const adminNames = () => VS_ADMINS.map(k => accounts[k] && accounts[k].name).filter(Boolean);
+module.exports = { handle, flush, durable, tokenKey, czAcc, czSync, czSeated, isAdmin, adminNames };

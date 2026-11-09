@@ -466,6 +466,7 @@ module.exports = {
     const i = seatOf(s, pid), x = s.seats[i];
     if (x && x.acc && BANK) BANK.sync(x.acc, x.chips + (x.stack || 0)); // Stand laufend aufs Konto schreiben
     const v = s.phase === 'idle' || s.phase === 'paused' ? { seats: s.seats.map(q => q && { name: q.name, bot: q.bot }) } : GAME[s.kind].view(s, i);
+    if (v && Array.isArray(v.seats) && BANK && BANK.isAdmin) v.seats = v.seats.map((q, k) => (q && s.seats[k] && s.seats[k].acc && BANK.isAdmin(s.seats[k].acc) ? { ...q, adm: true } : q)); // Admin-Schild
     return { kind: s.kind, phase: s.phase, left: s.ends ? Math.max(0, s.ends - now()) : null, log: s.log, mySeat: i, host: r.host === pid,
       wallet: x ? x.chips + (x.stack || 0) : null, chips: x ? x.chips : null, free: s.seats.filter(q => !q).length, ...v };
   },

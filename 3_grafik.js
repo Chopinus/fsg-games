@@ -298,6 +298,10 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 51, title: 'Admin-Schild', date: '09.11.2026', items: [
+      'Der Admin (Chop) hat jetzt einen goldenen Namen mit rotem ADMIN-Schild – im Hub, in Runden, im Casino, im Inselreich, im Ritterlauf und bei Kommentaren zu Ideen.',
+      'So seht ihr, wenn er da ist, und könnt ihn direkt ansprechen. Das Schild hängt am Konto – niemand kann es sich über den Namen holen.'
+    ] },
     { id: 50, title: 'Ritterlauf: Puzzle abgeschafft', date: '09.11.2026', items: [
       'Die Puzzle-Funktion ist weg: Neue Helden (Assassine, Nekromant, Barde, Druidin, Tüftlerin, Runengolem) gibt es nur noch im Sternenruf (Banner). Die erste Kopie schaltet den Helden frei.',
       'Expeditionen geben weiter Heldensplitter. Im Laden tauschst du sie jetzt im Splitter-Tausch gegen Sternkristalle (100 Splitter = 10 Sternkristalle).',

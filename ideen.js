@@ -4,6 +4,7 @@
 (() => {
   const q = s => document.querySelector(s);
   const h = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const adm = (n, a) => (a && window.admHTML ? window.admHTML(n, true) : h(n)); // Admin-Schild
   const konto = () => { try { const k = JSON.parse(localStorage.getItem('fsg.konto') || 'null'); return k && k.name && k.token ? k : null; } catch { return null; } };
   const say = (m) => (typeof toast === 'function' ? toast(m) : alert(m));
   async function call(a, body) {
@@ -46,9 +47,9 @@
     return `<article class="vz-card">
       <div class="vz-top"><span class="vz-st ${st[1]}">${st[0]}</span><span class="pill">${h(v.g)}</span>${cat ? `<span class="vz-cat">${h(cat)}</span>` : ''}<span class="vz-grow"></span>${vote}</div>
       <h3>${h(v.t)}</h3><p class="vz-x">${h(v.x)}</p>
-      ${v.reason ? `<p class="vz-why no">Grund: ${h(v.reason)}</p>` : ''}${v.dn ? `<div class="vz-cmt"><b>💬 ${h(v.dnBy || 'Admin')}:</b> ${h(v.dn)}</div>` : ''}${v.note ? `<p class="vz-why ok">Umgesetzt: ${h(v.note)}</p>` : ''}
+      ${v.reason ? `<p class="vz-why no">Grund: ${h(v.reason)}</p>` : ''}${v.dn ? `<div class="vz-cmt"><b>💬 ${adm(v.dnBy || 'Admin', true)}:</b> ${h(v.dn)}</div>` : ''}${v.note ? `<p class="vz-why ok">Umgesetzt: ${h(v.note)}</p>` : ''}
       ${ai}${adm}
-      <div class="vz-meta">von ${h(v.n)}${v.mine ? ' (du)' : ''} · ${date(v.ts)} ${del}</div></article>`;
+      <div class="vz-meta">von ${adm(v.n, v.adm)}${v.mine ? ' (du)' : ''} · ${date(v.ts)} ${del}</div></article>`;
   }
 
   function listFor(t) {

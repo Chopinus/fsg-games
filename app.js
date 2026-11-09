@@ -59,6 +59,34 @@ function onMsg(m) {
 }
 
 /* ---------- Helfer ---------- */
+// Admin-Schild: goldener Name + rotes ADMIN. Der Server sagt, wer Admin ist (über das angemeldete Konto, nicht über den Namen).
+const admHTML = (name, adm) => (adm ? `<span class="adm-name">${esc(name)}</span><span class="adm-tag">ADMIN</span>` : esc(name));
+window.admHTML = admHTML;
+let FSG_ADMINS = []; // Anzeigenamen der Admin-Konten (Ritterlauf zeigt Kontonamen)
+fetch('/api/status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(r => r.json()).then(j => { FSG_ADMINS = (j && j.admins) || []; renderAcct(); admScan(); }).catch(() => {});
+// Namen in Spielen ohne eigene Admin-Kennung (Ritterlauf, Brettspiel-Runden) nachträglich schmücken
+function admDecorate(root, names) {
+  if (!root || !names.length) return;
+  const want = new Set(names.map(n => n.toLowerCase()));
+  const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => {
+    const t = n.nodeValue.trim(); if (!t || !want.has(t.toLowerCase())) return NodeFilter.FILTER_REJECT;
+    const p = n.parentElement; if (!p || p.closest('.adm-name,.adm-tag,input,textarea,script,style,button,select,option,.chip')) return NodeFilter.FILTER_REJECT;
+    return NodeFilter.FILTER_ACCEPT; } });
+  const hits = []; while (tw.nextNode()) hits.push(tw.currentNode);
+  for (const n of hits) { const t = n.nodeValue, w = document.createElement('span'); w.innerHTML = t.replace(t.trim(), admHTML(t.trim(), true)); n.replaceWith(...w.childNodes); }
+}
+let admBusy = false;
+function admScan() {
+  if (admBusy) return; admBusy = true;
+  try {
+    const solo = $('#solo');
+    if (solo && !solo.hidden && window.Ritter && Ritter.isOpen && Ritter.isOpen()) admDecorate(solo, FSG_ADMINS); // Ritterlauf: Kontonamen
+    const rm = $('#room');
+    if (rm && !rm.hidden && room && room.players) admDecorate(rm, room.players.filter(p => p.adm).map(p => p.name)); // Runde: nur wer wirklich Admin ist
+  } finally { admBusy = false; }
+}
+let admT = null;
+new MutationObserver(() => { if (!admBusy && !admT) admT = requestAnimationFrame(() => { admT = null; admScan(); }); }).observe(document.body, { childList: true, subtree: true, characterData: true });
 let toastT;
 function toast(msg, big) { const t = $('#toast'); t.textContent = msg; t.className = 'toast' + (big ? ' big' : ''); t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), big ? 2600 : 3600); }
 const nick = () => ($('#nick').value || '').trim();
@@ -96,7 +124,7 @@ function renderRooms() {
     const pill = r.status === 'lobby' ? '<span class="pill wait">Wartet</span>' : r.status === 'playing' ? '<span class="pill play">Läuft</span>' : '<span class="pill end">Beendet</span>';
     const mine = r.id === roomId;
     return `<div class="roomrow"><div style="min-width:0"><div class="name">${esc(r.name)}</div>
-      <div class="meta"><span class="chip">${esc(g.title)}</span>${pill}${r.players.map(p => `<span class="chip">${esc(p.name)}${p.host ? ' ★' : ''}</span>`).join('')}</div></div>
+      <div class="meta"><span class="chip">${esc(g.title)}</span>${pill}${r.players.map(p => `<span class="chip">${admHTML(p.name, p.adm)}${p.host ? ' ★' : ''}</span>`).join('')}</div></div>
       <button class="btn small" data-join="${r.id}" ${r.full && !mine ? 'disabled' : ''}>${mine ? 'Zurück zur Runde' : r.full ? 'Voll' : r.status === 'lobby' ? 'Beitreten' : 'Einsteigen'}</button></div>`;
   }).join('');
 }
@@ -106,7 +134,7 @@ function needNick() {
   store.set('fsg.nick', n); send({ t: 'name', name: n }); return true;
 }
 // Casino wird erst geladen, wenn es jemand braucht
-const CZ_V = 46; // bei jeder Casino-Änderung erhöhen, damit Geräte die neue Datei laden
+const CZ_V = 47; // bei jeder Casino-Änderung erhöhen, damit Geräte die neue Datei laden
 function loadCasino(cb) {
   if (window.Casino) { cb(); return; }
   if (loadCasino.busy) { loadCasino.q.push(cb); return; }
@@ -151,7 +179,7 @@ async function kontoApi(action, body) {
 }
 function renderAcct() {
   const el = $('#acct'); if (!el) return;
-  if (konto) { el.innerHTML = `<div class="acct-on"><span>👤 Angemeldet als <b>${esc(konto.name)}</b><small>Ein Konto für alle Spiele – dein Fortschritt im Ritterlauf und im Inselreich wird online gesichert.</small></span><button class="btn small ghost" data-acct="out">Abmelden</button></div>`; return; }
+  if (konto) { el.innerHTML = `<div class="acct-on"><span>👤 Angemeldet als <b>${admHTML(konto.name, FSG_ADMINS.some(n => n.toLowerCase() === konto.name.toLowerCase()))}</b><small>Ein Konto für alle Spiele – dein Fortschritt im Ritterlauf und im Inselreich wird online gesichert.</small></span><button class="btn small ghost" data-acct="out">Abmelden</button></div>`; return; }
   if (!kontoForm) { el.innerHTML = `<button class="btn small ghost acct-open" data-acct="open">👤 Anmelden oder Konto anlegen</button><small class="acct-hint">Ein Konto für alle Spiele: Spielstände auf jedem Gerät weiterspielen.</small>${kontoMsg ? `<small class="acct-msg">${esc(kontoMsg)}</small>` : ''}`; return; }
   el.innerHTML = `<form class="acct-form" id="acctForm" autocomplete="on"><b>👤 Konto für alle Spiele</b>
     <input name="n" maxlength="20" placeholder="Kontoname" autocomplete="username"><input name="p" type="password" maxlength="60" placeholder="Passwort (mind. 4 Zeichen)" autocomplete="current-password">
@@ -224,7 +252,7 @@ function setMode(st, mode) { if (st.dataset.mode !== mode) { st.dataset.mode = m
 function lobbyHTML() {
   const r = room, n = r.players.length, need = r.min;
   return `<h2>Warten auf Mitspieler</h2>
-    <div class="seats">${r.players.map(p => `<span class="chip ${p.online ? '' : 'off'}">${esc(p.name)}${p.id === r.host ? ' ★' : ''}${p.id === r.me ? ' (du)' : ''}</span>`).join('')}</div>
+    <div class="seats">${r.players.map(p => `<span class="chip ${p.online ? '' : 'off'}">${admHTML(p.name, p.adm)}${p.id === r.host ? ' ★' : ''}${p.id === r.me ? ' (du)' : ''}</span>`).join('')}</div>
     <p class="note">Freunde öffnen</p><div class="shareurl">${esc(location.host)}</div>
     <p class="note">und tippen bei „${esc(r.name)}“ auf Beitreten.${r.seats < 12 ? ` Es spielen bis zu ${r.seats}, alle weiteren schauen zu.` : ''}</p>
     ${isHost() ? `<div class="row" style="justify-content:center"><button class="btn" data-room="start" ${n < need ? 'disabled' : ''}>${n < need ? `Noch ${need - n} Spieler nötig` : 'Spiel starten'}</button>

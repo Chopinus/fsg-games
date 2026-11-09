@@ -3584,8 +3584,17 @@
       if (hat && hat !== 'none') drawHat(px, py - 16 * S, dir, hat);
     }
   }
-  function nameTag(x, y, name, gold) {
+  function nameTag(x, y, name, gold, adm) {
     ctx.font = `600 ${Math.round(4.2 * S)}px system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    if (adm) { // Admin: goldener Name und rotes ADMIN-Schild
+      const tw = ctx.measureText(name).width; ctx.font = `800 ${Math.round(3.2 * S)}px system-ui,sans-serif`; const aw = ctx.measureText('ADMIN').width + 3 * S;
+      const w = tw + aw + 6 * S, x0 = x - w / 2;
+      ctx.fillStyle = 'rgba(14,22,40,.8)'; roundRect(x0, y - 6 * S, w, 6 * S, 2 * S); ctx.fill();
+      ctx.font = `700 ${Math.round(4.2 * S)}px system-ui,sans-serif`; ctx.textAlign = 'left'; ctx.fillStyle = '#ffd23f'; ctx.fillText(name, x0 + 2 * S, y - 0.7 * S);
+      ctx.fillStyle = '#d92b2b'; roundRect(x0 + tw + 3.5 * S, y - 5.2 * S, aw, 4.4 * S, 1.2 * S); ctx.fill();
+      ctx.font = `800 ${Math.round(3.2 * S)}px system-ui,sans-serif`; ctx.fillStyle = '#fff'; ctx.fillText('ADMIN', x0 + tw + 5 * S, y - 1.3 * S); ctx.textAlign = 'center';
+      return;
+    }
     const w = ctx.measureText(name).width + 4 * S;
     ctx.fillStyle = gold ? 'rgba(227,169,43,.85)' : 'rgba(14,22,40,.7)'; roundRect(x - w / 2, y - 6 * S, w, 6 * S, 2 * S); ctx.fill();
     ctx.fillStyle = gold ? '#2a1608' : '#fff'; ctx.fillText(name, x, y - 0.7 * S);
@@ -3903,7 +3912,7 @@
     for (const o of others.values()) {
       if (!sameZone(o, cave_)) continue;
       const hx = ox + o.x * u, hy = oy + o.y * u - (o.inBoat ? 0.6 : 1.6) * u;
-      nameTag(hx, hy, `${crew.names.includes(o.name) ? '👥 ' : ''}${o.name} · St. ${o.lvl || 1}${o.meta && o.meta.title ? ' · ' + o.meta.title : ''}`, false);
+      nameTag(hx, hy, `${crew.names.includes(o.name) ? '👥 ' : ''}${o.name} · St. ${o.lvl || 1}${o.meta && o.meta.title ? ' · ' + o.meta.title : ''}`, false, o.adm);
       const b = bubbles.get(o.name); if (b && now - b.t < 6000) bubble(hx, hy - 7 * S, b.m);
     }
     const mb = bubbles.get(me.name); if (mb && now - mb.t < 6000) bubble(ox + me.x * u, oy + me.y * u - (me.inBoat ? 0.6 : 1.6) * u - S, mb.m);
@@ -4133,13 +4142,13 @@
       online = m.n || online;
       const seen = new Set();
       for (const p of m.p || []) {
-        let [id, name, col, x, y, dir, moving, inBoat, bx, by, bh, sail, atk, lvl] = p, mt = p[14]; seen.add(id);
+        let [id, name, col, x, y, dir, moving, inBoat, bx, by, bh, sail, atk, lvl] = p, mt = p[14], adm = p[15] === 1; seen.add(id);
         const inCave = x < COX / 2; let cidx = 0; if (inCave) { cidx = Math.floor((x - COX) / 1000); x -= COX + cidx * 1000; y -= COY; }
         const tgt = { x, y, bx: inBoat ? x : bx, by: inBoat ? y : by, bh };
         let o = others.get(id);
         if (!o || o.cave !== inCave || o.cidx !== cidx || Math.hypot(o.x - x, o.y - y) > 20) { o = { ...tgt, t: tgt, ft: 0 }; others.set(id, o); }
         o.isl = inCave ? 'c' + cidx : (nearestIsland(x, y) || {}).name;
-        Object.assign(o, { name, col, dir, moving, inBoat, sail, atk, meta: mt || null, lvl: lvl || 1, cave: inCave, cidx, t: tgt });
+        Object.assign(o, { name, col, dir, moving, inBoat, sail, atk, meta: mt || null, lvl: lvl || 1, cave: inCave, cidx, t: tgt, adm });
       }
       for (const id of [...others.keys()]) if (!seen.has(id)) others.delete(id);
       mapDirty = true;

@@ -108,6 +108,7 @@ module.exports = function (send, konten) {
             CL = null; moved = true;
           }
           AP[k] = c.pid; touch();
+          const me0 = P.get(c); if (me0) me0.adm = !!(konten.isAdmin && konten.isAdmin(k)); // Admin-Schild über dem Kopf
         }
       }
       send(c, { t: 'i_hi', id: c.pid, n: P.size });
@@ -182,7 +183,7 @@ module.exports = function (send, konten) {
     for (const [c, me] of all) {
       if (Date.now() - me.last > 5 * 60e3) { P.delete(c); continue; }
       const near = [];
-      for (const [o, q] of all) { if (o === c) continue; const bx = q.s[4] ? q.s[0] : q.s[5], by = q.s[4] ? q.s[1] : q.s[6]; if (Math.hypot(q.s[0] - me.s[0], q.s[1] - me.s[1]) < NEAR || Math.hypot(bx - me.s[0], by - me.s[1]) < NEAR) near.push([q.id, q.name, q.col, ...q.s, q.meta || 0]); }
+      for (const [o, q] of all) { if (o === c) continue; const bx = q.s[4] ? q.s[0] : q.s[5], by = q.s[4] ? q.s[1] : q.s[6]; if (Math.hypot(q.s[0] - me.s[0], q.s[1] - me.s[1]) < NEAR || Math.hypot(bx - me.s[0], by - me.s[1]) < NEAR) near.push([q.id, q.name, q.col, ...q.s, q.meta || 0, q.adm ? 1 : 0]); }
       const key = JSON.stringify(near);
       if (key !== me.sent || tick % 10 === 0) { me.sent = key; send(c, { t: 'i_w', p: near, n: P.size }); }
     }

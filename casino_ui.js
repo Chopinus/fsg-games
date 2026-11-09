@@ -4,6 +4,7 @@
 (function () {
   const q = s => document.querySelector(s);
   const fmtN = n => Math.floor(n || 0).toLocaleString('de-DE');
+  const admN = (n, a) => (a && window.admHTML ? window.admHTML(n, true) : esc(n)); // Admin-Schild
   const short = n => (n >= 1e9 ? (n / 1e9).toFixed(n >= 1e10 ? 0 : 1).replace('.', ',') + ' Mrd.' : n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1).replace('.', ',') + ' Mio.' : n >= 1e4 ? Math.round(n / 1e3) + ' Tsd.' : fmtN(n));
   function set(el, html) { if (typeof el === 'string') el = q(el); if (el && el.dataset.h !== html) { el.innerHTML = html; el.dataset.h = html; } return el; }
 
@@ -116,8 +117,8 @@
     if (!czBoard) { set(el, '<p class="cz-note">Rangliste wird geladen …</p>'); return; }
     const B = (boardTab === 'ever' ? czBoard.ever : czBoard.cur) || { top: czBoard.top || [], rank: czBoard.rank, players: czBoard.players };
     const top = B.top || [], pod = [top[1], top[0], top[2]], place = [2, 1, 3];
-    const podium = top.length ? `<div class="cz-podium">${pod.map((e, i) => e ? `<div class="cz-pod p${place[i]} ${e.me ? 'me' : ''}"><span class="cz-medal">${['🥈', '🥇', '🥉'][i]}</span><b>${e.b && BADGE[e.b] ? BADGE[e.b] + ' ' : ''}${esc(e.n)}</b><em>${fmtN(e.c)}</em><div class="cz-step">${place[i]}.</div></div>` : `<div class="cz-pod p${place[i]} empty"><div class="cz-step">${place[i]}.</div></div>`).join('')}</div>` : '<p class="cz-note">Noch niemand auf der Liste.</p>';
-    const rest = top.slice(3).map((e, i) => `<div class="cz-rrow ${e.me ? 'me' : ''}"><b>${i + 4}.</b><span>${e.b && BADGE[e.b] ? BADGE[e.b] + ' ' : ''}${esc(e.n)}${e.me ? ' (du)' : ''}</span><em>${fmtN(e.c)}</em></div>`).join('');
+    const podium = top.length ? `<div class="cz-podium">${pod.map((e, i) => e ? `<div class="cz-pod p${place[i]} ${e.me ? 'me' : ''}"><span class="cz-medal">${['🥈', '🥇', '🥉'][i]}</span><b>${e.b && BADGE[e.b] ? BADGE[e.b] + ' ' : ''}${admN(e.n, e.adm)}</b><em>${fmtN(e.c)}</em><div class="cz-step">${place[i]}.</div></div>` : `<div class="cz-pod p${place[i]} empty"><div class="cz-step">${place[i]}.</div></div>`).join('')}</div>` : '<p class="cz-note">Noch niemand auf der Liste.</p>';
+    const rest = top.slice(3).map((e, i) => `<div class="cz-rrow ${e.me ? 'me' : ''}"><b>${i + 4}.</b><span>${e.b && BADGE[e.b] ? BADGE[e.b] + ' ' : ''}${admN(e.n, e.adm)}${e.me ? ' (du)' : ''}</span><em>${fmtN(e.c)}</em></div>`).join('');
     const mine = B.rank > top.length ? `<div class="cz-rrow me"><b>${B.rank}.</b><span>Du</span><em>${fmtN(B.mine || net())}</em></div>` : '';
     set(el, `<div class="cz-tabs"><button class="cz-btn small ${boardTab === 'cur' ? '' : 'dark'}" data-cz-bt="cur">💰 Momentan</button><button class="cz-btn small ${boardTab === 'ever' ? '' : 'dark'}" data-cz-bt="ever">👑 Jemals am meisten</button></div>
       <p class="cz-note">${boardTab === 'cur' ? 'Jetons, die du gerade hast – Bankschulden werden abgezogen. Zählt die letzten 30 Tage.' : 'Der höchste Jetonstand, den jemand je hatte (ohne Bankschulden).'}</p>
@@ -530,7 +531,7 @@
     set(main.querySelector('.cz-seats'), v.seats.map((x, i) => {
       if (!x) return `<div class="cz-seat empty">freier Platz</div>`;
       const turn = v.phase === 'play' && v.turn && v.turn.i === i;
-      return `<div class="cz-seat ${i === v.mySeat ? 'me' : ''} ${turn ? 'turn' : ''}"><div class="nm">${esc(x.name)} ${x.bot ? '<i>Bot</i>' : ''}</div>
+      return `<div class="cz-seat ${i === v.mySeat ? 'me' : ''} ${turn ? 'turn' : ''}"><div class="nm">${admN(x.name, x.adm)} ${x.bot ? '<i>Bot</i>' : ''}</div>
         ${x.hands.length ? x.hands.map((h, k) => `<div style="margin:2px 0">${cardsHTML(h.cards, 'bj' + i + '_' + k, true)}<span class="cz-val">${h.v}</span> ${stackHTML(h.bet)}${h.res && dealerDone ? ` <span class="cz-badge ${RES[h.res][1]}">${RES[h.res][0]}</span>` : ''}</div>`).join('') : `<div style="min-height:66px;display:grid;place-items:center">${x.bet ? stackHTML(x.bet) + (x.ready ? ' <span class="cz-badge">bereit</span>' : '') : '<span class="cz-ghost">kein Einsatz</span>'}</div>`}
       </div>`;
     }).join(''));
@@ -680,7 +681,7 @@
     if (me && me.slot && me.slot.id !== SL.id) { SL.id = me.slot.id; spinAnim(main, me.slot); }
     if (!SL.spinning) set(main.querySelector('.cz-bar'), me ? `<div class="cz-chips">${[10, 50, 100, 500, 1000, 5000].map(b => `<button class="cz-btn small ${b === SL.bet ? '' : 'dark'}" data-czs="${b}">${short(b)}</button>`).join('')}</div><button class="cz-btn red" data-czt="spin" style="font-size:20px;padding:14px 34px" ${wallet >= SL.bet ? '' : 'disabled'}>DREHEN · ${fmtN(SL.bet)}</button>` : '');
     const others = v.seats.filter((x, i) => x && i !== v.mySeat && x.slot);
-    let oth = main.parentNode.querySelector('.cz-others'); if (oth) set(oth, others.length ? `<div class="cz-log">${others.map(x => `<span>${esc(x.name)}: ${x.slot.pay ? '+' + fmtN(x.slot.pay) : 'kein Gewinn'}</span>`).join('')}</div>` : '');
+    let oth = main.parentNode.querySelector('.cz-others'); if (oth) set(oth, others.length ? `<div class="cz-log">${others.map(x => `<span>${admN(x.name, x.adm)}: ${x.slot.pay ? '+' + fmtN(x.slot.pay) : 'kein Gewinn'}</span>`).join('')}</div>` : '');
   }
   function showGrid(main, sres, hits) {
     sres.grid.forEach((col, c) => { const el = main.querySelector(`[data-reel="${c}"]`); el.style.transition = 'none'; el.style.transform = 'none'; el.innerHTML = col.map(symHTML).join(''); });
@@ -738,7 +739,7 @@
     if (me && me.rad && me.rad.id !== RD.id) { RD.id = me.rad.id; radSpin(main, me.rad); }
     if (!RD.spinning) set(main.querySelector('.cz-bar'), me ? `<div class="cz-chips">${[10, 50, 100, 500, 1000, 5000, 25000].map(b => `<button class="cz-btn small ${b === RD.bet ? '' : 'dark'}" data-czrb="${b}">${short(b)}</button>`).join('')}</div><button class="cz-btn red" data-czt="radspin" style="font-size:20px;padding:14px 34px" ${wallet >= RD.bet ? '' : 'disabled'}>DREHEN · ${fmtN(RD.bet)}</button>` : '<span class="cz-note">Setz dich hin, um zu drehen.</span>');
     const others = v.seats.filter((x, i) => x && i !== v.mySeat && x.rad);
-    let oth = main.parentNode.querySelector('.cz-others'); if (oth) set(oth, others.length ? `<div class="cz-log">${others.map(x => `<span>${esc(x.name)}: ${mTxt(x.rad.m)} → ${fmtN(x.rad.pay)}</span>`).join('')}</div>` : '');
+    let oth = main.parentNode.querySelector('.cz-others'); if (oth) set(oth, others.length ? `<div class="cz-log">${others.map(x => `<span>${admN(x.name, x.adm)}: ${mTxt(x.rad.m)} → ${fmtN(x.rad.pay)}</span>`).join('')}</div>` : '');
   }
   // Winkel, bei dem Feld i (mit zufälliger Stelle im Feld) unter dem Pfeil oben steht
   function radTarget(r) {
@@ -773,7 +774,7 @@
       if (!x) return `<div class="cz-pseat" style="left:${px}%;top:${py}%"><div class="box cz-ghost">freier Platz</div></div>`;
       const cls = `${i === v.mySeat ? 'me' : ''} ${v.turnI === i ? 'turn' : ''} ${x.folded ? 'fold' : ''}`;
       const betY = py > 50 ? -62 : 62;
-      return `<div class="cz-pseat ${cls}" style="left:${px}%;top:${py}%">${cardsHTML(x.cards, 'pk' + i)}<div class="box"><div class="nm" style="font-weight:800;font-size:13px">${esc(x.name)}${x.bot ? ' <i style="opacity:.6;font-style:normal;font-size:11px">Bot</i>' : ''}</div><div class="stk">${fmtN(x.stack)}</div>
+      return `<div class="cz-pseat ${cls}" style="left:${px}%;top:${py}%">${cardsHTML(x.cards, 'pk' + i)}<div class="box"><div class="nm" style="font-weight:800;font-size:13px">${admN(x.name, x.adm)}${x.bot ? ' <i style="opacity:.6;font-style:normal;font-size:11px">Bot</i>' : ''}</div><div class="stk">${fmtN(x.stack)}</div>
         ${x.shown ? `<div class="cz-badge ${x.win > 0 ? 'win' : ''}">${esc(x.shown)}</div>` : x.allin ? '<div class="cz-badge">ALL-IN</div>' : x.folded ? '<div class="cz-ghost">ausgestiegen</div>' : ''}${x.win > 0 && v.street === 'show' ? `<div class="cz-badge win">+${fmtN(x.win)}</div>` : ''}</div>
         ${x.bet ? `<div class="bet" style="top:calc(50% + ${betY}px)">${fmtN(x.bet)}</div>` : ''}${v.btn === i ? `<span class="cz-dbtn" style="right:-6px;top:-6px">D</span>` : ''}</div>`;
     }).join(''));

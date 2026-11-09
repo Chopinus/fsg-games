@@ -29,11 +29,14 @@ const MOVED = (s => (s && !/^https?:\/\//i.test(s) ? 'https://' + s : s))(String
 const konten = MOVED ? null : require('./konten.js');
 // Casino: Jetons gehören dem Hub-Konto. Hier merkt sich der Server, welches Konto zu welchem Spieler gehört.
 const ACC_OF = new Map();
+// Admin (z. B. Chop): bekommt im Spiel einen goldenen Namen mit rotem ADMIN-Schild – geprüft über das angemeldete Konto, nicht über den Spielernamen
+const isAdm = pid => !!(konten && konten.isAdmin && konten.isAdmin(ACC_OF.get(pid)));
 if (konten && konten.czAcc) GAMES.casino.setBank({
   accOf: pid => ACC_OF.get(pid) || null,
   acc: k => konten.czAcc(k),
   sync: (k, w) => konten.czSync(k, w),
   seated: konten.czSeated,
+  isAdmin: k => konten.isAdmin(k),
   roomLive: (id, k) => { const r = rooms.get(id); return !!(r && r.state && (r.state.seats || []).some(x => x && x.acc === k)); },
 });
 const MOVED_HOST = MOVED.replace(/^https?:\/\//i, '');
@@ -197,7 +200,7 @@ function summary(r) {
   const G = GAMES[r.game];
   return {
     id: r.id, game: r.game, name: r.name, status: r.status,
-    players: r.players.map(p => ({ name: p.name, host: p.id === r.host })),
+    players: r.players.map(p => ({ name: p.name, host: p.id === r.host, adm: isAdm(p.id) })),
     seats: G.seats, full: r.players.length >= ROOM_CAP,
   };
 }
@@ -225,7 +228,7 @@ function pushRoom(r) {
       room: {
         id: r.id, game: r.game, name: r.name, host: r.host, status: r.status, me: c.pid,
         min: G.min, seats: G.seats,
-        players: r.players.map(p => ({ id: p.id, name: p.name, online: online(r, p.id) })),
+        players: r.players.map(p => ({ id: p.id, name: p.name, online: online(r, p.id), adm: isAdm(p.id) })),
         view,
       },
     });
@@ -269,7 +272,9 @@ function handle(c, m) {
   if (!c.pid) return;
   if (m.t === 'konto') { // Hub-Konto für diese Verbindung (Casino-Jetons liegen beim Konto)
     const k = konten && konten.tokenKey && m.name && m.token ? konten.tokenKey(String(m.name).slice(0, 20), String(m.token).slice(0, 64)) : null;
-    c.acc = k || null; if (k) ACC_OF.set(c.pid, k); else ACC_OF.delete(c.pid); return;
+    c.acc = k || null; if (k) ACC_OF.set(c.pid, k); else ACC_OF.delete(c.pid);
+    if (c.room && rooms.get(c.room)) pushRoom(rooms.get(c.room)); broadcastRooms(); // Admin-Schild sofort zeigen
+    return;
   }
   if (typeof m.t === 'string' && m.t.startsWith('i_')) { ISL.handle(c, m); return; } // Inselreich
   if (m.t === 'name') {

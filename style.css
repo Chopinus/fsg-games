@@ -1652,3 +1652,7 @@ html.rl-appmode,html.rl-appmode body{overflow:hidden;overscroll-behavior:none}
 .acct-open{align-self:flex-start}.acct-msg{color:#ffd27a;font-weight:700;font-size:13px}
 .acct-form{display:flex;flex-direction:column;gap:8px;background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:12px}
 .acct-row{display:flex;gap:8px;flex-wrap:wrap}
+
+/* Admin-Schild: goldener Name mit rotem ADMIN */
+.adm-name{color:#ffd23f!important;font-weight:800;text-shadow:0 0 8px rgba(255,200,40,.35)}
+.adm-tag{display:inline-block;margin-left:5px;padding:1px 5px 0;border-radius:4px;background:#d92b2b;color:#fff!important;font-size:10px;font-weight:900;letter-spacing:.08em;line-height:1.5;vertical-align:middle;text-shadow:none;font-family:var(--body);text-transform:uppercase;box-shadow:0 1px 0 #7a1010}
