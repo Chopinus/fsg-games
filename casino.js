@@ -435,7 +435,11 @@ module.exports = {
     if (s.paused) { s.paused = false; s.phase = 'idle'; if (s.kind === 'poker') { s.btn = s.btn ?? -1; s.hand = s.hand || 0; PK.newHand(r); } else GAME[s.kind].start(r); if (a.type === 'resume') return; }
     let i = seatOf(s, pid);
     if (a.type === 'sit') {
-      if (i >= 0) return 'quiet';
+      if (i >= 0) { // schon am Tisch (z. B. aus einem anderen Tab): Stand vom Gerät übernehmen, solange nichts im Spiel ist
+        const x = s.seats[i], busy = x.bet > 0 || x.stack > 0 || Object.keys(x.bets || {}).length || (x.hands || []).some(h => h.bet > 0 && !h.res);
+        if (!busy && a.chips != null) x.chips = clampChips(a.chips);
+        return 'quiet';
+      }
       const free = s.seats.findIndex(x => !x); if (free < 0) return 'Alle Plätze sind besetzt. Du schaust zu.';
       const p = r.players.find(x => x.id === pid); s.seats[free] = newSeat(pid, p ? p.name : 'Gast', clampChips(a.chips), false);
       if (s.kind === 'poker') PK.buyIn(s.seats[free]);

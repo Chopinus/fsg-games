@@ -298,6 +298,9 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 41, title: 'Casino: Jetons gingen verloren – behoben', date: '09.11.2026', items: [
+      ['Behoben', 'Casino: Ein alter Platz an einem Tisch (z. B. aus einem zweiten Tab) konnte deinen Jetonstand auf einen alten Wert zurücksetzen'],
+    ] },
     { id: 40, title: 'Casino: Besseres Glücksrad', date: '05.11.2026', items: [
       ['Verbessert', 'Casino: Glücksrad mit besseren Chancen – etwa 97 % Rückfluss wie beim Roulette, fast jede zweite Drehung gewinnt'],
     ] },

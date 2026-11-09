@@ -11,6 +11,7 @@
   const WK = 'casino.jetons', DAY = 'casino.tag', HELP = 'casino.hilfe';
   const store = { get: k => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
   let wallet = store.get(WK) == null ? NaN : Number(store.get(WK)); if (!(wallet >= 0)) { wallet = 10000; store.set(WK, wallet); }
+  try { addEventListener('storage', e => { if (e.key === WK && e.newValue != null && Number(e.newValue) >= 0) { wallet = Number(e.newValue); document.querySelectorAll('[data-cz-wallet]').forEach(el => (el.textContent = fmtN(wallet))); } }); } catch {} // andere Tabs
   const setWallet = v => { wallet = Math.max(0, Math.min(1e12, Math.floor(v))); store.set(WK, wallet); document.querySelectorAll('[data-cz-wallet]').forEach(e => (e.textContent = fmtN(wallet))); czReport(); };
 
   /* ---------- Shop: Gewinn-Effekte, Gewinn-Sounds, Tischfarben und Abzeichen für Jetons ---------- */
@@ -327,8 +328,15 @@
     { kind: 'slots', title: 'Spielautomat', text: '5 Walzen, 10 Gewinnlinien, Joker ersetzen alles. Drei Siebener bringen das große Glück.', art: () => `<div style="font-family:Bungee,sans-serif;font-size:40px;color:#ffe9a8;text-shadow:0 0 16px rgba(255,200,80,.7)">7 7 7</div>` },
   ];
   let lobby = null;
+  // Gutschriften (z. B. Ersatz nach einem Fehler) für das angemeldete Hub-Konto einmalig abholen
+  async function czGift() {
+    let k = null; try { k = JSON.parse(store.get('fsg.konto') || 'null'); } catch {}
+    if (!k || !k.token) return;
+    const r = await czApi('casino_gift', { name: k.name, token: k.token });
+    if (r && r.chips > 0) { setWallet(wallet + r.chips); toast(`🎁 ${fmtN(r.chips)} Jetons gutgeschrieben${r.why ? ' – ' + r.why : ''}`); snd('win'); if (lobby && !lobby.hidden) renderLobby(); }
+  }
   function openLobby() {
-    css();
+    css(); czGift();
     if (!lobby) { lobby = document.createElement('div'); lobby.id = 'czLobby'; lobby.className = 'cz'; document.body.appendChild(lobby); lobby.addEventListener('click', onLobby); }
     lobby.hidden = false; const hub = q('#hub'); if (hub) hub.hidden = true; renderLobby();
   }
@@ -381,13 +389,16 @@
   }
 
   /* ================= Tisch ================= */
-  let V = null, sitAsked = null, deadline = 0, lastKind = null;
+  let V = null, sitAsked = null, deadline = 0, lastKind = null, lastVW = null, vwRoom = null;
   function timerHTML() { return `<span class="cz-timer" data-cz-cd></span>`; }
   setInterval(() => { const s = Math.max(0, Math.ceil((deadline - Date.now()) / 1000)); document.querySelectorAll('[data-cz-cd]').forEach(e => (e.textContent = deadline ? s + ' s' : '')); }, 250);
   function render(st, v) {
     css(); V = v; if (!v) return;
     deadline = v.left != null ? Date.now() + v.left : 0;
-    if (v.wallet != null) { const before = wallet; setWallet(v.wallet); if (v.mySeat >= 0 && v.wallet - before >= BIGWIN && before > 0) { const w = v.wallet - before; setTimeout(() => celebrate(w), v.kind === 'rad' ? 4300 : v.kind === 'slots' ? 2300 : 0); } }
+    // Jetons vom Tisch nur übernehmen, wenn sie sich dort wirklich geändert haben. Ein alter Platz (z. B. aus einem anderen Tab)
+    // darf den Stand auf dem Gerät nicht überschreiben – dann bringt das Gerät seinen Stand an den Tisch mit.
+    if (vwRoom !== room.id) { vwRoom = room.id; lastVW = v.wallet; if (v.mySeat >= 0 && v.wallet != null && v.wallet !== wallet) { act({ type: 'sit', chips: wallet }); v = { ...v, wallet: null }; } }
+    if (v.wallet != null && v.wallet !== lastVW) { lastVW = v.wallet; const before = wallet; setWallet(v.wallet); if (v.mySeat >= 0 && v.wallet - before >= BIGWIN && before > 0) { const w = v.wallet - before; setTimeout(() => celebrate(w), v.kind === 'rad' ? 4300 : v.kind === 'slots' ? 2300 : 0); } }
     // automatisch hinsetzen und eigene Jetons mitbringen
     if (v.mySeat < 0 && v.free > 0 && sitAsked !== room.id) { sitAsked = room.id; act({ type: 'sit', chips: wallet }); }
     const mode = 'cz-' + v.kind;

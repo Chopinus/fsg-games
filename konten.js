@@ -493,6 +493,10 @@ function tokenKey(name, token) {
 }
 
 
+// ---------- Casino-Gutschriften (einmalig je Konto, Name in Kleinbuchstaben) ----------
+const CZ_GIFTS = [
+  { id: 'g-2026-11-09-chop', k: 'chop', n: 14300, why: 'Ersatz für den Fehler beim Verlassen des Blackjack-Tischs' },
+];
 // ---------- Casino-Geldrangliste ----------
 // Jedes Gerät meldet seinen Jetonstand (die Jetons liegen im Gerät). Gespeichert wird je Gerät ein Eintrag mit Name, Jetons und Zeitpunkt.
 const CZ_FILE = 'casino-rangliste.json', CZ_LOCAL = path.join(__dirname, 'casino-rangliste.local.json');
@@ -595,6 +599,13 @@ async function handle(action, body, ip) {
   }
   if (action === 'board') return [200, board()];
   if (action === 'casino_top' || action === 'casino_report') return czAction(action, body);
+  if (action === 'casino_gift') { // einmalige Gutschriften für ein Konto
+    if (!acc || !(acc.tokens || []).includes(sha256(String(body.token || '')))) return [401, { error: 'Bitte melde dich neu an.' }];
+    acc.gifts = acc.gifts || []; let chips = 0, why = '';
+    for (const g of CZ_GIFTS) if (g.k === key && !acc.gifts.includes(g.id)) { acc.gifts.push(g.id); chips += g.n; why = g.why; }
+    if (chips) markDirty();
+    return [200, { chips, why }];
+  }
   if (action === 'insel_load' || action === 'insel_save') {
     if (!acc || !(acc.tokens || []).includes(sha256(String(body.token || '')))) return [401, { error: 'Bitte melde dich neu an.' }];
     return islAction(action, key, acc, body);
