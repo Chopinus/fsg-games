@@ -210,8 +210,8 @@
         info: [`Unterwegs: <b>${HEROES.filter(h => onTrip(S, h.id)).length}</b>${tripsReady().length ? ` · <b style="color:#9be36b">${tripsReady().length} zurück!</b>` : ''}`], acts: '<button class="btn" data-m="go" data-go="trips">Reisen planen</button>' },
       { title: 'Wochenboss', art: ['wboss1', 'wboss2'], icon: '🐲', col: '#e5484d', rot: -1, desc: 'Alle gegen denselben Boss mit unendlich vielen Lebensleisten. Jede Leiste macht ihn stärker und bringt dir Beute. Mit deiner Gilde schaltet ihr Wochenziele frei.',
         info: wbInfoLines(), lock: acct && acct.token ? '' : 'Nur mit Konto', acts: '<button class="btn" data-m="go" data-go="wboss">Zum Wochenboss</button>' },
-      { title: 'Expedition', art: ['exp1', 'exp2'], icon: '🧭', col: '#9bd14a', rot: -1.5, desc: 'Kurze Aufträge für Heldensplitter. Mit etwas Glück findest du Puzzleteile für neue Helden.',
-        info: eOpen ? [`Heldensplitter: <b>${S.exp.spl}</b>`, `Puzzle-Helden fertig: <b>${PUZZLE.filter(id => assembled(S, id)).length}/${PUZZLE.length}</b>`] : [],
+      { title: 'Expedition', art: ['exp1', 'exp2'], icon: '🧭', col: '#9bd14a', rot: -1.5, desc: 'Kurze Aufträge für Heldensplitter – tausch sie gegen Sternkristalle für den Sternenruf.',
+        info: eOpen ? [`Heldensplitter: <b>${S.exp.spl}</b>`] : [],
         lock: eOpen ? '' : 'Ab dem 1. Aufstieg', acts: '<button class="btn" data-m="go" data-go="exp">Aufträge ansehen</button>' },
       { title: 'Täglicher Lohn', art: ['lohn1', 'lohn2'], icon: '🎁', col: '#ff8ac8', rot: 1, desc: 'Jeden Tag ein Geschenk, das für immer bleibt: Runen, Splitter, Heldensplitter und Sternkristalle. Am 7. Tag gibt es am meisten.',
         info: [loginToday(S) ? 'Heute schon abgeholt. Morgen gibt es mehr.' : '<b style="color:#9be36b">Heute noch nicht abgeholt!</b>', `Tag ${(S.login.n % 7) + (loginToday(S) ? 0 : 1)} von 7`], acts: '<button class="btn" data-m="go" data-go="login">Ansehen</button>' },
@@ -289,8 +289,8 @@
     S.seenExp = true; save();
     modal(`<span class="rl-mic" style="border-color:#9bd14a;color:#9bd14a">◈</span><h2>Neu: Expeditionen</h2>
       <ul class="rl-list"><li>Im neuen Reiter <b>Expedition</b> spielst du kurze Missionen für einen Helden deiner Wahl.</li>
-      <li>Jede geschaffte Mission gibt sicher <b>Heldensplitter</b>. Jedes fehlende Puzzleteil hat dazu 0,5 % Chance.</li>
-      <li>Mit Splittern kaufst du gezielt Puzzleteile. 6 Teile ergeben einen neuen Helden: <b>Assassine, Nekromant, Barde, Druidin oder Tüftlerin</b>.</li></ul>
+      <li>Jede geschaffte Mission gibt sicher <b>Heldensplitter</b>.</li>
+      <li>Im Laden (Splitter-Tausch) tauschst du Splitter gegen <b>Sternkristalle</b> für den Sternenruf – dort gibt es neue Helden.</li></ul>
       <div class="row" style="justify-content:center"><button class="btn" data-m="ok">Zu den Expeditionen</button></div>`);
     tab = 'exp'; renderTabs(); panel();
   }
@@ -298,6 +298,11 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 50, title: 'Ritterlauf: Puzzle abgeschafft', date: '09.11.2026', items: [
+      'Die Puzzle-Funktion ist weg: Neue Helden (Assassine, Nekromant, Barde, Druidin, Tüftlerin, Runengolem) gibt es nur noch im Sternenruf (Banner). Die erste Kopie schaltet den Helden frei.',
+      'Expeditionen geben weiter Heldensplitter. Im Laden tauschst du sie jetzt im Splitter-Tausch gegen Sternkristalle (100 Splitter = 10 Sternkristalle).',
+      'Schon angefangene Puzzles werden als Heldensplitter zurückgegeben (100 pro Teil). Fertige Helden bleiben dir.'
+    ] },
     { id: 49, title: 'Ideen: eigene Kachel und Kommentare', date: '09.11.2026', items: [
       'Ideen & Vorschläge haben jetzt eine eigene Kachel im Hub, direkt unter dem Casino.',
       'Unter Vorschlägen kann jetzt ein Kommentar vom Admin stehen – z. B. was genau umgesetzt wird.'
@@ -753,7 +758,7 @@
       if (n.n >= 9) items.push('Der Aufstieg ist jetzt möglich, sobald du Stufe 150 erreichst');
     } else {
       items.push(`+${n.crowns} Kronen für den Kronen-Laden`);
-      if (n.n === 1) items.push('Neuer Reiter Expedition: Missionen geben Heldensplitter und Puzzleteile für 5 neue Helden');
+      if (n.n === 1) items.push('Neuer Reiter Expedition: Missionen geben Heldensplitter für Sternkristalle – und der Sternenruf öffnet mit neuen Helden');
       const road = ASC_ROAD.find(x => x.a === n.n); if (road) items.push(road.text);
       items.push(`Gegner sind jetzt ×${Math.pow(1.6, n.n).toFixed(1).replace('.', ',')} so stark wie am Anfang`);
       items.push('Der Wiedergeburt-Fahrplan beginnt von vorn – mit deinen Kronen-Boni geht es viel schneller');

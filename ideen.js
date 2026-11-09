@@ -70,7 +70,7 @@
       <div class="vz-row"><div class="field"><label for="vzG">Spiel</label><select id="vzG" name="g"><option value="">Bitte wählen …</option>${games().map(g => `<option ${draft.g === g ? 'selected' : ''}>${h(g)}</option>`).join('')}</select></div>
       <div class="field"><label for="vzC">Art</label><select id="vzC" name="c">${Object.entries((D && D.cats) || {}).map(([k2, l]) => `<option value="${k2}" ${draft.c === k2 ? 'selected' : ''}>${h(l)}</option>`).join('')}</select></div></div>
       <div class="field"><label for="vzT">Titel</label><input id="vzT" name="t" maxlength="80" placeholder="z. B. Mehr Gegner in der Eiswelt" value="${h(draft.t || '')}"></div>
-      <div class="field"><label for="vzX">Beschreibung</label><textarea id="vzX" name="x" maxlength="800" rows="4" placeholder="Was genau soll sich ändern, und warum wäre das besser?">${h(draft.x || '')}</textarea></div>
+      <div class="field"><label for="vzX">Beschreibung</label><textarea id="vzX" name="x" maxlength="800" rows="4" placeholder="Was genau soll sich ändern, und warum wäre das besser? Bei einer neuen Klasse: Wie kämpft sie, was macht ihre Fähigkeit besonders?">${h(draft.x || '')}</textarea></div>
       <div class="vz-row end"><button type="button" class="btn ghost small" data-vz="cancel">Abbrechen</button><button class="btn small" ${busy ? 'disabled' : ''}>Einreichen</button></div>
       <p class="vz-small">Dein Vorschlag wird täglich gegen 18 Uhr geprüft und danach für alle sichtbar. Beleidigende oder unsinnige Vorschläge werden nicht veröffentlicht.</p></form>`;
   }
@@ -85,6 +85,7 @@
     page.innerHTML = `<div class="wrap vz">
       <div class="vz-head"><button class="btn small ghost" data-vz="back">‹ Hub</button><h2>💡 Ideen & Vorschläge</h2></div>
       <p class="lead">Schlag Verbesserungen für die Spiele vor – Balance, neue Funktionen, Fehler. <b>Täglich gegen 18 Uhr</b> werden neue Ideen geprüft und dann für alle zum Abstimmen freigegeben. Angenommene Ideen kommen <b>mittwochs, freitags und sonntags</b> ins Spiel.</p>
+      <div class="vz-life">🌱 <b>Der Game Hub lebt von euch.</b> Ohne eure Ideen gibt es nichts Neues – also schlag alles vor, was dir einfällt: Balance, neue Funktionen, Fehler, neue Gebiete oder sogar <b>neue Klassen für Ritterlauf</b>, die dann als Held ins Event-Banner kommen.</div>
       <div class="panel vz-formbox">${formHTML()}</div>
       <div class="vz-tabs">${tabs.map(([k2, l]) => `<button class="vz-tab ${tab === k2 ? 'on' : ''}" data-vz-tab="${k2}">${l}</button>`).join('')}</div>
       ${D && D.admin && (tab === 'adm' || tab === 'ok') ? loadHTML() : ''}
@@ -179,6 +180,7 @@
   .vz-bar{position:relative;height:10px;border-radius:99px;background:var(--bg);overflow:hidden}
   .vz-bar i{position:absolute;inset:0 auto 0 0;background:#27a06a;border-radius:99px}.vz-load.mid .vz-bar i{background:#f2be1a}.vz-load.no .vz-bar i{background:#e5484d}
   .vz-bar span{position:absolute;top:0;bottom:0;width:2px;background:#fff8}
+  .vz-life{background:linear-gradient(120deg,#1f3320,var(--surface) 75%);border:1px solid #3f6b3a;border-radius:12px;padding:12px 14px;line-height:1.45}
   .vz-cmt{background:#1f2a3a;border:1px solid #3b5a86;border-radius:10px;padding:9px 12px;font-size:15px;overflow-wrap:anywhere}.vz-cmt b{color:#9cc3ff}
   .vz-adm{display:flex;gap:8px;flex-wrap:wrap}
   .vz-meta{font-size:13px;color:var(--muted)}

@@ -548,7 +548,7 @@
         <span class="note">Beide Banner kosten dasselbe und nutzen dieselben Sternkristalle. Der Fortschritt zum nächsten 5★ wird pro Banner getrennt gezählt.</span></div>`;
     if (bannerTab === 'cons') {
       const sel = consSel && HERO_BY_ID[consSel] ? consSel : evt ? E.five : 'o';
-      body = `<p class="note">Jede Kopie eines Helden schaltet sein nächstes Sternbild frei, höchstens 6. Jeder Held hat eigene Sternbilder. Für einen noch fehlenden Fünf-Sterne-Helden gibt jede Kopie 3 seiner 6 Puzzleteile, zwei Kopien schalten ihn also frei. Weitere Kopien nach dem 6. Sternbild werden zu ${GACHA.refund5} ${gem} (5★) bzw. ${GACHA.refund4} ${gem} (4★). Tippe auf einen Helden.</p>
+      body = `<p class="note">Jede Kopie eines Helden schaltet sein nächstes Sternbild frei, höchstens 6. Jeder Held hat eigene Sternbilder. Die erste Kopie eines noch fehlenden Fünf-Sterne-Helden schaltet ihn frei – neue Helden gibt es nur hier. Weitere Kopien nach dem 6. Sternbild werden zu ${GACHA.refund5} ${gem} (5★) bzw. ${GACHA.refund4} ${gem} (4★). Tippe auf einen Helden.</p>
         <h3 class="rl-h3">★★★★★</h3><div class="rl-gcards">${G_FIVE.map(card).join('')}</div><h3 class="rl-h3">★★★★</h3><div class="rl-gcards">${G_FOUR.map(card).join('')}</div>
         <h3 class="rl-h3" style="color:${HERO_BY_ID[sel].color}">Sternbilder: ${esc(HERO_BY_ID[sel].name)}</h3>${consHTML(sel)}`;
     }
@@ -689,7 +689,7 @@
       const h = x.id && HERO_BY_ID[x.id];
       const pic = h ? `<img src="${portraitURL(x.id)}" alt="">` : `<span class="ico">${x.kind === 'dust' ? '⬢' : '◈'}</span>`;
       const name = h ? esc(h.name) : x.kind === 'dust' ? 'Runensplitter' : 'Heldensplitter';
-      const note = x.unlock ? '<em class="new">NEU! Freigeschaltet</em>' : x.pieces ? `<em>🧩 +${x.pieces} Teile · ${x.have}/6</em>` : x.cons ? `<em title="${esc(x.consName || '')}">✦ Sternbild ${x.cons}</em>` : x.refund ? `<em>+${x.refund} 💠</em>` : x.n ? `<em>×${fmt(x.n)}</em>` : '';
+      const note = x.unlock ? '<em class="new">NEU! Freigeschaltet</em>' : x.cons ? `<em title="${esc(x.consName || '')}">✦ Sternbild ${x.cons}</em>` : x.refund ? `<em>+${x.refund} 💠</em>` : x.n ? `<em>×${fmt(x.n)}</em>` : '';
       return `<div class="rl-pcard r${x.r}" style="--d:${delay[i].toFixed(2)}s;${h ? `--hc:${h.color}` : ''}"><div class="in"><div class="bk"><i>✦</i></div><div class="fr"><div class="glow"></div>${pic}<b>${name}</b><small>${rarStars(x.r)}</small>${x.cons && x.consName ? `<span class="cn">${esc(x.consName)}</span>` : ''}${note}</div></div></div>`;
     };
     modal(`<div class="rl-pull-anim" id="pullAnim"><canvas></canvas><p class="skip">Tippen zum Überspringen</p></div>
@@ -1082,7 +1082,6 @@
     if (R.weeklyReward && R.weeklyReward.stars) add(star, `<b>+${R.weeklyReward.stars}</b> Sterne`, '#ffd23f');
     if (R.weeklyReward && R.weeklyReward.crowns) add(crown, `<b>+${R.weeklyReward.crowns}</b> Krone`, '#ffd23f');
     if (R.expReward) add('◈', `<b>+${R.expReward.spl}</b> Heldensplitter`, '#9bd14a');
-    if (R.expReward && R.expReward.dup != null) add('🧩', `Doppeltes Puzzleteil von ${HERO_BY_ID[R.expReward.hero].name}: <b>+${R.expReward.dupSpl}</b> Heldensplitter`, HERO_BY_ID[R.expReward.hero].color);
     if (R.expReward && R.expReward.rune) add('⬢', `Rune aus der Mine: <b>${RUNE[R.expReward.rune.t].name} ${ROMAN[R.expReward.rune.tier]}</b>`, RUNE[R.expReward.rune.t].color);
     if (R.expReward && R.expReward.runeDust) add('⬢', `Runenlager voll: Minen-Rune zu <b>${R.expReward.runeDust} Runensplittern</b> zerlegt`, '#e2c9ff');
     if (R.mode === 'tower' && R.stage > (R.towerBefore || 0)) add('🏰', `Neuer Turm-Rekord: <b>Etage ${R.stage}</b> · +${R.stage * 3} % Schaden und Leben bis zum Aufstieg`, '#c9a6ff', 'hot');
@@ -1098,10 +1097,6 @@
         <h3>Ahnensiegel erhalten!</h3><p>Der Urahn ist besiegt. Du hast jetzt <b>${S.ahn.sig}</b> freie${S.ahn.sig === 1 ? 's' : ''} Siegel.</p>
         <button class="btn gold" data-m="go" data-go="sigil">Siegel setzen</button></div>`;
     const ex = R.expReward;
-    if (ex && ex.piece != null) { const h = HERO_BY_ID[ex.hero];
-      special = ex.complete ? `<div class="rl-rpuzzle done" style="--hc:${h.color}">${puzzleHTML(ex.hero, false, ex.piece)}<h3>${h.name} ist bereit!</h3><p>Alle 6 Puzzleteile sind zusammen. ${h.name} hat sich deiner Gruppe angeschlossen. Stell den Helden in der Aufstellung am Lagerfeuer auf.</p><button class="btn" data-m="go" data-go="hero:${h.tree}">Zu ${h.name}</button></div>`
-        : `<div class="rl-rpuzzle" style="--hc:${h.color}">${puzzleHTML(ex.hero, false, ex.piece)}<h3>Puzzleteil gefunden!</h3><p>Ein Teil für ${h.name}: jetzt <b>${pieceCount(S, ex.hero)} von 6</b>.</p></div>`;
-      if (ex.complete && S.exp.target === ex.hero) { const nx = PUZZLE.find(x => !assembled(S, x)); if (nx) { S.exp.target = nx; save(); } } }
     const stats = `<div class="rl-rstats"><span><b>${R.mode === 'wboss' ? `×${fmt(Math.pow(WB.grow, wbScore(R)))}` : R.mode === 'tower' ? `Etage ${R.stage}` : `Stufe ${R.stage}`}</b>${R.mode === 'wboss' ? 'Bossstärke am Ende' : R.mode === 'exp' || R.mode === 'ahnen' ? 'Gegnerstärke' : 'erreicht'}</span><span><b>${R.kills}</b>Gegner besiegt</span><span><b>${mins}:${String(secs).padStart(2, '0')}</b>Spielzeit</span></div>`;
     const showAgain = again && inCamp() && (again !== 'tower' || feature(S, 'turm')) && (again !== 'ahn' || ahnOpen(S));
     modal(`<div class="rl-rhead"><span class="rl-remb">${win ? '🏆' : '💀'}</span><h2>${title}</h2><p>${sub}</p></div>
@@ -1372,7 +1367,7 @@
   }
   function heroTab(tree) {
     const h = HERO[tree], eq = eqOf(S, tree, false), eqS = eqOf(S, tree, true), ok = hired(S, tree), sg = sigOn(S, tree);
-    const lockedNote = !classOpen(S, tree) ? `<p class="warn">${h.puzzle ? `Diese Klasse bekommst du mit 6 Puzzleteilen aus den Expeditionen (${pieceCount(S, h.id)}/6).` : `Diese Klasse wird mit der ${h.rebirth}. Wiedergeburt freigeschaltet.`} Du kannst dir den Baum schon ansehen.</p>` : '';
+    const lockedNote = !classOpen(S, tree) ? `<p class="warn">${h.puzzle ? 'Diese Klasse bekommst du nur im Sternenruf (Banner).' : `Diese Klasse wird mit der ${h.rebirth}. Wiedergeburt freigeschaltet.`} Du kannst dir den Baum schon ansehen.</p>` : '';
     return `${lockedNote}<div class="rl-hhead" style="--hc:${h.color}">${ok ? `<div class="rl-hsbtn"><button class="btn ghost small" data-rl="ward" aria-label="Aussehen" title="Aussehen: Kopf, Oberteil, Beine">👕</button><button class="btn ghost small" data-rl="hstats" aria-label="Alle Werte" title="Alle Werte">📊<span class="rl-backtxt"> Werte</span></button></div>` : ''}<span class="pt">${PORTRAIT[h.id]}</span><div class="rl-hbody"><h3>${h.name}${gachaOpen(S) ? ` <span class="rl-hrar">${rarStars(heroRar(h.id))}</span>${consStars(h.id)}` : ''}</h3><p class="note rl-long">${h.desc}</p>
       ${ok ? `<div class="rl-actchips" title="Aktive Fähigkeiten ${eq.length}/${slotsOf(S, tree)}">${Array.from({ length: slotsOf(S, tree) }, (_, i) => eq[i] ? `<span class="on">⚡${esc(ACT_NAME(eq[i]))}</span>` : '<span>leer</span>').join('')}${sg ? (eqS.length ? eqS.map(id => `<span class="on sig">✦${esc(ACT_NAME(id))}</span>`).join('') : '<span class="sig">✦ frei</span>') : ''}</div>${mastHTML(h)}${sockRow(tree)}` : ''}</div></div>
       ${acct && acct.tester ? `<div class="rl-test"><b>🧪 Test</b> <button class="btn small ${confirm === 'tbuild' ? 'danger' : ''}" data-rl="tbuild" ${inCamp() && classOpen(S, tree) ? '' : 'disabled'}>${confirm === 'tbuild' ? 'Wirklich den ganzen Baum setzen?' : 'Baum komplett ausbauen'}</button><span class="note">Alles auf voll, beide Endlos-Fertigkeiten auf 42. Kostet nichts. Schlüssel bleiben, wie sie sind.</span>
@@ -1396,7 +1391,7 @@
       if (run.mode === 'bounty') return `<div class="rl-dead ${run.victory ? 'win' : ''}"><b>${run.victory ? 'Kopfgeld eingelöst' : 'Jagd gescheitert'}: ${esc(run.ahn.bounty.def.name)}</b><span>${run.bountyReward ? `+${run.bountyReward.gem} Sternkristalle` : run.victory ? 'Belohnung heute schon erhalten' : 'Versuch es nochmal mit Schildwall und Schwachstellen.'}</span></div>`;
       if (run.mode === 'exp') {
         const m = MISSION[run.mission], r = run.expReward;
-        if (run.victory && r) return `<div class="rl-dead win"><b>Mission geschafft: ${esc(m.name)}</b><span>+${r.spl} Heldensplitter${r.rune ? ` · Rune: ${RUNE[r.rune.t].name} ${ROMAN[r.rune.tier]}` : r.runeDust ? ` · +${r.runeDust} Runensplitter (Lager voll)` : ''}${r.piece != null ? ` · Puzzleteil für ${HERO_BY_ID[r.hero].name}!` : ''}${r.dup != null ? ` · doppeltes Teil: +${r.dupSpl} Splitter` : ''}</span><span class="note">Splitter: ${S.exp.spl}${r.hero ? ` · Puzzleteile von ${HERO_BY_ID[r.hero].name}: ${pieceCount(S, r.hero)}/6` : ''}</span></div>`;
+        if (run.victory && r) return `<div class="rl-dead win"><b>Mission geschafft: ${esc(m.name)}</b><span>+${r.spl} Heldensplitter${r.rune ? ` · Rune: ${RUNE[r.rune.t].name} ${ROMAN[r.rune.tier]}` : r.runeDust ? ` · +${r.runeDust} Runensplitter (Lager voll)` : ''}</span><span class="note">Splitter: ${S.exp.spl}</span></div>`;
         return `<div class="rl-dead"><b>Mission gescheitert: ${esc(m.name)}</b><span>${esc(run.failNote || `Gefallen auf Stufe ${run.stage}`)}</span><span class="note">Versuch es mit stärkeren Helden oder einer leichteren Mission.</span></div>`;
       }
       if (run.mode === 'tower') return `<div class="rl-dead tower"><b>Turm: Etage ${run.stage} erreicht</b><span>${extra}</span><span class="note">Dein Turm-Rekord (${S.towerBest}) gibt allen Helden bis zum nächsten Aufstieg +${S.towerBest * 3} % Schaden und Leben.</span></div>`;
@@ -1759,7 +1754,7 @@
     if (b.dataset.shopjump) { const el = document.getElementById('shop-' + b.dataset.shopjump); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     if (b.dataset.xinfo) { const id = b.dataset.xinfo; if (expInfo.has(id)) expInfo.delete(id); else expInfo.add(id); panel(); return; }
     if (b.dataset.target) { S.exp.target = b.dataset.target; save(); panel(); return; }
-    if (b.dataset.piece) { const [hid, i] = b.dataset.piece.split(':'); testerSplinters(); if (buyPiece(S, hid, Number(i))) { const h = HERO_BY_ID[hid]; if (assembled(S, hid)) heroDone(hid); else toast(`Puzzleteil ${pieceCount(S, hid)}/6 für ${h.name}`); afterChange(); } return; }
+    if (b.dataset.spltrade) { testerSplinters(); const n = b.dataset.spltrade === 'all' ? Infinity : Number(b.dataset.spltrade); const g = splTrade(S, n); if (g) { SND.play('buy'); toast(`+${g} Sternkristalle`); afterChange(); } return; }
     if (b.dataset.tempo) { if (buyTempo(S)) { toast(`Tempo ×${String(maxSpeed(S)).replace('.', ',')} freigeschaltet!`, true); afterChange(); } return; }
     if (b.dataset.pathmode) { pathMode = b.dataset.pathmode; panel(); return; }
     if (b.dataset.skin) { const [hid, id] = b.dataset.skin.split(':'); if (SKIN[id] && mastLevel(S, hid) >= SKIN[id].L) { S.skin = S.skin || {}; if (id === 'std') delete S.skin[hid]; else S.skin[hid] = id; SND.play('tick'); save(); panel(); } return; }
@@ -1950,52 +1945,29 @@
       <div class="rl-path"><div class="trk" style="width:${w}px;height:${h}px">${zones}<span class="start" style="left:${L}px">Start</span>${pins}</div></div>
       <p class="note">Jedes Fähnchen ist ein gespeicherter Spielstand. W = Wiedergeburten, A = Aufstiege. ${acct ? '' : 'Lege im Reiter „Spielstand“ einen Spielstand an, damit deine Freunde dich hier auch sehen.'}${boardData ? '' : ' Die anderen Spielstände werden geladen …'}</p>`;
   }
-  const PIECE_POS = [[0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1]];
-  function puzzleHTML(id, shop, newIdx) {
-    const h = HERO_BY_ID[id], m = pieceMask(S, id);
-    return `<div class="rl-puz" style="--hc:${h.color}">${PIECE_POS.map(([x, y], i) => {
-      const got = m & (1 << i);
-      return got ? `<span class="pc got ${i === newIdx ? 'new' : ''}" style="--x:${x};--y:${y}"><i>${PORTRAIT[id]}</i></span>`
-        : shop ? `<button class="pc buy" style="--x:${x};--y:${y}" data-piece="${id}:${i}" ${S.exp.spl >= PIECE_COST ? '' : 'disabled'} title="Teil ${i + 1} kaufen"><b>${PIECE_COST}</b></button>` : `<span class="pc" style="--x:${x};--y:${y}"></span>`;
-    }).join('')}</div>`;
-  }
   const expInfo = new Set();
   function expTab() {
     const camp = inCamp();
     const pc = v => `${Math.round(v * 1000) / 10} %`.replace('.', ',');
     const mRow = m => { const h = m.hero && HERO_BY_ID[m.hero], open = expInfo.has(m.id), sp = `${m.spl[0]}–${m.spl[1]} Heldensplitter`;
-      const rewards = [[sp, 1], ...(m.rune ? [['1 Rune', 1]] : []), ...(h ? [[`1 Puzzleteil (${h.name})`, PIECE_CHANCE]] : [])];
+      const rewards = [[sp, 1], ...(m.rune ? [['1 Rune', 1]] : [])];
       return `<div class="rl-mission ${h ? 'hero' : ''} ${open ? 'open' : ''}" ${h ? `style="--hc:${h.color}"` : ''}><div class="rl-mtop"><span class="ic">${h ? PORTRAIT[m.hero] : m.icon}</span><b>${m.name}</b>
         <button class="rl-minfo ${open ? 'on' : ''}" data-xinfo="${m.id}" aria-label="Infos zu ${esc(m.name)}">i</button>
         <button class="btn small" data-rl="mission" data-m2="${m.id}" ${camp ? '' : 'disabled'}>Starten</button></div>
         ${open ? `<div class="rl-mbody"><p>${m.desc}</p><div class="rl-mrew"><span>Belohnungen</span>${rewards.map(([n, v]) => `<div><b>${n}</b><i>${pc(v)}</i></div>`).join('')}</div>
-          ${h ? `<small>Doppeltes Teil: ${PIECE_DUP} Splitter${assembled(S, m.hero) ? ` · ${h.name} ist fertig` : ` · Teile ${pieceCount(S, m.hero)}/6`}</small>` : ''}<small>Alle Wellen auf Stufe ${expStage(S, m)}</small></div>` : ''}</div>`; };
-    const heroes = PUZZLE.map(id => {
-      const h = HERO_BY_ID[id], done = assembled(S, id), n = pieceCount(S, id), hm = heroMission(id);
-      return `<div class="rl-xhero ${done ? 'done' : ''}" style="--hc:${h.color}">
-        <div class="top"><span class="pt">${PORTRAIT[id]}</span><div><b>${h.name}</b><small>${done ? (hired(S, h.tree) ? 'In deiner Gruppe' : 'Fertig! Jetzt im Baum anheuern.') : `${n}/6 Puzzleteile`}</small></div></div>
-        <p class="note">${esc(h.desc)}</p>${puzzleHTML(id, !done)}
-        ${done ? `<button class="btn small ghost rl-gotree" data-tab="${h.tree}">Zum Baum</button>` : hm ? `<span class="rl-minetag" style="--hc:${h.color}">${hm.icon} Teile nur in: ${esc(hm.name)}</span>` : ''}</div>`;
-    }).join('');
-    return `<div class="rl-exp"><div class="rl-xhead"><div><h3 class="rl-h3">Expeditionen</h3><p class="note">Jeder Puzzle-Held hat sein eigenes Gebiet mit eigenen Gegnern und einem eigenen Boss. Nur dort findest du seine Puzzleteile: Jeder Sieg hat 6 % Chance auf eines der 6 Teile. Ein Teil, das du schon hast, wird zu ${PIECE_DUP} Heldensplittern. Die allgemeinen Missionen geben mehr Heldensplitter. Mit Splittern kaufst du jedes Teil gezielt (${PIECE_COST} Splitter). Tippe auf ⓘ für Details und Belohnungen. Gold, Seelen und Rekorde gibt es in Expeditionen nicht.</p></div>
+          <small>Alle Wellen auf Stufe ${expStage(S, m)}</small></div>` : ''}</div>`; };
+    return `<div class="rl-exp"><div class="rl-xhead"><div><h3 class="rl-h3">Expeditionen</h3><p class="note">Jedes Heldengebiet hat eigene Gegner und einen eigenen Boss. Missionen geben Heldensplitter – die tauschst du im Laden (Splitter-Tausch) gegen Sternkristalle für den Sternenruf. Neue Helden gibt es nur im Sternenruf. Tippe auf ⓘ für Details und Belohnungen. Gold, Seelen und Rekorde gibt es in Expeditionen nicht.</p></div>
       <div class="rl-spl"><span>◈</span><b>${S.exp.spl}</b><small>Heldensplitter</small></div></div>
       ${camp ? '' : '<p class="note">Missionen startest du im Lager.</p>'}
       <h3 class="rl-h3">Heldengebiete</h3><div class="rl-missions">${MISSIONS.filter(m => m.hero).map(mRow).join('')}</div>
       <h3 class="rl-h3">Allgemeine Missionen</h3><p class="note">Nur Heldensplitter, dafür mehr davon.</p><div class="rl-missions">${MISSIONS.filter(m => !m.hero).map(mRow).join('')}</div>
-      <h3 class="rl-h3">Helden &amp; Puzzle-Laden</h3><p class="note">Tippe ein leeres Teil an, um es für ${PIECE_COST} Splitter zu kaufen.</p>
-      <div class="rl-xheroes">${heroes}</div></div>`;
-  }
-  function pieceFound(id) {
-    const h = HERO_BY_ID[id];
-    modal(`<span class="rl-mic" style="border-color:${h.color};color:${h.color}">${PORTRAIT[id]}</span><h2>Puzzleteil gefunden!</h2>
-      <p class="note" style="text-align:center">Ein Teil für ${h.name}: jetzt ${pieceCount(S, id)} von 6.</p>${puzzleHTML(id, false)}
-      <div class="row" style="justify-content:center"><button class="btn" data-m="ok">Super</button></div>`);
+      </div>`;
   }
   function heroDone(id) {
     const h = HERO_BY_ID[id];
     if (S.exp.target === id) { const nx = PUZZLE.find(x => !assembled(S, x)); if (nx) { S.exp.target = nx; save(); } }
     modal(`<span class="rl-mic" style="border-color:${h.color};color:${h.color}">${PORTRAIT[id]}</span><h2>${h.name} ist bereit!</h2>
-      <ul class="rl-list"><li>Alle 6 Puzzleteile sind zusammengesetzt.</li><li>${esc(h.desc)}</li><li>${h.name} hat sich deiner Gruppe angeschlossen. Stell den Helden in der Aufstellung am Lagerfeuer auf.</li><li>Das Puzzle bleibt für immer fertig. Ohne „Veteranen“ aus dem Kronen-Laden musst du den Helden nach einem Aufstieg neu anheuern, direkt in der Aufstellung.</li></ul>
+      <ul class="rl-list"><li>${esc(h.desc)}</li><li>${h.name} hat sich deiner Gruppe angeschlossen. Stell den Helden in der Aufstellung am Lagerfeuer auf.</li><li>Der Held bleibt für immer freigeschaltet. Ohne „Veteranen“ aus dem Kronen-Laden musst du den Helden nach einem Aufstieg neu anheuern, direkt in der Aufstellung.</li></ul>
       <div class="row" style="justify-content:center"><button class="btn" data-m="ok">Los geht’s</button></div>`);
   }
   // Runenschmied: Runen zerstören (gibt Runensplitter) und 3 gleiche verschmelzen (kostet so viel wie 3 zerstörte)
@@ -2018,10 +1990,10 @@
     const open = { stern: S.rebirths >= 1 || S.stars > 0 || S.asc > 0, zeit: S.asc > 0, altar: S.rebirths >= 1 || S.asc > 0 || S.altar > 0, schmiede: feature(S, 'runen') || S.asc > 0, krone: S.asc > 0 || S.crowns > 0, puzzle: expOpen(S) };
     const LIST = [
       ['stern', 'Sternen-Laden', 'mit der 1. Wiedergeburt', star], ['zeit', 'Zeitbaum', 'mit dem 1. Aufstieg', '⏱'], ['altar', 'Seelenaltar', 'mit der 1. Wiedergeburt', soul],
-      ['krone', 'Kronen-Laden', 'mit dem 1. Aufstieg', crown], ['puzzle', 'Puzzle-Laden', 'mit dem 1. Aufstieg (Expeditionen)', '◈'],
+      ['krone', 'Kronen-Laden', 'mit dem 1. Aufstieg', crown], ['puzzle', 'Splitter-Tausch', 'mit dem 1. Aufstieg (Expeditionen)', '◈'],
     ];
     let cur = shopSel; if (!LIST.some(([id]) => id === cur && open[id])) cur = (LIST.find(([id]) => open[id]) || ['stern'])[0];
-    let html = `${wallet({ stern: ['stars'], zeit: ['souls'], altar: ['gold'], krone: ['crowns'], puzzle: ['spl'] }[cur] || [])}
+    let html = `${wallet({ stern: ['stars'], zeit: ['souls'], altar: ['gold'], krone: ['crowns'], puzzle: ['spl', 'gem'] }[cur] || [])}
       <div class="rl-shopnav">${LIST.map(([id, name, when, ic]) => open[id] ? `<button data-shoptab="${id}" class="${id === cur ? 'on' : ''}">${ic} ${name}${id === 'krone' && !cperk(S, 'k_veteran') ? '<span class="rl-reddot"></span>' : ''}</button>` : `<span class="lock" title="Kommt ${when}">🔒 ${name}</span>`).join('')}</div>`;
     if (open.stern && cur === 'stern') html += `<section id="shop-stern" class="rl-shop"><h3 class="rl-h3">Sternen-Laden</h3><p class="note">Du hast <span class="rl-cur star">${star}${S.stars}</span> Sterne. Sterne bekommst du bei jeder Wiedergeburt und aus der Tages-Herausforderung. Beim Aufstieg werden die Sternen-Boni zurückgesetzt.</p><div class="rl-perks">${perkCards()}</div><div class="row" style="margin-top:10px"><button class="btn ${confirm === 'pres' ? 'danger' : 'ghost'} small" data-rl="pres" ${inCamp() && Object.keys(S.perks).length ? '' : 'disabled'}>${confirm === 'pres' ? 'Wirklich alles zurücksetzen?' : '↺ Sternen-Laden zurücksetzen (alle Sterne zurück)'}</button></div></section>`;
     if (open.zeit && cur === 'zeit') html += `<section id="shop-zeit" class="rl-shop">${zeitTab()}</section>`;
@@ -2030,8 +2002,9 @@
       <div class="rl-altar"><div class="rl-altar-ic">${soul}</div><div><b>Stufe ${L} von ${ALTAR_MAX}</b><span class="note">Seelen jetzt ×${altarMul(S).toFixed(2).replace('.', ',')}${maxed ? '' : ` · nächste Stufe ×${(altarMul(S) + 0.15).toFixed(2).replace('.', ',')}`}</span></div>
       <button class="btn small" data-rl="altar" ${!maxed && S.gold >= c && inCamp() ? '' : 'disabled'}>${maxed ? 'Voll ausgebaut' : `Opfern: ${coin}${fmt(c)}`}</button></div></section>`; }
     if (open.krone && cur === 'krone') html += `<section id="shop-krone" class="rl-shop">${crownShop()}</section>`;
-    if (open.puzzle && cur === 'puzzle') html += `<section id="shop-puzzle" class="rl-shop"><h3 class="rl-h3">Puzzle-Laden</h3><p class="note">Du hast <b>◈ ${S.exp.spl}</b> Heldensplitter aus den Expeditionen. Tippe ein leeres Teil an, um es für ${PIECE_COST} Splitter zu kaufen.</p>
-      <div class="rl-xheroes">${PUZZLE.map(id => { const h = HERO_BY_ID[id], done = assembled(S, id); return `<div class="rl-xhero ${done ? 'done' : ''}" style="--hc:${h.color}"><div class="top"><span class="pt">${PORTRAIT[id]}</span><div><b>${h.name}</b><small>${done ? 'Fertig' : `${pieceCount(S, id)}/6 Puzzleteile`}</small></div></div>${puzzleHTML(id, !done)}</div>`; }).join('')}</div></section>`;
+    if (open.puzzle && cur === 'puzzle') { const packs = Math.floor(S.exp.spl / SPL_PACK);
+      html += `<section id="shop-puzzle" class="rl-shop"><h3 class="rl-h3">Splitter-Tausch</h3><p class="note">Du hast <b>◈ ${S.exp.spl}</b> Heldensplitter. Je ${SPL_PACK} Splitter tauschst du gegen ${SPL_GEM} Sternkristalle für den Sternenruf – dort gibt es neue Helden.</p>
+      <div class="row"><button class="btn small" data-spltrade="1" ${packs >= 1 ? '' : 'disabled'}>${SPL_PACK} ◈ → ${SPL_GEM} 💠</button><button class="btn small" data-spltrade="10" ${packs >= 10 ? '' : 'disabled'}>${SPL_PACK * 10} ◈ → ${SPL_GEM * 10} 💠</button><button class="btn small gold" data-spltrade="all" ${packs >= 1 ? '' : 'disabled'}>Alles tauschen (${packs * SPL_GEM} 💠)</button></div></section>`; }
     const next = LIST.find(([id]) => !open[id]);
     if (next) html += `<p class="note rl-nextshop">Als Nächstes kommt der <b>${next[1]}</b> ${next[2]}.</p>`;
     return html;
@@ -2084,7 +2057,7 @@
     return nx ? [...own, nx] : own;
   }
   function lockReason(h) {
-    if (h.puzzle) return `${h.name}: Setze das Puzzle aus den Expeditionen zusammen.`;
+    if (h.puzzle) return `${h.name}: Gibt es nur im Sternenruf (Banner).`;
     if (S.rebirths < h.rebirth) return `${h.name} kommt mit der ${h.rebirth}. Wiedergeburt.`;
     return `${h.name} kannst du jetzt in seinem Baum anheuern.`;
   }

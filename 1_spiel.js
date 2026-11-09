@@ -1339,12 +1339,10 @@
   }
   function gHero(S, id, rar) {
     const h = HERO_BY_ID[id], out = { kind: 'hero', id, r: rar };
-    // Noch nicht fertiger Puzzle-Held: jede Kopie bringt 3 fehlende Puzzleteile (2 Kopien = fertig)
+    // Noch nicht freigeschalteter Fünf-Sterne-Held: die erste Kopie schaltet ihn frei (Helden gibt es nur noch im Banner)
     if (h.puzzle && !assembled(S, id)) {
       S.exp = S.exp || { spl: 0, done: 0, target: 'a', pieces: {} }; S.exp.pieces = S.exp.pieces || {};
-      const have = pieceMask(S, id), miss = [0, 1, 2, 3, 4, 5].filter(i => !(have & (1 << i))).sort(() => Math.random() - 0.5).slice(0, 3);
-      S.exp.pieces[id] = miss.reduce((m, i) => m | (1 << i), have); out.pieces = miss.length; out.have = pieceCount(S, id);
-      if (assembled(S, id)) { puzzleHire(S, id); out.unlock = true; }
+      S.exp.pieces[id] = 63; puzzleHire(S, id); out.unlock = true;
       return out;
     }
     S.cons = S.cons || {}; const c = consOf(S, id);
@@ -1752,6 +1750,10 @@
     out.wf = Math.max(0, Math.floor(Number(d.wf) || 0)); out.rankGot = Math.max(out.asc, Math.floor(Number(d.rankGot) || 0));
     if (!d.puzV) for (const id of PUZZLE) puzzleHire(out, id);
     out.puzV = 1;
+    if (!d.puzX && out.exp && out.exp.pieces) for (const id of PUZZLE) { // Puzzle abgeschafft: angefangene Teile als Heldensplitter zurück
+      if (!assembled(out, id) && pieceMask(out, id)) { out.exp.spl += pieceCount(out, id) * 100; delete out.exp.pieces[id]; }
+    }
+    out.puzX = 1;
     if (!d.ahnV) out.ahn.lvl = 0; // Stärke neu: nach dem höchsten Rekord überhaupt
     out.ahnV = 1;
     for (const h of [...HEROES].reverse()) while (kPlaced(out) > out.kslots && out.kplace[h.id]) { if (--out.kplace[h.id] <= 0) delete out.kplace[h.id]; }
@@ -1779,7 +1781,7 @@
   const eqOf = (S, tree, sg) => S.equip.filter(id => NODE[id] && NODE[id].tree === tree && !!NODE[id].sig === !!sg);
   const slotLim = (S, tree, sg) => (sg ? sigCap(S, tree) : slotsOf(S, tree));
   function blockReason(S, n) {
-    if (n.reqPuzzle && !assembled(S, n.reqPuzzle)) return `Setze zuerst alle 6 Puzzleteile in den Expeditionen zusammen (${pieceCount(S, n.reqPuzzle)}/6).`;
+    if (n.reqPuzzle && !assembled(S, n.reqPuzzle)) return 'Diesen Helden bekommst du nur im Sternenruf (Banner).';
     if (n.reqRebirth && S.rebirths < n.reqRebirth && !rank(S, n.id)) return `Wird mit der ${n.reqRebirth}. Wiedergeburt freigeschaltet.`;
     if (n.sig && !sigOn(S, n.tree)) return 'Setze zuerst im Reiter Ahnenprüfung ein Ahnensiegel auf diesen Helden.';
     if (n.kind === 'key' && !rank(S, n.id) && keyNeed(S, n.tree, n.sig ? 1 : 0, n.sig ? 0 : 1) > keyCap(S, n.tree)) return n.sig ? `Der Siegelsockel und alle ${keyCap(S, n.tree)} Schlüsselsockel dieser Klasse sind belegt. Nimm einen Schlüssel ab oder setze oben einen freien Sockel auf diese Klasse.` : `Alle ${keyCap(S, n.tree)} Schlüsselsockel dieser Klasse sind belegt. Setze oben einen freien Sockel auf diese Klasse (du bekommst einen pro Wiedergeburt).`;
@@ -2097,17 +2099,17 @@
     const dragon = comp.drache ? 0.3 * (1 + 0.2 * comp.drache) * field.reduce((a, k) => a + (hs[k] ? hs[k].atk : 0), 0) : 0;
     return { ...hs, ...Object.fromEntries(HEROES.filter(h => !hs[h.id]).map(h => [h.id, null])), g, soulBonus: perk(S, 'p_seele'), startStage, cap: capOf(S), comp, dragon, field, slots: fieldSlots(S) };
   }
-  // Expeditionen (ab dem 1. Aufstieg): Missionen geben Heldensplitter und mit etwas Glück Puzzleteile
+  // Expeditionen (ab dem 1. Aufstieg): Missionen geben Heldensplitter (tauschbar gegen Sternkristalle)
   const MISSIONS = [
     { id: 'streif', name: 'Streifzug', desc: 'Überstehe 15 Wellen.', waves: 15, spl: [4, 6], start: 0.9, icon: '⚑' },
     { id: 'bosse', name: 'Bosshatz', desc: 'Besiege 4 Bosse. Jede dritte Welle bringt einen.', bosses: 4, spl: [4, 6], start: 0.87, icon: '♛' },
     { id: 'festung', name: 'Belagerung', desc: 'Überstehe 25 Wellen, ohne dass ein Held fällt.', waves: 25, spl: [4, 6], start: 0.81, noLoss: true, icon: '⛉' },
-    { id: 'h_a', hero: 'a', area: 'schatten', name: 'Schattenviertel', desc: 'Schleiche 18 Wellen durch die Gassen der Diebesgilde. Jede 6. Welle stellt sich dir die Gildenmeisterin. Nur hier findest du Teile der Assassine.', waves: 18, bossEvery: 6, spl: [2, 3], start: 0.85, icon: '☾' },
-    { id: 'h_n', hero: 'n', area: 'friedhof', name: 'Vergessener Friedhof', desc: 'Überstehe 18 Wellen zwischen den Gräbern. Jede 6. Welle gräbt sich der Totengräber aus der Erde. Nur hier findest du Teile des Nekromanten.', waves: 18, bossEvery: 6, spl: [2, 3], start: 0.85, icon: '☠' },
-    { id: 'h_b', hero: 'b', area: 'theater', name: 'Geistertheater', desc: 'Spiele 18 Wellen lang auf der verfluchten Bühne. Jede 6. Welle zieht der Puppenspieler die Fäden. Nur hier findest du Teile des Barden.', waves: 18, bossEvery: 6, spl: [2, 3], start: 0.85, icon: '♪' },
-    { id: 'h_d', hero: 'd', area: 'hain', name: 'Verdorbener Hain', desc: 'Kämpfe dich 18 Wellen durch den kranken Wald. Jede 6. Welle bricht der Moderhirsch durchs Unterholz. Nur hier findest du Teile der Druidin.', waves: 18, bossEvery: 6, spl: [2, 3], start: 0.85, icon: '❀' },
-    { id: 'h_e', hero: 'e', area: 'werk', name: 'Uhrwerkfabrik', desc: 'Überstehe 18 Wellen in der verlassenen Fabrik. Jede 6. Welle stampft der Dampfkoloss heran. Nur hier findest du Teile der Tüftlerin.', waves: 18, bossEvery: 6, spl: [2, 3], start: 0.85, icon: '⚙' },
-    { id: 'mine', hero: 'o', area: 'mine', name: 'Runenmine', desc: 'Dringe 18 Wellen tief in die alte Runenmine vor. Jede 6. Welle erwacht der Runenwächter. Nur hier findest du Teile des Runengolems, und jeder Sieg bringt eine Rune.', waves: 18, bossEvery: 6, spl: [2, 3], start: 0.85, icon: '⬢', rune: true },
+    { id: 'h_a', hero: 'a', area: 'schatten', name: 'Schattenviertel', desc: 'Schleiche 18 Wellen durch die Gassen der Diebesgilde. Jede 6. Welle stellt sich dir die Gildenmeisterin.', waves: 18, bossEvery: 6, spl: [2, 3], start: 0.85, icon: '☾' },
+    { id: 'h_n', hero: 'n', area: 'friedhof', name: 'Vergessener Friedhof', desc: 'Überstehe 18 Wellen zwischen den Gräbern. Jede 6. Welle gräbt sich der Totengräber aus der Erde.', waves: 18, bossEvery: 6, spl: [2, 3], start: 0.85, icon: '☠' },
+    { id: 'h_b', hero: 'b', area: 'theater', name: 'Geistertheater', desc: 'Spiele 18 Wellen lang auf der verfluchten Bühne. Jede 6. Welle zieht der Puppenspieler die Fäden.', waves: 18, bossEvery: 6, spl: [2, 3], start: 0.85, icon: '♪' },
+    { id: 'h_d', hero: 'd', area: 'hain', name: 'Verdorbener Hain', desc: 'Kämpfe dich 18 Wellen durch den kranken Wald. Jede 6. Welle bricht der Moderhirsch durchs Unterholz.', waves: 18, bossEvery: 6, spl: [2, 3], start: 0.85, icon: '❀' },
+    { id: 'h_e', hero: 'e', area: 'werk', name: 'Uhrwerkfabrik', desc: 'Überstehe 18 Wellen in der verlassenen Fabrik. Jede 6. Welle stampft der Dampfkoloss heran.', waves: 18, bossEvery: 6, spl: [2, 3], start: 0.85, icon: '⚙' },
+    { id: 'mine', hero: 'o', area: 'mine', name: 'Runenmine', desc: 'Dringe 18 Wellen tief in die alte Runenmine vor. Jede 6. Welle erwacht der Runenwächter. Jeder Sieg bringt eine Rune.', waves: 18, bossEvery: 6, spl: [2, 3], start: 0.85, icon: '⬢', rune: true },
   ];
   const MISSION = Object.fromEntries(MISSIONS.map(m => [m.id, m]));
   // Themengebiete der Puzzle-Helden: eigene Umgebung, eigene Gegner und ein eigener Boss
@@ -2129,23 +2131,20 @@
     const m = MISSION[run.mission]; if (!m || !run.victory) return null;
     const spl = m.spl[0] + Math.floor(Math.random() * (m.spl[1] - m.spl[0] + 1));
     S.exp.spl += spl; S.exp.done++;
-    const id = m.hero || null, have = id ? pieceMask(S, id) : 63, missing = [0, 1, 2, 3, 4, 5].filter(i => !(have & (1 << i)));
-    let piece = null, rune = null, runeDust = 0;
+    const id = m.hero || null;
+    let rune = null, runeDust = 0;
     if (m.rune && feature(S, 'runen')) { const d0 = S.dust; rune = addRune(S, RUNES[Math.floor(Math.random() * RUNES.length)].id, bossRuneTier(run.stage)); runeDust = S.dust - d0; }
-    // Jedes der 6 Teile kann fallen. Hat man es schon, wird es zu Heldensplittern.
-    let dup = null;
-    if (id && Math.random() < PIECE_CHANCE) { const k = Math.floor(Math.random() * 6); if (have & (1 << k)) { dup = k; S.exp.spl += PIECE_DUP; } else { piece = k; S.exp.pieces[id] = have | (1 << piece); } }
-    const complete = piece != null && id && assembled(S, id);
-    if (complete) puzzleHire(S, id);
-    return { spl, piece, dup, dupSpl: dup != null ? PIECE_DUP : 0, hero: id, complete, rune, runeDust };
+    // Keine Puzzleteile mehr (Helden gibt es nur noch im Banner) – Missionen geben Heldensplitter und ggf. eine Rune
+    return { spl, piece: null, dup: null, dupSpl: 0, hero: id, complete: false, rune, runeDust };
   }
   // Fertiges Puzzle: der Held schließt sich sofort kostenlos an
   function puzzleHire(S, id) { const h = HERO_BY_ID[id]; if (h && h.hire && assembled(S, id) && !rank(S, h.hire)) S.nodes[h.hire] = 1; }
-  function buyPiece(S, id, i) {
-    if (!PUZZLE.includes(id) || !(i >= 0 && i < 6) || (pieceMask(S, id) & (1 << i)) || S.exp.spl < PIECE_COST) return false;
-    S.exp.spl -= PIECE_COST; S.exp.pieces[id] = pieceMask(S, id) | (1 << i);
-    puzzleHire(S, id);
-    return true;
+  // Splitter-Tausch: Heldensplitter gegen Sternkristalle für den Banner (100 ◈ = 10 💠)
+  const SPL_PACK = 100, SPL_GEM = 10;
+  function splTrade(S, packs) {
+    packs = Math.max(0, Math.min(Math.floor(Number(packs) || 0), Math.floor(((S.exp && S.exp.spl) || 0) / SPL_PACK)));
+    if (!packs) return 0;
+    S.exp.spl -= packs * SPL_PACK; S.gem += packs * SPL_GEM; return packs * SPL_GEM;
   }
   // Werte mit den Regeln der Tages-Herausforderung
   function statsFor(S, mode) {
@@ -2899,7 +2898,7 @@
     return (n < 10 ? n.toFixed(2) : n < 100 ? n.toFixed(1) : Math.floor(n).toString()).replace('.', ',') + units[i];
   }
 
-  const core = { RAR, RAR_COL, GEAR_SLOTS, TINTS, HERO_SETS, DECO_SLOTS, ITEMS, TROPHY_N, BSET_AT, itemOf, invN, invAdd, invUsed, invFree, equipGear, setDeco, chestRoll, chestCount, openChest, trophyRoll, bsetCount, bsetAdd, CHEST, TROPHY, TRIPS, TRIP_SHARE, onTrip, tripLeft, rateOf, noteRate, hoursReward, tripReward, startTrip, claimTrip, WB, WB_BOSS, wbScore, wbBarReward, wbBarSecs, wbGoalHours, wbReward, GACHA, G_FIVE, G_FOUR, CONS_H, consList, consApply, evtBanner, evtPeriod, starSock, gachaOpen, evtOpen, gemOpen, gemBossFirst, GIFT_PULLS, consOf, bannerOf, gachaPull, GEM_SRC, LOGIN, loginItem, loginToday, claimLogin, BOUNTY, bountiesOf, bountyDone, bountyClaim, ahnLike, AHN_MISSIONS, AHN_ABIL, AHN_MECH, AHN_BOONS, ahnRollBoons, ahnPickBoon, ahnBoonText, ahnApplyBoons, AHN_TRAIT, AHNE, AHN_TUNE, AHN_COUNT, ahnOpen, ahnBossesOf, ahnLevelFor, placeSigil, ahnClaim, unrebirth, transmute, bossRuneTier, resetPerks, buyLager, lagerCost, LAGER_MAX, runeCap, shardOf, mergeCost, ALTAR_MAX, altarCost, altarMul, buyAltar, kSlots, kFree, keyCap, addSock, removeSock, removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, buyPiece, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
+  const core = { RAR, RAR_COL, GEAR_SLOTS, TINTS, HERO_SETS, DECO_SLOTS, ITEMS, TROPHY_N, BSET_AT, itemOf, invN, invAdd, invUsed, invFree, equipGear, setDeco, chestRoll, chestCount, openChest, trophyRoll, bsetCount, bsetAdd, CHEST, TROPHY, TRIPS, TRIP_SHARE, onTrip, tripLeft, rateOf, noteRate, hoursReward, tripReward, startTrip, claimTrip, WB, WB_BOSS, wbScore, wbBarReward, wbBarSecs, wbGoalHours, wbReward, GACHA, G_FIVE, G_FOUR, CONS_H, consList, consApply, evtBanner, evtPeriod, starSock, gachaOpen, evtOpen, gemOpen, gemBossFirst, GIFT_PULLS, consOf, bannerOf, gachaPull, GEM_SRC, LOGIN, loginItem, loginToday, claimLogin, BOUNTY, bountiesOf, bountyDone, bountyClaim, ahnLike, AHN_MISSIONS, AHN_ABIL, AHN_MECH, AHN_BOONS, ahnRollBoons, ahnPickBoon, ahnBoonText, ahnApplyBoons, AHN_TRAIT, AHNE, AHN_TUNE, AHN_COUNT, ahnOpen, ahnBossesOf, ahnLevelFor, placeSigil, ahnClaim, unrebirth, transmute, bossRuneTier, resetPerks, buyLager, lagerCost, LAGER_MAX, runeCap, shardOf, mergeCost, ALTAR_MAX, altarCost, altarMul, buyAltar, kSlots, kFree, keyCap, addSock, removeSock, removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, splTrade, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
     SEASON, rankOf, RANKS, rankBonus, AREAS, areaOf, MISSIONS, extraSocks, XSOCK, sockOk, runeAmp, mastInfo, mastLevel, SKINS, WF_STAGE, WF, wfSpawn,
     sigOn, sigKeysUsed, keyNeed, eqOf, slotLim, SIG, SIG_FLAGS, newRun, step, stats, buy, available, blockReason, NODE, migrate, fresh,
     rebirth, ascend, crownsFor, buyCperk, cperkCost, cperk, CPERKS, levelComp, toggleComp, compCost, compMax, compSlots, COMPS, checkAch, ACH, claimWeekly, weekId, dayId, weekRules, RULE, WEEK_TIERS, statsFor, starsFor, toggleEquip, slotsOf, hired, classOpen, keysUsed, keyLimit, capOf, reqOf, feature, encode, decode, fmt, socket, unsocket, merge, canMerge, dismantle, buyRune, runeVal, addRune };
