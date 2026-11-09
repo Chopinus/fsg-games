@@ -59,7 +59,7 @@ const IDLE_MS = 30 * 60 * 1000; // Räume ohne verbundene Spieler verschwinden n
 
 const STATIC = {
   '/': 'index.html', '/index.html': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css',
-  '/mini.js': 'mini.js', '/ritter.js': 'ritter.js', '/spiele2.js': 'spiele2.js', '/welt.js': 'welt.js', '/casino_ui.js': 'casino_ui.js', '/insel.js': 'insel.js',
+  '/mini.js': 'mini.js', '/ritter.js': 'ritter.js', '/spiele2.js': 'spiele2.js', '/welt.js': 'welt.js', '/casino_ui.js': 'casino_ui.js', '/insel.js': 'insel.js', '/ideen.js': 'ideen.js',
 };
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
 

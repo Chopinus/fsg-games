@@ -606,6 +606,126 @@ function createLimit(ip, add) {
   if (e.length >= 25) return 'Von diesem Netzwerk wurden heute schon sehr viele Konten angelegt. Versuch es morgen wieder.';
   return '';
 }
+// ---------- Ideen & Vorschläge der Spieler ----------
+// Ablauf: Spieler reichen ein (Status "neu", nur für sie sichtbar). Täglich gegen 18 Uhr prüft Claude die neuen Vorschläge
+// und schreibt das Ergebnis in vorschlaege-pruefung.json (im selben privaten Repo). Der Server holt diese Datei regelmäßig ab:
+// geeignete Vorschläge werden "offen" (öffentlich, mit 👍 bewertbar), unpassende "verworfen". Der Admin (Chop) nimmt offene an
+// oder lehnt sie ab. An Update-Tagen (Mi, Fr, So) setzt Claude angenommene um und meldet sie über dieselbe Datei als "umgesetzt".
+// Nur der Server schreibt vorschlaege.json, nur Claude schreibt vorschlaege-pruefung.json – so gibt es keine Schreibkonflikte.
+const VS_FILE = 'vorschlaege.json', VS_LOCAL = path.join(__dirname, 'vorschlaege.local.json');
+const VS_REV_FILE = 'vorschlaege-pruefung.json', VS_REV_LOCAL = path.join(__dirname, 'vorschlaege-pruefung.local.json');
+const VS_ADMINS = String(process.env.VS_ADMINS || 'chop').split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+const VS_CATS = { balance: '⚖️ Balance', feature: '✨ Neue Funktion', bug: '🐞 Fehler', grafik: '🎨 Grafik & Sound', sonstiges: '💬 Sonstiges' };
+const VS_WEEK = 3, VS_MAX_NEW = 300;
+let vs = { list: [], seq: 0 }, vsSha = null, vsDirty = false, vsTimer = null, vsRevSha = '';
+async function vsLoad() {
+  try {
+    if (durable) { const res = await gh('GET', null, VS_FILE); if (res.status === 200) { const j = await res.json(); vsSha = j.sha; vs = JSON.parse(Buffer.from(j.content || '', 'base64').toString('utf8') || '{}'); } }
+    else if (fs.existsSync(VS_LOCAL)) vs = JSON.parse(fs.readFileSync(VS_LOCAL, 'utf8'));
+  } catch (e) { console.error('Vorschläge laden:', e); }
+  vs.list = vs.list || []; vs.seq = vs.seq || 0;
+  vsPull(); setInterval(vsPull, 10 * 60e3).unref();
+}
+async function vsFlush() {
+  if (!vsDirty) return; vsDirty = false;
+  const text = JSON.stringify(vs);
+  try {
+    if (durable) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const res = await gh('PUT', { message: 'Vorschläge aktualisiert', content: Buffer.from(text).toString('base64'), ...(vsSha ? { sha: vsSha } : {}) }, VS_FILE);
+        if (res.ok) { vsSha = (await res.json()).content.sha; return; }
+        if (res.status === 409 || res.status === 422) { const g = await gh('GET', null, VS_FILE); if (g.ok) vsSha = (await g.json()).sha; continue; }
+        console.error('Vorschläge speichern:', res.status); break;
+      }
+      vsDirty = true;
+    } else fs.writeFileSync(VS_LOCAL, text);
+  } catch (e) { vsDirty = true; console.error('Vorschläge speichern:', e); }
+}
+function vsMark() { vsDirty = true; if (!vsTimer) vsTimer = setTimeout(() => { vsTimer = null; vsFlush(); }, 15000); }
+// Prüfergebnisse von Claude abholen und übernehmen
+let vsPulled = 0;
+async function vsPull() {
+  vsPulled = Date.now(); let rev = null;
+  try {
+    if (durable) {
+      const res = await gh('GET', null, VS_REV_FILE); if (res.status !== 200) return;
+      const j = await res.json(); if (j.sha === vsRevSha) return; vsRevSha = j.sha;
+      rev = JSON.parse(Buffer.from(j.content || '', 'base64').toString('utf8') || '{}');
+    } else if (fs.existsSync(VS_REV_LOCAL)) rev = JSON.parse(fs.readFileSync(VS_REV_LOCAL, 'utf8'));
+  } catch (e) { console.error('Vorschlags-Prüfung laden:', e); return; }
+  if (!rev) return;
+  const byId = new Map(vs.list.map(v => [v.id, v])); let changed = false;
+  const txt = (x, n) => String(x || '').replace(/[\u0000-\u001f<>]/g, ' ').trim().slice(0, n);
+  for (const [id, r] of Object.entries(rev.reviews || {})) {
+    const v = byId.get(id); if (!v || v.st !== 'neu' || !r) continue;
+    v.st = r.st === 'verworfen' ? 'verworfen' : 'offen';
+    v.ai = { v: ['gut', 'unsicher', 'nein'].includes(r.v) ? r.v : 'unsicher', why: txt(r.why, 600), cost: ['klein', 'mittel', 'groß'].includes(r.cost) ? r.cost : '', dup: txt(r.dup, 20) };
+    if (v.st === 'verworfen') v.reason = txt(r.reason || r.why, 200);
+    v.rt = Date.now(); changed = true;
+  }
+  for (const [id, d] of Object.entries(rev.done || {})) {
+    const v = byId.get(id); if (!v || v.st !== 'angenommen') continue;
+    v.st = 'umgesetzt'; v.note = txt(d && d.note, 300); v.dt = Date.now(); changed = true;
+  }
+  if (changed) vsMark();
+}
+const vsPublic = v => ['offen', 'angenommen', 'umgesetzt', 'abgelehnt'].includes(v.st);
+function vsView(v, key, admin) {
+  const o = { id: v.id, n: v.n, g: v.g, c: v.c, t: v.t, x: v.x, st: v.st, ts: v.ts, up: (v.votes || []).length, me: (v.votes || []).includes(key), mine: v.k === key };
+  if (v.reason && (o.mine || admin)) o.reason = v.reason;
+  if (v.note) o.note = v.note;
+  if (v.dn) o.dn = v.dn;
+  if (admin && v.ai) o.ai = v.ai;
+  return o;
+}
+async function vsAction(action, key, acc, body) {
+  const authed = !!(acc && (acc.tokens || []).includes(sha256(String(body.token || ''))));
+  const admin = authed && VS_ADMINS.includes(key);
+  const now = Date.now();
+  if (action === 'vs_list') {
+    if (now - vsPulled > 120e3) await vsPull(); // Prüfergebnisse höchstens alle 2 Minuten nachsehen
+    const old = now - 30 * 864e5;
+    const list = vs.list.filter(v => (vsPublic(v) && !(v.st === 'abgelehnt' && v.ts < old)) || (authed && (v.k === key || admin)))
+      .slice(-300).map(v => vsView(v, authed ? key : '', admin));
+    const used = authed ? vs.list.filter(v => v.k === key && now - v.ts < 7 * 864e5).length : 0;
+    return [200, { list, cats: VS_CATS, admin, left: authed ? Math.max(0, VS_WEEK - used) : 0, week: VS_WEEK }];
+  }
+  if (!authed) return [401, { error: 'Melde dich im Hub mit deinem Konto an.' }];
+  if (action === 'vs_add') {
+    const t = String(body.t || '').replace(/[\u0000-\u001f<>]/g, ' ').trim().slice(0, 80), x = String(body.x || '').replace(/[\u0000-\u0009\u000b-\u001f<>]/g, ' ').trim().slice(0, 800);
+    const g = String(body.g || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 30), c = VS_CATS[body.c] ? body.c : 'sonstiges';
+    if (t.length < 4) return [400, { error: 'Gib deinem Vorschlag einen kurzen Titel (mindestens 4 Zeichen).' }];
+    if (x.length < 15) return [400, { error: 'Beschreib deinen Vorschlag etwas genauer (mindestens 15 Zeichen).' }];
+    if (!g) return [400, { error: 'Wähle aus, zu welchem Spiel der Vorschlag gehört.' }];
+    if (vs.list.filter(v => v.k === key && now - v.ts < 7 * 864e5).length >= VS_WEEK) return [429, { error: `Du kannst höchstens ${VS_WEEK} Vorschläge pro Woche einreichen.` }];
+    if (vs.list.filter(v => v.st === 'neu').length >= VS_MAX_NEW) return [429, { error: 'Gerade warten sehr viele Vorschläge auf die Prüfung. Versuch es morgen wieder.' }];
+    const v = { id: 'v' + (++vs.seq), k: key, n: acc.name, g, c, t, x, st: 'neu', ts: now, votes: [] };
+    vs.list.push(v); vsMark();
+    return [200, { ok: true, item: vsView(v, key, admin) }];
+  }
+  const v = vs.list.find(e => e.id === String(body.id || ''));
+  if (!v) return [404, { error: 'Diesen Vorschlag gibt es nicht mehr.' }];
+  if (action === 'vs_vote') {
+    if (v.st !== 'offen') return [400, { error: 'Bewerten kann man nur offene Vorschläge.' }];
+    if (v.k === key) return [400, { error: 'Deinen eigenen Vorschlag kannst du nicht bewerten.' }];
+    v.votes = v.votes || []; const i = v.votes.indexOf(key); if (i >= 0) v.votes.splice(i, 1); else v.votes.push(key);
+    vsMark(); return [200, { ok: true, item: vsView(v, key, admin) }];
+  }
+  if (action === 'vs_delete') { // eigenen, noch nicht geprüften Vorschlag zurückziehen
+    if (!(v.k === key && v.st === 'neu') && !admin) return [403, { error: 'Das geht nur bei deinen eigenen, noch nicht geprüften Vorschlägen.' }];
+    vs.list.splice(vs.list.indexOf(v), 1); vsMark(); return [200, { ok: true }];
+  }
+  if (action === 'vs_decide') {
+    if (!admin) return [403, { error: 'Nur für Admins.' }];
+    const d = String(body.d || '');
+    if (!['angenommen', 'abgelehnt', 'offen'].includes(d)) return [400, { error: 'Ungültig' }];
+    if (!['offen', 'angenommen', 'abgelehnt', 'neu', 'verworfen'].includes(v.st)) return [400, { error: 'Dieser Vorschlag ist schon umgesetzt.' }];
+    v.st = d; v.dn = String(body.dn || '').replace(/[\u0000-\u001f<>]/g, ' ').trim().slice(0, 200); v.dt = now;
+    vsMark(); return [200, { ok: true, item: vsView(v, key, admin) }];
+  }
+  return [400, { error: 'Unbekannte Aktion' }];
+}
+
 // Bremse gegen Passwort-Raten: höchstens 12 falsche Versuche pro Minute und IP
 const fails = new Map();
 const recent = ip => (fails.get(ip) || []).filter(x => Date.now() - x < 60000);
@@ -667,6 +787,7 @@ async function handle(action, body, ip) {
   }
   if (action === 'board') return [200, board()];
   if (action === 'casino_top' || action === 'casino_report' || action.startsWith('cz_')) return czAction(action, key, acc, body);
+  if (action.startsWith('vs_')) return vsAction(action, key, acc, body);
   if (action === 'casino_gift') return [200, { chips: 0 }]; // alte Seiten: Gutschriften kommen jetzt mit cz_state
   if (action === 'insel_load' || action === 'insel_save') {
     if (!acc || !(acc.tokens || []).includes(sha256(String(body.token || '')))) return [401, { error: 'Bitte melde dich neu an.' }];
@@ -712,9 +833,9 @@ function board() {
   return boardCache;
 }
 
-load().finally(czOldLoad); chatLoad(); wbLoad(); gLoad(); islLoad();
+load().finally(czOldLoad); vsLoad(); chatLoad(); wbLoad(); gLoad(); islLoad();
 // Render beendet den Dienst mit SIGTERM – vorher noch speichern
-process.on('SIGTERM', async () => { await flush(); await chatFlush(); await wbFlush(); await gFlush(); await islFlush(); process.exit(0); });
-process.on('SIGINT', async () => { await flush(); await chatFlush(); await wbFlush(); await gFlush(); await islFlush(); process.exit(0); });
+process.on('SIGTERM', async () => { await flush(); await chatFlush(); await wbFlush(); await gFlush(); await islFlush(); await vsFlush(); process.exit(0); });
+process.on('SIGINT', async () => { await flush(); await chatFlush(); await wbFlush(); await gFlush(); await islFlush(); await vsFlush(); process.exit(0); });
 
 module.exports = { handle, flush, durable, tokenKey, czAcc, czSync, czSeated };
