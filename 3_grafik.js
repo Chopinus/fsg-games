@@ -299,7 +299,7 @@
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
     { id: 52, title: 'Casino: Einsatzlimit für neue Konten', date: '09.11.2026', items: [
-      'Neue Konten haben ein kleineres Einsatzlimit, das mit dem Alter des Kontos wächst: 1.000 am ersten Tag, 2.500 am zweiten, 5.000 am dritten, 10.000 ab Tag 3, 25.000 ab Tag 5 und 50.000 ab einer Woche.',
+      'Neue Konten haben ein kleineres Einsatzlimit, das mit dem Alter des Kontos wächst: 1.000 am 1. Tag, 2.500 am 2. Tag, 5.000 am 3. Tag, 10.000 am 4. und 5. Tag, 25.000 am 6. und 7. Tag und 50.000 ab einer Woche.',
       'In der Casino-Rangliste erscheinen Konten erst, wenn sie 3 Tage alt sind.',
       'Fehler behoben: Beim Pferderennen galt bisher gar kein Höchsteinsatz.'
     ] },
