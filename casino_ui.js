@@ -108,6 +108,49 @@
       <p class="cz-note">${boardTab === 'cur' ? 'Jetons, die du gerade hast – Bankschulden werden abgezogen. Zählt die letzten 30 Tage.' : 'Der höchste Jetonstand, den jemand je hatte (ohne Bankschulden).'}</p>
       ${podium}<div class="cz-rlist">${rest}${mine}</div><p class="cz-note">${B.players || 0} Spieler · zählt die Jetons auf jedem Gerät</p>`);
   }
+
+  /* ---------- Schulden abarbeiten: harte, schlecht bezahlte Arbeit für die Bank ---------- */
+  // Der Lohn geht komplett an die Bank (nicht in den Geldbeutel). Absichtlich mühsam: Schulden sollen wehtun.
+  const JOBS = {
+    mine: { i: '⛏️', n: 'Kohlemine', d: 'Hack Kohle aus dem Fels. Manchmal ist es nur wertloser Stein.', pay: '40 je Sack Kohle' },
+    teller: { i: '🍽️', n: 'Tellerwaschen', d: 'Schrubb die Essensreste von den Tellern der Gewinner. Lass bloß keinen fallen!', pay: '30 je Teller' },
+    putzen: { i: '🧹', n: 'Casino-Boden schrubben', d: 'Jede Fliese zweimal schrubben, bis sie glänzt.', pay: '45 je Boden' },
+  };
+  const BOSS = ['Der Aufseher brüllt: „Schneller, Schuldner!“', 'Der Aufseher gähnt und zählt seine Jetons.', '„Wer spielt, muss auch schuften!“', 'Ein Gewinner läuft vorbei und lacht dich aus.', '„Pause? Pausen gibt es für Leute ohne Schulden.“', 'Der Aufseher notiert: „Arbeitet zu langsam.“', '„Noch 100 Säcke, dann reden wir weiter.“'];
+  const W = { job: null, hp: 0, max: 0, spots: [], tiles: [], msg: '', last: 0, earned: Number(store.get('casino.arbeit')) || 0, shift: 0, shake: 0 };
+  const workPay = n => { const p = Math.min(n, debt); if (p > 0) { setDebt(debt - p); W.earned += p; W.shift += p; store.set('casino.arbeit', W.earned); } return p; };
+  function newWork() {
+    if (W.job === 'mine') { W.max = W.hp = 6 + Math.floor(Math.random() * 6); }
+    if (W.job === 'teller') { W.spots = Array.from({ length: 4 + Math.floor(Math.random() * 4) }, () => ({ x: 22 + Math.random() * 56, y: 22 + Math.random() * 56, ok: 0 })); }
+    if (W.job === 'putzen') { W.tiles = Array.from({ length: 16 }, () => (Math.random() < 0.75 ? 2 : 0)); }
+  }
+  function workHTML() {
+    const J = JOBS[W.job];
+    if (!J) return '';
+    const head = `<div class="cz-work-h"><button class="cz-btn small dark" data-cz-w="stop">← Schicht beenden</button><div><b>${J.i} ${J.n}</b><small>Lohn: ${J.pay} · geht direkt an die Bank</small></div><div class="cz-debtbox"><small>SCHULDEN</small><b>${fmtN(debt)}</b></div></div>
+      <div class="cz-boss">${esc(W.msg || BOSS[0])}</div>`;
+    let body = '';
+    if (!debt) body = '<div class="cz-free">🎉 Schuldenfrei! Der Aufseher lässt dich gehen.</div>';
+    else if (W.job === 'mine') body = `<div class="cz-mine"><button class="cz-rock ${W.shake ? 'hit' : ''}" data-cz-w="hack" style="--crack:${(1 - W.hp / W.max).toFixed(2)}"><span>🪨</span><i class="cz-cracks"></i></button><div class="cz-hpbar"><i style="width:${W.hp / W.max * 100}%"></i></div><small class="cz-note">Tippe auf den Fels, bis er zerbricht.</small></div>`;
+    else if (W.job === 'teller') body = `<div class="cz-plate"><div class="cz-dish">${W.spots.map((p, k) => p.ok ? '' : `<button class="cz-dirt" data-cz-w="wipe" data-k="${k}" style="left:${p.x}%;top:${p.y}%"></button>`).join('')}</div><small class="cz-note">Tippe alle Flecken weg. Pass auf – manchmal rutscht ein Teller aus der Hand.</small></div>`;
+    else if (W.job === 'putzen') body = `<div class="cz-floor">${W.tiles.map((t, k) => `<button class="cz-tile t${t}" data-cz-w="scrub" data-k="${k}"></button>`).join('')}</div><small class="cz-note">Schmutzige Fliesen brauchen zwei Mal Schrubben.</small>`;
+    return head + body + `<p class="cz-note">Diese Schicht: ${fmtN(W.shift)} abgearbeitet · insgesamt schon ${fmtN(W.earned)} Jetons Schulden abgearbeitet.</p>`;
+  }
+  function workTap(b) {
+    const now = performance.now(); if (now - W.last < 70) return; W.last = now; // nicht schneller als ein Mensch tippen kann
+    const a = b.dataset.czW;
+    if (a === 'stop') { W.job = null; W.shift = 0; renderLobby(); return; }
+    if (!debt) return;
+    let done = false;
+    if (a === 'hack') { W.hp--; snd('card'); W.shake = 1; setTimeout(() => { W.shake = 0; }, 90);
+      if (W.hp <= 0) { if (Math.random() < 0.7) { const p = workPay(40); W.msg = `⚫ Ein Sack Kohle! ${fmtN(p)} Schulden abgearbeitet.`; snd('chip'); } else W.msg = '🪨 Nur wertloser Stein. Der Aufseher lacht.'; done = true; } }
+    if (a === 'wipe') { const sp = W.spots[+b.dataset.k]; if (sp && !sp.ok) { sp.ok = 1; snd('card'); }
+      if (W.spots.every(q => q.ok)) { if (Math.random() < 0.06) { setDebt(debt + 50); W.msg = '💥 Teller zerbrochen! Die Bank schreibt dir 50 Schulden dazu.'; snd('lose'); } else { const p = workPay(30); W.msg = `✨ Blitzblank! ${fmtN(p)} Schulden abgearbeitet.`; snd('chip'); } done = true; } }
+    if (a === 'scrub') { const k = +b.dataset.k; if (W.tiles[k] > 0) { W.tiles[k]--; snd('card'); }
+      if (W.tiles.every(t => !t)) { const p = workPay(45); W.msg = `🧽 Der Boden glänzt! ${fmtN(p)} Schulden abgearbeitet.`; snd('chip'); done = true; } }
+    if (done) { newWork(); if (Math.random() < 0.35) W.msg += ' ' + BOSS[Math.floor(Math.random() * BOSS.length)]; if (!debt) { W.msg = '🎉 Schuldenfrei!'; snd('win'); toast('🎉 Du hast alle Schulden abgearbeitet!'); } }
+    renderLobby();
+  }
   function bankHTML() {
     const room = DEBT_MAX - debt;
     return `<div class="cz-bank"><div class="cz-bankrow"><div><small>DEINE JETONS</small><b>${fmtN(wallet)}</b></div><div><small>SCHULDEN BEI DER BANK</small><b class="${debt ? 'red' : ''}">${fmtN(debt)}</b></div><div><small>DIR GEHÖRT WIRKLICH</small><b>${fmtN(net())}</b></div></div>
@@ -116,6 +159,8 @@
       <div class="cz-toprow" style="justify-content:flex-start">${LOANS.map(n => `<button class="cz-btn small" data-cz-loan="${n}" ${n <= room ? '' : 'disabled'}>+ ${fmtN(n)} leihen</button>`).join('')}${room > 0 && room < LOANS[0] ? `<button class="cz-btn small" data-cz-loan="${room}">+ ${fmtN(room)} leihen</button>` : ''}</div>
       ${room <= 0 ? '<p class="cz-note" style="color:#ff8a7a">Kreditrahmen ausgeschöpft – zahl zuerst etwas zurück.</p>' : `<p class="cz-note">Noch ${fmtN(room)} Kreditrahmen frei.</p>`}
       <div class="cz-sec">💸 Zurückzahlen</div>
+      ${debt ? `<div class="cz-sec">⛏️ Schulden abarbeiten</div><p class="cz-note">Kein Geld zum Zurückzahlen? Dann arbeite für die Bank. Der Lohn ist mies und geht komplett an die Bank – aber jede Schicht macht deine Schulden kleiner.</p>
+      <div class="cz-shop">${Object.entries(JOBS).map(([k, J]) => `<div class="cz-item"><span class="ic">${J.i}</span><b>${J.n}</b><small>${J.d}</small><small><b>${J.pay}</b></small><div class="row"><button class="cz-btn small dark" data-cz-job="${k}">Schicht beginnen</button></div></div>`).join('')}</div>` : ''}
       ${debt ? `<div class="cz-toprow" style="justify-content:flex-start">${[1000, 5000].filter(n => n < debt).map(n => `<button class="cz-btn small dark" data-cz-pay="${n}" ${wallet >= n ? '' : 'disabled'}>${fmtN(n)} zurück</button>`).join('')}<button class="cz-btn small dark" data-cz-pay="all" ${wallet > 0 ? '' : 'disabled'}>${wallet >= debt ? `Alles zurück (${fmtN(debt)})` : `So viel wie geht (${fmtN(wallet)})`}</button></div>` : '<p class="cz-note">Du hast keine Schulden. 🎉</p>'}
     </div>`;
   }
@@ -154,6 +199,20 @@
   .cz-shop{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:8px}
   .cz-item{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:12px 10px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)}
   .cz-item.on{border-color:var(--gold);background:rgba(232,196,106,.12)}.cz-item .ic{font-size:34px;line-height:1.1}.cz-item small{color:#cdbf9f}.cz-item .row{display:flex;gap:6px}
+  .cz-work-h{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:12px 0 8px}.cz-work-h>div{display:flex;flex-direction:column}.cz-work-h small{color:#cdbf9f}
+  .cz-debtbox{margin-left:auto;background:rgba(255,80,60,.12);border:1px solid rgba(255,120,100,.4);border-radius:12px;padding:6px 12px}.cz-debtbox b{color:#ff8a7a;font-size:22px}
+  .cz-boss{background:#2a2016;border-left:4px solid #8a6a3a;border-radius:8px;padding:9px 12px;margin:6px 0 14px;color:#e8d8b8;font-style:italic;max-width:640px}
+  .cz-free{font-size:26px;text-align:center;padding:40px 0;color:var(--gold)}
+  .cz-mine{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 0;background:radial-gradient(ellipse at center,#2a2420 0%,#120e0c 70%);border-radius:18px}
+  .cz-rock{position:relative;border:0;background:none;cursor:pointer;font-size:150px;line-height:1;transition:transform .08s;filter:drop-shadow(0 10px 12px rgba(0,0,0,.6)) grayscale(.4) brightness(calc(1 - var(--crack) * .35))}
+  .cz-rock.hit{transform:scale(.93) rotate(-4deg)}.cz-rock:active{transform:scale(.93)}
+  .cz-hpbar{width:220px;height:10px;border-radius:6px;background:#3a2a20;overflow:hidden}.cz-hpbar i{display:block;height:100%;background:linear-gradient(90deg,#7a6a5a,#b8a890)}
+  .cz-plate{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .cz-dish{position:relative;width:min(300px,78vw);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,#ffffff 0 52%,#e8eef4 53% 62%,#cfd8e2 63% 100%);box-shadow:0 10px 24px rgba(0,0,0,.5)}
+  .cz-dirt{position:absolute;width:44px;height:36px;margin:-18px 0 0 -22px;border:0;border-radius:50% 40% 55% 45%;background:radial-gradient(circle at 40% 40%,#8a5a2a,#5a3a1a);cursor:pointer;opacity:.9}
+  .cz-floor{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;width:min(360px,86vw);padding:6px;background:#1a1410;border-radius:10px}
+  .cz-tile{aspect-ratio:1;border:0;border-radius:4px;cursor:pointer;background:linear-gradient(135deg,#e8e0d0,#c8bca8)}
+  .cz-tile.t2{background:linear-gradient(135deg,#6a5a3a,#4a3a22)}.cz-tile.t1{background:linear-gradient(135deg,#a8987a,#8a7a5a)}
   .cz-fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:99999}
   .cz-ltabs,.cz-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 6px}
   .cz-podium{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;align-items:end;max-width:560px;margin:14px 0 12px}
@@ -350,8 +409,8 @@
       <div class="cz-head"><button class="cz-btn dark small" data-cz="back">‹ Hub</button>
         <div class="cz-logo">Casino Aurum<small>NUR SPIELGELD · KEIN ECHTES GELD</small></div>
         <div class="cz-wallet">${chipHTML(1000, '', 'tabindex="-1"')}<div><small>DEINE JETONS</small><b data-cz-wallet>${fmtN(wallet)}</b></div></div></div>
-      <div class="cz-ltabs">${[['games', '🎰 Spiele'], ['shop', '🛍️ Shop'], ['bank', '🏦 Bank' + (debt ? ' · ' + short(debt) : '')], ['board', '🏆 Rangliste']].map(([k, t]) => `<button class="cz-btn small ${lobbyTab === k ? '' : 'dark'}" data-cz-tab="${k}">${t}</button>`).join('')}</div>
-      ${lobbyTab === 'shop' ? shopHTML() : lobbyTab === 'bank' ? bankHTML() : lobbyTab === 'board' ? '<div class="cz-sec">🏆 Rangliste</div><div id="czBoard"></div>' : `<div class="cz-toprow" style="justify-content:flex-start">
+      <div class="cz-ltabs">${[...(W.job ? [['work', '⛏️ Schicht']] : []), ['games', '🎰 Spiele'], ['shop', '🛍️ Shop'], ['bank', '🏦 Bank' + (debt ? ' · ' + short(debt) : '')], ['board', '🏆 Rangliste']].map(([k, t]) => `<button class="cz-btn small ${lobbyTab === k ? '' : 'dark'}" data-cz-tab="${k}">${t}</button>`).join('')}</div>
+      ${lobbyTab === 'work' ? workHTML() : lobbyTab === 'shop' ? shopHTML() : lobbyTab === 'bank' ? bankHTML() : lobbyTab === 'board' ? '<div class="cz-sec">🏆 Rangliste</div><div id="czBoard"></div>' : `<div class="cz-toprow" style="justify-content:flex-start">
         ${bonus ? '<button class="cz-btn small" data-cz="bonus">🎁 Tagesbonus: 2.000 Jetons</button>' : '<span class="cz-note">Tagesbonus abgeholt – morgen gibt es neuen.</span>'}
         ${helpOk ? '<button class="cz-btn small dark" data-cz="help">Pleite? 1.000 Jetons Starthilfe</button>' : ''}
       </div>
@@ -374,6 +433,8 @@
     const by = e.target.closest('[data-cz-buy]'); if (by) { const cat = by.dataset.czBuy, k = by.dataset.k, it = SHOP_ITEMS[cat].items.find(x => x[0] === k); if (!it || SH.own.includes(k) || net() < it[3]) return; setWallet(wallet - it[3]); SH.own.push(k); SH.eq[cat] = k; shopSave(); if (cat === 'felt') feltApply(); if (cat === 'badge') czReport(true); snd('win'); toast(`🛍️ ${it[2]} gekauft und aktiviert!`); if (cat === 'fx') winFx(k, 1.5); if (cat === 'sfx') winSound(k, false); renderLobby(); return; }
     const eqb = e.target.closest('[data-cz-eq]'); if (eqb) { const cat = eqb.dataset.czEq; SH.eq[cat] = eqb.dataset.k; shopSave(); if (cat === 'felt') feltApply(); if (cat === 'badge') czReport(true); renderLobby(); return; }
     const tr = e.target.closest('[data-cz-try]'); if (tr) { if (tr.dataset.czTry === 'fx') winFx(tr.dataset.k, 1.5); else winSound(tr.dataset.k, true); return; }
+    const jb = e.target.closest('[data-cz-job]'); if (jb) { W.job = jb.dataset.czJob; W.shift = 0; W.msg = BOSS[Math.floor(Math.random() * BOSS.length)]; newWork(); lobbyTab = 'work'; renderLobby(); return; }
+    const wk = e.target.closest('[data-cz-w]'); if (wk) { workTap(wk); if (!W.job) { lobbyTab = 'bank'; renderLobby(); } return; }
     const tb = e.target.closest('[data-cz-tab]'); if (tb) { lobbyTab = tb.dataset.czTab; renderLobby(); if (lobbyTab === 'board') czReport(true); return; }
     const bt = e.target.closest('[data-cz-bt]'); if (bt) { boardTab = bt.dataset.czBt; renderBoard(); return; }
     const ln = e.target.closest('[data-cz-loan]'); if (ln) { const n = Math.min(+ln.dataset.czLoan, DEBT_MAX - debt); if (n > 0) { setDebt(debt + n); setWallet(wallet + n); snd('chip'); toast(`🏦 ${fmtN(n)} Jetons geliehen – Schulden jetzt ${fmtN(debt)}`); } renderLobby(); return; }

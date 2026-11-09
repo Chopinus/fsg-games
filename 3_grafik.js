@@ -298,6 +298,10 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 42, title: 'Casino: Schulden abarbeiten', date: '09.11.2026', items: [
+      ['Neu', 'Casino: Wer Schulden hat, kann sie bei der Bank abarbeiten – Kohle hacken, Teller waschen oder den Casino-Boden schrubben'],
+      ['Neu', 'Casino: Der Lohn ist mies und geht direkt an die Bank. Und wer einen Teller fallen lässt, bekommt Schulden dazu'],
+    ] },
     { id: 41, title: 'Casino: Jetons gingen verloren – behoben', date: '09.11.2026', items: [
       ['Behoben', 'Casino: Ein alter Platz an einem Tisch (z. B. aus einem zweiten Tab) konnte deinen Jetonstand auf einen alten Wert zurücksetzen'],
     ] },
