@@ -77,7 +77,7 @@
       <p class="lead">Schlag Verbesserungen für die Spiele vor – Balance, neue Funktionen, Fehler. <b>Täglich gegen 18 Uhr</b> werden neue Ideen geprüft und dann für alle zum Abstimmen freigegeben. Angenommene Ideen kommen <b>mittwochs, freitags und sonntags</b> ins Spiel.</p>
       <div class="panel vz-formbox">${formHTML()}</div>
       <div class="vz-tabs">${tabs.map(([k2, l]) => `<button class="vz-tab ${tab === k2 ? 'on' : ''}" data-vz-tab="${k2}">${l}</button>`).join('')}</div>
-      ${tab === 'adm' ? `<p class="vz-small">${waiting} Idee(n) warten auf die nächste Prüfung. Angenommene setzt Claude am nächsten Update-Tag um (höchstens 3 pro Update, die mit den meisten 👍 zuerst).</p>` : ''}
+      ${tab === 'adm' ? `<p class="vz-small">${waiting} Idee(n) warten auf die nächste Prüfung. Alles, was du annimmst, setzt Claude am nächsten Update-Tag um (Mi, Fr, So).</p>` : ''}
       <div class="vz-list">${!D ? '<p class="vz-small">Wird geladen …</p>' : L.length ? L.map(card).join('') : `<p class="vz-small">${empty}</p>`}</div></div>`;
     const f = q('#vzForm');
     if (f) {
@@ -123,7 +123,8 @@
     const hub = q('#hub'); if (!hub || q('#vzTeaser')) return;
     const sec = document.createElement('section'); sec.className = 'stack'; sec.id = 'vzTeaser';
     sec.innerHTML = `<h2>Ideen für die Spiele</h2><div class="panel vz-teaser"><span class="vz-bulb">💡</span><div><b>Du hast eine Idee, wie ein Spiel besser wird?</b><p>Schlag sie vor oder stimm über die Ideen der anderen ab. Updates mit angenommenen Ideen kommen mittwochs, freitags und sonntags.</p></div><button class="btn small" data-vz-open="1">Ideen ansehen</button></div>`;
-    hub.appendChild(sec);
+    const rooms = q('#rooms'), before = rooms && rooms.closest('section');
+    if (before && before.parentNode === hub) hub.insertBefore(sec, before); else hub.appendChild(sec); // über den offenen Runden
     sec.addEventListener('click', e => { if (e.target.closest('[data-vz-open]')) open(); });
   }
 

@@ -301,7 +301,8 @@
     { id: 47, title: 'Neu im Hub: Ideen & Vorschläge', date: '09.11.2026', items: [
       'Im Hub gibt es jetzt den Bereich „Ideen für die Spiele“: Schlag Verbesserungen für jedes Spiel vor – Balance, neue Funktionen, Fehler.',
       'Täglich gegen 18 Uhr werden neue Ideen geprüft und dann für alle sichtbar. Mit 👍 stimmst du für Ideen der anderen.',
-      'Angenommene Ideen kommen mittwochs, freitags und sonntags ins Spiel. Pro Konto 3 Ideen pro Woche.'
+      'Angenommene Ideen kommen mittwochs, freitags und sonntags ins Spiel. Pro Konto 3 Ideen pro Woche.',
+      'Der Ideen-Bereich steht jetzt über den offenen Runden.'
     ] },
     { id: 46, title: 'Ein neues Konto pro Gerät', date: '09.11.2026', items: [
       'Auf jedem Gerät kann nur noch ein neues Konto erstellt werden.',
