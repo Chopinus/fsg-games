@@ -298,6 +298,10 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 49, title: 'Ideen: eigene Kachel und Kommentare', date: '09.11.2026', items: [
+      'Ideen & Vorschläge haben jetzt eine eigene Kachel im Hub, direkt unter dem Casino.',
+      'Unter Vorschlägen kann jetzt ein Kommentar vom Admin stehen – z. B. was genau umgesetzt wird.'
+    ] },
     { id: 48, title: 'Casino: alte Jetons übers Gerät zurück', date: '09.11.2026', items: [
       'Die alten Jetons werden jetzt über das Gerät zurückgegeben, auf dem du damals gespielt hast – egal, welchen Namen du im Casino benutzt hattest.',
       'Öffne dafür das Casino auf diesem Gerät und melde dich mit deinem Konto an. Bis höchstens 50.000 Jetons, einmal pro Konto und Gerät.'

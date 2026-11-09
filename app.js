@@ -80,7 +80,9 @@ function renderTiles() {
     <div class="tile wide solo-tile is-tile"><div class="art"><span class="is-art"></span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b>Inselreich <span class="pill">Prototyp</span></b><span class="sub">Eine offene Pixelwelt aus Inseln für alle zusammen. Laufe über die Inseln, steig ins Boot und segle mit dem Wind zu neuen Ufern.</span></div>
       <button class="btn small" data-insel="1">Spielen</button></div>
     <div class="tile wide solo-tile cz-tile"><div class="art"><span class="cz-art"></span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b>Casino Aurum <span class="pill">Spielgeld</span></b><span class="sub">Blackjack, Roulette, Texas Hold'em, Pferderennen, Spielautomat und Glücksrad – allein gegen Bots oder am Tisch mit Freunden. Nur Spieljetons, kein echtes Geld.</span></div>
-      <button class="btn small" data-casino="1">Spielen</button></div>` + GAMES.map(g => g.key === 'party'
+      <button class="btn small" data-casino="1">Spielen</button></div>
+    <div class="tile wide vz-tile"><div class="art"><span class="vz-art">💡</span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b>Ideen &amp; Vorschläge <span class="pill">Neu</span></b><span class="sub">Du hast eine Idee, wie ein Spiel besser wird? Schlag sie vor oder stimm über die Ideen der anderen ab. Updates kommen mittwochs, freitags und sonntags.</span></div>
+      <button class="btn small" data-vz-open="1">Ideen ansehen</button></div>` + GAMES.map(g => g.key === 'party'
     ? `<div class="tile wide"><div class="art">${g.art}</div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b>${esc(g.title)}</b><span class="sub">${esc(g.sub)}</span></div>
       <button class="btn small" data-create="${g.key}">Party starten</button></div>`
     : `<div class="tile"><div class="art">${g.art}</div><b>${esc(g.title)}</b><span class="sub">${esc(g.sub)}</span>

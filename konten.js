@@ -693,7 +693,7 @@ function vsView(v, key, admin) {
   const o = { id: v.id, n: v.n, g: v.g, c: v.c, t: v.t, x: v.x, st: v.st, ts: v.ts, up: (v.votes || []).length, me: (v.votes || []).includes(key), mine: v.k === key };
   if (v.reason && (o.mine || admin)) o.reason = v.reason;
   if (v.note) o.note = v.note;
-  if (v.dn) o.dn = v.dn;
+  if (v.dn) { o.dn = v.dn; o.dnBy = v.dnBy || 'Admin'; }
   if (admin && v.ai) o.ai = v.ai;
   return o;
 }
@@ -734,12 +734,18 @@ async function vsAction(action, key, acc, body) {
     if (!(v.k === key && v.st === 'neu') && !admin) return [403, { error: 'Das geht nur bei deinen eigenen, noch nicht geprüften Vorschlägen.' }];
     vs.list.splice(vs.list.indexOf(v), 1); vsMark(); return [200, { ok: true }];
   }
+  if (action === 'vs_note') { // Kommentar des Admins zu einem Vorschlag (für alle sichtbar)
+    if (!admin) return [403, { error: 'Nur für Admins.' }];
+    v.dn = String(body.dn || '').replace(/[\u0000-\u0009\u000b-\u001f<>]/g, ' ').trim().slice(0, 500); v.dnBy = acc.name;
+    vsMark(); return [200, { ok: true, item: vsView(v, key, admin) }];
+  }
   if (action === 'vs_decide') {
     if (!admin) return [403, { error: 'Nur für Admins.' }];
     const d = String(body.d || '');
     if (!['angenommen', 'abgelehnt', 'offen'].includes(d)) return [400, { error: 'Ungültig' }];
     if (!['offen', 'angenommen', 'abgelehnt', 'neu', 'verworfen'].includes(v.st)) return [400, { error: 'Dieser Vorschlag ist schon umgesetzt.' }];
-    v.st = d; v.dn = String(body.dn || '').replace(/[\u0000-\u001f<>]/g, ' ').trim().slice(0, 200); v.dt = now;
+    v.st = d; v.dt = now;
+    const dn = String(body.dn || '').replace(/[\u0000-\u001f<>]/g, ' ').trim().slice(0, 500); if (dn) { v.dn = dn; v.dnBy = acc.name; } // Begründung nur setzen, wenn eine angegeben wurde
     vsMark(); return [200, { ok: true, item: vsView(v, key, admin) }];
   }
   return [400, { error: 'Unbekannte Aktion' }];

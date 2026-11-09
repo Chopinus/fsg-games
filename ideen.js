@@ -32,7 +32,7 @@
   let D = null, tab = 'top', page = null, busy = false, formOpen = false, draft = {};
 
   function games() {
-    const names = [...document.querySelectorAll('#tiles .tile b')].map(b => (b.firstChild && b.firstChild.textContent || '').trim()).filter(Boolean);
+    const names = [...document.querySelectorAll('#tiles .tile:not(.vz-tile) b')].map(b => (b.firstChild && b.firstChild.textContent || '').trim()).filter(Boolean);
     return [...new Set([...names, 'Game Hub allgemein'])];
   }
   const date = t => new Date(t).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
@@ -41,12 +41,12 @@
     const st = ST[v.st] || ['', ''], cat = (D.cats || {})[v.c] || '';
     const vote = v.st === 'offen' ? `<button class="vz-up ${v.me ? 'on' : ''}" data-vz-up="${v.id}" ${v.mine ? 'disabled title="Eigene Vorschläge kann man nicht bewerten"' : ''}>👍 ${v.up}</button>` : (v.up ? `<span class="vz-up static">👍 ${v.up}</span>` : '');
     const ai = D.admin && v.ai ? `<div class="vz-ai ${AI[v.ai.v] ? AI[v.ai.v][1] : ''}"><b>Claude: ${AI[v.ai.v] ? AI[v.ai.v][0] : h(v.ai.v)}</b>${v.ai.cost ? ` · Aufwand ${h(v.ai.cost)}` : ''}${v.ai.dup ? ` · ähnlich wie ${h(v.ai.dup)}` : ''}<p>${h(v.ai.why)}</p></div>` : '';
-    const adm = D.admin ? `<div class="vz-adm">${v.st === 'offen' || v.st === 'neu' || v.st === 'verworfen' ? `<button class="btn small" data-vz-d="angenommen" data-id="${v.id}">✅ Annehmen</button><button class="btn small ghost" data-vz-d="abgelehnt" data-id="${v.id}">✖️ Ablehnen</button>` : ''}${v.st === 'angenommen' || v.st === 'abgelehnt' ? `<button class="btn small ghost" data-vz-d="offen" data-id="${v.id}">↩︎ Wieder offen</button>` : ''}</div>` : '';
+    const adm = D.admin ? `<div class="vz-adm">${v.st === 'offen' || v.st === 'neu' || v.st === 'verworfen' ? `<button class="btn small" data-vz-d="angenommen" data-id="${v.id}">✅ Annehmen</button><button class="btn small ghost" data-vz-d="abgelehnt" data-id="${v.id}">✖️ Ablehnen</button>` : ''}${v.st === 'angenommen' || v.st === 'abgelehnt' ? `<button class="btn small ghost" data-vz-d="offen" data-id="${v.id}">↩︎ Wieder offen</button>` : ''}<button class="btn small ghost" data-vz-note="${v.id}">💬 ${v.dn ? 'Kommentar ändern' : 'Kommentar'}</button></div>` : '';
     const del = v.mine && v.st === 'neu' ? `<button class="vz-link" data-vz-del="${v.id}">zurückziehen</button>` : '';
     return `<article class="vz-card">
       <div class="vz-top"><span class="vz-st ${st[1]}">${st[0]}</span><span class="pill">${h(v.g)}</span>${cat ? `<span class="vz-cat">${h(cat)}</span>` : ''}<span class="vz-grow"></span>${vote}</div>
       <h3>${h(v.t)}</h3><p class="vz-x">${h(v.x)}</p>
-      ${v.reason ? `<p class="vz-why no">Grund: ${h(v.reason)}</p>` : ''}${v.dn ? `<p class="vz-why">Admin: ${h(v.dn)}</p>` : ''}${v.note ? `<p class="vz-why ok">Umgesetzt: ${h(v.note)}</p>` : ''}
+      ${v.reason ? `<p class="vz-why no">Grund: ${h(v.reason)}</p>` : ''}${v.dn ? `<div class="vz-cmt"><b>💬 ${h(v.dnBy || 'Admin')}:</b> ${h(v.dn)}</div>` : ''}${v.note ? `<p class="vz-why ok">Umgesetzt: ${h(v.note)}</p>` : ''}
       ${ai}${adm}
       <div class="vz-meta">von ${h(v.n)}${v.mine ? ' (du)' : ''} · ${date(v.ts)} ${del}</div></article>`;
   }
@@ -122,6 +122,12 @@
     if (b.dataset.vzTab) { tab = b.dataset.vzTab; render(); return; }
     if (b.dataset.vzUp) { const r = await call('vs_vote', { id: b.dataset.vzUp }); if (r.error) say(r.error); else { Object.assign(D.list.find(v => v.id === r.item.id) || {}, r.item); render(); } return; }
     if (b.dataset.vzDel) { const r = await call('vs_delete', { id: b.dataset.vzDel }); if (r.error) say(r.error); else load(); return; }
+    if (b.dataset.vzNote) {
+      const v = D.list.find(x => x.id === b.dataset.vzNote); const dn = prompt('Dein Kommentar zu diesem Vorschlag (für alle sichtbar, leer = löschen):', (v && v.dn) || '');
+      if (dn === null) return;
+      const r = await call('vs_note', { id: b.dataset.vzNote, dn }); if (r.error) say(r.error); else { say(dn.trim() ? 'Kommentar gespeichert.' : 'Kommentar gelöscht.'); load(); }
+      return;
+    }
     if (b.dataset.vzD) {
       const d = b.dataset.vzD; let dn = '';
       if (d === 'angenommen') {
@@ -133,22 +139,13 @@
     }
   }
 
-  // Einstieg im Hub
-  function teaser() {
-    const hub = q('#hub'); if (!hub || q('#vzTeaser')) return;
-    const sec = document.createElement('section'); sec.className = 'stack'; sec.id = 'vzTeaser';
-    sec.innerHTML = `<h2>Ideen für die Spiele</h2><div class="panel vz-teaser"><span class="vz-bulb">💡</span><div><b>Du hast eine Idee, wie ein Spiel besser wird?</b><p>Schlag sie vor oder stimm über die Ideen der anderen ab. Updates mit angenommenen Ideen kommen mittwochs, freitags und sonntags.</p></div><button class="btn small" data-vz-open="1">Ideen ansehen</button></div>`;
-    const rooms = q('#rooms'), before = rooms && rooms.closest('section');
-    if (before && before.parentNode === hub) hub.insertBefore(sec, before); else hub.appendChild(sec); // über den offenen Runden
-    sec.addEventListener('click', e => { if (e.target.closest('[data-vz-open]')) open(); });
-  }
+  // Einstieg im Hub: Kachel "Ideen & Vorschläge" (in app.js unter dem Casino)
+  document.addEventListener('click', e => { if (e.target.closest('[data-vz-open]')) open(); });
 
   const css = document.createElement('style');
   css.textContent = `
-  .vz-teaser{flex-direction:row;align-items:center;gap:14px;border-color:#5b4a2a;background:linear-gradient(120deg,#2f2614,var(--surface) 70%)}
-  .vz-teaser p{margin:4px 0 0;color:var(--muted);font-size:15px}.vz-teaser>div{flex:1;min-width:0}
-  .vz-bulb{font-size:34px;line-height:1}
-  @media (max-width:600px){.vz-teaser{flex-direction:column;align-items:stretch;text-align:left}.vz-bulb{display:none}}
+  .vz-tile{border-color:#5b4a2a;background:linear-gradient(120deg,#2f2614,var(--surface) 70%)}
+  .vz-art{display:grid;place-items:center;width:56px;height:56px;border-radius:50%;font-size:32px;background:radial-gradient(circle,#ffe9a8 0 30%,#3a2e14 70%);box-shadow:0 4px 0 #1c160a,0 8px 14px rgba(0,0,0,.4)}
   .vz-head{display:flex;align-items:center;gap:14px}
   .vz-formbox{flex-direction:row;flex-wrap:wrap;align-items:center;gap:12px}
   .vz-form{display:flex;flex-direction:column;gap:12px;width:100%}
@@ -182,10 +179,10 @@
   .vz-bar{position:relative;height:10px;border-radius:99px;background:var(--bg);overflow:hidden}
   .vz-bar i{position:absolute;inset:0 auto 0 0;background:#27a06a;border-radius:99px}.vz-load.mid .vz-bar i{background:#f2be1a}.vz-load.no .vz-bar i{background:#e5484d}
   .vz-bar span{position:absolute;top:0;bottom:0;width:2px;background:#fff8}
+  .vz-cmt{background:#1f2a3a;border:1px solid #3b5a86;border-radius:10px;padding:9px 12px;font-size:15px;overflow-wrap:anywhere}.vz-cmt b{color:#9cc3ff}
   .vz-adm{display:flex;gap:8px;flex-wrap:wrap}
   .vz-meta{font-size:13px;color:var(--muted)}
   .vz-link{background:none;border:0;color:var(--accent);text-decoration:underline;padding:0 0 0 6px;font-size:13px}`;
   document.head.appendChild(css);
-  if (document.readyState === 'loading') addEventListener('DOMContentLoaded', teaser); else teaser();
   window.Ideen = { open };
 })();
