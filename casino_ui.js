@@ -14,7 +14,9 @@
   // Die Jetons liegen auf dem Server beim Hub-Konto. Im Browser wird nur angezeigt, was der Server sagt.
   let wallet = 0, CZ = null; // CZ: Stand vom Server { w, d, m, bonus, help, own, eq, work, seated }
   const konto = () => { try { const k = JSON.parse(store.get('fsg.konto') || 'null'); return k && k.name && k.token ? k : null; } catch { return null; } };
-  async function czCall(action, extra) { const k = konto(); if (!k) return { error: 'Bitte melde dich im Hub an.' }; const r = await czApi(action, { name: k.name, token: k.token, ...(extra || {}) }); if (!r) return { error: 'Keine Verbindung zum Server.' }; if (r.gift > 0) { infoGift += r.gift; infoWhy = r.why || ''; } if (r.w != null) { CZ = r; wallet = r.w; debt = r.d || 0; SH.own = ['konfetti', 'klingeln', 'gruen', '', ...(r.own || [])]; SH.eq = { fx: 'konfetti', sfx: 'klingeln', felt: 'gruen', badge: '', ...(r.eq || {}) }; feltApply(); showWallet(); if (r.gift > 0) { toast(`🎁 ${fmtN(r.gift)} Jetons gutgeschrieben${r.why ? ' – ' + r.why : ''}`); snd('win'); } } return r; }
+  async function czCall(action, extra) { const k = konto(); if (!k) return { error: 'Bitte melde dich im Hub an.' }; const r = await czApi(action, { name: k.name, token: k.token, ...(extra || {}) }); if (!r) return { error: 'Keine Verbindung zum Server.' }; if (r.gift > 0) { infoGift += r.gift; infoWhy = r.why || ''; } if (r.pops && r.pops.length) giftPops.push(...r.pops); if (r.w != null) { CZ = r; wallet = r.w; debt = r.d || 0; SH.own = ['konfetti', 'klingeln', 'gruen', '', ...(r.own || [])]; SH.eq = { fx: 'konfetti', sfx: 'klingeln', felt: 'gruen', badge: '', ...(r.eq || {}) }; feltApply(); showWallet(); if (r.gift > 0) { toast(`🎁 ${fmtN(r.gift)} Jetons gutgeschrieben${r.why ? ' – ' + r.why : ''}`); snd('win'); } } return r; }
+  let giftPops = []; // Geschenke mit eigenem kleinen Fenster (nur Betrag + Nachricht)
+  const popHTML = () => { const g = giftPops[0]; return g ? `<div class="cz-news"><div class="cz-news-box cz-gift-box"><div class="cz-gift-ic">🎁</div><div class="cz-gift-n">+${fmtN(g.n)} Jetons</div>${g.msg ? `<p>${esc(g.msg)}</p>` : ''}<button class="cz-btn" data-cz="popok">Danke!</button></div></div>` : ''; };
   let infoGift = 0, infoWhy = ''; // Gutschrift, die im Info-Fenster gezeigt wird
   const INFO_KEY = () => 'fsg.cz.info2.' + ((konto() || {}).name || '').toLowerCase();
   const infoSeen = () => { try { return !!localStorage.getItem(INFO_KEY()); } catch { return false; } };
@@ -239,6 +241,7 @@
   .cz-news-box h3{margin:0 0 10px;color:#ffd977;font-size:22px}.cz-news-box p{margin:0 0 10px;line-height:1.45}
   .cz-news-gift{background:#2f4a22;border:1px solid #6fbf4a;border-radius:10px;padding:10px 12px;margin:4px 0 12px}
   .cz-news-box .cz-btn{width:100%;margin-top:6px}
+  .cz-gift-box{max-width:320px;text-align:center}.cz-gift-ic{font-size:54px;line-height:1.1}.cz-gift-n{font-size:28px;font-weight:900;color:#ffd977;margin:4px 0 8px}
   .cz-floor .cz-fl{aspect-ratio:1;border:0;border-radius:4px;cursor:pointer;background:linear-gradient(135deg,#e8e0d0,#c8bca8)}
   .cz-floor .cz-fl.t2{background:linear-gradient(135deg,#6a5a3a,#4a3a22)}.cz-floor .cz-fl.t1{background:linear-gradient(135deg,#a8987a,#8a7a5a)}
   .cz-login{max-width:520px;margin:40px auto;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:26px 20px}.cz-login .ic{font-size:48px}.cz-login h3{margin:0;font-family:Bungee,Figtree,sans-serif;font-weight:400;color:#ffe9a8}.cz-login p{margin:0;color:#d8ccb4}
@@ -459,7 +462,7 @@
       <div class="cz-sec">Offene Tische</div>
       <div class="cz-tables">${open.length ? open.map(r => `<div class="cz-trow"><b>${esc(r.name)}</b><span class="cz-note">${r.players.length} ${r.players.length === 1 ? 'Spieler' : 'Spieler'}</span><button class="cz-btn small" data-cz-join="${r.id}">Hinsetzen</button></div>`).join('') : '<p class="cz-note">Gerade ist kein Tisch offen. Eröffne einen – deine Freunde sehen ihn dann hier und in der Runden-Liste.</p>'}</div>`}
       <p class="cz-note" style="margin-top:22px">Hier wird nur mit Spieljetons gespielt. Sie haben keinen Geldwert, lassen sich weder kaufen noch auszahlen und liegen bei deinem Hub-Konto.</p>
-    </div>${infoHTML()}`;
+    </div>${giftPops.length ? popHTML() : infoHTML()}`;
     const cvw = lobby.querySelector('[data-cz-artwheel]'); if (cvw) drawWheel(cvw, 0.4, null);
     renderBoard(); if (!renderLobby.asked || Date.now() - renderLobby.asked > 20000) { renderLobby.asked = Date.now(); czReport(true); }
   }
@@ -480,6 +483,7 @@
     const py = e.target.closest('[data-cz-pay]'); if (py) { const n = py.dataset.czPay === 'all' ? Math.min(wallet, debt) : +py.dataset.czPay; czCall('cz_pay', { n }).then(r => { if (r.error) toast(r.error); else { snd('chip'); toast(debt ? `💸 Zurückgezahlt – noch ${fmtN(debt)} Schulden` : '🎉 Alle Schulden bezahlt!'); } renderLobby(); }); return; }
     const b = e.target.closest('[data-cz],[data-cz-open],[data-cz-solo],[data-cz-join]'); if (!b) return;
     if (b.dataset.cz === 'back') { closeLobby(); return; }
+    if (b.dataset.cz === 'popok') { giftPops.shift(); renderLobby(); return; }
     if (b.dataset.cz === 'infook') { try { localStorage.setItem(INFO_KEY(), '1'); } catch {} infoGift = 0; const x = lobby.querySelector(".cz-news"); if (x) x.remove(); return; }
     if (b.dataset.cz === 'bonus') { czCall('cz_bonus').then(r => { if (r.error) toast(r.error); else { snd('win'); toast('2.000 Jetons gutgeschrieben – viel Glück!'); } renderLobby(); }); return; }
     if (b.dataset.cz === 'help') { czCall('cz_help').then(r => { if (r.error) toast(r.error); else snd('chip'); renderLobby(); }); return; }

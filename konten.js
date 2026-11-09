@@ -499,6 +499,7 @@ const CZ_GIFTS = [
   { id: 'g-2026-11-09-chop2', k: 'chop', n: 14300, why: 'Ersatz für den Fehler beim Verlassen des Blackjack-Tischs (kam vorher nicht beim Konto an)' },
   { id: 'g-2026-11-09-chop-admin', k: 'chop', n: 200000, why: 'Admin-Guthaben' },
   { id: 'g-2026-11-09-himmler', k: 'himmler', n: 30000, why: 'Geschenk vom Admin' },
+  { id: 'g-2026-11-09-himmler2', k: 'himmler', n: 150000, pop: true, msg: 'Geschenk vom Admin – viel Glück am Tisch! 🍀' },
 ];
 
 // ---------- Casino-Konto: Jetons liegen auf dem Server beim Hub-Konto (nicht mehr im Browser) ----------
@@ -560,9 +561,9 @@ async function czOldLoad() {
 function czState(key, acc) {
   const z = czAcc(key), now = Date.now();
   // einmalige Gutschriften – nicht während man am Tisch sitzt, sonst überschreibt der Platz sie
-  let gift = 0, why = ''; acc.gifts = acc.gifts || [];
+  let gift = 0, why = '', pops = []; acc.gifts = acc.gifts || []; // pops: Geschenke mit eigenem kleinen Fenster
   if (!czSeated.has(key)) {
-    for (const g of CZ_GIFTS) if (g.k === key && !acc.gifts.includes(g.id)) { acc.gifts.push(g.id); z.w += g.n; gift += g.n; why = g.why; markDirty(); }
+    for (const g of CZ_GIFTS) if (g.k === key && !acc.gifts.includes(g.id)) { acc.gifts.push(g.id); z.w += g.n; markDirty(); if (g.pop) pops.push({ n: g.n, msg: g.msg || '' }); else { gift += g.n; why = g.why; } }
     if (czOld && !acc.gifts.includes(CZ_REST_ID)) {
       acc.gifts.push(CZ_REST_ID); markDirty();
       const back = Math.min(CZ_REST_MAX, czOld[key] || 0) - CZ_START;
@@ -570,7 +571,7 @@ function czState(key, acc) {
     }
   }
   const L = czLimit(key), young = czAgeDays(acc) < CZ_BOARD_DAYS;
-  return { lim: L.lim, limNext: L.next, limNextN: L.nextLim, boardFrom: young ? acc.created + CZ_BOARD_DAYS * 864e5 : 0, name: acc.name, w: z.w, d: z.d || 0, m: z.m || 0, bonus: z.day !== czDay(), help: z.w < 100 && now - (z.help || 0) > 3600e3, own: z.own || [], eq: z.eq || {}, work: z.work || 0, seated: czSeated.has(key), gift, why };
+  return { pops, lim: L.lim, limNext: L.next, limNextN: L.nextLim, boardFrom: young ? acc.created + CZ_BOARD_DAYS * 864e5 : 0, name: acc.name, w: z.w, d: z.d || 0, m: z.m || 0, bonus: z.day !== czDay(), help: z.w < 100 && now - (z.help || 0) > 3600e3, own: z.own || [], eq: z.eq || {}, work: z.work || 0, seated: czSeated.has(key), gift, why };
 }
 function czTop(key) {
   const old = Date.now() - 30 * 864e5, all = Object.entries(accounts).filter(([, a]) => a.cz && czAgeDays(a) >= CZ_BOARD_DAYS); // Rangliste erst ab 3 Tage altem Konto

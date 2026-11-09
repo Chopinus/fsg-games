@@ -134,7 +134,7 @@ function needNick() {
   store.set('fsg.nick', n); send({ t: 'name', name: n }); return true;
 }
 // Casino wird erst geladen, wenn es jemand braucht
-const CZ_V = 49; // bei jeder Casino-Änderung erhöhen, damit Geräte die neue Datei laden
+const CZ_V = 50; // bei jeder Casino-Änderung erhöhen, damit Geräte die neue Datei laden
 function loadCasino(cb) {
   if (window.Casino) { cb(); return; }
   if (loadCasino.busy) { loadCasino.q.push(cb); return; }
