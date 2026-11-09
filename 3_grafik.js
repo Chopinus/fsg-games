@@ -298,6 +298,10 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 44, title: 'Hub: Casino-Kachel repariert', date: '09.11.2026', items: [
+      'Die Casino-Kachel im Hub wird nicht mehr zu einem großen beigen Kasten, nachdem man das Casino geöffnet hat.',
+      'Neue Versionen des Casinos werden jetzt sofort geladen, auch auf iPad und Handy.'
+    ] },
     { id: 43, title: 'Casino: Jetons jetzt beim Konto', date: '09.11.2026', items: [
       ['Neu', 'Casino: Deine Jetons liegen jetzt sicher auf dem Server bei deinem Hub-Konto – auf jedem Gerät derselbe Stand'],
       ['Neu', 'Casino: Zum Spielen brauchst du ein Hub-Konto. Jedes Konto startet einmal mit 10.000 Jetons'],

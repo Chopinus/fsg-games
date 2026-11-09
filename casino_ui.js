@@ -1,5 +1,5 @@
 'use strict';
-// Casino im Game Hub – Browser-Seite. Nur Spielgeld: Jetons liegen im Gerät, es gibt nichts zu kaufen.
+// Casino im Game Hub – Browser-Seite. Nur Spielgeld: Jetons liegen beim Hub-Konto auf dem Server, es gibt nichts zu kaufen.
 // Nutzt Helfer aus app.js: room, rooms, send, act, esc, toast, nick.
 (function () {
   const q = s => document.querySelector(s);
@@ -93,7 +93,7 @@
   const DEBT = 'casino.schuld', DEBT_MAX = 50000, LOANS = [1000, 5000, 10000];
   let debt = 0;
   const net = () => Math.max(0, wallet - debt); // für die Rangliste zählt, was dir wirklich gehört
-  /* ---------- Geldrangliste: jedes Gerät meldet seinen Jetonstand ---------- */
+  /* ---------- Geldrangliste: aus den Hub-Konten auf dem Server ---------- */
   let czBoard = null, czTimer = null;
   async function czApi(action, body) { try { const r = await fetch('/api/' + action, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); return r.ok ? await r.json() : null; } catch { return null; } }
   function czReport(now) { clearTimeout(czTimer); czTimer = setTimeout(async () => { const k = konto(); const r = await czApi('casino_top', k ? { name: k.name } : {}); if (r) { czBoard = r; renderBoard(); } }, now ? 0 : 3000); }
@@ -135,7 +135,7 @@
     if (!debt) body = '<div class="cz-free">🎉 Schuldenfrei! Der Aufseher lässt dich gehen.</div>';
     else if (W.job === 'mine') body = `<div class="cz-mine"><button class="cz-rock ${W.shake ? 'hit' : ''}" data-cz-w="hack" style="--crack:${(1 - W.hp / W.max).toFixed(2)}"><span>🪨</span><i class="cz-cracks"></i></button><div class="cz-hpbar"><i style="width:${W.hp / W.max * 100}%"></i></div><small class="cz-note">Tippe auf den Fels, bis er zerbricht.</small></div>`;
     else if (W.job === 'teller') body = `<div class="cz-plate"><div class="cz-dish">${W.spots.map((p, k) => p.ok ? '' : `<button class="cz-dirt" data-cz-w="wipe" data-k="${k}" style="left:${p.x}%;top:${p.y}%"></button>`).join('')}</div><small class="cz-note">Tippe alle Flecken weg. Pass auf – manchmal rutscht ein Teller aus der Hand.</small></div>`;
-    else if (W.job === 'putzen') body = `<div class="cz-floor">${W.tiles.map((t, k) => `<button class="cz-tile t${t}" data-cz-w="scrub" data-k="${k}"></button>`).join('')}</div><small class="cz-note">Schmutzige Fliesen brauchen zwei Mal Schrubben.</small>`;
+    else if (W.job === 'putzen') body = `<div class="cz-floor">${W.tiles.map((t, k) => `<button class="cz-fl t${t}" data-cz-w="scrub" data-k="${k}"></button>`).join('')}</div><small class="cz-note">Schmutzige Fliesen brauchen zwei Mal Schrubben.</small>`;
     return head + body + `<p class="cz-note">Diese Schicht: ${fmtN(W.shift)} abgearbeitet · insgesamt schon ${fmtN(W.earned)} Jetons Schulden abgearbeitet.</p>`;
   }
   function workTap(b) {
@@ -220,8 +220,8 @@
   .cz-dish{position:relative;width:min(300px,78vw);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,#ffffff 0 52%,#e8eef4 53% 62%,#cfd8e2 63% 100%);box-shadow:0 10px 24px rgba(0,0,0,.5)}
   .cz-dirt{position:absolute;width:44px;height:36px;margin:-18px 0 0 -22px;border:0;border-radius:50% 40% 55% 45%;background:radial-gradient(circle at 40% 40%,#8a5a2a,#5a3a1a);cursor:pointer;opacity:.9}
   .cz-floor{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;width:min(360px,86vw);padding:6px;background:#1a1410;border-radius:10px}
-  .cz-tile{aspect-ratio:1;border:0;border-radius:4px;cursor:pointer;background:linear-gradient(135deg,#e8e0d0,#c8bca8)}
-  .cz-tile.t2{background:linear-gradient(135deg,#6a5a3a,#4a3a22)}.cz-tile.t1{background:linear-gradient(135deg,#a8987a,#8a7a5a)}
+  .cz-floor .cz-fl{aspect-ratio:1;border:0;border-radius:4px;cursor:pointer;background:linear-gradient(135deg,#e8e0d0,#c8bca8)}
+  .cz-floor .cz-fl.t2{background:linear-gradient(135deg,#6a5a3a,#4a3a22)}.cz-floor .cz-fl.t1{background:linear-gradient(135deg,#a8987a,#8a7a5a)}
   .cz-login{max-width:520px;margin:40px auto;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:26px 20px}.cz-login .ic{font-size:48px}.cz-login h3{margin:0;font-family:Bungee,Figtree,sans-serif;font-weight:400;color:#ffe9a8}.cz-login p{margin:0;color:#d8ccb4}
   .cz-fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:99999}
   .cz-ltabs,.cz-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 6px}

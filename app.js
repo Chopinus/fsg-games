@@ -79,7 +79,7 @@ function renderTiles() {
       <button class="btn small" data-welt="1">Spielen</button></div>
     <div class="tile wide solo-tile is-tile"><div class="art"><span class="is-art"></span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b>Inselreich <span class="pill">Prototyp</span></b><span class="sub">Eine offene Pixelwelt aus Inseln für alle zusammen. Laufe über die Inseln, steig ins Boot und segle mit dem Wind zu neuen Ufern.</span></div>
       <button class="btn small" data-insel="1">Spielen</button></div>
-    <div class="tile wide solo-tile cz-tile"><div class="art"><span class="cz-art"></span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b>Casino Aurum <span class="pill">Spielgeld</span></b><span class="sub">Blackjack, Roulette, Texas Hold'em, Pferderennen und Spielautomat – allein gegen Bots oder am Tisch mit Freunden. Nur Spieljetons, kein echtes Geld.</span></div>
+    <div class="tile wide solo-tile cz-tile"><div class="art"><span class="cz-art"></span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b>Casino Aurum <span class="pill">Spielgeld</span></b><span class="sub">Blackjack, Roulette, Texas Hold'em, Pferderennen, Spielautomat und Glücksrad – allein gegen Bots oder am Tisch mit Freunden. Nur Spieljetons, kein echtes Geld.</span></div>
       <button class="btn small" data-casino="1">Spielen</button></div>` + GAMES.map(g => g.key === 'party'
     ? `<div class="tile wide"><div class="art">${g.art}</div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b>${esc(g.title)}</b><span class="sub">${esc(g.sub)}</span></div>
       <button class="btn small" data-create="${g.key}">Party starten</button></div>`
@@ -104,11 +104,12 @@ function needNick() {
   store.set('fsg.nick', n); send({ t: 'name', name: n }); return true;
 }
 // Casino wird erst geladen, wenn es jemand braucht
+const CZ_V = 44; // bei jeder Casino-Änderung erhöhen, damit Geräte die neue Datei laden
 function loadCasino(cb) {
   if (window.Casino) { cb(); return; }
   if (loadCasino.busy) { loadCasino.q.push(cb); return; }
   loadCasino.busy = true; loadCasino.q = [cb];
-  const sc = document.createElement('script'); sc.src = 'casino_ui.js';
+  const sc = document.createElement('script'); sc.src = 'casino_ui.js?v=' + CZ_V;
   sc.onload = () => { loadCasino.busy = false; loadCasino.q.forEach(f => f()); };
   sc.onerror = () => { loadCasino.busy = false; toast('Das Casino konnte nicht geladen werden.'); sc.remove(); };
   document.body.appendChild(sc);
