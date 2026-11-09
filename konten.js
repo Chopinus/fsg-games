@@ -618,6 +618,10 @@ async function handle(action, body, ip) {
   if (action === 'status') return [200, { durable, error: lastError || null, testers: TESTERS.length }];
   if (action === 'create') {
     const lim = createLimit(ip); if (lim) return [429, { error: lim }];
+    const dev = /^[a-f0-9]{32}$/.test(String(body._dev || '')) ? sha256('dev' + body._dev).slice(0, 24) : '';
+    if (!dev) return [428, { error: 'Bitte lade die Seite einmal neu und versuch es dann noch mal. (Cookies müssen erlaubt sein.)' }];
+    const had = Object.values(accounts).find(x => x.dev === dev);
+    if (had) return [403, { error: `Auf diesem Gerät wurde schon ein Konto erstellt (${had.name}). Melde dich damit an – anmelden kannst du dich mit jedem Konto.` }];
     if (!validName(name)) return [400, { error: 'Der Name braucht 3 bis 20 Zeichen (Buchstaben, Zahlen, Leerzeichen, - _ .).' }];
     if (String(body.pass || '').length < 4) return [400, { error: 'Das Passwort braucht mindestens 4 Zeichen.' }];
     if (acc) return [409, { error: 'Diesen Namen gibt es schon. Wähle einen anderen oder lade den Spielstand.' }];
@@ -627,7 +631,7 @@ async function handle(action, body, ip) {
     if (wiped) data = { season: SEASON };
     if (Object.keys(accounts).length >= 5000) return [507, { error: 'Der Speicher ist voll.' }];
     const salt = crypto.randomBytes(16).toString('hex');
-    const a = accounts[key] = { name, salt, hash: hashPw(body.pass, salt), tokens: [], data, updated: Date.now(), season: SEASON };
+    const a = accounts[key] = { name, salt, hash: hashPw(body.pass, salt), tokens: [], data, updated: Date.now(), season: SEASON, dev };
     createLimit(ip, true); const token = newToken(a); markDirty();
     return [200, { name, token, updated: a.updated, durable, tester: isTester(key), reset: wiped && testData(cleanData(body.data)) }];
   }

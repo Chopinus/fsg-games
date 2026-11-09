@@ -129,8 +129,19 @@ function readStatic(file, cb) {
     .then(parts => cb(null, Buffer.concat(parts)), err => cb(err));
 }
 
+// Geräte-Kennung als Cookie (vom Server gesetzt, HttpOnly): pro Gerät darf nur ein neues Konto angelegt werden
+const DEV_RE = /(?:^|;\s*)fsgd=([a-f0-9]{32})(?:;|$)/;
+function devOf(req, res) {
+  const m = DEV_RE.exec(req.headers.cookie || ''); if (m) return m[1];
+  const id = crypto.randomBytes(16).toString('hex');
+  const secure = /https/.test(String(req.headers['x-forwarded-proto'] || '')) ? '; Secure' : '';
+  res.setHeader('Set-Cookie', `fsgd=${id}; Max-Age=34560000; Path=/; HttpOnly; SameSite=Lax${secure}`);
+  return ''; // neu vergeben: zählt erst ab der nächsten Anfrage
+}
+
 const server = http.createServer((req, res) => {
   const url = req.url.split('?')[0];
+  if (url === '/' || url.endsWith('.html') || url.startsWith('/api/')) req.dev = devOf(req, res);
   if (url === '/health') { res.end('ok'); return; }
   if (MOVED) {
     if (url.startsWith('/api/')) { res.writeHead(410, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify({ error: `Die Spiele sind umgezogen auf ${MOVED_HOST}. Bitte spiele dort weiter.` })); return; }
@@ -167,6 +178,7 @@ function api(req, res, action) {
     let data = {};
     try { data = JSON.parse(body || '{}'); } catch { return reply(400, { error: 'Ungültige Anfrage' }); }
     const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+    if (data && typeof data === 'object') data._dev = req.dev || '';
     try { const [code, obj] = await konten.handle(action, data, ip); reply(code, obj); }
     catch (e) { console.error(e); reply(500, { error: 'Da ist etwas schiefgelaufen.' }); }
   });

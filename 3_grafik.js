@@ -298,6 +298,10 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 46, title: 'Ein neues Konto pro Gerät', date: '09.11.2026', items: [
+      'Auf jedem Gerät kann nur noch ein neues Konto erstellt werden.',
+      'Anmelden kannst du dich weiterhin mit jedem Konto, auf jedem Gerät.'
+    ] },
     { id: 45, title: 'Casino: alte Stände zurück', date: '09.11.2026', items: [
       'Wer in der alten Rangliste unter dem Namen seines Hub-Kontos stand, bekommt seinen alten Stand einmalig zurück – bis höchstens 50.000 Jetons.',
       'Wer über 1 Million Jetons hatte, bekommt nichts zurück.',
