@@ -498,6 +498,7 @@ const CZ_GIFTS = [
   { id: 'g-2026-11-09-chop', k: 'chop', n: 14300, why: 'Ersatz für den Fehler beim Verlassen des Blackjack-Tischs' },
   { id: 'g-2026-11-09-chop2', k: 'chop', n: 14300, why: 'Ersatz für den Fehler beim Verlassen des Blackjack-Tischs (kam vorher nicht beim Konto an)' },
   { id: 'g-2026-11-09-chop-admin', k: 'chop', n: 200000, why: 'Admin-Guthaben' },
+  { id: 'g-2026-11-09-himmler', k: 'himmler', n: 30000, why: 'Geschenk vom Admin' },
 ];
 
 // ---------- Casino-Konto: Jetons liegen auf dem Server beim Hub-Konto (nicht mehr im Browser) ----------
