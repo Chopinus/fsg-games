@@ -16,6 +16,9 @@ const now = () => Date.now();
 const rnd = n => Math.floor(Math.random() * n);
 const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = rnd(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const clampChips = v => Math.max(0, Math.min(MAXC, Math.floor(Number(v) || 0)));
+const MAXBET = 50000; // Höchsteinsatz pro Runde und Tisch – verhindert, dass man mit All-in-Glück in Minuten Millionen macht
+let BANK = null; // vom Server gesetzt: Konto je Spieler und Jetons auf dem Server
+const roundBets = x => (x.bet || 0) + Object.values(x.bets || {}).reduce((a, b) => a + b, 0) + (x.hands || []).reduce((a, h) => a + (h.res ? 0 : h.bet || 0), 0);
 const deck = (n = 1) => { const d = []; for (let k = 0; k < n; k++) for (const s of 'shdc') for (const r of 'A23456789TJQK') d.push(r + s); return shuffle(d); };
 
 /* ---------- Tisch-Grundlagen ---------- */
@@ -127,7 +130,7 @@ const BJ = {
     const s = r.state;
     if (a.type === 'bet') {
       if (s.phase !== 'bet') return 'Warte auf die nächste Runde.';
-      const n = clampChips(a.amount); if (!n || n > x.chips) return 'Nicht genug Jetons.';
+      const n = clampChips(a.amount); if (!n || n > x.chips) return 'Nicht genug Jetons.'; if (roundBets(x) + n > MAXBET) return 'Höchsteinsatz 50.000 pro Runde.';
       x.chips -= n; x.bet += n; x.ready = false; return;
     }
     if (a.type === 'clear') { if (s.phase !== 'bet') return; x.chips += x.bet; x.bet = 0; x.ready = false; return; }
@@ -179,7 +182,7 @@ const RL = {
     const s = r.state;
     if (a.type === 'bet') {
       if (s.phase !== 'bet') return 'Nichts geht mehr – warte auf die nächste Runde.';
-      const key = String(a.key), n = clampChips(a.amount); if (!RL.keyOk(key) || !n) return; if (n > x.chips) return 'Nicht genug Jetons.';
+      const key = String(a.key), n = clampChips(a.amount); if (!RL.keyOk(key) || !n) return; if (n > x.chips) return 'Nicht genug Jetons.'; if (roundBets(x) + n > MAXBET) return 'Höchsteinsatz 50.000 pro Runde.';
       x.chips -= n; x.bets[key] = (x.bets[key] || 0) + n; x.ready = false; return;
     }
     if (a.type === 'clear') { if (s.phase !== 'bet') return; for (const v of Object.values(x.bets)) x.chips += v; x.bets = {}; return; }
@@ -249,7 +252,7 @@ const SLOT = {
   },
   act(r, x, a) {
     if (a.type !== 'spin') return;
-    const bet = clampChips(a.amount); if (bet < 10) return 'Mindesteinsatz 10.'; if (bet > x.chips) return 'Nicht genug Jetons.';
+    const bet = clampChips(a.amount); if (bet < 10) return 'Mindesteinsatz 10.'; if (bet > x.chips) return 'Nicht genug Jetons.'; if (bet > 25000) return 'Höchsteinsatz 25.000.';
     x.chips -= bet; const res = SLOT.spin(bet); x.chips = clampChips(x.chips + res.pay); x.win = res.pay - bet;
     x.slot = { id: (x.slot ? x.slot.id : 0) + 1, ...res, bet };
     if (res.pay >= bet * 15) log(r.state, `${x.name} knackt den Automaten: ${res.pay.toLocaleString('de-DE')}!`);
@@ -265,7 +268,7 @@ const RAD = {
   start(r) { r.state.phase = 'free'; },
   act(r, x, a) {
     if (a.type !== 'spin') return;
-    const bet = clampChips(a.amount); if (bet < 10) return 'Mindesteinsatz 10.'; if (bet > x.chips) return 'Nicht genug Jetons.';
+    const bet = clampChips(a.amount); if (bet < 10) return 'Mindesteinsatz 10.'; if (bet > x.chips) return 'Nicht genug Jetons.'; if (bet > 25000) return 'Höchsteinsatz 25.000.';
     let v = Math.random() * RAD_W, i = 0; for (; i < RAD_SEGS.length - 1; i++) { v -= RAD_SEGS[i][1]; if (v <= 0) break; }
     const m = RAD_SEGS[i][0], pay = Math.floor(bet * m);
     x.chips = clampChips(x.chips - bet + pay); x.win = pay - bet;
@@ -423,8 +426,10 @@ module.exports = {
     setTimeout(() => { try { GAME[kind].start(r); r.push(); } catch (e) { console.error(e); } }, 50);
   },
   start(r) { if (!r.state) this.init(r, { kind: 'blackjack' }); r.status = 'playing'; },
+  setBank(b) { BANK = b; },
   onLeave(r, pid) {
     const s = r.state; if (!s) return; const i = seatOf(s, pid); if (i < 0) return;
+    const lx = s.seats[i]; if (lx && lx.acc && BANK) { BANK.sync(lx.acc, lx.chips + (lx.stack || 0)); if (BANK.seated.get(lx.acc) === r.id) BANK.seated.delete(lx.acc); }
     if (s.kind === 'poker' && s.phase === 'hand' && s.seats[i].cards && s.seats[i].cards.length && !s.seats[i].folded) { if (s.turnI === i) PK.move(r, i, { type: 'fold' }); else s.seats[i].folded = true; }
     s.seats[i] = null;
     if (s.kind === 'blackjack' && s.turn && s.turn.i === i) BJ.next(r);
@@ -435,13 +440,13 @@ module.exports = {
     if (s.paused) { s.paused = false; s.phase = 'idle'; if (s.kind === 'poker') { s.btn = s.btn ?? -1; s.hand = s.hand || 0; PK.newHand(r); } else GAME[s.kind].start(r); if (a.type === 'resume') return; }
     let i = seatOf(s, pid);
     if (a.type === 'sit') {
-      if (i >= 0) { // schon am Tisch (z. B. aus einem anderen Tab): Stand vom Gerät übernehmen, solange nichts im Spiel ist
-        const x = s.seats[i], busy = x.bet > 0 || x.stack > 0 || Object.keys(x.bets || {}).length || (x.hands || []).some(h => h.bet > 0 && !h.res);
-        if (!busy && a.chips != null) x.chips = clampChips(a.chips);
-        return 'quiet';
-      }
+      if (i >= 0) return 'quiet';
+      // Jetons kommen vom Konto auf dem Server – was der Browser schickt, zählt nicht
+      const acc = BANK && BANK.accOf(pid); if (!acc) return 'Melde dich im Hub mit deinem Konto an, um im Casino zu spielen.';
+      const other = BANK.seated.get(acc); if (other && other !== r.id && BANK.roomLive(other, acc)) return 'Du sitzt schon an einem anderen Tisch. Steh dort zuerst auf.';
+      const z = BANK.acc(acc); if (!z) return 'Dein Konto wurde nicht gefunden.';
       const free = s.seats.findIndex(x => !x); if (free < 0) return 'Alle Plätze sind besetzt. Du schaust zu.';
-      const p = r.players.find(x => x.id === pid); s.seats[free] = newSeat(pid, p ? p.name : 'Gast', clampChips(a.chips), false);
+      const p = r.players.find(x => x.id === pid); s.seats[free] = newSeat(pid, p ? p.name : 'Gast', z.w, false); s.seats[free].acc = acc; BANK.seated.set(acc, r.id);
       if (s.kind === 'poker') PK.buyIn(s.seats[free]);
       return;
     }
@@ -453,12 +458,13 @@ module.exports = {
     }
     if (i < 0) return 'Setz dich zuerst an den Tisch.';
     const x = s.seats[i];
-    if (a.type === 'topup') { const n = clampChips(a.chips); if (n > x.chips) x.chips = n; return; }
+    if (a.type === 'topup') return 'quiet';
     return GAME[s.kind].act(r, x, a, i);
   },
   view(r, pid) {
     const s = r.state; if (!s) return null;
     const i = seatOf(s, pid), x = s.seats[i];
+    if (x && x.acc && BANK) BANK.sync(x.acc, x.chips + (x.stack || 0)); // Stand laufend aufs Konto schreiben
     const v = s.phase === 'idle' || s.phase === 'paused' ? { seats: s.seats.map(q => q && { name: q.name, bot: q.bot }) } : GAME[s.kind].view(s, i);
     return { kind: s.kind, phase: s.phase, left: s.ends ? Math.max(0, s.ends - now()) : null, log: s.log, mySeat: i, host: r.host === pid,
       wallet: x ? x.chips + (x.stack || 0) : null, chips: x ? x.chips : null, free: s.seats.filter(q => !q).length, ...v };

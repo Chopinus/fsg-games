@@ -27,6 +27,15 @@ const GAMES = {
 // (MOVE_TO ohne D wird auch akzeptiert; fehlt https://, wird es ergänzt)
 const MOVED = (s => (s && !/^https?:\/\//i.test(s) ? 'https://' + s : s))(String(process.env.MOVED_TO || process.env.MOVE_TO || '').trim().replace(/\/+$/, ''));
 const konten = MOVED ? null : require('./konten.js');
+// Casino: Jetons gehören dem Hub-Konto. Hier merkt sich der Server, welches Konto zu welchem Spieler gehört.
+const ACC_OF = new Map();
+if (konten && konten.czAcc) GAMES.casino.setBank({
+  accOf: pid => ACC_OF.get(pid) || null,
+  acc: k => konten.czAcc(k),
+  sync: (k, w) => konten.czSync(k, w),
+  seated: konten.czSeated,
+  roomLive: (id, k) => { const r = rooms.get(id); return !!(r && r.state && (r.state.seats || []).some(x => x && x.acc === k)); },
+});
 const MOVED_HOST = MOVED.replace(/^https?:\/\//i, '');
 if (MOVED) console.log(`Umzugs-Modus: alle Seiten zeigen den Hinweis auf ${MOVED}`);
 const MOVED_PAGE = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -217,6 +226,7 @@ function pushSoon(r) {
 }
 function deleteRoom(r) {
   if (r.timer) clearTimeout(r.timer);
+  if (konten && konten.czSeated && r.state && r.state.seats) for (const x of r.state.seats) if (x && x.acc) { konten.czSync(x.acc, x.chips + (x.stack || 0)); if (konten.czSeated.get(x.acc) === r.id) konten.czSeated.delete(x.acc); } // Casino: Jetons sichern, Platz freigeben
   rooms.delete(r.id);
   for (const c of clients) if (c.room === r.id) { c.room = null; send(c, { t: 'closed' }); }
   broadcastRooms();
@@ -245,6 +255,10 @@ function handle(c, m) {
     return;
   }
   if (!c.pid) return;
+  if (m.t === 'konto') { // Hub-Konto für diese Verbindung (Casino-Jetons liegen beim Konto)
+    const k = konten && konten.tokenKey && m.name && m.token ? konten.tokenKey(String(m.name).slice(0, 20), String(m.token).slice(0, 64)) : null;
+    c.acc = k || null; if (k) ACC_OF.set(c.pid, k); else ACC_OF.delete(c.pid); return;
+  }
   if (typeof m.t === 'string' && m.t.startsWith('i_')) { ISL.handle(c, m); return; } // Inselreich
   if (m.t === 'name') {
     c.name = clean(m.name);

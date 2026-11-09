@@ -497,52 +497,84 @@ function tokenKey(name, token) {
 const CZ_GIFTS = [
   { id: 'g-2026-11-09-chop', k: 'chop', n: 14300, why: 'Ersatz für den Fehler beim Verlassen des Blackjack-Tischs' },
 ];
-// ---------- Casino-Geldrangliste ----------
-// Jedes Gerät meldet seinen Jetonstand (die Jetons liegen im Gerät). Gespeichert wird je Gerät ein Eintrag mit Name, Jetons und Zeitpunkt.
-const CZ_FILE = 'casino-rangliste.json', CZ_LOCAL = path.join(__dirname, 'casino-rangliste.local.json');
-let cz = {}, czSha = null, czDirty = false, czTimer = null;
-const czLast = new Map();
-async function czLoad() {
-  try {
-    if (durable) { const res = await gh('GET', null, CZ_FILE); if (res.status === 200) { const j = await res.json(); czSha = j.sha; cz = JSON.parse(Buffer.from(j.content || '', 'base64').toString('utf8') || '{}'); } }
-    else if (fs.existsSync(CZ_LOCAL)) cz = JSON.parse(fs.readFileSync(CZ_LOCAL, 'utf8'));
-  } catch (e) { console.error('Casino-Rangliste laden:', e); }
+
+// ---------- Casino-Konto: Jetons liegen auf dem Server beim Hub-Konto (nicht mehr im Browser) ----------
+// Jedes Konto startet einmal mit 10.000 Jetons. Am Tisch werden die Jetons des Platzes laufend ins Konto geschrieben.
+const CZ_START = 10000, CZ_DEBT_MAX = 50000;
+const CZ_PRICES = {
+  fx: { konfetti: 0, gold: 8000, feuerwerk: 20000, blitz: 35000, diamant: 60000, regenbogen: 100000 },
+  sfx: { klingeln: 0, fanfare: 6000, glocken: 12000, jackpot: 25000, applaus: 40000, koenig: 80000 },
+  felt: { gruen: 0, blau: 5000, rot: 5000, lila: 10000, nacht: 15000, goldf: 50000 },
+  badge: { '': 0, zylinder: 5000, klee: 10000, hai: 20000, feuer: 40000, dia: 80000, krone: 150000 },
+};
+const CZ_JOBS = { mine: 1400, teller: 900, putzen: 2200 }; // so schnell kann man frühestens fertig sein (ms)
+const czSeated = new Map(); // Konto -> Raum, solange es an einem Tisch sitzt (nur im Speicher)
+const czDay = () => new Date(Date.now() + 3600e3).toISOString().slice(0, 10);
+function czAcc(key) {
+  const a = accounts[key]; if (!a) return null;
+  if (!a.cz) { a.cz = { w: CZ_START, d: 0, m: CZ_START, own: [], eq: {}, day: '', help: 0, work: 0, t: Date.now() }; markDirty(); }
+  return a.cz;
 }
-async function czFlush() {
-  if (!czDirty) return; czDirty = false;
-  const text = JSON.stringify(cz);
-  try {
-    if (durable) {
-      for (let attempt = 0; attempt < 2; attempt++) {
-        const res = await gh('PUT', { message: 'Casino-Rangliste aktualisiert', content: Buffer.from(text).toString('base64'), ...(czSha ? { sha: czSha } : {}) }, CZ_FILE);
-        if (res.ok) { czSha = (await res.json()).content.sha; return; }
-        if (res.status === 409 || res.status === 422) { const g = await gh('GET', null, CZ_FILE); if (g.ok) czSha = (await g.json()).sha; continue; }
-        console.error('Casino-Rangliste speichern:', res.status); break;
-      }
-      czDirty = true;
-    } else fs.writeFileSync(CZ_LOCAL, text);
-  } catch (e) { czDirty = true; console.error('Casino-Rangliste speichern:', e); }
+function czSync(key, w) { // vom Tisch: aktueller Stand des Platzes
+  const z = czAcc(key); if (!z) return;
+  w = Math.max(0, Math.min(1e12, Math.floor(Number(w) || 0)));
+  if (z.w !== w) { z.w = w; z.m = Math.max(z.m || 0, w - (z.d || 0)); z.t = Date.now(); markDirty(); }
 }
-function czMark() { czDirty = true; if (!czTimer) czTimer = setTimeout(() => { czTimer = null; czFlush(); }, 60000); }
-function czTop(id) {
-  const old = Date.now() - 30 * 864e5;
-  const live = Object.entries(cz).filter(([, e]) => e.t > old).sort((a, b) => b[1].c - a[1].c);
-  const best = Object.entries(cz).sort((a, b) => (b[1].m || b[1].c) - (a[1].m || a[1].c));
-  const pack = (list, f) => ({ top: list.slice(0, 50).map(([k, e]) => ({ n: e.n, c: f(e), b: e.b || '', me: k === id })), rank: id ? list.findIndex(([k]) => k === id) + 1 : 0, mine: id && cz[id] ? f(cz[id]) : 0, players: list.length });
-  const cur = pack(live, e => e.c), ever = pack(best, e => e.m || e.c);
-  return { top: cur.top.slice(0, 20), rank: cur.rank, players: cur.players, cur, ever }; // top/rank/players für ältere Seiten
+function czState(key, acc) {
+  const z = czAcc(key), now = Date.now();
+  // einmalige Gutschriften
+  let gift = 0, why = ''; acc.gifts = acc.gifts || [];
+  for (const g of CZ_GIFTS) if (g.k === key && !acc.gifts.includes(g.id)) { acc.gifts.push(g.id); z.w += g.n; gift += g.n; why = g.why; markDirty(); }
+  return { name: acc.name, w: z.w, d: z.d || 0, m: z.m || 0, bonus: z.day !== czDay(), help: z.w < 100 && now - (z.help || 0) > 3600e3, own: z.own || [], eq: z.eq || {}, work: z.work || 0, seated: czSeated.has(key), gift, why };
 }
-function czAction(action, body) {
-  const key = String(body.key || ''); const id = key.length >= 8 && key.length <= 64 ? sha256('cz' + key).slice(0, 16) : '';
-  if (action === 'casino_top') return [200, czTop(id)];
-  if (!id) return [400, { error: 'Ungültig' }];
-  const n = String(body.name || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 16), c = Math.max(0, Math.min(1e12, Math.floor(Number(body.chips) || 0)));
-  if (!n) return [200, czTop(id)];
-  const b = /^[a-z]{0,10}$/.test(String(body.badge || '')) ? String(body.badge || '') : '';
-  if (Date.now() - (czLast.get(id) || 0) > 4000) { czLast.set(id, Date.now()); const cur = cz[id]; if (!cur || cur.c !== c || cur.n !== n || (cur.b || '') !== b || Date.now() - cur.t > 3600e3) { cz[id] = { n, c, m: Math.max(c, (cur && (cur.m || cur.c)) || 0), b, t: Date.now() }; czMark(); } }
-  return [200, czTop(id)];
+function czTop(key) {
+  const old = Date.now() - 30 * 864e5, all = Object.entries(accounts).filter(([, a]) => a.cz);
+  const live = all.filter(([, a]) => (a.cz.t || 0) > old).sort((a, b) => (b[1].cz.w - (b[1].cz.d || 0)) - (a[1].cz.w - (a[1].cz.d || 0)));
+  const best = all.slice().sort((a, b) => (b[1].cz.m || 0) - (a[1].cz.m || 0));
+  const pack = (list, f) => ({ top: list.slice(0, 50).map(([k, a]) => ({ n: a.name, c: f(a.cz), b: (a.cz.eq && a.cz.eq.badge) || '', me: k === key })), rank: key ? list.findIndex(([k]) => k === key) + 1 : 0, mine: key && accounts[key] && accounts[key].cz ? f(accounts[key].cz) : 0, players: list.length });
+  const cur = pack(live, z => Math.max(0, z.w - (z.d || 0))), ever = pack(best, z => z.m || 0);
+  return { top: cur.top.slice(0, 20), rank: cur.rank, players: cur.players, cur, ever };
+}
+function czAction(action, key, acc, body) {
+  if (action === 'casino_top' || action === 'casino_report') return [200, czTop(acc ? key : '')];
+  if (!acc || !(acc.tokens || []).includes(sha256(String(body.token || '')))) return [401, { error: 'Bitte melde dich im Hub an, um im Casino zu spielen.' }];
+  const z = czAcc(key), ok = () => { z.t = Date.now(); markDirty(); return [200, czState(key, acc)]; };
+  if (action === 'cz_state') return [200, czState(key, acc)];
+  if (czSeated.has(key) && action !== 'cz_eq') return [409, { error: 'Du sitzt noch an einem Tisch. Steh zuerst auf.' }];
+  if (action === 'cz_bonus') { if (z.day === czDay()) return [409, { error: 'Den Tagesbonus gibt es morgen wieder.' }]; z.day = czDay(); z.w += 2000; return ok(); }
+  if (action === 'cz_help') { if (z.w >= 100 || Date.now() - (z.help || 0) < 3600e3) return [409, { error: 'Starthilfe gibt es nur, wenn du fast nichts mehr hast – höchstens einmal pro Stunde.' }]; z.help = Date.now(); z.w += 1000; return ok(); }
+  if (action === 'cz_loan') { const n = Math.min(Math.floor(Number(body.n) || 0), CZ_DEBT_MAX - (z.d || 0)); if (n <= 0) return [409, { error: 'Dein Kreditrahmen ist ausgeschöpft.' }]; z.d = (z.d || 0) + n; z.w += n; return ok(); }
+  if (action === 'cz_pay') { const n = Math.min(Math.floor(Number(body.n) || 0), z.w, z.d || 0); if (n <= 0) return [409, { error: 'Nichts zurückzuzahlen.' }]; z.w -= n; z.d -= n; return ok(); }
+  if (action === 'cz_buy' || action === 'cz_eq') {
+    const cat = String(body.cat || ''), k = String(body.k || ''), P = CZ_PRICES[cat]; if (!P || !(k in P)) return [400, { error: 'Gibt es nicht.' }];
+    z.own = z.own || []; z.eq = z.eq || {};
+    if (action === 'cz_buy' && P[k] && !z.own.includes(k)) { if (z.w - (z.d || 0) < P[k]) return [409, { error: 'Dafür fehlen dir eigene Jetons (Schulden zählen nicht).' }]; z.w -= P[k]; z.own.push(k); }
+    if (P[k] && !z.own.includes(k)) return [409, { error: 'Das hast du noch nicht gekauft.' }];
+    z.eq[cat] = k; return ok();
+  }
+  if (action === 'cz_work') {
+    const job = String(body.job || ''), min = CZ_JOBS[job]; if (!min) return [400, { error: 'Diesen Job gibt es nicht.' }];
+    if (!(z.d > 0)) return [409, { error: 'Du hast keine Schulden.' }];
+    const now = Date.now(); if (now - (z.wt || 0) < min) return [429, { error: 'Langsam! Der Aufseher glaubt dir nicht, dass du so schnell warst.' }];
+    z.wt = now; let pay = 0, res = '';
+    if (job === 'mine') { if (Math.random() < 0.7) { pay = 40; res = 'kohle'; } else res = 'stein'; }
+    else if (job === 'teller') { if (Math.random() < 0.06) { z.d = Math.min(CZ_DEBT_MAX * 2, z.d + 50); res = 'kaputt'; } else { pay = 30; res = 'sauber'; } }
+    else { pay = 45; res = 'sauber'; }
+    pay = Math.min(pay, z.d); z.d -= pay; z.work = (z.work || 0) + pay;
+    const r = ok(); r[1].res = res; r[1].pay = pay; return r;
+  }
+  return [400, { error: 'Unbekannte Aktion.' }];
 }
 
+// Bremse gegen massenhaft neue Konten (z. B. um im Casino immer wieder neu anzufangen): je Netzwerk 1 Konto pro 20 s und 25 pro Tag
+const creates = new Map();
+function createLimit(ip, add) {
+  const now = Date.now(), k = String(ip || '?'), e = (creates.get(k) || []).filter(t => now - t < 864e5);
+  if (add) { e.push(now); creates.set(k, e); return ''; }
+  if (e.length && now - e[e.length - 1] < 20000) return 'Bitte warte kurz, bevor du noch ein Konto anlegst.';
+  if (e.length >= 25) return 'Von diesem Netzwerk wurden heute schon sehr viele Konten angelegt. Versuch es morgen wieder.';
+  return '';
+}
 // Bremse gegen Passwort-Raten: höchstens 12 falsche Versuche pro Minute und IP
 const fails = new Map();
 const recent = ip => (fails.get(ip) || []).filter(x => Date.now() - x < 60000);
@@ -554,6 +586,7 @@ async function handle(action, body, ip) {
   const name = cleanName(body.name), key = keyOf(name), acc = accounts[key];
   if (action === 'status') return [200, { durable, error: lastError || null, testers: TESTERS.length }];
   if (action === 'create') {
+    const lim = createLimit(ip); if (lim) return [429, { error: lim }];
     if (!validName(name)) return [400, { error: 'Der Name braucht 3 bis 20 Zeichen (Buchstaben, Zahlen, Leerzeichen, - _ .).' }];
     if (String(body.pass || '').length < 4) return [400, { error: 'Das Passwort braucht mindestens 4 Zeichen.' }];
     if (acc) return [409, { error: 'Diesen Namen gibt es schon. Wähle einen anderen oder lade den Spielstand.' }];
@@ -564,7 +597,7 @@ async function handle(action, body, ip) {
     if (Object.keys(accounts).length >= 5000) return [507, { error: 'Der Speicher ist voll.' }];
     const salt = crypto.randomBytes(16).toString('hex');
     const a = accounts[key] = { name, salt, hash: hashPw(body.pass, salt), tokens: [], data, updated: Date.now(), season: SEASON };
-    const token = newToken(a); markDirty();
+    createLimit(ip, true); const token = newToken(a); markDirty();
     return [200, { name, token, updated: a.updated, durable, tester: isTester(key), reset: wiped && testData(cleanData(body.data)) }];
   }
   if (action === 'login') {
@@ -598,14 +631,8 @@ async function handle(action, body, ip) {
     return [200, { token }];
   }
   if (action === 'board') return [200, board()];
-  if (action === 'casino_top' || action === 'casino_report') return czAction(action, body);
-  if (action === 'casino_gift') { // einmalige Gutschriften für ein Konto
-    if (!acc || !(acc.tokens || []).includes(sha256(String(body.token || '')))) return [401, { error: 'Bitte melde dich neu an.' }];
-    acc.gifts = acc.gifts || []; let chips = 0, why = '';
-    for (const g of CZ_GIFTS) if (g.k === key && !acc.gifts.includes(g.id)) { acc.gifts.push(g.id); chips += g.n; why = g.why; }
-    if (chips) markDirty();
-    return [200, { chips, why }];
-  }
+  if (action === 'casino_top' || action === 'casino_report' || action.startsWith('cz_')) return czAction(action, key, acc, body);
+  if (action === 'casino_gift') return [200, { chips: 0 }]; // alte Seiten: Gutschriften kommen jetzt mit cz_state
   if (action === 'insel_load' || action === 'insel_save') {
     if (!acc || !(acc.tokens || []).includes(sha256(String(body.token || '')))) return [401, { error: 'Bitte melde dich neu an.' }];
     return islAction(action, key, acc, body);
@@ -650,9 +677,9 @@ function board() {
   return boardCache;
 }
 
-load(); chatLoad(); wbLoad(); gLoad(); islLoad(); czLoad();
+load(); chatLoad(); wbLoad(); gLoad(); islLoad();
 // Render beendet den Dienst mit SIGTERM – vorher noch speichern
-process.on('SIGTERM', async () => { await flush(); await chatFlush(); await wbFlush(); await gFlush(); await islFlush(); await czFlush(); process.exit(0); });
-process.on('SIGINT', async () => { await flush(); await chatFlush(); await wbFlush(); await gFlush(); await islFlush(); await czFlush(); process.exit(0); });
+process.on('SIGTERM', async () => { await flush(); await chatFlush(); await wbFlush(); await gFlush(); await islFlush(); process.exit(0); });
+process.on('SIGINT', async () => { await flush(); await chatFlush(); await wbFlush(); await gFlush(); await islFlush(); process.exit(0); });
 
-module.exports = { handle, flush, durable, tokenKey };
+module.exports = { handle, flush, durable, tokenKey, czAcc, czSync, czSeated };

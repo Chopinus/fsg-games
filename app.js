@@ -47,7 +47,7 @@ function send(m) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(m)); }
 function act(a) { send({ t: 'act', a }); }
 function onMsg(m) {
   if (typeof m.t === 'string' && m.t.startsWith('i_')) { if (window.Insel) Insel.net(m); return; } // Inselreich
-  if (m.t === 'hi') { pid = m.pid; if (window.Insel && Insel.isOpen()) Insel.rejoin(); }
+  if (m.t === 'hi') { pid = m.pid; if (konto) send({ t: 'konto', name: konto.name, token: konto.token }); if (window.Insel && Insel.isOpen()) Insel.rejoin(); }
   else if (m.t === 'rooms') { rooms = m.rooms; if (!room) renderRooms(); if (window.Casino && Casino.isLobby()) Casino.refreshLobby(); }
   else if (m.t === 'room') {
     room = m.room; roomId = room.id; store.set('fsg.room', roomId);
@@ -163,11 +163,11 @@ async function kontoLogin(create) {
   if (r.error) { kontoMsg = r.error; renderAcct(); const g = $('#acctForm'); if (g) g.n.value = n; return; }
   konto = { name: r.name, token: r.token }; store.set(AK, JSON.stringify(konto)); kontoForm = false; kontoMsg = '';
   if (!nick()) { $('#nick').value = r.name.slice(0, 16); $('#nick').dispatchEvent(new Event('change')); }
-  toast(create ? `Konto ${r.name} angelegt – es gilt für alle Spiele` : `Willkommen, ${r.name}!`); renderAcct();
+  toast(create ? `Konto ${r.name} angelegt – es gilt für alle Spiele` : `Willkommen, ${r.name}!`); renderAcct(); send({ t: 'konto', name: konto.name, token: konto.token }); window.dispatchEvent(new Event('fsg-konto'));
 }
 function kontoLogout() {
   konto = null; store.set(AK, null); store.set('fsg.ritter.konto', null); store.set('insel.konto', JSON.stringify({ out: 1 }));
-  kontoMsg = 'Abgemeldet. Deine Spielstände bleiben auf diesem Gerät.'; renderAcct();
+  kontoMsg = 'Abgemeldet. Deine Spielstände bleiben auf diesem Gerät.'; renderAcct(); send({ t: 'konto' }); window.dispatchEvent(new Event('fsg-konto'));
 }
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-acct]'); if (!b) return; const a = b.dataset.acct;

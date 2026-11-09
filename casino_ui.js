@@ -10,9 +10,14 @@
   /* ---------- Geldbörse (nur Spielgeld) ---------- */
   const WK = 'casino.jetons', DAY = 'casino.tag', HELP = 'casino.hilfe';
   const store = { get: k => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
-  let wallet = store.get(WK) == null ? NaN : Number(store.get(WK)); if (!(wallet >= 0)) { wallet = 10000; store.set(WK, wallet); }
-  try { addEventListener('storage', e => { if (e.key === WK && e.newValue != null && Number(e.newValue) >= 0) { wallet = Number(e.newValue); document.querySelectorAll('[data-cz-wallet]').forEach(el => (el.textContent = fmtN(wallet))); } }); } catch {} // andere Tabs
-  const setWallet = v => { wallet = Math.max(0, Math.min(1e12, Math.floor(v))); store.set(WK, wallet); document.querySelectorAll('[data-cz-wallet]').forEach(e => (e.textContent = fmtN(wallet))); czReport(); };
+  // Die Jetons liegen auf dem Server beim Hub-Konto. Im Browser wird nur angezeigt, was der Server sagt.
+  let wallet = 0, CZ = null; // CZ: Stand vom Server { w, d, m, bonus, help, own, eq, work, seated }
+  const konto = () => { try { const k = JSON.parse(store.get('fsg.konto') || 'null'); return k && k.name && k.token ? k : null; } catch { return null; } };
+  async function czCall(action, extra) { const k = konto(); if (!k) return { error: 'Bitte melde dich im Hub an.' }; const r = await czApi(action, { name: k.name, token: k.token, ...(extra || {}) }); if (!r) return { error: 'Keine Verbindung zum Server.' }; if (r.w != null) { CZ = r; wallet = r.w; debt = r.d || 0; SH.own = ['konfetti', 'klingeln', 'gruen', '', ...(r.own || [])]; SH.eq = { fx: 'konfetti', sfx: 'klingeln', felt: 'gruen', badge: '', ...(r.eq || {}) }; feltApply(); showWallet(); if (r.gift > 0) { toast(`🎁 ${fmtN(r.gift)} Jetons gutgeschrieben${r.why ? ' – ' + r.why : ''}`); snd('win'); } } return r; }
+  function sendKonto() { const k = konto(); if (typeof send === 'function') send(k ? { t: 'konto', name: k.name, token: k.token } : { t: 'konto' }); }
+  try { addEventListener('fsg-konto', () => { sendKonto(); CZ = null; if (lobby && !lobby.hidden) { czCall('cz_state').then(() => renderLobby()); renderLobby(); } }); } catch {}
+  const showWallet = () => document.querySelectorAll('[data-cz-wallet]').forEach(e => (e.textContent = fmtN(wallet)));
+  const setWallet = v => { wallet = Math.max(0, Math.min(1e12, Math.floor(v))); showWallet(); };
 
   /* ---------- Shop: Gewinn-Effekte, Gewinn-Sounds, Tischfarben und Abzeichen für Jetons ---------- */
   const SHOP_ITEMS = {
@@ -28,8 +33,7 @@
   const FELT = { gruen: ['#0f5a3a', '#083d27'], blau: ['#0f3e6a', '#082440'], rot: ['#6a1420', '#3e0810'], lila: ['#4a1a6a', '#2a0a40'], nacht: ['#1a1a22', '#08080c'], goldf: ['#7a5a14', '#3e2c08'] };
   const BADGE = { zylinder: '🎩', klee: '🍀', hai: '🦈', feuer: '🔥', dia: '💎', krone: '👑' };
   let SH = { own: ['konfetti', 'klingeln', 'gruen', ''], eq: { fx: 'konfetti', sfx: 'klingeln', felt: 'gruen', badge: '' } };
-  try { const q = JSON.parse(store.get('casino.shop') || 'null'); if (q && q.own) SH = { own: [...new Set([...SH.own, ...q.own])], eq: { ...SH.eq, ...(q.eq || {}) } }; } catch {}
-  const shopSave = () => store.set('casino.shop', JSON.stringify(SH));
+
   setTimeout(() => feltApply(), 0);
   function feltApply() { let st = document.getElementById('czFelt'); if (!st) { st = document.createElement('style'); st.id = 'czFelt'; document.head.appendChild(st); } const f = FELT[SH.eq.felt] || FELT.gruen; st.textContent = `.cz{--felt:${f[0]};--felt2:${f[1]}}`; }
   function shopHTML() {
@@ -87,14 +91,12 @@
   }
   /* ---------- Bank: Kredit aufnehmen und zurückzahlen ---------- */
   const DEBT = 'casino.schuld', DEBT_MAX = 50000, LOANS = [1000, 5000, 10000];
-  if (store.get('casino.schuldv') !== '2') { store.set(DEBT, 0); store.set('casino.schuldv', '2'); } // Neustart 05.11.2026: alle Schulden gelöscht
-  let debt = Math.max(0, Number(store.get(DEBT)) || 0);
-  const setDebt = v => { debt = Math.max(0, Math.min(DEBT_MAX, Math.floor(v))); store.set(DEBT, debt); czReport(); };
+  let debt = 0;
   const net = () => Math.max(0, wallet - debt); // für die Rangliste zählt, was dir wirklich gehört
   /* ---------- Geldrangliste: jedes Gerät meldet seinen Jetonstand ---------- */
   let czBoard = null, czTimer = null;
   async function czApi(action, body) { try { const r = await fetch('/api/' + action, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); return r.ok ? await r.json() : null; } catch { return null; } }
-  function czReport(now) { clearTimeout(czTimer); czTimer = setTimeout(async () => { const n = typeof nick === 'function' ? nick() : ''; const r = await czApi(n ? 'casino_report' : 'casino_top', { key: store.get('fsg.key') || '', name: n, chips: net(), badge: SH.eq.badge || '' }); if (r) { czBoard = r; renderBoard(); } }, now ? 0 : 3000); }
+  function czReport(now) { clearTimeout(czTimer); czTimer = setTimeout(async () => { const k = konto(); const r = await czApi('casino_top', k ? { name: k.name } : {}); if (r) { czBoard = r; renderBoard(); } }, now ? 0 : 3000); }
   let boardTab = 'cur';
   function renderBoard() {
     const el = q('#czBoard'); if (!el) return;
@@ -106,7 +108,7 @@
     const mine = B.rank > top.length ? `<div class="cz-rrow me"><b>${B.rank}.</b><span>Du</span><em>${fmtN(B.mine || net())}</em></div>` : '';
     set(el, `<div class="cz-tabs"><button class="cz-btn small ${boardTab === 'cur' ? '' : 'dark'}" data-cz-bt="cur">💰 Momentan</button><button class="cz-btn small ${boardTab === 'ever' ? '' : 'dark'}" data-cz-bt="ever">👑 Jemals am meisten</button></div>
       <p class="cz-note">${boardTab === 'cur' ? 'Jetons, die du gerade hast – Bankschulden werden abgezogen. Zählt die letzten 30 Tage.' : 'Der höchste Jetonstand, den jemand je hatte (ohne Bankschulden).'}</p>
-      ${podium}<div class="cz-rlist">${rest}${mine}</div><p class="cz-note">${B.players || 0} Spieler · zählt die Jetons auf jedem Gerät</p>`);
+      ${podium}<div class="cz-rlist">${rest}${mine}</div><p class="cz-note">${B.players || 0} Spieler · jedes Hub-Konto zählt einmal</p>`);
   }
 
   /* ---------- Schulden abarbeiten: harte, schlecht bezahlte Arbeit für die Bank ---------- */
@@ -117,8 +119,8 @@
     putzen: { i: '🧹', n: 'Casino-Boden schrubben', d: 'Jede Fliese zweimal schrubben, bis sie glänzt.', pay: '45 je Boden' },
   };
   const BOSS = ['Der Aufseher brüllt: „Schneller, Schuldner!“', 'Der Aufseher gähnt und zählt seine Jetons.', '„Wer spielt, muss auch schuften!“', 'Ein Gewinner läuft vorbei und lacht dich aus.', '„Pause? Pausen gibt es für Leute ohne Schulden.“', 'Der Aufseher notiert: „Arbeitet zu langsam.“', '„Noch 100 Säcke, dann reden wir weiter.“'];
-  const W = { job: null, hp: 0, max: 0, spots: [], tiles: [], msg: '', last: 0, earned: Number(store.get('casino.arbeit')) || 0, shift: 0, shake: 0 };
-  const workPay = n => { const p = Math.min(n, debt); if (p > 0) { setDebt(debt - p); W.earned += p; W.shift += p; store.set('casino.arbeit', W.earned); } return p; };
+  const W = { job: null, hp: 0, max: 0, spots: [], tiles: [], msg: '', last: 0, earned: 0, shift: 0, shake: 0, busy: false };
+
   function newWork() {
     if (W.job === 'mine') { W.max = W.hp = 6 + Math.floor(Math.random() * 6); }
     if (W.job === 'teller') { W.spots = Array.from({ length: 4 + Math.floor(Math.random() * 4) }, () => ({ x: 22 + Math.random() * 56, y: 22 + Math.random() * 56, ok: 0 })); }
@@ -142,14 +144,21 @@
     if (a === 'stop') { W.job = null; W.shift = 0; renderLobby(); return; }
     if (!debt) return;
     let done = false;
-    if (a === 'hack') { W.hp--; snd('card'); W.shake = 1; setTimeout(() => { W.shake = 0; }, 90);
-      if (W.hp <= 0) { if (Math.random() < 0.7) { const p = workPay(40); W.msg = `⚫ Ein Sack Kohle! ${fmtN(p)} Schulden abgearbeitet.`; snd('chip'); } else W.msg = '🪨 Nur wertloser Stein. Der Aufseher lacht.'; done = true; } }
-    if (a === 'wipe') { const sp = W.spots[+b.dataset.k]; if (sp && !sp.ok) { sp.ok = 1; snd('card'); }
-      if (W.spots.every(q => q.ok)) { if (Math.random() < 0.06) { setDebt(debt + 50); W.msg = '💥 Teller zerbrochen! Die Bank schreibt dir 50 Schulden dazu.'; snd('lose'); } else { const p = workPay(30); W.msg = `✨ Blitzblank! ${fmtN(p)} Schulden abgearbeitet.`; snd('chip'); } done = true; } }
-    if (a === 'scrub') { const k = +b.dataset.k; if (W.tiles[k] > 0) { W.tiles[k]--; snd('card'); }
-      if (W.tiles.every(t => !t)) { const p = workPay(45); W.msg = `🧽 Der Boden glänzt! ${fmtN(p)} Schulden abgearbeitet.`; snd('chip'); done = true; } }
-    if (done) { newWork(); if (Math.random() < 0.35) W.msg += ' ' + BOSS[Math.floor(Math.random() * BOSS.length)]; if (!debt) { W.msg = '🎉 Schuldenfrei!'; snd('win'); toast('🎉 Du hast alle Schulden abgearbeitet!'); } }
-    renderLobby();
+    if (W.busy) return;
+    if (a === 'hack') { W.hp--; snd('card'); W.shake = 1; setTimeout(() => { W.shake = 0; }, 90); if (W.hp <= 0) done = true; }
+    if (a === 'wipe') { const sp = W.spots[+b.dataset.k]; if (sp && !sp.ok) { sp.ok = 1; snd('card'); } if (W.spots.every(q => q.ok)) done = true; }
+    if (a === 'scrub') { const k = +b.dataset.k; if (W.tiles[k] > 0) { W.tiles[k]--; snd('card'); } if (W.tiles.every(t => !t)) done = true; }
+    if (!done) { renderLobby(); return; }
+    W.busy = true; renderLobby();
+    czCall('cz_work', { job: W.job }).then(r => {
+      W.busy = false;
+      if (r.error) W.msg = r.error;
+      else { W.shift += r.pay || 0; W.earned = r.work || 0;
+        W.msg = { kohle: `⚫ Ein Sack Kohle! ${fmtN(r.pay)} Schulden abgearbeitet.`, stein: '🪨 Nur wertloser Stein. Der Aufseher lacht.', kaputt: '💥 Teller zerbrochen! Die Bank schreibt dir 50 Schulden dazu.', sauber: W.job === 'putzen' ? `🧽 Der Boden glänzt! ${fmtN(r.pay)} Schulden abgearbeitet.` : `✨ Blitzblank! ${fmtN(r.pay)} Schulden abgearbeitet.` }[r.res] || '';
+        snd(r.pay ? 'chip' : 'lose'); if (Math.random() < 0.35) W.msg += ' ' + BOSS[Math.floor(Math.random() * BOSS.length)];
+        if (!debt) { W.msg = '🎉 Schuldenfrei!'; snd('win'); toast('🎉 Du hast alle Schulden abgearbeitet!'); } }
+      newWork(); renderLobby();
+    });
   }
   function bankHTML() {
     const room = DEBT_MAX - debt;
@@ -213,6 +222,7 @@
   .cz-floor{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;width:min(360px,86vw);padding:6px;background:#1a1410;border-radius:10px}
   .cz-tile{aspect-ratio:1;border:0;border-radius:4px;cursor:pointer;background:linear-gradient(135deg,#e8e0d0,#c8bca8)}
   .cz-tile.t2{background:linear-gradient(135deg,#6a5a3a,#4a3a22)}.cz-tile.t1{background:linear-gradient(135deg,#a8987a,#8a7a5a)}
+  .cz-login{max-width:520px;margin:40px auto;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:26px 20px}.cz-login .ic{font-size:48px}.cz-login h3{margin:0;font-family:Bungee,Figtree,sans-serif;font-weight:400;color:#ffe9a8}.cz-login p{margin:0;color:#d8ccb4}
   .cz-fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:99999}
   .cz-ltabs,.cz-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 6px}
   .cz-podium{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;align-items:end;max-width:560px;margin:14px 0 12px}
@@ -388,14 +398,9 @@
   ];
   let lobby = null;
   // Gutschriften (z. B. Ersatz nach einem Fehler) für das angemeldete Hub-Konto einmalig abholen
-  async function czGift() {
-    let k = null; try { k = JSON.parse(store.get('fsg.konto') || 'null'); } catch {}
-    if (!k || !k.token) return;
-    const r = await czApi('casino_gift', { name: k.name, token: k.token });
-    if (r && r.chips > 0) { setWallet(wallet + r.chips); toast(`🎁 ${fmtN(r.chips)} Jetons gutgeschrieben${r.why ? ' – ' + r.why : ''}`); snd('win'); if (lobby && !lobby.hidden) renderLobby(); }
-  }
+  async function czGift() { await czCall('cz_state'); if (lobby && !lobby.hidden) renderLobby(); }
   function openLobby() {
-    css(); czGift();
+    css(); sendKonto(); czGift();
     if (!lobby) { lobby = document.createElement('div'); lobby.id = 'czLobby'; lobby.className = 'cz'; document.body.appendChild(lobby); lobby.addEventListener('click', onLobby); }
     lobby.hidden = false; const hub = q('#hub'); if (hub) hub.hidden = true; renderLobby();
   }
@@ -403,7 +408,12 @@
   let lobbyTab = 'games';
   function renderLobby() {
     if (!lobby || lobby.hidden) return;
-    const bonus = store.get(DAY) !== today(), helpOk = wallet < 100 && Date.now() - (Number(store.get(HELP)) || 0) > 3600e3;
+    if (!konto() || !CZ) { // Casino nur mit Hub-Konto: die Jetons liegen auf dem Server
+      lobby.innerHTML = `<div class="cz-wrap"><div class="cz-head"><button class="cz-btn dark small" data-cz="back">‹ Hub</button><div class="cz-logo">Casino Aurum<small>NUR SPIELGELD · KEIN ECHTES GELD</small></div></div>
+        <div class="cz-login">${konto() ? '<p>Dein Casino-Konto wird geladen …</p>' : `<span class="ic">🔐</span><h3>Im Casino spielst du mit deinem Konto</h3><p>Deine Jetons liegen sicher auf dem Server bei deinem Hub-Konto – auf jedem Gerät derselbe Stand. Jedes Konto startet einmal mit ${fmtN(10000)} Jetons.</p><p>Melde dich dafür im Hub unter „👤 Anmelden oder Konto anlegen“ an.</p><button class="cz-btn" data-cz="back">Zum Hub</button>`}</div></div>`;
+      return;
+    }
+    const bonus = !!(CZ && CZ.bonus), helpOk = !!(CZ && CZ.help);
     const open = (typeof rooms !== 'undefined' ? rooms : []).filter(r => r.game === 'casino');
     lobby.innerHTML = `<div class="cz-wrap">
       <div class="cz-head"><button class="cz-btn dark small" data-cz="back">‹ Hub</button>
@@ -419,7 +429,7 @@
         <div class="row"><button class="cz-btn small" data-cz-open="${g.kind}">Tisch eröffnen</button><button class="cz-btn small dark" data-cz-solo="${g.kind}">Allein mit Bots</button></div></div>`).join('')}</div>
       <div class="cz-sec">Offene Tische</div>
       <div class="cz-tables">${open.length ? open.map(r => `<div class="cz-trow"><b>${esc(r.name)}</b><span class="cz-note">${r.players.length} ${r.players.length === 1 ? 'Spieler' : 'Spieler'}</span><button class="cz-btn small" data-cz-join="${r.id}">Hinsetzen</button></div>`).join('') : '<p class="cz-note">Gerade ist kein Tisch offen. Eröffne einen – deine Freunde sehen ihn dann hier und in der Runden-Liste.</p>'}</div>`}
-      <p class="cz-note" style="margin-top:22px">Hier wird nur mit Spieljetons gespielt. Sie haben keinen Geldwert, lassen sich weder kaufen noch auszahlen und liegen nur auf deinem Gerät.</p>
+      <p class="cz-note" style="margin-top:22px">Hier wird nur mit Spieljetons gespielt. Sie haben keinen Geldwert, lassen sich weder kaufen noch auszahlen und liegen bei deinem Hub-Konto.</p>
     </div>`;
     const cvw = lobby.querySelector('[data-cz-artwheel]'); if (cvw) drawWheel(cvw, 0.4, null);
     renderBoard(); if (!renderLobby.asked || Date.now() - renderLobby.asked > 20000) { renderLobby.asked = Date.now(); czReport(true); }
@@ -430,19 +440,19 @@
     try { localStorage.setItem('fsg.nick', nick()); } catch {} send({ t: 'name', name: nick() }); return true;
   }
   function onLobby(e) {
-    const by = e.target.closest('[data-cz-buy]'); if (by) { const cat = by.dataset.czBuy, k = by.dataset.k, it = SHOP_ITEMS[cat].items.find(x => x[0] === k); if (!it || SH.own.includes(k) || net() < it[3]) return; setWallet(wallet - it[3]); SH.own.push(k); SH.eq[cat] = k; shopSave(); if (cat === 'felt') feltApply(); if (cat === 'badge') czReport(true); snd('win'); toast(`🛍️ ${it[2]} gekauft und aktiviert!`); if (cat === 'fx') winFx(k, 1.5); if (cat === 'sfx') winSound(k, false); renderLobby(); return; }
-    const eqb = e.target.closest('[data-cz-eq]'); if (eqb) { const cat = eqb.dataset.czEq; SH.eq[cat] = eqb.dataset.k; shopSave(); if (cat === 'felt') feltApply(); if (cat === 'badge') czReport(true); renderLobby(); return; }
+    const by = e.target.closest('[data-cz-buy]'); if (by) { const cat = by.dataset.czBuy, k = by.dataset.k, it = SHOP_ITEMS[cat].items.find(x => x[0] === k); czCall('cz_buy', { cat, k }).then(r => { if (r.error) toast(r.error); else { snd('win'); toast(`🛍️ ${it ? it[2] : k} gekauft und aktiviert!`); if (cat === 'fx') winFx(k, 1.5); if (cat === 'sfx') winSound(k, false); } renderLobby(); }); return; }
+    const eqb = e.target.closest('[data-cz-eq]'); if (eqb) { czCall('cz_eq', { cat: eqb.dataset.czEq, k: eqb.dataset.k }).then(r => { if (r.error) toast(r.error); renderLobby(); }); return; }
     const tr = e.target.closest('[data-cz-try]'); if (tr) { if (tr.dataset.czTry === 'fx') winFx(tr.dataset.k, 1.5); else winSound(tr.dataset.k, true); return; }
     const jb = e.target.closest('[data-cz-job]'); if (jb) { W.job = jb.dataset.czJob; W.shift = 0; W.msg = BOSS[Math.floor(Math.random() * BOSS.length)]; newWork(); lobbyTab = 'work'; renderLobby(); return; }
     const wk = e.target.closest('[data-cz-w]'); if (wk) { workTap(wk); if (!W.job) { lobbyTab = 'bank'; renderLobby(); } return; }
     const tb = e.target.closest('[data-cz-tab]'); if (tb) { lobbyTab = tb.dataset.czTab; renderLobby(); if (lobbyTab === 'board') czReport(true); return; }
     const bt = e.target.closest('[data-cz-bt]'); if (bt) { boardTab = bt.dataset.czBt; renderBoard(); return; }
-    const ln = e.target.closest('[data-cz-loan]'); if (ln) { const n = Math.min(+ln.dataset.czLoan, DEBT_MAX - debt); if (n > 0) { setDebt(debt + n); setWallet(wallet + n); snd('chip'); toast(`🏦 ${fmtN(n)} Jetons geliehen – Schulden jetzt ${fmtN(debt)}`); } renderLobby(); return; }
-    const py = e.target.closest('[data-cz-pay]'); if (py) { const n = py.dataset.czPay === 'all' ? Math.min(wallet, debt) : Math.min(+py.dataset.czPay, wallet, debt); if (n > 0) { setWallet(wallet - n); setDebt(debt - n); snd('chip'); toast(debt ? `💸 ${fmtN(n)} zurückgezahlt – noch ${fmtN(debt)} Schulden` : '🎉 Alle Schulden bezahlt!'); } renderLobby(); return; }
+    const ln = e.target.closest('[data-cz-loan]'); if (ln) { czCall('cz_loan', { n: +ln.dataset.czLoan }).then(r => { if (r.error) toast(r.error); else { snd('chip'); toast(`🏦 Geliehen – Schulden jetzt ${fmtN(debt)}`); } renderLobby(); }); return; }
+    const py = e.target.closest('[data-cz-pay]'); if (py) { const n = py.dataset.czPay === 'all' ? Math.min(wallet, debt) : +py.dataset.czPay; czCall('cz_pay', { n }).then(r => { if (r.error) toast(r.error); else { snd('chip'); toast(debt ? `💸 Zurückgezahlt – noch ${fmtN(debt)} Schulden` : '🎉 Alle Schulden bezahlt!'); } renderLobby(); }); return; }
     const b = e.target.closest('[data-cz],[data-cz-open],[data-cz-solo],[data-cz-join]'); if (!b) return;
     if (b.dataset.cz === 'back') { closeLobby(); return; }
-    if (b.dataset.cz === 'bonus') { store.set(DAY, today()); setWallet(wallet + 2000); snd('win'); toast('2.000 Jetons gutgeschrieben – viel Glück!'); renderLobby(); return; }
-    if (b.dataset.cz === 'help') { store.set(HELP, Date.now()); setWallet(wallet + 1000); snd('chip'); renderLobby(); return; }
+    if (b.dataset.cz === 'bonus') { czCall('cz_bonus').then(r => { if (r.error) toast(r.error); else { snd('win'); toast('2.000 Jetons gutgeschrieben – viel Glück!'); } renderLobby(); }); return; }
+    if (b.dataset.cz === 'help') { czCall('cz_help').then(r => { if (r.error) toast(r.error); else snd('chip'); renderLobby(); }); return; }
     if (b.dataset.cz === 'nick') { needName(); renderLobby(); return; }
     if (!needName()) return;
     if (b.dataset.czOpen || b.dataset.czSolo) { const kind = b.dataset.czOpen || b.dataset.czSolo; send({ t: 'create', game: 'casino', kind, priv: !!b.dataset.czSolo }); closeLobby(); return; }
@@ -458,10 +468,10 @@
     deadline = v.left != null ? Date.now() + v.left : 0;
     // Jetons vom Tisch nur übernehmen, wenn sie sich dort wirklich geändert haben. Ein alter Platz (z. B. aus einem anderen Tab)
     // darf den Stand auf dem Gerät nicht überschreiben – dann bringt das Gerät seinen Stand an den Tisch mit.
-    if (vwRoom !== room.id) { vwRoom = room.id; lastVW = v.wallet; if (v.mySeat >= 0 && v.wallet != null && v.wallet !== wallet) { act({ type: 'sit', chips: wallet }); v = { ...v, wallet: null }; } }
-    if (v.wallet != null && v.wallet !== lastVW) { lastVW = v.wallet; const before = wallet; setWallet(v.wallet); if (v.mySeat >= 0 && v.wallet - before >= BIGWIN && before > 0) { const w = v.wallet - before; setTimeout(() => celebrate(w), v.kind === 'rad' ? 4300 : v.kind === 'slots' ? 2300 : 0); } }
+    if (vwRoom !== room.id) { vwRoom = room.id; lastVW = null; }
+    if (v.wallet != null && v.wallet !== lastVW) { const before = lastVW == null ? v.wallet : wallet; lastVW = v.wallet; setWallet(v.wallet); if (v.mySeat >= 0 && v.wallet - before >= BIGWIN && before > 0) { const w = v.wallet - before; setTimeout(() => celebrate(w), v.kind === 'rad' ? 4300 : v.kind === 'slots' ? 2300 : 0); } }
     // automatisch hinsetzen und eigene Jetons mitbringen
-    if (v.mySeat < 0 && v.free > 0 && sitAsked !== room.id) { sitAsked = room.id; act({ type: 'sit', chips: wallet }); }
+    if (v.mySeat < 0 && v.free > 0 && sitAsked !== room.id) { sitAsked = room.id; sendKonto(); act({ type: 'sit' }); }
     const mode = 'cz-' + v.kind;
     if (st.dataset.mode !== mode) { st.dataset.mode = mode; delete st.dataset.h; st.innerHTML = `<div class="cz cz-room"><div class="cz-info"></div><div class="cz-main"></div><div class="cz-log"></div></div>`; lastKind = null; }
     const me = v.mySeat >= 0 ? v.seats[v.mySeat] : null;
@@ -762,7 +772,7 @@
     b = t.closest('[data-czs]'); if (b) { SL.bet = +b.dataset.czs; store.set('casino.slotbet', SL.bet); slot(q('#stage .cz-main'), V, V.mySeat >= 0 ? V.seats[V.mySeat] : null); return; }
     b = t.closest('[data-czt]'); if (!b || b.disabled) return;
     const a = b.dataset.czt;
-    if (a === 'lobby') { send({ t: 'leave' }); setTimeout(openLobby, 80); return; }
+    if (a === 'lobby') { send({ t: 'leave' }); setTimeout(() => { openLobby(); czCall('cz_state').then(renderLobby); }, 300); return; }
     if (a === 'botadd') { act({ type: 'bot', add: true }); return; }
     if (a === 'botdel') { act({ type: 'bot', add: false }); return; }
     if (a === 'bet') { if (chipSel > wallet) { toast('Nicht genug Jetons.'); return; } act({ type: 'bet', amount: chipSel }); snd('chip'); return; }
