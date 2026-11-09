@@ -19,6 +19,16 @@
     umgesetzt: ['🚀 Umgesetzt', 'done'], abgelehnt: ['✖️ Abgelehnt', 'no'], verworfen: ['🚫 Nicht veröffentlicht', 'no'],
   };
   const AI = { gut: ['👍 Gut & machbar', 'ok'], unsicher: ['🤔 Unsicher', 'mid'], nein: ['👎 Eher nicht', 'no'] };
+  // Aufwand der angenommenen, noch nicht umgesetzten Ideen (aus Claudes Einschätzung) – damit ein Update-Tag nicht zu teuer wird
+  const COST = { klein: 1, mittel: 3, 'groß': 6 }, LOAD_OK = 6, LOAD_MAX = 12;
+  const pts = v => COST[v.ai && v.ai.cost] || 3;
+  const loadOf = extra => ((D && D.list) || []).filter(v => v.st === 'angenommen').reduce((n, v) => n + pts(v), 0) + (extra || 0);
+  function loadHTML() {
+    const acc = ((D && D.list) || []).filter(v => v.st === 'angenommen'), n = loadOf();
+    const lvl = n > LOAD_MAX ? 'no' : n > LOAD_OK ? 'mid' : 'ok';
+    const txt = n > LOAD_MAX ? '⚠️ Viel – das nächste Update wird teuer. Nimm erstmal nichts Großes mehr an oder stell Ideen wieder auf offen.' : n > LOAD_OK ? 'Mittel – geht noch, aber es wird spürbar.' : 'Leicht – passt gut.';
+    return `<div class="vz-load ${lvl}"><b>Nächstes Update: ${acc.length} Idee(n) · Aufwand ${n} Punkte</b><div class="vz-bar"><i style="width:${Math.min(100, Math.round(n / (LOAD_MAX * 1.5) * 100))}%"></i><span style="left:${Math.round(LOAD_MAX / (LOAD_MAX * 1.5) * 100)}%"></span></div><small>${txt} (klein = 1, mittel = 3, groß = 6 Punkte · ab ${LOAD_MAX + 1} wird gewarnt)</small></div>`;
+  }
   let D = null, tab = 'top', page = null, busy = false, formOpen = false, draft = {};
 
   function games() {
@@ -77,6 +87,7 @@
       <p class="lead">Schlag Verbesserungen für die Spiele vor – Balance, neue Funktionen, Fehler. <b>Täglich gegen 18 Uhr</b> werden neue Ideen geprüft und dann für alle zum Abstimmen freigegeben. Angenommene Ideen kommen <b>mittwochs, freitags und sonntags</b> ins Spiel.</p>
       <div class="panel vz-formbox">${formHTML()}</div>
       <div class="vz-tabs">${tabs.map(([k2, l]) => `<button class="vz-tab ${tab === k2 ? 'on' : ''}" data-vz-tab="${k2}">${l}</button>`).join('')}</div>
+      ${D && D.admin && (tab === 'adm' || tab === 'ok') ? loadHTML() : ''}
       ${tab === 'adm' ? `<p class="vz-small">${waiting} Idee(n) warten auf die nächste Prüfung. Alles, was du annimmst, setzt Claude am nächsten Update-Tag um (Mi, Fr, So).</p>` : ''}
       <div class="vz-list">${!D ? '<p class="vz-small">Wird geladen …</p>' : L.length ? L.map(card).join('') : `<p class="vz-small">${empty}</p>`}</div></div>`;
     const f = q('#vzForm');
@@ -113,6 +124,10 @@
     if (b.dataset.vzDel) { const r = await call('vs_delete', { id: b.dataset.vzDel }); if (r.error) say(r.error); else load(); return; }
     if (b.dataset.vzD) {
       const d = b.dataset.vzD; let dn = '';
+      if (d === 'angenommen') {
+        const v = D.list.find(x => x.id === b.dataset.id), after = loadOf(v ? pts(v) : 3);
+        if (after > LOAD_MAX && !confirm(`Achtung: Damit hat das nächste Update ${after} Aufwand-Punkte (Warnung ab ${LOAD_MAX + 1}). Das verbraucht spürbar mehr Claude-Volumen. Trotzdem annehmen?`)) return;
+      }
       if (d === 'abgelehnt') { dn = prompt('Kurze Begründung für die Spieler (optional):') ?? null; if (dn === null) return; }
       const r = await call('vs_decide', { id: b.dataset.id, d, dn }); if (r.error) say(r.error); else { say(d === 'angenommen' ? 'Angenommen – kommt am nächsten Update-Tag.' : d === 'abgelehnt' ? 'Abgelehnt.' : 'Wieder offen.'); load(); }
     }
@@ -161,6 +176,12 @@
   .vz-ai{border-radius:10px;padding:10px 12px;background:var(--surface2);border-left:4px solid var(--muted);font-size:14px}
   .vz-ai.ok{border-color:#27a06a}.vz-ai.mid{border-color:#f2be1a}.vz-ai.no{border-color:#e5484d}
   .vz-ai p{margin:4px 0 0;color:#e6dccd}
+  .vz-load{border-radius:12px;padding:12px 14px;background:var(--surface);border:1px solid var(--line);border-left:5px solid #27a06a;display:flex;flex-direction:column;gap:8px}
+  .vz-load.mid{border-left-color:#f2be1a}.vz-load.no{border-left-color:#e5484d;background:#2e1a22}
+  .vz-load small{color:var(--muted);font-size:13px}
+  .vz-bar{position:relative;height:10px;border-radius:99px;background:var(--bg);overflow:hidden}
+  .vz-bar i{position:absolute;inset:0 auto 0 0;background:#27a06a;border-radius:99px}.vz-load.mid .vz-bar i{background:#f2be1a}.vz-load.no .vz-bar i{background:#e5484d}
+  .vz-bar span{position:absolute;top:0;bottom:0;width:2px;background:#fff8}
   .vz-adm{display:flex;gap:8px;flex-wrap:wrap}
   .vz-meta{font-size:13px;color:var(--muted)}
   .vz-link{background:none;border:0;color:var(--accent);text-decoration:underline;padding:0 0 0 6px;font-size:13px}`;
