@@ -89,7 +89,6 @@
       <div class="vz-life">🌱 <b>Der Game Hub lebt von euch.</b> Ohne eure Ideen gibt es nichts Neues – also schlag alles vor, was dir einfällt: Balance, neue Funktionen, Fehler, neue Gebiete oder sogar <b>neue Klassen für Ritterlauf</b>, die dann als Held ins Event-Banner kommen.</div>
       <div class="panel vz-formbox">${formHTML()}</div>
       <div class="vz-tabs">${tabs.map(([k2, l]) => `<button class="vz-tab ${tab === k2 ? 'on' : ''}" data-vz-tab="${k2}">${l}</button>`).join('')}</div>
-      ${D && D.admin && (tab === 'adm' || tab === 'ok') ? loadHTML() : ''}
       ${tab === 'adm' ? `<p class="vz-small">${waiting} Idee(n) warten auf die nächste Prüfung. Alles, was du annimmst, setzt Claude am nächsten Update-Tag um (Mi, Fr, So).</p>` : ''}
       <div class="vz-list">${!D ? '<p class="vz-small">Wird geladen …</p>' : L.length ? L.map(card).join('') : `<p class="vz-small">${empty}</p>`}</div></div>`;
     const f = q('#vzForm');
@@ -132,10 +131,6 @@
     }
     if (b.dataset.vzD) {
       const d = b.dataset.vzD; let dn = '';
-      if (d === 'angenommen') {
-        const v = D.list.find(x => x.id === b.dataset.id), after = loadOf(v ? pts(v) : 3);
-        if (after > LOAD_MAX && !confirm(`Achtung: Damit hat das nächste Update ${after} Aufwand-Punkte (Warnung ab ${LOAD_MAX + 1}). Das verbraucht spürbar mehr Claude-Volumen. Trotzdem annehmen?`)) return;
-      }
       if (d === 'abgelehnt') { dn = prompt('Kurze Begründung für die Spieler (optional):') ?? null; if (dn === null) return; }
       const r = await call('vs_decide', { id: b.dataset.id, d, dn }); if (r.error) say(r.error); else { say(d === 'angenommen' ? 'Angenommen – kommt am nächsten Update-Tag.' : d === 'abgelehnt' ? 'Abgelehnt.' : 'Wieder offen.'); load(); }
     }
