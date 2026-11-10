@@ -325,8 +325,8 @@ function handle(c, m) {
   if (m.t === 'close') { if (r.host === c.pid) deleteRoom(r); return; }
   if (m.t === 'start') {
     if (r.host !== c.pid) return;
-    if (r.players.length < G.min) return send(c, { t: 'err', msg: `Es braucht mindestens ${G.min} Spieler.` });
-    G.start(r);
+    if (r.players.length < G.min && !(G.solo && G.solo(r, m))) return send(c, { t: 'err', msg: `Es braucht mindestens ${G.min} Spieler.` });
+    G.start(r, m);
     pushRoom(r);
     return;
   }

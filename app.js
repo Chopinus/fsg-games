@@ -10,7 +10,7 @@ const store = {
 const GAMES = [
   { key: 'uno', title: 'Letzte Karte', sub: 'Ablegespiel nach Uno-Regeln · 2–8 Spieler',
     art: '<span class="card c-r" style="--cw:40px"><span class="big">7</span></span><span class="card c-w" style="--cw:40px;transform:rotate(8deg)"><span class="wheel"></span></span>' },
-  { key: 'schach', title: 'Schach', sub: '2 Spieler · weitere können zuschauen',
+  { key: 'schach', title: 'Schach', sub: '2 Spieler oder gegen den Schachbot · Rätsel des Tages',
     art: '<span class="pc pw" style="font-size:52px">♞&#xFE0E;</span><span class="pc pb" style="font-size:52px;color:#e9dcc3">♛&#xFE0E;</span>' },
   { key: 'maedn', title: 'Mensch ärgere dich nicht', sub: '2–4 Spieler',
     art: ['rot', 'blau', 'gruen', 'gelb'].map(c => `<span class="fig ${c}" style="width:30px;height:30px;display:inline-block"></span>`).join('') },
@@ -135,7 +135,7 @@ function needNick() {
   store.set('fsg.nick', n); send({ t: 'name', name: n }); return true;
 }
 // Casino wird erst geladen, wenn es jemand braucht
-const CZ_V = 52; // bei jeder Casino-Änderung erhöhen, damit Geräte die neue Datei laden
+const CZ_V = 53; // bei jeder Casino-Änderung erhöhen, damit Geräte die neue Datei laden
 function loadCasino(cb) {
   if (window.Casino) { cb(); return; }
   if (loadCasino.busy) { loadCasino.q.push(cb); return; }
@@ -295,7 +295,18 @@ function lobbyHTML() {
     <p class="note">und tippen bei „${esc(r.name)}“ auf Beitreten.${r.seats < 12 ? ` Es spielen bis zu ${r.seats}, alle weiteren schauen zu.` : ''}</p>
     ${isHost() ? `<div class="row" style="justify-content:center"><button class="btn" data-room="start" ${n < need ? 'disabled' : ''}>${n < need ? `Noch ${need - n} Spieler nötig` : 'Spiel starten'}</button>
       <button class="btn ghost" data-room="close">Runde auflösen</button></div>`
-      : `<p class="status">${esc(nameOf(r.host))} startet das Spiel.</p>`}`;
+      : `<p class="status">${esc(nameOf(r.host))} startet das Spiel.</p>`}
+    ${r.game === 'schach' ? chessSoloHTML() : ''}`;
+}
+// Schach allein: gegen den Bot (5 Stufen) oder das Rätsel des Tages
+const CH_LV = ['Anfänger', 'Leicht', 'Mittel', 'Schwer', 'Meister'];
+const chPuzDay = () => Math.floor((Date.now() + 3600e3) / 864e5);
+function chessSoloHTML(lv) {
+  if (!isHost()) return '';
+  const solved = store.get('fsg.schach.puz') === String(chPuzDay());
+  return `<div class="ch-solo"><p class="note" style="margin:14px 0 6px">Gegen den Schachbot spielen:</p>
+    <div class="row" style="justify-content:center;flex-wrap:wrap;gap:6px">${CH_LV.map((n, i) => `<button class="btn ${lv === i + 1 ? '' : 'ghost'} small" data-chbot="${i + 1}">${n}</button>`).join('')}</div>
+    <div class="row" style="justify-content:center;margin-top:10px"><button class="btn ghost small" data-chpuz="1">🧩 Rätsel des Tages${solved ? ' ✓ gelöst' : ''}</button></div></div>`;
 }
 function againHTML(label) {
   return isHost() ? `<button class="btn" data-room="start" ${room.players.length < room.min ? 'disabled' : ''}>${label}</button>`
@@ -309,6 +320,10 @@ $('#room').addEventListener('click', e => {
   else if (a === 'leave') send({ t: 'leave' });
   else if (a === 'close') send({ t: 'close' });
   else if (a === 'start') send({ t: 'start' });
+});
+$('#room').addEventListener('click', e => {
+  const b = e.target.closest('[data-chbot],[data-chpuz]'); if (!b || b.disabled || !isHost()) return;
+  if (b.dataset.chbot) send({ t: 'start', bot: Number(b.dataset.chbot) }); else send({ t: 'start', puz: 1 });
 });
 
 /* ---------- Letzte Karte ---------- */
@@ -395,20 +410,29 @@ function renderChess(st, v) {
     cells += `<button class="${cls.join(' ')}" data-sq="${sq}" aria-label="${'abcdefgh'[c]}${8 - r}">${p ? glyph(p) : ''}${hint}</button>`;
   }
   const topCol = flip ? 'w' : 'b', botCol = flip ? 'b' : 'w';
+  const cName = col => (v.names ? v.names[col] : nameOf(col === 'w' ? v.w : v.b));
+  if (v.puz && v.puz.solved) store.set('fsg.schach.puz', String(v.puz.day));
   const bar = col => {
     const id = col === 'w' ? v.w : v.b;
     return `<div class="bar" style="width:min(100%,560px)"><span class="player ${room.status === 'playing' && v.turn === col ? 'turn' : ''}">
-      <span class="dot" style="background:${col === 'w' ? '#fffaf0' : '#17131f'};border:2px solid var(--muted)"></span>${esc(nameOf(id))}${id === room.me ? ' (du)' : ''}</span>
+      <span class="dot" style="background:${col === 'w' ? '#fffaf0' : '#17131f'};border:2px solid var(--muted)"></span>${esc(cName(col))}${id === room.me ? ' (du)' : ''}</span>
       <span class="taken">${v.taken[col].map(glyph).join('')}</span></div>`;
   };
   let status;
-  if (v.result) status = v.result.winner ? `${v.result.winner === v.mine ? 'Du gewinnst' : `${esc(nameOf(v.result.winner === 'w' ? v.w : v.b))} gewinnt`} – ${esc(v.result.reason)}` : esc(v.result.reason);
-  else if (!v.mine) status = `${esc(nameOf(v.turn === 'w' ? v.w : v.b))} ist am Zug`;
-  else status = myTurn ? (v.check ? 'Schach! Du bist dran' : 'Du bist dran') : 'Gegner ist am Zug';
+  if (v.result) status = v.puz ? esc(v.result.reason) : v.result.winner ? `${v.result.winner === v.mine ? 'Du gewinnst' : `${esc(cName(v.result.winner))} gewinnt`} – ${esc(v.result.reason)}` : esc(v.result.reason);
+  else if (!v.mine) status = `${esc(cName(v.turn))} ist am Zug`;
+  else status = myTurn ? (v.check ? 'Schach! Du bist dran' : 'Du bist dran') + (v.puz ? ` – Matt in ${v.puz.left}` : '') : v.think ? 'Der Bot überlegt …' : 'Gegner ist am Zug';
+  let again = '';
+  if (room.status === 'ended') {
+    if (v.puz) again = isHost() ? (v.puz.solved ? '<p class="note">Morgen gibt es ein neues Rätsel.</p>' : '<button class="btn" data-chpuz="1">Rätsel nochmal versuchen</button>') + chessSoloHTML() : '';
+    else if (v.bot) again = isHost() ? `<button class="btn" data-chbot="${v.bot.lv}">Nochmal (${CH_LV[v.bot.lv - 1]}, Farben tauschen)</button>${chessSoloHTML(v.bot.lv)}` : '';
+    else again = againHTML('Neue Partie (Farben tauschen)') + chessSoloHTML();
+    if ((v.bot || v.puz) && room.players.length >= 2) again += againHTML('Gegen einen Menschen spielen');
+  }
   st.innerHTML = `${bar(topCol)}<div class="chess">${cells}</div>${bar(botCol)}
     <p class="status ${myTurn ? 'mine' : ''}">${status}</p><p class="log">${esc(v.log)}</p>
     ${!v.mine ? '<p class="note">Du schaust bei dieser Partie zu.</p>' : ''}
-    ${room.status === 'ended' ? againHTML('Neue Partie (Farben tauschen)') : ''}
+    ${again}
     ${room.status === 'playing' && v.mine ? `<button class="btn ${ui.resign ? 'danger' : 'ghost'} small" data-chess="resign">${ui.resign ? 'Wirklich aufgeben? Tippen zum Bestätigen' : 'Aufgeben'}</button>` : ''}`;
 }
 

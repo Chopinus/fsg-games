@@ -298,6 +298,11 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 58, title: 'Spieler-Idee: Schachbot und Rätsel des Tages', date: '10.11.2026', items: [
+      'Schach geht jetzt auch allein: Im Warteraum einer Schach-Runde spielst du gegen den Schachbot in 5 Stufen – Anfänger, Leicht, Mittel, Schwer und Meister.',
+      'Nach der Partie kannst du mit getauschten Farben nochmal antreten oder eine andere Stufe wählen. Wer zuschaut, sieht live zu.',
+      'Neu: das 🧩 Rätsel des Tages – jeden Tag eine andere Stellung, in der du in 2 Zügen matt setzt. Der Bot verteidigt sich, bei einem falschen Zug darfst du es nochmal versuchen.'
+    ] },
     { id: 57, title: 'Spieler-Idee: Chat in allen Runden', date: '10.11.2026', items: [
       'Jede Runde im Game Hub hat jetzt einen eigenen Chat: Tipp unten links auf 💬 – z. B. bei Schach, Letzte Karte, Kniffel, Mensch ärgere dich nicht, Vier gewinnt, Stadt-Land-Fluss, Spion, Minispiel-Party und an den Casino-Tischen.',
       'Ein roter Punkt zeigt ungelesene Nachrichten. Würfelwelt und Montagsmaler behalten ihren eigenen Chat.'
