@@ -298,6 +298,9 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 54, title: 'Spieler-Idee: Casino-Kontostand erst nach dem Drehen', date: '10.11.2026', items: [
+      'Beim Spielautomaten und Glücksrad verrät der Kontostand den Gewinn nicht mehr vorab: Die Anzeige zieht zuerst nur den Einsatz ab und zeigt den Gewinn erst, wenn Walzen bzw. Rad stehen.'
+    ] },
     { id: 53, title: 'Casino: kein Höchsteinsatz mehr', date: '09.11.2026', items: [
       'Der Höchsteinsatz von 50.000 pro Runde ist weg – auch Spielautomat und Glücksrad haben keinen 25.000er-Deckel mehr.',
       'Nur neue Konten haben in ihrer ersten Woche ein wachsendes Einsatzlimit (1.000 am 1. Tag bis 25.000 am 7. Tag), danach ist alles offen.'

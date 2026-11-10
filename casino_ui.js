@@ -32,7 +32,10 @@
   }
   function sendKonto() { const k = konto(); if (typeof send === 'function') send(k ? { t: 'konto', name: k.name, token: k.token } : { t: 'konto' }); }
   try { addEventListener('fsg-konto', () => { sendKonto(); CZ = null; if (lobby && !lobby.hidden) { czGift(); renderLobby(); } }); } catch {}
-  const showWallet = () => document.querySelectorAll('[data-cz-wallet]').forEach(e => (e.textContent = fmtN(wallet)));
+  // Spieler-Idee: Beim Automaten und Glücksrad zeigt die Anzeige den Gewinn erst, wenn die Animation fertig ist
+  const WH = { until: 0, v: 0 };
+  const shownW = () => (Date.now() < WH.until ? WH.v : wallet);
+  const showWallet = () => document.querySelectorAll('[data-cz-wallet]').forEach(e => (e.textContent = fmtN(shownW())));
   const setWallet = v => { wallet = Math.max(0, Math.min(1e12, Math.floor(v))); showWallet(); };
 
   /* ---------- Shop: Gewinn-Effekte, Gewinn-Sounds, Tischfarben und Abzeichen für Jetons ---------- */
@@ -503,13 +506,17 @@
     // Jetons vom Tisch nur übernehmen, wenn sie sich dort wirklich geändert haben. Ein alter Platz (z. B. aus einem anderen Tab)
     // darf den Stand auf dem Gerät nicht überschreiben – dann bringt das Gerät seinen Stand an den Tisch mit.
     if (vwRoom !== room.id) { vwRoom = room.id; lastVW = null; }
+    if (v.wallet != null && v.wallet !== lastVW && lastVW != null && v.mySeat >= 0 && (v.kind === 'slots' || v.kind === 'rad')) {
+      const m0 = v.seats[v.mySeat], sp = m0 && (v.kind === 'slots' ? m0.slot : m0.rad), seen = v.kind === 'slots' ? SL.id : RD.id;
+      if (sp && sp.id !== seen && lastKind === v.kind) { const ms = v.kind === 'rad' ? 4300 : 2400; WH.v = Math.max(0, v.wallet - (sp.pay || 0)); WH.until = Date.now() + ms; setTimeout(showWallet, ms + 30); }
+    }
     if (v.wallet != null && v.wallet !== lastVW) { const before = lastVW == null ? v.wallet : wallet; lastVW = v.wallet; setWallet(v.wallet); if (v.mySeat >= 0 && v.wallet - before >= BIGWIN && before > 0) { const w = v.wallet - before; setTimeout(() => celebrate(w), v.kind === 'rad' ? 4300 : v.kind === 'slots' ? 2300 : 0); } }
     // automatisch hinsetzen und eigene Jetons mitbringen
     if (v.mySeat < 0 && v.free > 0 && sitAsked !== room.id) { sitAsked = room.id; sendKonto(); act({ type: 'sit' }); }
     const mode = 'cz-' + v.kind;
     if (st.dataset.mode !== mode) { st.dataset.mode = mode; delete st.dataset.h; st.innerHTML = `<div class="cz cz-room"><div class="cz-info"></div><div class="cz-main"></div><div class="cz-log"></div></div>`; lastKind = null; }
     const me = v.mySeat >= 0 ? v.seats[v.mySeat] : null;
-    set(st.querySelector('.cz-info'), `<div class="cz-wallet">${chipHTML(1000, '', 'tabindex="-1"')}<div><small>DEINE JETONS${v.kind === 'poker' && me ? ' · AM TISCH ' + fmtN(me.stack) : ''}</small><b data-cz-wallet>${fmtN(wallet)}</b></div></div>
+    set(st.querySelector('.cz-info'), `<div class="cz-wallet">${chipHTML(1000, '', 'tabindex="-1"')}<div><small>DEINE JETONS${v.kind === 'poker' && me ? ' · AM TISCH ' + fmtN(me.stack) : ''}</small><b data-cz-wallet>${fmtN(shownW())}</b></div></div>
       <div class="cz-toprow">${v.mySeat < 0 ? `<span class="cz-badge">${v.free ? 'Du setzt dich …' : 'Alle Plätze besetzt – du schaust zu'}</span>` : ''}
       ${v.host && v.kind !== 'slots' && v.kind !== 'rad' ? `<button class="cz-btn small dark" data-czt="botadd" ${v.free ? '' : 'disabled'}>+ Bot</button><button class="cz-btn small dark" data-czt="botdel">− Bot</button>` : ''}
       <button class="cz-btn small dark" data-czt="lobby">Casino</button></div>`);
