@@ -1542,7 +1542,7 @@
         <p><b>📍 Absteckpfahl:</b> Er schützt <b>${2 * CLAIM_R + 1} × ${2 * CLAIM_R + 1} Felder</b> rund um sich. Dort können nur du und deine Crew bauen und abreißen. Jeder darf höchstens <b>${CLAIM_MAX} Pfähle</b> aufstellen. Ohne Pfahl dürfen andere deine Wände und Böden abreißen – Werkbänke, Truhen, Betten und Pfähle aber nie.</p>
         <p><b>Werkbänke</b> stellst du im 🎒 Rucksack unter <b>✋ Handwerk</b> her. Aufstellen darfst du sie überall – auch unterwegs auf jeder Insel. Abbauen und mitnehmen geht jederzeit.</p>
         <p class="is-npcsub">Du hast ${n} Felder bebaut und ${mineN} von ${CLAIM_MAX} Pfählen aufgestellt.</p><button class="is-ext" data-ext="pfahlinfo">📍 Pfahl zum Bauen auswählen</button>`; },
-    hof: () => `<p>Samen pflanzt du auf einem <b>Feld</b> bei deinem Haus. Danach heißt es warten – auch wenn du nicht spielst, wächst alles weiter.</p><div class="is-shop">${SEEDSHOP.map(([k, pr]) => `<div><i>${RES[SEEDS[k][0]][1]}</i><span><b>${RES[k][0]}</b><small>wächst in ${Math.round(SEEDS[k][1] / 60)} Min. zu ${RES[SEEDS[k][0]][0]}${bag[k] ? ` · hast ${bag[k]}` : ''}</small></span><button class="is-ext" data-ext="seed" data-k="${k}" ${me.coins >= pr ? '' : 'disabled'}>🪙 ${pr}</button></div>`).join('')}</div><p class="is-npcsub">Hühnerstall und Schafweide stellst du in der 🪑 Tischlerei her und baust sie bei deinem Haus auf.</p>`,
+    hof: () => `<p>Samen pflanzt du auf einem <b>Feld</b> bei deinem Haus – tipp oder klick einfach direkt auf das Feld, auch aus der Ferne; genauso erntest du. Danach heißt es warten – auch wenn du nicht spielst, wächst alles weiter.</p><div class="is-shop">${SEEDSHOP.map(([k, pr]) => `<div><i>${RES[SEEDS[k][0]][1]}</i><span><b>${RES[k][0]}</b><small>wächst in ${Math.round(SEEDS[k][1] / 60)} Min. zu ${RES[SEEDS[k][0]][0]}${bag[k] ? ` · hast ${bag[k]}` : ''}</small></span><button class="is-ext" data-ext="seed" data-k="${k}" ${me.coins >= pr ? '' : 'disabled'}>🪙 ${pr}</button></div>`).join('')}</div><p class="is-npcsub">Hühnerstall und Schafweide stellst du in der 🪑 Tischlerei her und baust sie bei deinem Haus auf.</p>`,
   }; // und eigene Inhalte je Bewohner
   /* ---------- Angeln ---------- */
   // [Name, Symbol, Farbe, Bedingung, Größe in cm, Preis]
@@ -2504,6 +2504,32 @@
       <div class="is-bpieces"><button data-pc="abriss" class="${buildSel === 'abriss' ? 'on' : ''}"><i>🧹</i>Abreißen</button>${list.map(([k, p]) => { const ok = needKit(k) ? kit(k) > 0 : affordable(p.cost); return `<button data-pc="${k}" class="${buildSel === k ? 'on' : ''} ${ok ? '' : 'no'}"><i>${p.i}</i>${p.n}${needKit(k) ? `<sup>${kit(k)}</sup>` : ''}</button>`; }).join('')}</div>${home ? '' : '<small class="is-bnote">Unterwegs kannst du nur Werkbänke aufstellen. Häuser baust du auf der Heimatinsel.</small>'}`;
   }
   // Was ist in der Nähe benutzbar? (eigene und fremde Bauteile)
+  // Spieler-Idee: Felder einfach antippen bzw. anklicken – Pflanzen und Ernten geht auch aus der Ferne (nur eigene Felder bzw. die der Crew)
+  function farmField(b, far) {
+    const g = WG[b.key];
+    if (g) {
+      const [seed, at] = g, [crop, sec] = SEEDS[seed] || ['weizen', 300], left = sec * 1000 - (Date.now() - at);
+      if (left > 0) { say(`${RES[crop][1]} wächst noch ${Math.ceil(left / 60000)} Min.`); return true; }
+      const n = 2 + Math.floor(Math.random() * 2), got = [...Array(n).fill(crop), ...(Math.random() < 0.4 ? [seed] : [])];
+      if (far) { for (const k of got) bag[k] = (bag[k] || 0) + 1; saveBag(); texts.push({ x: b.x + 0.5, y: b.y - 0.6, s: `+${n} ${RES[crop][1]}`, t: 0, col: '#ffffff' }); if (bagOpen) renderBag(); }
+      else for (const k of got) drop(b.x + 0.5, b.y + 0.6, k);
+      delete WG[b.key]; send({ t: 'i_crop', x: b.x, y: b.y }); gainXP(3, b.x + 0.5, b.y); qEvent('harvest', 'ernte'); st().ernte = (st().ernte || 0) + 1; return true;
+    }
+    const seed = Object.keys(SEEDS).find(s2 => bag[s2] > 0);
+    if (!seed) { say('Du hast keine Samen. Bäuerin Frieda im Dorf verkauft welche.'); return true; }
+    bag[seed]--; saveBag(); WG[b.key] = [seed, Date.now()]; send({ t: 'i_plant', x: b.x, y: b.y, k: seed });
+    say(`${RES[seed][1]} gepflanzt – fertig in ${Math.round(SEEDS[seed][1] / 60)} Min.`); return true;
+  }
+  function fieldAtTile(tx, ty) {
+    const v = WORLD.get(wkey(tx, ty)); if (!v || v[1] !== 'feld') return null;
+    return { key: wkey(tx, ty), k: 'feld', x: tx, y: ty, o: v[2], n: v[3] };
+  }
+  function tapField(cx, cy) { // true, wenn auf ein eigenes Feld getippt wurde
+    if (buildOn || me.inBoat || me.inCave || !worldReady) return false;
+    const [tx, ty] = screenTile(cx, cy), b = fieldAtTile(tx, ty); if (!b) return false;
+    if (!friendOf(b.o, b.n)) return false;
+    farmField(b, Math.hypot(me.x - (tx + 0.5), me.y - (ty + 0.8)) > 2.5); return true;
+  }
   function findBaseNear() {
     if (!WORLD.size) return null;
     let best = null, bd = 1.45; const fx = Math.floor(me.x), fy = Math.floor(me.y);
@@ -2523,20 +2549,7 @@
     if (!mine) { say(`${pc.i} Das gehört ${b.n}`); return true; }
     if (b.k === 'truhe') { toggleChest(); return true; }
     if (b.k === 'bett') { prog.bed = { x: b.x + 0.5, y: b.y + 1.5 }; saveProg(); me.hp = maxHp(); say('🛏️ Gut geschlafen! Hier wachst du jetzt auf, wenn du ohnmächtig wirst.'); return true; }
-    if (b.k === 'feld') {
-      const g = WG[b.key];
-      if (g) {
-        const [seed, at] = g, [crop, sec] = SEEDS[seed] || ['weizen', 300], left = sec * 1000 - (Date.now() - at);
-        if (left > 0) { say(`${RES[crop][1]} wächst noch ${Math.ceil(left / 60000)} Min.`); return true; }
-        const n = 2 + Math.floor(Math.random() * 2); for (let i = 0; i < n; i++) drop(b.x + 0.5, b.y + 0.6, crop);
-        if (Math.random() < 0.4) drop(b.x + 0.5, b.y + 0.6, seed);
-        delete WG[b.key]; send({ t: 'i_crop', x: b.x, y: b.y }); gainXP(3, b.x + 0.5, b.y); qEvent('harvest', 'ernte'); st().ernte = (st().ernte || 0) + 1; return true;
-      }
-      const seed = Object.keys(SEEDS).find(s2 => bag[s2] > 0);
-      if (!seed) { say('Du hast keine Samen. Bäuerin Frieda im Dorf verkauft welche.'); return true; }
-      bag[seed]--; saveBag(); WG[b.key] = [seed, Date.now()]; send({ t: 'i_plant', x: b.x, y: b.y, k: seed });
-      say(`${RES[seed][1]} gepflanzt – fertig in ${Math.round(SEEDS[seed][1] / 60)} Min.`); return true;
-    }
+    if (b.k === 'feld') return farmField(b);
     if (pc.prod) {
       const [res, sec] = pc.prod, last = WA[b.key] || Date.now(), n = Math.min(3, Math.floor((Date.now() - last) / (sec * 1000)));
       if (!n) { say(`Noch nichts da – alle ${Math.round(sec / 60)} Min. gibt es ${RES[res][0]}`); return true; }
@@ -2772,6 +2785,7 @@
   function joyDown(e) {
     if (chatOpen || bigMap || titleOn) return;
     if (buildOn) { const tt = screenTile(e.clientX, e.clientY); if (e.pointerType === 'mouse') { if (e.button === 0) { mouseTile = tt; updateBuildCursor(); if (buildCur && buildCur[2]) placeAt(buildCur[0], buildCur[1]); } return; } joy.tap = { x: e.clientX, y: e.clientY, t: Date.now(), tt }; }
+    if (!buildOn && (e.pointerType !== 'mouse' || e.button === 0) && tapField(e.clientX, e.clientY)) return; // Feld angetippt: pflanzen oder ernten
     if (e.pointerType !== 'mouse' && !buildOn) { const r = cv.getBoundingClientRect(); if (e.clientX - r.left > r.width * 0.5) { aimStart(e, 'atk'); return; } }
     if (e.pointerType === 'mouse') { // am PC: Klick greift in Mausrichtung an
       if (e.button !== 0) return;

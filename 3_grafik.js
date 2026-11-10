@@ -298,6 +298,11 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 56, title: 'Spieler-Idee: Inselreich – Felder antippen', date: '10.11.2026', items: [
+      'Pflanzen und Ernten geht jetzt wie beim Bauen: einfach auf dein Feld tippen oder klicken – du musst nicht mehr davorstehen und E drücken.',
+      'Das klappt auch aus der Ferne, solange das Feld auf dem Bildschirm ist. Die Ernte landet dann direkt im Rucksack.',
+      'Nur eigene Felder und die deiner Crew lassen sich so bearbeiten.'
+    ] },
     { id: 55, title: 'Spieler-Idee: Poker-Topf geht nicht mehr verloren', date: '10.11.2026', items: [
       'Texas Hold\'em: Wenn während einer Hand jemand geht oder ein Bot entfernt wird, bleibt dessen Einsatz im Topf und wird an die Gewinner verteilt, statt zu verschwinden.',
       'Teile des Topfs, um die niemand mehr spielt, und Rundungsreste gehen jetzt immer an die beste Hand – ein All-in-Sieg wird damit vollständig ausgezahlt.',
