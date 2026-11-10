@@ -1656,3 +1656,17 @@ html.rl-appmode,html.rl-appmode body{overflow:hidden;overscroll-behavior:none}
 /* Admin-Schild: goldener Name mit rotem Ⓐ oben rechts (wie ©) */
 .adm-name{color:#ffd23f!important;font-weight:800;text-shadow:0 0 8px rgba(255,200,40,.35)}
 .adm-tag{display:inline-grid;place-items:center;width:1.15em;height:1.15em;margin-left:1px;border:1.5px solid #e5322d;border-radius:50%;color:#e5322d!important;font-size:.66em;font-weight:900;line-height:1;vertical-align:super;font-family:var(--body);text-shadow:none;box-sizing:border-box;position:relative;top:-.15em}
+
+/* Raum-Chat (Spieler-Idee) */
+#rchat{position:fixed;left:calc(env(safe-area-inset-left,0px) + 12px);bottom:calc(env(safe-area-inset-bottom,0px) + 12px);z-index:18}
+#rchat .rc-btn{position:relative;width:52px;height:52px;border-radius:50%;border:1px solid var(--line);background:var(--surface2);color:var(--fg);font-size:24px;box-shadow:0 6px 18px rgba(0,0,0,.45);cursor:pointer}
+#rchat .rc-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:var(--cr);color:#fff;font-size:12px;font-weight:800;line-height:20px}
+#rchat .rc-panel{width:min(340px,calc(100vw - 24px));background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.5);display:flex;flex-direction:column;overflow:hidden}
+#rchat .rc-head{display:flex;align-items:center;justify-content:space-between;padding:8px 8px 8px 14px;border-bottom:1px solid var(--line)}
+#rchat .rc-head .btn{min-height:36px;padding:6px 12px}
+#rchat .rc-list{height:min(200px,28vh);overflow-y:auto;padding:8px 12px;display:flex;flex-direction:column;gap:4px}
+#rchat .rc-list p{margin:0;font-size:15px;line-height:1.35;word-break:break-word}
+#rchat .rc-list p.me b{color:var(--accent)}
+#rchat .rc-form{display:flex;gap:6px;padding:8px;border-top:1px solid var(--line)}
+#rchat .rc-form input{font-size:16px;padding:8px 10px}
+#rchat .rc-form .btn{min-height:40px;padding:8px 14px}

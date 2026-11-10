@@ -298,6 +298,10 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 57, title: 'Spieler-Idee: Chat in allen Runden', date: '10.11.2026', items: [
+      'Jede Runde im Game Hub hat jetzt einen eigenen Chat: Tipp unten links auf 💬 – z. B. bei Schach, Letzte Karte, Kniffel, Mensch ärgere dich nicht, Vier gewinnt, Stadt-Land-Fluss, Spion, Minispiel-Party und an den Casino-Tischen.',
+      'Ein roter Punkt zeigt ungelesene Nachrichten. Würfelwelt und Montagsmaler behalten ihren eigenen Chat.'
+    ] },
     { id: 56, title: 'Spieler-Idee: Inselreich – Felder antippen', date: '10.11.2026', items: [
       'Pflanzen und Ernten geht jetzt wie beim Bauen: einfach auf dein Feld tippen oder klicken – du musst nicht mehr davorstehen und E drücken.',
       'Das klappt auch aus der Ferne, solange das Feld auf dem Bildschirm ist. Die Ernte landet dann direkt im Rucksack.',

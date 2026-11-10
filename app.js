@@ -55,6 +55,7 @@ function onMsg(m) {
     render();
   } else if (m.t === 'closed') { const wasWelt = room && room.game === 'welt'; room = null; roomId = null; store.set('fsg.room', null); render(); if (wasWelt && window.Welt && Welt.inMP()) Welt.roomGone(); }
   else if (m.t === 'err') toast(m.msg);
+  else if (m.t === 'rchat') rcOnMsg(m);
   else if (m.t === 'cast') { if (m.d && m.d.g === 'welt') { if (window.Welt) Welt.net(m.d); } else if (window.Spiele2) Spiele2.cast(m.d); }
 }
 
@@ -228,8 +229,45 @@ function render() {
   if (!room || room.game !== 'party') endMini();
   if (window.Ritter && Ritter.isOpen()) { if (!room) return; Ritter.close(); }
   $('#hub').hidden = !!room; $('#room').hidden = !room;
-  if (!room) { $('#picker').hidden = true; renderRooms(); return; }
-  renderRoom();
+  if (!room) { $('#picker').hidden = true; renderRooms(); renderChat(); return; }
+  renderRoom(); renderChat();
+}
+/* ---------- Raum-Chat (Spieler-Idee) ---------- */
+// Für alle Runden-Spiele ohne eigenen Chat. Würfelwelt und Montagsmaler haben schon einen.
+const NOCHAT = ['welt', 'maler'];
+const RC = { id: null, list: [], open: false, seen: 0 };
+function rcOnMsg(m) {
+  if (!room || m.id !== room.id || !Array.isArray(m.list)) return;
+  if (m.full || RC.id !== m.id) { RC.id = m.id; RC.list = m.list.slice(); RC.seen = RC.open ? RC.list.length : Math.min(RC.seen, RC.list.length); }
+  else { RC.list.push(...m.list); if (m.list.every(x => x.id === pid)) RC.seen = RC.list.length; }
+  if (RC.list.length > 40) { RC.seen = Math.max(0, RC.seen - (RC.list.length - 40)); RC.list = RC.list.slice(-40); }
+  renderChat();
+}
+function renderChat() {
+  let el = $('#rchat');
+  const show = !!room && !NOCHAT.includes(room.game);
+  if (!show) { if (el) el.hidden = true; return; }
+  if (RC.id !== room.id) { RC.id = room.id; RC.list = []; RC.seen = 0; RC.open = false; }
+  if (!el) {
+    el = document.createElement('div'); el.id = 'rchat'; document.body.appendChild(el);
+    el.innerHTML = `<button class="rc-btn" data-rc="toggle" aria-label="Chat">💬<span class="rc-badge" hidden></span></button>
+      <div class="rc-panel" hidden><div class="rc-head"><b>Chat der Runde</b><button class="btn ghost small" data-rc="toggle" aria-label="Chat schließen">✕</button></div>
+      <div class="rc-list"></div><form class="rc-form"><input maxlength="200" placeholder="Nachricht schreiben …" autocomplete="off" enterkeyhint="send"><button class="btn small">Senden</button></form></div>`;
+    el.addEventListener('click', e => { if (e.target.closest('[data-rc="toggle"]')) { RC.open = !RC.open; renderChat(); if (RC.open) el.querySelector('input').focus(); } });
+    el.addEventListener('keydown', e => e.stopPropagation()); // Tippen soll nicht das Spiel steuern
+    el.addEventListener('keyup', e => e.stopPropagation());
+    el.querySelector('form').addEventListener('submit', e => { e.preventDefault(); const i = el.querySelector('input'), t = i.value.trim(); if (!t) return; send({ t: 'chat', m: t.slice(0, 200) }); i.value = ''; });
+  }
+  el.hidden = false;
+  const panel = el.querySelector('.rc-panel'), badge = el.querySelector('.rc-badge');
+  panel.hidden = !RC.open; el.querySelector('.rc-btn').hidden = RC.open;
+  if (RC.open) RC.seen = RC.list.length;
+  const unread = RC.list.length - RC.seen; badge.hidden = unread <= 0; badge.textContent = unread > 9 ? '9+' : unread;
+  if (RC.open) {
+    const box = el.querySelector('.rc-list'), atEnd = box.scrollTop + box.clientHeight >= box.scrollHeight - 8;
+    const html = RC.list.map(x => `<p class="${x.id === pid ? 'me' : ''}"><b>${admHTML(x.n, x.adm)}</b> ${esc(x.m)}</p>`).join('') || '<p class="note">Noch keine Nachrichten. Schreib etwas!</p>';
+    if (box.dataset.h !== html) { box.innerHTML = html; box.dataset.h = html; if (atEnd || !box.dataset.s) { box.scrollTop = box.scrollHeight; box.dataset.s = 1; } }
+  }
 }
 function renderRoom() {
   const r = room, el = $('#room'), g = gameOf(r.game);

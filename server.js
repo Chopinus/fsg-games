@@ -236,6 +236,7 @@ function pushRoom(r) {
   }
   broadcastRooms();
 }
+function sendChat(c, r) { if (r.chat && r.chat.length) send(c, { t: 'rchat', id: r.id, list: r.chat, full: true }); }
 function pushSoon(r) {
   if (r.soon) return;
   r.soon = setTimeout(() => { r.soon = null; if (rooms.has(r.id)) pushRoom(r); }, 250);
@@ -266,7 +267,7 @@ function handle(c, m) {
     c.name = clean(m.name);
     send(c, { t: 'hi', pid: c.pid });
     const r = rooms.get(m.room);
-    if (r && r.players.some(p => p.id === c.pid)) { c.room = r.id; pushRoom(r); } else send(c, { t: 'closed' });
+    if (r && r.players.some(p => p.id === c.pid)) { c.room = r.id; pushRoom(r); sendChat(c, r); } else send(c, { t: 'closed' });
     broadcastRooms();
     return;
   }
@@ -313,7 +314,7 @@ function handle(c, m) {
       try { GAMES[r.game].onJoin?.(r, c.pid, c.name); } catch (e) { console.error(e); }
     }
     c.room = r.id;
-    pushRoom(r);
+    pushRoom(r); sendChat(c, r);
     return;
   }
   const r = rooms.get(c.room);
@@ -327,6 +328,18 @@ function handle(c, m) {
     if (r.players.length < G.min) return send(c, { t: 'err', msg: `Es braucht mindestens ${G.min} Spieler.` });
     G.start(r);
     pushRoom(r);
+    return;
+  }
+  if (m.t === 'chat') { // Raum-Chat (Spieler-Idee): kurze Nachrichten an alle im Raum, höchstens 5 in 10 Sekunden
+    if (!r.players.some(p => p.id === c.pid)) return;
+    const text = clean(m.m, 200); if (!text) return;
+    const now = Date.now(); c.chatT = (c.chatT || []).filter(t => now - t < 10000);
+    if (c.chatT.length >= 5) return send(c, { t: 'err', msg: 'Nicht so schnell – warte kurz mit der nächsten Nachricht.' });
+    c.chatT.push(now);
+    const p = r.players.find(p => p.id === c.pid), e = { id: c.pid, n: (p && p.name) || 'Gast', m: text, adm: isAdm(c.pid), ts: now };
+    r.chat = r.chat || []; r.chat.push(e); if (r.chat.length > 40) r.chat.shift();
+    const msg = JSON.stringify({ t: 'rchat', id: r.id, list: [e] });
+    for (const x of clients) if (x.room === r.id && x.ws.readyState === 1) x.ws.send(msg);
     return;
   }
   if (m.t === 'act') {
