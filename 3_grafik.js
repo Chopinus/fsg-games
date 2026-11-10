@@ -298,6 +298,11 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 55, title: 'Spieler-Idee: Poker-Topf geht nicht mehr verloren', date: '10.11.2026', items: [
+      'Texas Hold\'em: Wenn während einer Hand jemand geht oder ein Bot entfernt wird, bleibt dessen Einsatz im Topf und wird an die Gewinner verteilt, statt zu verschwinden.',
+      'Teile des Topfs, um die niemand mehr spielt, und Rundungsreste gehen jetzt immer an die beste Hand – ein All-in-Sieg wird damit vollständig ausgezahlt.',
+      'Mit demselben Konto kann man sich nicht mehr zweimal an denselben Tisch setzen (z. B. von zwei Geräten) – das konnte den Kontostand überschreiben.'
+    ] },
     { id: 54, title: 'Spieler-Idee: Casino-Kontostand erst nach dem Drehen', date: '10.11.2026', items: [
       'Beim Spielautomaten und Glücksrad verrät der Kontostand den Gewinn nicht mehr vorab: Die Anzeige zieht zuerst nur den Einsatz ab und zeigt den Gewinn erst, wenn Walzen bzw. Rad stehen.'
     ] },

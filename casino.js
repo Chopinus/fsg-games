@@ -309,7 +309,7 @@ const PK = {
     const s = r.state; botRefill(s);
     for (const x of s.seats) if (x) { if (x.bot && x.stack < PK.bb) { x.stack = PK.buy; } else PK.buyIn(x); x.cards = []; x.folded = false; x.allin = false; x.bet = 0; x.put = 0; x.acted = false; x.win = 0; x.shown = null; }
     const act = PK.seated(s);
-    s.board = []; s.pot = 0; s.street = 'wait'; s.turnI = -1; s.result = null; s.toCall = 0; s.minRaise = PK.bb;
+    s.board = []; s.pot = 0; s.gone = []; s.street = 'wait'; s.turnI = -1; s.result = null; s.toCall = 0; s.minRaise = PK.bb;
     if (act.length < 2) { s.phase = 'wait'; s.ends = null; schedule(r, 3000, () => PK.newHand(r)); return; }
     s.phase = 'hand'; s.hand++; s.deck = deck(1);
     const nextOf = i => { for (let k = 1; k <= s.seats.length; k++) { const j = (i + k) % s.seats.length; if (act.includes(j)) return j; } return i; };
@@ -367,15 +367,19 @@ const PK = {
       while (s.board.length < 5) s.board.push(s.deck.pop());
       const score = {}; for (const i of alive) { score[i] = best7([...s.seats[i].cards, ...s.board]); s.seats[i].shown = HAND_NAMES[score[i][0]]; }
       // Haupt- und Nebentöpfe nach Einsatzhöhe
-      const puts = s.seats.map(x => (x ? x.put : 0)), levels = [...new Set(puts.filter(p => p > 0))].sort((a, b) => a - b);
-      let prev = 0; const got = {};
+      // Einsätze von Spielern/Bots, die während der Hand gegangen sind (s.gone), bleiben im Topf und werden mitverteilt
+      const puts = [...s.seats.map(x => (x && x.put) || 0), ...(s.gone || [])], levels = [...new Set(puts.filter(p => p > 0))].sort((a, b) => a - b);
+      const bestOf = ids => { let best = []; for (const i of ids) { if (!best.length || cmp(score[i], score[best[0]]) > 0) best = [i]; else if (cmp(score[i], score[best[0]]) === 0) best.push(i); } return best; };
+      const give = (ids, part) => { const each = Math.floor(part / ids.length); ids.forEach((i, k) => { const g = each + (k === 0 ? part - each * ids.length : 0); s.seats[i].stack += g; got[i] = (got[i] || 0) + g; }); };
+      let prev = 0, carry = 0; const got = {};
       for (const L of levels) {
-        const part = puts.reduce((a, p) => a + Math.max(0, Math.min(p, L) - prev), 0);
-        const elig = alive.filter(i => puts[i] >= L); if (!elig.length) { prev = L; continue; }
-        let best = []; for (const i of elig) { if (!best.length || cmp(score[i], score[best[0]]) > 0) best = [i]; else if (cmp(score[i], score[best[0]]) === 0) best.push(i); }
-        const each = Math.floor(part / best.length); best.forEach((i, k) => { const g = each + (k === 0 ? part - each * best.length : 0); s.seats[i].stack += g; got[i] = (got[i] || 0) + g; });
-        prev = L;
+        const part = puts.reduce((a, p) => a + Math.max(0, Math.min(p, L) - prev), 0) + carry; carry = 0;
+        const elig = alive.filter(i => puts[i] >= L); prev = L;
+        if (!elig.length) { carry = part; continue; } // niemand mehr im Rennen um diesen Teil → geht an den nächsten bzw. besten Rest
+        give(bestOf(elig), part);
       }
+      // Sicherheitsnetz: alles, was noch nicht verteilt ist, bekommt die beste Hand – der Topf darf nie verschwinden
+      const dealt = Object.values(got).reduce((a, b) => a + b, 0); if (s.pot - dealt > 0) give(bestOf(alive), s.pot - dealt);
       s.seats.forEach((x, i) => { if (x) x.win = (got[i] || 0) - (x.put || 0); });
       const ws = Object.keys(got).map(Number).filter(i => got[i] > s.seats[i].put).sort((a, b) => got[b] - got[a]);
       if (!ws.length) ws.push(+Object.keys(got)[0]);
@@ -434,6 +438,7 @@ module.exports = {
     const s = r.state; if (!s) return; const i = seatOf(s, pid); if (i < 0) return;
     const lx = s.seats[i]; if (lx && lx.acc && BANK) { BANK.sync(lx.acc, lx.chips + (lx.stack || 0)); if (BANK.seated.get(lx.acc) === r.id) BANK.seated.delete(lx.acc); }
     if (s.kind === 'poker' && s.phase === 'hand' && s.seats[i].cards && s.seats[i].cards.length && !s.seats[i].folded) { if (s.turnI === i) PK.move(r, i, { type: 'fold' }); else s.seats[i].folded = true; }
+    if (s.kind === 'poker' && s.phase === 'hand' && s.seats[i] && s.seats[i].put) (s.gone = s.gone || []).push(s.seats[i].put); // Einsatz bleibt im Topf
     s.seats[i] = null;
     if (s.kind === 'blackjack' && s.turn && s.turn.i === i) BJ.next(r);
   },
@@ -447,6 +452,7 @@ module.exports = {
       // Jetons kommen vom Konto auf dem Server – was der Browser schickt, zählt nicht
       const acc = BANK && BANK.accOf(pid); if (!acc) return 'Melde dich im Hub mit deinem Konto an, um im Casino zu spielen.';
       const other = BANK.seated.get(acc); if (other && other !== r.id && BANK.roomLive(other, acc)) return 'Du sitzt schon an einem anderen Tisch. Steh dort zuerst auf.';
+      if (s.seats.some(q => q && q.acc === acc)) return 'Du sitzt mit deinem Konto schon an diesem Tisch (anderes Gerät oder Tab).'; // sonst zwei Plätze mit denselben Jetons
       const z = BANK.acc(acc); if (!z) return 'Dein Konto wurde nicht gefunden.';
       const free = s.seats.findIndex(x => !x); if (free < 0) return 'Alle Plätze sind besetzt. Du schaust zu.';
       const p = r.players.find(x => x.id === pid); s.seats[free] = newSeat(pid, p ? p.name : 'Gast', z.w, false); s.seats[free].acc = acc; BANK.seated.set(acc, r.id);
@@ -456,7 +462,7 @@ module.exports = {
     if (a.type === 'bot') {
       if (r.host !== pid) return 'Nur wer den Tisch eröffnet hat, kann Bots dazuholen.';
       if (a.add) { if (!addBot(s)) return 'Kein Platz mehr frei.'; }
-      else { const j = s.seats.map((x, k) => (x && x.bot && !(s.kind === 'poker' && s.phase === 'hand' && x.cards && x.cards.length && !x.folded) ? k : -1)).filter(k => k >= 0).pop(); if (j == null) return 'Gerade kann kein Bot gehen.'; s.seats[j] = null; }
+      else { const j = s.seats.map((x, k) => (x && x.bot && !(s.kind === 'poker' && s.phase === 'hand' && x.cards && x.cards.length && !x.folded) ? k : -1)).filter(k => k >= 0).pop(); if (j == null) return 'Gerade kann kein Bot gehen.'; if (s.kind === 'poker' && s.phase === 'hand' && s.seats[j].put) (s.gone = s.gone || []).push(s.seats[j].put); s.seats[j] = null; }
       return;
     }
     if (i < 0) return 'Setz dich zuerst an den Tisch.';
