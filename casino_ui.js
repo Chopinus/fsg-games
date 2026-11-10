@@ -508,7 +508,7 @@
     if (vwRoom !== room.id) { vwRoom = room.id; lastVW = null; }
     if (v.wallet != null && v.wallet !== lastVW && lastVW != null && v.mySeat >= 0 && (v.kind === 'slots' || v.kind === 'rad')) {
       const m0 = v.seats[v.mySeat], sp = m0 && (v.kind === 'slots' ? m0.slot : m0.rad), seen = v.kind === 'slots' ? SL.id : RD.id;
-      if (sp && sp.id !== seen && lastKind === v.kind) { const ms = v.kind === 'rad' ? 4300 : 2400; WH.v = Math.max(0, v.wallet - (sp.pay || 0)); WH.until = Date.now() + ms; setTimeout(showWallet, ms + 30); }
+      if (sp && sp.id !== seen && lastKind === (v.kind === 'slots' ? 'slot' : 'rad')) { const ms = v.kind === 'rad' ? 4300 : 2400; WH.v = Math.max(0, v.wallet - (sp.pay || 0)); WH.until = Date.now() + ms; setTimeout(showWallet, ms + 30); }
     }
     if (v.wallet != null && v.wallet !== lastVW) { const before = lastVW == null ? v.wallet : wallet; lastVW = v.wallet; setWallet(v.wallet); if (v.mySeat >= 0 && v.wallet - before >= BIGWIN && before > 0) { const w = v.wallet - before; setTimeout(() => celebrate(w), v.kind === 'rad' ? 4300 : v.kind === 'slots' ? 2300 : 0); } }
     // automatisch hinsetzen und eigene Jetons mitbringen
