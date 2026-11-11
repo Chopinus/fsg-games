@@ -181,6 +181,24 @@ setInterval(() => {
 }, 10 * 60e3).unref();
 setInterval(() => { console.log(`Datenverkehr letzte Stunde: ${mb(TRAFFIC.hour)}`); TRAFFIC.hour = 0; }, 60 * 60e3).unref();
 
+// ---------- Bremse für Musik/Bilder ----------
+// Alle Sounds und Bilder zusammen sind nur wenige MB und bleiben im Browser gespeichert. Wer in 10 Minuten
+// viel mehr lädt, ist eine Schleife oder ein Skript (z. B. am 11.11. ein Server, der niederlage.mp3 ~30x pro Sekunde abrief).
+// Geräte mit Hub-Cookie: bis 60 MB je 10 min; ohne Cookie (kein normaler Browser) je IP nur 10 MB.
+const MEDIA_BLOCK_IPS = new Set(['34.73.178.26']);
+const MEDIA = new Map(); let mediaT = Date.now();
+function mediaBlocked(req) {
+  if (Date.now() - mediaT > 10 * 60e3) { MEDIA.clear(); mediaT = Date.now(); }
+  const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+  if (MEDIA_BLOCK_IPS.has(ip)) return true;
+  const dm = DEV_RE.exec(req.headers.cookie || ''), key = dm ? 'd' + dm[1] : 'ip' + ip, cap = (dm ? 60 : 10) * 1048576;
+  const used = MEDIA.get(key) || 0;
+  if (used > cap) { if (!MEDIA.has(key + '!')) { MEDIA.set(key + '!', 1); console.log(`Downloads gebremst: ${dm ? 'Gerät ' + dm[1].slice(0, 6) : 'IP ' + ip} (${(used / 1048576).toFixed(0)} MB in 10 min)`); } return true; }
+  // grobe Schätzung vorab: Dateigröße des angefragten Stücks (Range-Anfragen zählen nur ihren Teil)
+  try { const st = fs.statSync(soundFile(path.basename(req.url.split('?')[0]))); const m = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || ''); const n = m && m[1] ? (m[2] ? Number(m[2]) - Number(m[1]) + 1 : st.size - Number(m[1])) : st.size; MEDIA.set(key, used + Math.max(0, Math.min(n, st.size))); } catch {}
+  return false;
+}
+
 const server = http.createServer((req, res) => {
   const url = req.url.split('?')[0];
   { // Bytes dieser Antwort mitzählen
@@ -197,7 +215,10 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(req.method === 'HEAD' ? undefined : MOVED_PAGE); return;
   }
   if (url.startsWith('/api/')) { api(req, res, url.slice(5)); return; }
-  if (/^\/(sounds|bilder)\/[a-z0-9_-]+\.(mp3|jpg|png|webp)$/.test(url)) { sendSound(req, res, soundFile(path.basename(url))); return; }
+  if (/^\/(sounds|bilder)\/[a-z0-9_-]+\.(mp3|jpg|png|webp)$/.test(url)) {
+    if (mediaBlocked(req)) { res.writeHead(429, { 'Retry-After': '600', 'Content-Type': 'text/plain; charset=utf-8' }); res.end('Zu viele Downloads – bitte später wieder.'); return; }
+    sendSound(req, res, soundFile(path.basename(url))); return;
+  }
   const file = STATIC[url];
   if (!file) { res.writeHead(302, { Location: '/' }); res.end(); return; }
   readStatic(file, (err, data) => {
