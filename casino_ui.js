@@ -378,8 +378,8 @@
   function css() { if (!q('#czCss')) { const s = document.createElement('style'); s.id = 'czCss'; s.textContent = CSS; document.head.appendChild(s); } }
 
   /* ---------- Bausteine ---------- */
-  const CHIP_VAL = [10, 50, 100, 500, 1000, 5000, 25000, 100000];
-  const CHIP_COL = { 10: '#2f6fd6', 50: '#c8332c', 100: '#1d8a4c', 500: '#6a35b8', 1000: '#151518', 5000: '#d4882a', 25000: '#c2185b', 100000: '#00838f' };
+  const CHIP_VAL = [10, 50, 100, 500, 1000, 5000, 25000, 50000, 100000];
+  const CHIP_COL = { 10: '#2f6fd6', 50: '#c8332c', 100: '#1d8a4c', 500: '#6a35b8', 1000: '#151518', 5000: '#d4882a', 25000: '#c2185b', 50000: '#b8860b', 100000: '#00838f' };
   const chipLabel = v => (v >= 1000 ? v / 1000 + 'K' : String(v));
   const chipHTML = (v, cls = '', attrs = '') => `<button class="cz-chip ${cls}" style="--c:${CHIP_COL[v] || '#555'}" ${attrs}><span>${chipLabel(v)}</span></button>`;
   const stackHTML = n => { if (!n) return ''; const v = [...CHIP_VAL].reverse().find(x => x <= n) || 10; return `<span class="cz-chip mini" style="--c:${CHIP_COL[v]}" title="${fmtN(n)}"><span>${short(n)}</span></span>`; };
@@ -691,7 +691,7 @@
       SL.id = me && me.slot ? me.slot.id : -1; if (me && me.slot) showGrid(main, me.slot, false);
     }
     if (me && me.slot && me.slot.id !== SL.id) { SL.id = me.slot.id; spinAnim(main, me.slot); }
-    if (!SL.spinning) set(main.querySelector('.cz-bar'), me ? `<div class="cz-chips">${[10, 50, 100, 500, 1000, 5000].map(b => `<button class="cz-btn small ${b === SL.bet ? '' : 'dark'}" data-czs="${b}">${short(b)}</button>`).join('')}</div><button class="cz-btn red" data-czt="spin" style="font-size:20px;padding:14px 34px" ${wallet >= SL.bet ? '' : 'disabled'}>DREHEN · ${fmtN(SL.bet)}</button>` : '');
+    if (!SL.spinning) set(main.querySelector('.cz-bar'), me ? `<div class="cz-chips">${[10, 50, 100, 500, 1000, 5000, 25000, 50000, 100000].map(b => `<button class="cz-btn small ${b === SL.bet ? '' : 'dark'}" data-czs="${b}">${short(b)}</button>`).join('')}</div><button class="cz-btn red" data-czt="spin" style="font-size:20px;padding:14px 34px" ${wallet >= SL.bet ? '' : 'disabled'}>DREHEN · ${fmtN(SL.bet)}</button>` : '');
     const others = v.seats.filter((x, i) => x && i !== v.mySeat && x.slot);
     let oth = main.parentNode.querySelector('.cz-others'); if (oth) set(oth, others.length ? `<div class="cz-log">${others.map(x => `<span>${admN(x.name, x.adm)}: ${x.slot.pay ? '+' + fmtN(x.slot.pay) : 'kein Gewinn'}</span>`).join('')}</div>` : '');
   }
@@ -749,7 +749,7 @@
       requestAnimationFrame(() => drawRad(main.querySelector('.cz-radcv'), RD.ang));
     }
     if (me && me.rad && me.rad.id !== RD.id) { RD.id = me.rad.id; radSpin(main, me.rad); }
-    if (!RD.spinning) set(main.querySelector('.cz-bar'), me ? `<div class="cz-chips">${[10, 50, 100, 500, 1000, 5000, 25000].map(b => `<button class="cz-btn small ${b === RD.bet ? '' : 'dark'}" data-czrb="${b}">${short(b)}</button>`).join('')}</div><button class="cz-btn red" data-czt="radspin" style="font-size:20px;padding:14px 34px" ${wallet >= RD.bet ? '' : 'disabled'}>DREHEN · ${fmtN(RD.bet)}</button>` : '<span class="cz-note">Setz dich hin, um zu drehen.</span>');
+    if (!RD.spinning) set(main.querySelector('.cz-bar'), me ? `<div class="cz-chips">${[10, 50, 100, 500, 1000, 5000, 25000, 50000, 100000].map(b => `<button class="cz-btn small ${b === RD.bet ? '' : 'dark'}" data-czrb="${b}">${short(b)}</button>`).join('')}</div><button class="cz-btn red" data-czt="radspin" style="font-size:20px;padding:14px 34px" ${wallet >= RD.bet ? '' : 'disabled'}>DREHEN · ${fmtN(RD.bet)}</button>` : '<span class="cz-note">Setz dich hin, um zu drehen.</span>');
     const others = v.seats.filter((x, i) => x && i !== v.mySeat && x.rad);
     let oth = main.parentNode.querySelector('.cz-others'); if (oth) set(oth, others.length ? `<div class="cz-log">${others.map(x => `<span>${admN(x.name, x.adm)}: ${mTxt(x.rad.m)} → ${fmtN(x.rad.pay)}</span>`).join('')}</div>` : '');
   }
