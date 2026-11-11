@@ -2,6 +2,7 @@
 // Dauerhaft gespeichert in einem privaten GitHub-Projekt (Umgebungsvariablen GITHUB_TOKEN und SAVE_REPO).
 // Ohne diese Variablen landet alles nur in einer lokalen Datei, die beim Neustart von Render verloren geht.
 const crypto = require('crypto');
+const WORTLE = require('./wortle.js');
 const fs = require('fs');
 const path = require('path');
 
@@ -850,6 +851,10 @@ async function handle(action, body, ip) {
   if (['wb_info', 'wb_start', 'wb_hit', 'wb_claim'].includes(action)) {
     if (!acc || !(acc.tokens || []).includes(sha256(String(body.token || '')))) return [401, { error: 'Bitte melde dich neu an.' }];
     return wbAction(action, key, acc, body);
+  }
+  if (action === 'wd_state' || action === 'wd_guess') { // Wörtle: tägliches Worträtsel mit Rangliste (wortle.js)
+    if (!acc || !(acc.tokens || []).includes(sha256(String(body.token || '')))) return [401, { error: 'Melde dich im Game Hub an, um bei Wörtle mitzuspielen.' }];
+    return WORTLE.action(action, key, acc, body, accounts, markDirty, isTester);
   }
   if (['friends', 'friend_add', 'friend_answer', 'friend_remove', 'chat', 'chat_send', 'profile'].includes(action)) {
     if (!acc || !(acc.tokens || []).includes(sha256(String(body.token || '')))) return [401, { error: 'Bitte melde dich neu an.' }];
