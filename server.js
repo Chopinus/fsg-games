@@ -126,6 +126,16 @@ function ritterDir() {
     console.log('FEHLER Ritterlauf: weder Ordner ritter/ mit allen 4 Teilen noch ritter.js gefunden. Gefundene Teile: ' + (found.join(', ') || 'keine') + '. Ordner von server.js: ' + __dirname);
   }
 }
+// Gzip-Zwischenspeicher: pro Dateiversion (ETag) einmal asynchron komprimieren
+function gzipOnce(etag, data) {
+  let p = GZ.get(etag); if (p) return Promise.resolve(p);
+  p = GZP.get(etag); if (p) return p;
+  p = new Promise((ok, no) => zlib.gzip(data, { level: 7 }, (err, gz) => { GZP.delete(etag); if (err) return no(err); GZ.set(etag, gz); if (GZ.size > 40) GZ.delete(GZ.keys().next().value); ok(gz); }));
+  GZP.set(etag, p); return p;
+}
+const GZP = new Map();
+// Nach dem Start die großen Dateien schon vorab komprimieren, damit die ersten Besucher nicht warten
+setTimeout(() => { for (const f of new Set(Object.values(STATIC))) readStatic(f, (err, data) => { if (!err && data.length > 1024) gzipOnce('"' + crypto.createHash('sha1').update(data).digest('hex').slice(0, 16) + '"', data).catch(() => {}); }); }, 1500).unref();
 function readStatic(file, cb) {
   const d = file === 'ritter.js' ? ritterDir() : null;
   if (!d) { fs.readFile(path.join(__dirname, file), cb); return; }
@@ -198,8 +208,10 @@ const server = http.createServer((req, res) => {
     // Komprimiert ausliefern, wenn der Browser es kann (ritter.js wird so etwa 70 % kleiner)
     const head = { 'Content-Type': TYPES[path.extname(file)], 'Cache-Control': 'no-cache', ETag: etag, Vary: 'Accept-Encoding' };
     if (/\bgzip\b/.test(req.headers['accept-encoding'] || '') && data.length > 1024) {
-      let gz = GZ.get(etag); if (!gz) { gz = zlib.gzipSync(data, { level: 9 }); GZ.set(etag, gz); if (GZ.size > 40) GZ.delete(GZ.keys().next().value); }
-      res.writeHead(200, { ...head, 'Content-Encoding': 'gzip', 'Content-Length': gz.length }); res.end(req.method === 'HEAD' ? undefined : gz); return;
+      // Komprimieren läuft im Hintergrund (blockiert den Server nicht) und nur einmal pro Dateiversion
+      gzipOnce(etag, data).then(gz => { res.writeHead(200, { ...head, 'Content-Encoding': 'gzip', 'Content-Length': gz.length }); res.end(req.method === 'HEAD' ? undefined : gz); },
+        () => { res.writeHead(200, head); res.end(req.method === 'HEAD' ? undefined : data); });
+      return;
     }
     res.writeHead(200, head);
     res.end(req.method === 'HEAD' ? undefined : data);
