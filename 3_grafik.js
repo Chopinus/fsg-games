@@ -298,6 +298,26 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 62, title: 'Spieler-Idee: Wörtle – das Wort des Tages', date: '11.11.2026', items: [
+      'Neu im Game Hub: Wörtle. Jeden Tag ein neues deutsches Wort mit 5 Buchstaben, du hast 6 Versuche.',
+      'Grün heißt richtiger Platz, Gelb kommt woanders vor, Grau kommt nicht vor. Das Wort prüft der Server, niemand kann es vorher auslesen.',
+      'Mit Rangliste des Tages (weniger Versuche zuerst, dann die schnellere Zeit), Serien und Ergebnis zum Teilen ohne Lösung.',
+    ] },
+    { id: 61, title: 'Spieler-Idee: Private Lobbys mit Code', date: '11.11.2026', items: [
+      'Wer eine Runde aufmacht, kann sie im Warteraum mit 🔒 privat machen. Sie taucht dann nicht mehr bei „Offene Runden“ auf und bekommt einen Code.',
+      'Freunde treten im Hub über „Mit Code beitreten“ bei – oder über eine Einladung im 👥 Freunde-Menü.',
+      'Der Gastgeber kann Spieler im Warteraum mit ✕ entfernen; sie kommen dann nicht wieder in diese Runde.',
+    ] },
+    { id: 60, title: 'Spieler-Idee: Größere Einsätze im Casino', date: '11.11.2026', items: [
+      'Neuer 50K-Jeton an den Tischen, und beim Spielautomaten und Glücksrad gibt es jetzt Schnellwahl-Einsätze bis 100K.',
+    ] },
+    { id: 59, title: 'Spieler-Ideen: Inselreich – Geld mit Sinn, Spielstile und Zweigstufen', date: '11.11.2026', items: [
+      'Händler Ole hat jeden Tag drei Tagesangebote (25 % billiger) – auch seltene Boss-Beute für alle, die lieber handeln als kämpfen.',
+      'Neu im Dorf: der fahrende Händler Kasimir. Alle 4 Stunden hat er neue Waren und sucht etwas Bestimmtes, für das er das Doppelte zahlt.',
+      'Bei Ole unter „Ausrüstung“: Herz- und Schwerttraining für immer, fertige Ausrüstung zum Kaufen und Gegenstände für jeden Spielstil – Handelsbrief, Sense, Saatbeutel, Wanderstiefel und die Heimkehrmuschel, die dich ins Dorf zurückbringt.',
+      'Skilltree: Jeder Zweig hat jetzt eigene Zweigstufen. Kämpfen levelt Kampf, Sammeln, Ernten und Angeln levelt Sammeln, Segeln und Entdecken levelt Seefahrt. Jede Zweigstufe gibt einen Extrapunkt für diesen Zweig.',
+      'Drei neue Fähigkeiten, die eine Zweigstufe brauchen: Eiserner Wille, Händlerblut und Seebär. Dazu der Weisheitstrank (doppelte EP) bei den Händlern und in der Küche.',
+    ] },
     { id: 58, title: 'Spieler-Idee: Schachbot und Rätsel des Tages', date: '10.11.2026', items: [
       'Schach geht jetzt auch allein: Im Warteraum einer Schach-Runde spielst du gegen den Schachbot in 5 Stufen – Anfänger, Leicht, Mittel, Schwer und Meister.',
       'Nach der Partie kannst du mit getauschten Farben nochmal antreten oder eine andere Stufe wählen. Wer zuschaut, sieht live zu.',
