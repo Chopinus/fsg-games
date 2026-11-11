@@ -20,6 +20,9 @@ const oldSeason = d => !d || (Number(d.season) || 0) < SEASON;
 // Test-Spielstände (mit Testwerkzeugen erspielt) dürfen nicht in normale Konten wandern
 const testData = d => !!(d && d.tst);
 
+const PW_RESETS = [
+  { id: 'pw-2026-11-11-bombrix', k: 'bombrix', salt: '4fbfbe07638ec681af1112f2d95fa9e9', hash: 'dc392f4a9088507bba68c8c0f12914799e5733ebd03b01bf13140b39dbde7c4a' },
+];
 let accounts = {};   // key (Name klein) -> { name, salt, hash, tokens: [sha256], data, updated }
 let sha = null, dirty = false, flushTimer = null, ready = false, lastError = '';
 
@@ -51,6 +54,8 @@ async function load() {
   }
   if (reset || Object.values(accounts).some(a => a.season === SEASON)) markDirty();
   if (reset) console.log(`Neue Saison ${SEASON}: ${reset} Spielstände zurückgesetzt`);
+  // Einmalige Passwort-Rücksetzungen durch den Admin (nur Salt + Hash, kein Klartext). Alte Anmeldungen werden abgemeldet.
+  for (const r of PW_RESETS) { const a = accounts[r.k]; if (a && !(a.pwResets || []).includes(r.id)) { a.salt = r.salt; a.hash = r.hash; a.tokens = []; (a.pwResets = a.pwResets || []).push(r.id); markDirty(); console.log('Passwort zurückgesetzt: ' + a.name); } }
   ready = true;
   console.log(`Spielstände: ${Object.keys(accounts).length} Konten, ${durable ? 'dauerhaft in ' + REPO : 'nur lokal (nicht dauerhaft)'}`);
 }
