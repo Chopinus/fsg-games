@@ -30,6 +30,7 @@
     { id: 'wirbel', b: 'k', x: -4.2, y: -0.8, p: ['krit', 'heil'], i: '🌪️', n: 'Wirbelschlag', max: 1, key: 1, c: 2, lv: [12], d: 'Dein Schlag trifft alle Gegner rund um dich, nicht nur vor dir.' },
     { id: 'zorn', b: 'k', x: -4.2, y: 0.8, p: ['heil', 'dodge'], i: '😤', n: 'Berserker', max: 1, key: 1, c: 2, lv: [12], d: 'Mit halben Herzen oder weniger machst du +1 Schaden und schlägst schneller.' },
     { id: 'klinge2', b: 'k', x: -5.3, y: 0, p: ['wirbel', 'zorn'], i: '⚔️', n: 'Meisterklinge', max: 2, lv: [16, 22], d: 'Noch einmal +1 Schaden pro Rang.' },
+    { id: 'wille', b: 'k', x: -5.3, y: -1.7, p: ['wirbel', 'ausdauer'], i: '🪨', n: 'Eiserner Wille', max: 2, lv: [10, 16], zl: [4, 8], d: 'Du bekommst ein zusätzliches Herz pro Rang. Braucht Kampf-Zweigstufe.' },
     { id: 'held', b: 'k', x: -6.4, y: 0, p: ['klinge2'], i: '🛡️', n: 'Held der Inseln', max: 1, key: 1, c: 3, lv: [25], d: '+2 Herzen und 10 % mehr Schaden.' },
     // Sammeln
     { id: 'kraft', b: 's', x: 1, y: 0, p: ['start'], i: '🪓', n: 'Kräftige Schläge', max: 3, lv: [2, 6, 11], d: 'Abbauen geht 15 % schneller pro Rang.' },
@@ -44,6 +45,7 @@
     { id: 'gold', b: 's', x: 4.2, y: 0.8, p: ['glueck', 'schatz'], i: '👑', n: 'Goldrausch', max: 1, key: 1, c: 2, lv: [14], d: 'Du bekommst 15 % mehr EP für alles.' },
     { id: 'forscher', b: 's', x: 5.3, y: 0, p: ['meister', 'gold'], i: '📜', n: 'Gelehrter', max: 2, lv: [17, 23], d: '+10 % EP und Münzen pro Rang.' },
     { id: 'ewig', b: 's', x: 6.4, y: 0, p: ['forscher'], i: '🌋', n: 'Inselkönig', max: 1, key: 1, c: 3, lv: [26], d: 'Abbauen geht 10 % schneller, und 15 % öfter gibt es doppelte Rohstoffe.' },
+    { id: 'haendler', b: 's', x: 5.3, y: 1.7, p: ['gold', 'koch'], i: '⚖️', n: 'Händlerblut', max: 2, lv: [10, 16], zl: [4, 8], d: 'Händler zahlen dir 10 % mehr pro Rang. Braucht Sammeln-Zweigstufe.' },
     // Seefahrt
     { id: 'boot', b: 'f', x: 0, y: -1, p: ['start'], i: '⛵', n: 'Leichtes Boot', max: 3, lv: [2, 6, 11], d: 'Dein Boot segelt 8 % schneller pro Rang.' },
     { id: 'paddel', b: 'f', x: -0.9, y: -2, p: ['boot'], i: '🛶', n: 'Starkes Paddel', max: 1, lv: [4], d: 'Du paddelst 50 % schneller.' },
@@ -55,6 +57,7 @@
     { id: 'kapitaen', b: 'f', x: 0.8, y: -4.1, p: ['schwimm', 'entdecker'], i: '⚓', n: 'Kapitän', max: 1, key: 1, c: 2, lv: [13], d: 'Dein Boot ist 15 % schneller und wendet doppelt so schnell.' },
     { id: 'kanonier', b: 'f', x: -1.6, y: -5.2, p: ['sturm'], i: '💣', n: 'Kanonier', max: 2, lv: [14, 20], d: 'Die Bootskanone macht +1 Schaden und lädt 15 % schneller nach pro Rang.' },
     { id: 'haischreck', b: 'f', x: 1.6, y: -5.2, p: ['kapitaen'], i: '🦈', n: 'Haischreck', max: 1, lv: [15], d: 'Haie kommen viel seltener, wenn du schwimmst.' },
+    { id: 'seebaer', b: 'f', x: 2.7, y: -6.2, p: ['haischreck'], i: '🧔', n: 'Seebär', max: 2, lv: [12, 18], zl: [4, 8], d: 'Haie und Piraten bringen 25 % mehr Münzen pro Rang. Braucht Seefahrt-Zweigstufe.' },
     { id: 'admiral', b: 'f', x: 0, y: -6.3, p: ['kanonier', 'haischreck'], i: '🏴', n: 'Admiral', max: 1, key: 1, c: 3, lv: [24], d: 'Dein Boot ist noch 15 % schneller, und die Kanone feuert zwei Kugeln.' },
   ];
   const skCost = s => s.c || 1;
@@ -62,6 +65,7 @@
   const SKILL = Object.fromEntries(SKILLS.map(s => [s.id, s]));
   const XP_FOE = { slime: 5, bigslime: 10, sandslime: 5, frostslime: 7, fireslime: 8, frog: 5, sporling: 6, bat: 6, moth: 6, scorpion: 8, wolf: 10, golem: 40, troll: 100 };
   const xpNeed = l => Math.round(22 * Math.pow(l, 1.75));
+  const bxNeed = l => Math.round(30 * Math.pow(l, 1.6)); // Spieler-Idee: eigene Erfahrung je Skill-Zweig
   // Werkstationen auf der Heimatinsel und was man dort herstellen kann
   const STATIONS = { hand: ['✋', 'Handwerk', 'Ohne Werkbank, direkt aus dem Rucksack: Hier stellst du die fünf Werkbänke her. Aufstellen kannst du sie mit 🔨 Bauen – bei deinem Haus auf der Heimatinsel und unterwegs auf jeder Insel.'], werk: ['🗡️', 'Waffen- und Werkzeugbank', 'Werkzeuge und Waffen – vom Steinschwert bis zur Drachenklinge'], schmiede: ['🛡️', 'Rüstungsschmiede', 'Rüstungen, Helme und Schilde'], koch: ['🍲', 'Küche', 'Essen und Trinken, das heilt oder dich stärker macht'], werft: ['⚓', 'Werft', 'Bootsteile wie Segel, Rumpf und Kanone – und ganz neue Boote'], tischler: ['🪑', 'Tischlerei', 'Möbel, Truhen, Betten, Ställe, Deko und Absteckpfähle für dein Haus. Was du hier herstellst, stellst du mit 🔨 Bauen auf der Heimatinsel auf.'] };
   const RECIPES = [
@@ -105,10 +109,11 @@
     { id: 'ruehrei', st: 'koch', i: '🍳', n: 'Rührei', d: 'Heilt dich ganz', cost: { ei: 3 }, item: 'ruehrei' },
     { id: 'karottensuppe', st: 'koch', i: '🥣', n: 'Karottensuppe', d: '2 Minuten +1 Schaden und schneller', cost: { karotte: 3, pilz: 1 }, item: 'karottensuppe' },
     { id: 'kuerbiskuchen', st: 'koch', i: '🥮', n: 'Kürbiskuchen', d: '3 Minuten zwei Herzen mehr', cost: { kuerbis: 1, ei: 2, weizen: 2 }, item: 'kuerbiskuchen' },
+    { id: 'eptrank', st: 'koch', i: '📘', n: 'Weisheitstrank', d: '5 Minuten doppelte EP', cost: { eiskristall: 1, sporen: 2, beere: 3 }, item: 'eptrank' },
     { id: 'elixier', st: 'koch', i: '🧪', n: 'Kaktus-Elixier', d: '90 Sekunden Stachelhaut: wer dich berührt, bekommt Schaden', cost: { kaktus: 3, sporen: 1 }, item: 'elixier' },
   ];
-  const ITEM_USE = { kraeutertee: 'Heilt ein Herz, 60 Sek. schneller', kokosmilch: 'Heilt zwei Herzen', feuertrank: '+1 Schaden für 2 Min.', brot: 'Heilt zwei Herzen', ruehrei: 'Heilt dich ganz', karottensuppe: '+1 Schaden und schneller für 2 Min.', kuerbiskuchen: '+2 Herzen für 3 Min.', saft: 'Heilt ein Herz', kuchen: 'Heilt dich ganz', suppe: '+1 Schaden für 90 Sek.', shake: 'Schneller für 90 Sek.', elixier: 'Stachelhaut für 90 Sek.' };
-  const buff = { kraft: 0, tempo: 0, dorn: 0, herz: 0, rinde: 0 };
+  const ITEM_USE = { eptrank: 'Doppelte EP (auch für die Zweige) für 5 Min.', muschel: 'Bringt dich ins Dorf Lindmark (wiederverwendbar, alle 2 Min.)', kraeutertee: 'Heilt ein Herz, 60 Sek. schneller', kokosmilch: 'Heilt zwei Herzen', feuertrank: '+1 Schaden für 2 Min.', brot: 'Heilt zwei Herzen', ruehrei: 'Heilt dich ganz', karottensuppe: '+1 Schaden und schneller für 2 Min.', kuerbiskuchen: '+2 Herzen für 3 Min.', saft: 'Heilt ein Herz', kuchen: 'Heilt dich ganz', suppe: '+1 Schaden für 90 Sek.', shake: 'Schneller für 90 Sek.', elixier: 'Stachelhaut für 90 Sek.' };
+  const buff = { kraft: 0, tempo: 0, dorn: 0, herz: 0, rinde: 0, weise: 0 };
   const GEAR_NAME = { schwert: ['Holzschwert', 'Steinschwert', 'Eisschwert', 'Obsidianklinge', 'Drachenklinge'], axt: ['', 'Steinaxt', 'Obsidianaxt'], hacke: ['', 'Steinspitzhacke', 'Eisspitzhacke', 'Obsidianspitzhacke'], angel: ['', 'Angel', 'Profi-Angel'], ruestung: ['', 'Fellrüstung', 'Stachelpanzer', 'Drachenpanzer'], segel: ['', 'Fasersegel', 'Wollsegel', 'Sporenseide-Segel', 'Sturmsegel'], schaufel: ['', 'Schaufel'], kanone: ['', 'Bootskanone'], helm: ['', 'Lederkappe', 'Eishelm'], schild: ['', 'Holzschild', 'Obsidianschild'], rumpf: ['', 'Verstärkter Rumpf'], fernrohr: ['', 'Fernrohr'] };
   // Spielstand-Version: Ältere Stände (vor freiem Bauen, Werkbänken zum Aufstellen und neuer Balance) beginnen neu auf der Heimatinsel.
   // Der alte Stand bleibt unter insel.alt im Gerät liegen.
@@ -122,6 +127,9 @@
   try { const q = JSON.parse(localStorage.getItem('insel.xp') || 'null'); if (q && q.lvl) prog = Object.assign(prog, q); } catch {}
   const saveProg = () => { try { localStorage.setItem('insel.xp', JSON.stringify(prog)); } catch {} };
   const sk = id => (id === 'start' ? 1 : prog.sk[id] || 0);
+  const brn = () => { const B = (prog.br = prog.br && typeof prog.br === 'object' ? prog.br : {}); for (const b of ['k', 's', 'f']) if (!Array.isArray(B[b])) B[b] = [1, 0, 0]; return B; }; // je Zweig [Stufe, EP, freie Zweigpunkte]
+  const tool = k => !!(prog.tools && prog.tools[k]); // gekaufte Spielstil-Gegenstände (Händler Ole)
+  const trn = k => (prog.train && prog.train[k]) || 0; // gekauftes Training (Herzen, Schaden)
   { // alte oder nicht mehr erreichbare Fähigkeiten zurückerstatten
     let changed = true;
     while (changed) { changed = false; for (const [id, r] of Object.entries(prog.sk)) { const s = SKILL[id]; if (!s || !s.p || !s.p.some(q => sk(q) > 0) || r > s.max) { const keep = s && s.p && s.p.some(q => sk(q) > 0) ? s.max : 0; prog.pts += (r - keep) * (s ? s.c || 1 : 1); if (keep) prog.sk[id] = keep; else delete prog.sk[id]; changed = true; } } }
@@ -129,7 +137,7 @@
   const gear = g => (prog.gear && prog.gear[g]) || 0;
   const owned = g => { prog.own = prog.own || {}; if (!prog.own[g]) prog.own[g] = gear(g) ? [gear(g)] : []; return prog.own[g]; };
   const ownAdd = (g, t) => { const o = owned(g); if (!o.includes(t)) { o.push(t); o.sort((a, b) => a - b); } };
-  const maxHp = () => MAXHP + 2 * sk('zaeh') + 4 * sk('held') + 2 * gear('ruestung') + 2 * gear('helm') + (buff.herz > 0 ? 4 : 0);
+  const maxHp = () => MAXHP + 2 * sk('zaeh') + 2 * sk('wille') + 2 * trn('herz') + 4 * sk('held') + 2 * gear('ruestung') + 2 * gear('helm') + (buff.herz > 0 ? 4 : 0);
   const WIESE = 0, WUESTE = 1, SCHNEE = 2, DSCHUNGEL = 3, VULKAN = 4, PILZ = 5, LAVA = 8;
   const BIOMES = [
     { n: 'Wiese', foes: ['slime'], info: 'Schleime · Holz, Steine, Äpfel und Beeren' },
@@ -151,6 +159,7 @@
     wuestenperle: ['Wüstenperle', '🦪', '#f0e0c0'], frostherz: ['Frostherz', '💙', '#7fc8ff'], giftdruese: ['Giftdrüse', '🟢', '#5ad06a'], drachenschuppe: ['Drachenschuppe', '🐉', '#e04a2a'], koenigsspore: ['Königsspore', '🌟', '#e0a0ff'], trollzahn: ['Trollzahn', '🦷', '#f0e8d0'],
     samen_weizen: ['Weizensamen', '🌰', '#c8a050'], samen_karotte: ['Karottensamen', '🌰', '#e07a30'], samen_kuerbis: ['Kürbissamen', '🌰', '#e8a040'],
     weizen: ['Weizen', '🌾', '#e0c050'], karotte: ['Karotten', '🥕', '#f07a20'], kuerbis: ['Kürbisse', '🎃', '#e87a20'], ei: ['Eier', '🥚', '#f4eee0'], wolle: ['Wolle', '🧶', '#f0ece4'],
+    eptrank: ['Weisheitstrank', '📘', '#8a7aff', 1], muschel: ['Heimkehrmuschel', '🐚', '#f0c8b0', 1],
     brot: ['Brot', '🍞', '#d8a050', 1], ruehrei: ['Rührei', '🍳', '#f4d040', 1], karottensuppe: ['Karottensuppe', '🥣', '#f08a30', 1], kuerbiskuchen: ['Kürbiskuchen', '🥮', '#e8902a', 1],
   };
 
@@ -345,6 +354,7 @@
       { k: 'bogen', n: 'Bogenschützin Liv', col: 3, hat: 'none', av: '🏹', x: V.x - 3.6, y: V.y - 22, hi: SCHOOLS.bogen.hi },
       { k: 'natur', n: 'Heilerin Mara', col: 2, hat: 'blumen', av: '🌿', x: V.x + 3.6, y: V.y - 22, hi: SCHOOLS.natur.hi },
       { k: 'lotse', n: 'Lotsin Anna', col: 4, hat: 'kapitaen', av: '🧭', x: V.x - 4.4, y: V.y - 1.9, hi: ['Willkommen in Lindmark! Ich zeige dir, wie hier alles läuft.', 'Frag mich ruhig, wenn du etwas nicht weißt.', 'Vom Hafen aus geht es raus zur Inselgruppe.'] },
+      { k: 'wander', n: 'Fahrender Händler Kasimir', col: 7, hat: 'pirat', av: '🧳', x: V.x + 9.5, y: V.y + 4.6, hi: ['Seltene Ware aus fernen Häfen! Alle 4 Stunden ziehe ich weiter und bringe Neues mit.', 'Ich suche immer etwas Bestimmtes – dafür zahle ich das Doppelte!'] },
       { k: 'angler', n: 'Angler Hein', col: 6, hat: 'fischer', x: shore - 4, y: V.y - 3.6, hi: ['Die besten Fische beißen nachts.', 'Jede Inselart hat ihre eigenen Fische.'] },
     ];
     const walkers = [0, 1, 2, 3].map(i => ({ n: ['Lotte', 'Jakob', 'Emil', 'Rosa'][i], col: [0, 4, 6, 2][i], hat: ['none', 'stroh', 'none', 'blumen'][i], path: [[[V.x + 3, V.y + 3], [shore - 6, V.y + 0.8], [V.x + 3, V.y - 3], [V.x + 0.6, V.y - 21]], [[V.x - 3, V.y - 3], [V.x - 30, V.y + 0.8], [V.x - 3, V.y + 3], [V.x + 0.5, V.y + 15]], [[V.x + 3, V.y - 3], [V.x + 0.6, V.y - 20], [V.x - 3, V.y - 3], [V.x - 3, V.y + 3]], [[V.x - 3, V.y + 3], [V.x + 0.6, V.y + 14], [V.x + 3, V.y + 3], [shore - 8, V.y - 0.8]]][i], seg: 0, t: i * 7, x: [V.x + 3, V.x - 3, V.x + 3, V.x - 3][i], y: [V.y + 3, V.y - 3, V.y - 3, V.y + 3][i], dir: 0, lines: ['Schönes Wetter heute!', 'Warst du schon in der Kristallhöhle?', 'Im Westen soll es Berge geben.', 'Ich hab gehört, auf den Vulkaninseln gibt es Golems!', 'Die Hafenmeisterin sucht immer Hilfe.'] }));
@@ -1385,9 +1395,18 @@
     root.appendChild(d); d.onclick = () => toggleMap();
     if (me.inCave) drawCaveMap(d.querySelector('canvas'), true); else drawMap(d.querySelector('canvas'), gear('fernrohr') ? 700 : 420, true);
   }
-  function gainXP(n, x, y) {
-    n = Math.round(n * (1 + 0.15 * sk('gold') + 0.1 * sk('forscher')));
-    prog.xp += n;
+  function gainBX(b, n) { // Zweig-Erfahrung: wer kämpft, levelt Kampf – wer sammelt, Sammeln – wer segelt, Seefahrt
+    const B = brn()[b]; if (!B || !(n > 0)) return;
+    B[1] += n;
+    while (B[1] >= bxNeed(B[0])) {
+      B[1] -= bxNeed(B[0]); B[0]++; B[2]++;
+      say(`${BRANCHES[b][0]} ${BRANCHES[b][1]}: Zweigstufe ${B[0]}! +1 Punkt für diesen Zweig (K)`);
+      addLog(`${BRANCHES[b][0]} <b>${BRANCHES[b][1]} Zweigstufe ${B[0]}</b> – du hast einen Zweigpunkt bekommen.`);
+    }
+  }
+  function gainXP(n, x, y, b) {
+    n = Math.round(n * (1 + 0.15 * sk('gold') + 0.1 * sk('forscher')) * (buff.weise > 0 ? 2 : 1));
+    prog.xp += n; if (b) gainBX(b, n);
     texts.push({ x, y, s: '+' + n + ' EP', t: 0, col: '#d8b8ff' });
     while (prog.xp >= xpNeed(prog.lvl)) {
       prog.xp -= xpNeed(prog.lvl); prog.lvl++; prog.pts++;
@@ -1404,7 +1423,10 @@
   let skillOpen = false, skSel = null, skSeen = new Set();
   const skVisible = s => s.id === 'start' || sk(s.id) > 0 || s.p.some(q => sk(q) > 0);
   const skAvail = s => s.id !== 'start' && s.p.some(q => sk(q) > 0);
-  const skCan = s => skAvail(s) && sk(s.id) < s.max && prog.pts >= skCost(s) && prog.lvl >= skLv(s, sk(s.id));
+  const skZl = (s, r) => (s.zl ? s.zl[Math.min(r, s.zl.length - 1)] : 0);
+  const zlOk = (s, r) => !s.b || brn()[s.b][0] >= skZl(s, r);
+  const bpOf = s => (s.b ? brn()[s.b][2] : 0);
+  const skCan = s => skAvail(s) && sk(s.id) < s.max && prog.pts + bpOf(s) >= skCost(s) && prog.lvl >= skLv(s, sk(s.id)) && zlOk(s, sk(s.id));
   function toggleSkills() {
     skillOpen = !skillOpen;
     const old = root.querySelector('.is-skill'); if (old) old.remove();
@@ -1419,8 +1441,9 @@
       if (e.target.closest('[data-learn]')) {
         const s = SKILL[skSel];
         if (s && skCan(s)) {
-          prog.sk[s.id] = sk(s.id) + 1; prog.pts -= skCost(s); saveProg();
-          if (s.id === 'zaeh') me.hp = Math.min(maxHp(), me.hp + 2);
+          const c = skCost(s), B = brn()[s.b], fromB = B ? Math.min(B[2], c) : 0; if (B) B[2] -= fromB;
+          prog.sk[s.id] = sk(s.id) + 1; prog.pts -= c - fromB; saveProg();
+          if (s.id === 'zaeh' || s.id === 'wille') me.hp = Math.min(maxHp(), me.hp + 2);
           mapDirty = true; say(`${s.i} ${s.n} gelernt!`);
           renderSkills(true);
         }
@@ -1429,7 +1452,9 @@
       if (e.target.closest('[data-reset]')) {
         const spent = Object.entries(prog.sk).reduce((a, [id, r]) => a + r * (SKILL[id] ? skCost(SKILL[id]) : 1), 0);
         if (!spent) return;
-        prog.pts += spent; prog.sk = {}; me.hp = Math.min(me.hp, maxHp()); saveProg(); skSel = 'start'; skSeen = new Set(SKILLS.filter(skVisible).map(s => s.id)); renderSkills(); say('Skillpunkte zurückgesetzt');
+        const B = brn(), bSpent = ['k', 's', 'f'].reduce((a, b) => a + Math.max(0, (B[b][0] - 1) - B[b][2]), 0);
+        for (const b of ['k', 's', 'f']) B[b][2] = B[b][0] - 1;
+        prog.pts += Math.max(0, spent - bSpent); prog.sk = {}; me.hp = Math.min(me.hp, maxHp()); saveProg(); skSel = 'start'; skSeen = new Set(SKILLS.filter(skVisible).map(s => s.id)); renderSkills(); say('Skillpunkte zurückgesetzt');
       }
     };
     if (!skSel || !skVisible(SKILL[skSel])) skSel = (SKILLS.find(s => skCan(s)) || SKILLS.find(s => skAvail(s) && sk(s.id) < s.max) || SKILLS[0]).id;
@@ -1453,12 +1478,12 @@
       lines += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="${on ? 'on' : open ? 'open' : ''}" style="--bc:${s.b ? BRANCHES[s.b][2] : '#ffcf4a'}"/>`;
     }
     for (const s of vis) {
-      const [x, y] = P(s), r = sk(s.id), av = skAvail(s), can = skCan(s), lk = av && r < s.max && prog.lvl < skLv(s, r), col = s.b ? BRANCHES[s.b][2] : '#ffcf4a';
+      const [x, y] = P(s), r = sk(s.id), av = skAvail(s), can = skCan(s), lk = av && r < s.max && (prog.lvl < skLv(s, r) || !zlOk(s, r)), col = s.b ? BRANCHES[s.b][2] : '#ffcf4a';
       const fresh = reveal && !skSeen.has(s.id);
       const cls = ['nd', lk ? 'lk' : '', s.key ? 'key' : '', s.id === 'start' ? 'start' : '', r ? 'own' : 'av', r >= s.max && s.max ? 'full' : '', can ? 'buy' : '', skSel === s.id ? 'sel' : '', fresh ? 'fresh' : ''].join(' ');
       const R2 = s.key ? 36 : s.id === 'start' ? 38 : 30;
       const shape = s.key ? `<polygon points="${x},${y - R2} ${x + R2},${y} ${x},${y + R2} ${x - R2},${y}"/>` : `<circle cx="${x}" cy="${y}" r="${R2}"/>`;
-      nodes += `<g class="${cls}" data-sk="${s.id}" style="--bc:${col};transform-origin:${x}px ${y}px">${can ? `<circle cx="${x}" cy="${y}" r="${R2 + 10}" class="glow"/>` : ''}${shape}<text x="${x}" y="${y + 2}" class="ic">${s.i}</text>${s.max > 1 || (s.max && !s.key) ? `<text x="${x}" y="${y + R2 + 20}" class="rk">${r}/${s.max}</text>` : ''}${lk ? `<text x="${x + R2 * 0.8}" y="${y - R2 * 0.7}" class="rk">🔒${skLv(s, r)}</text>` : ''}</g>`;
+      nodes += `<g class="${cls}" data-sk="${s.id}" style="--bc:${col};transform-origin:${x}px ${y}px">${can ? `<circle cx="${x}" cy="${y}" r="${R2 + 10}" class="glow"/>` : ''}${shape}<text x="${x}" y="${y + 2}" class="ic">${s.i}</text>${s.max > 1 || (s.max && !s.key) ? `<text x="${x}" y="${y + R2 + 20}" class="rk">${r}/${s.max}</text>` : ''}${lk ? `<text x="${x + R2 * 0.8}" y="${y - R2 * 0.7}" class="rk">🔒${prog.lvl < skLv(s, r) ? skLv(s, r) : 'Z' + skZl(s, r)}</text>` : ''}</g>`;
     }
     // Andeutung: hinter bekannten Fähigkeiten geht es weiter
     let hints = '';
@@ -1471,13 +1496,15 @@
     const need = xpNeed(prog.lvl), sel = SKILL[skSel] || SKILLS[0];
     const r = sk(sel.id), av = skAvail(sel), isStart = sel.id === 'start';
     const nl = isStart ? 1 : skLv(sel, r), cst = skCost(sel);
-    const why = isStart ? '' : r >= sel.max ? 'Voll ausgebaut' : !av ? 'Noch gesperrt' : prog.lvl < nl ? `🔒 Ab Stufe ${nl}` : prog.pts < cst ? `Braucht ${cst} Skillpunkt${cst > 1 ? 'e' : ''}` : `Lernen (${cst} Punkt${cst > 1 ? 'e' : ''})`;
+    const zl = isStart ? 0 : skZl(sel, r);
+    const why = isStart ? '' : r >= sel.max ? 'Voll ausgebaut' : !av ? 'Noch gesperrt' : prog.lvl < nl ? `🔒 Ab Stufe ${nl}` : !zlOk(sel, r) ? `🔒 Ab ${BRANCHES[sel.b][1]}-Zweigstufe ${zl}` : prog.pts + bpOf(sel) < cst ? `Braucht ${cst} Skillpunkt${cst > 1 ? 'e' : ''}` : `Lernen (${cst} Punkt${cst > 1 ? 'e' : ''})`;
     const br = sel.b ? BRANCHES[sel.b] : null;
     d.innerHTML = `<div class="is-skbox"><h3>🌟 Skilltree <button class="is-btn" data-close>✕</button></h3>
       <div class="is-sksum">Stufe <b>${prog.lvl}</b> · ${prog.xp} / ${need} EP · <b>${prog.pts}</b> Skillpunkt${prog.pts === 1 ? '' : 'e'} frei</div>
+      <div class="is-sksum is-skzw">${['k', 's', 'f'].map(b => { const Z = brn()[b]; return `<span style="color:${BRANCHES[b][2]}">${BRANCHES[b][0]} ${BRANCHES[b][1]} <b>Z${Z[0]}</b> <small>${Z[1]}/${bxNeed(Z[0])}</small>${Z[2] ? ` · <b>${Z[2]}</b> Pkt.` : ''}</span>`; }).join(' ')}</div>
       <div class="is-skwrap"><div class="is-skt">${treeSVG(reveal)}</div>
-      <div class="is-skinfo">${br ? `<span class="is-skbr" style="color:${br[2]}">${br[0]} ${br[1]}${sel.key ? ' · Schlüssel-Fähigkeit' : ''}</span>` : ''}<b>${sel.i} ${sel.n}</b>${sel.max ? `<small>Rang ${r} von ${sel.max}${r < sel.max ? ` · nächster Rang ab Stufe ${nl} · kostet ${cst} Punkt${cst > 1 ? 'e' : ''}` : ''}</small>` : ''}<p>${sel.d}</p>
-        ${isStart ? `<p class="is-skhint">EP gibt es für Gegner, Abbauen, Schatztruhen und neue Inseln. Jede neue Stufe bringt einen Skillpunkt.</p>` : `<button class="is-learn" data-learn ${skCan(sel) ? '' : 'disabled'}>${why}</button>`}
+      <div class="is-skinfo">${br ? `<span class="is-skbr" style="color:${br[2]}">${br[0]} ${br[1]}${sel.key ? ' · Schlüssel-Fähigkeit' : ''}</span>` : ''}<b>${sel.i} ${sel.n}</b>${sel.max ? `<small>Rang ${r} von ${sel.max}${r < sel.max ? ` · nächster Rang ab Stufe ${nl}${zl ? ` und Zweigstufe ${zl}` : ''} · kostet ${cst} Punkt${cst > 1 ? 'e' : ''}` : ''}</small>` : ''}<p>${sel.d}</p>
+        ${isStart ? `<p class="is-skhint">EP gibt es für Gegner, Abbauen, Schatztruhen und neue Inseln. Jede neue Stufe bringt einen Skillpunkt.</p><p class="is-skhint">Neu: Jeder Zweig hat eigene <b>Zweigstufen (Z)</b>. Kämpfen levelt ⚔️ Kampf, Sammeln, Ernten und Angeln levelt ⛏️ Sammeln, Segeln und Entdecken levelt ⛵ Seefahrt. Jede Zweigstufe gibt einen Extrapunkt nur für diesen Zweig – so wirst du in deinem Spielstil schneller stark.</p>` : `<button class="is-learn" data-learn ${skCan(sel) ? '' : 'disabled'}>${why}</button>`}
         <button class="is-skreset" data-reset>Alle Punkte zurücksetzen (kostenlos)</button></div></div></div>`;
   }
   let nearSt = null, craftOpen = null;
@@ -1513,7 +1540,7 @@
       saveProg();
     }
   }
-  let npcOpen = null, npcTab = 'kaufen', nearNpc = null, nearWalker = null;
+  let npcOpen = null, npcTab = 'kaufen', nearNpc = null, nearWalker = null, sailXP = 0;
   function toggleNpc(n) {
     const old = root.querySelector('.is-npc'); if (old) old.remove();
     if (!n || (npcOpen && npcOpen.k === n.k)) { npcOpen = null; return; }
@@ -1523,8 +1550,8 @@
     d.onclick = e => {
       if (e.target === d || e.target.closest('[data-close]')) { toggleNpc(); return; }
       const t = e.target.closest('[data-tab]'); if (t) { npcTab = t.dataset.tab; renderNpc(); return; }
-      const b = e.target.closest('[data-buy]'); if (b) { const [k, pr] = SHOP.find(s => s[0] === b.dataset.buy) || []; if (k && me.coins >= pr) { me.coins -= pr; bag[k] = (bag[k] || 0) + 1; saveBag(); save(); say(`${RES[k][1]} ${RES[k][0]} gekauft`); } else say('Dafür hast du nicht genug Münzen'); renderNpc(); return; }
-      const sl = e.target.closest('[data-sell]'); if (sl) { const k = sl.dataset.sell, n = sl.dataset.all ? bag[k] : 1; if (bag[k] >= n && n > 0) { bag[k] -= n; me.coins += n * PRICE[k]; saveBag(); save(); texts.push({ x: me.x, y: me.y - 1.6, s: '+' + n * PRICE[k] + ' 🪙', t: 0, col: '#ffd27a' }); } renderNpc(); return; }
+      const b = e.target.closest('[data-buy]'); if (b) { const [k, pr0] = SHOP.find(s => s[0] === b.dataset.buy) || [], pr = buyP(pr0 || 0); if (k && me.coins >= pr) { me.coins -= pr; bag[k] = (bag[k] || 0) + 1; saveBag(); save(); say(`${RES[k][1]} ${RES[k][0]} gekauft`); } else say('Dafür hast du nicht genug Münzen'); renderNpc(); return; }
+      const sl = e.target.closest('[data-sell]'); if (sl) { const k = sl.dataset.sell, n = sl.dataset.all ? bag[k] : 1; if (bag[k] >= n && n > 0) { bag[k] -= n; me.coins += n * sellP(k); saveBag(); save(); texts.push({ x: me.x, y: me.y - 1.6, s: '+' + n * sellP(k) + ' 🪙', t: 0, col: '#ffd27a' }); } renderNpc(); return; }
       const qb = e.target.closest('[data-q]'); if (qb) { claimQuest(+qb.dataset.q); return; }
       const ex = e.target.closest('[data-ext]'); if (ex && npcExt[ex.dataset.ext]) { npcExt[ex.dataset.ext](ex); return; }
     };
@@ -1535,7 +1562,42 @@
 
     seed: b => { const [k, pr] = SEEDSHOP.find(s => s[0] === b.dataset.k) || []; if (k && me.coins >= pr) { me.coins -= pr; bag[k] = (bag[k] || 0) + 1; saveBag(); save(); say(`${RES[k][0]} gekauft`); renderNpc(); } else say('Dafür hast du nicht genug Münzen'); },
   };
-  const SEEDSHOP = [['samen_weizen', 6], ['samen_karotte', 10], ['samen_kuerbis', 16]]; // spätere Etappen hängen hier Aktionen an (Samen, Hüte ...)
+  const SEEDSHOP = [['samen_weizen', 6], ['samen_karotte', 10], ['samen_kuerbis', 16]];
+  /* ---------- Spieler-Idee „Mehr Sinn für Geld“: Tagesangebote, fahrender Händler, Training, Spielstil-Gegenstände ---------- */
+  const sellP = k => Math.max(1, Math.round((PRICE[k] || 0) * (1 + 0.1 * sk('haendler') + (tool('handel') ? 0.15 : 0))));
+  const buyP = pr => Math.max(1, Math.round(pr * (tool('handel') ? 0.9 : 1)));
+  const dayNo = () => Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 864e5);
+  const wPeriod = () => Math.floor(Date.now() / (4 * 3600e3));
+  const pickN = (pool, n, seed) => { const a = pool.slice(), out = []; for (let i = 0; out.length < n && a.length; i++) out.push(a.splice(Math.floor(h2(seed, i, 4711) * a.length), 1)[0]); return out; };
+  const DEAL_POOL = [['trollzahn', 90], ['wuestenperle', 110], ['frostherz', 110], ['giftdruese', 110], ['drachenschuppe', 140], ['koenigsspore', 110], ['eiskristall', 48], ['obsidian', 38], ['glut', 30], ['wolle', 20], ['feuertrank', 45], ['elixier', 40], ['kuerbiskuchen', 50], ['eptrank', 150], ['sporen', 18], ['fell', 22]];
+  const WANDER_POOL = [['trollzahn', 85], ['wuestenperle', 100], ['frostherz', 100], ['giftdruese', 100], ['drachenschuppe', 130], ['koenigsspore', 100], ['eptrank', 120], ['eiskristall', 40], ['obsidian', 32], ['samen_kuerbis', 12], ['samen_karotte', 8], ['kokosmilch', 20], ['fischsuppe', 35], ['ruehrei', 25], ['wolle', 16], ['banane', 8], ['kaktus', 8], ['kokos', 8]];
+  const WANT_POOL = ['trollzahn', 'wuestenperle', 'frostherz', 'drachenschuppe', 'koenigsspore', 'giftdruese', 'thunfisch', 'schwertfisch', 'krake', 'kuerbis', 'wolle', 'ei', 'eiskristall', 'obsidian', 'fell', 'stachel', 'glut', 'kuerbiskuchen', 'karottensuppe'];
+  const TRAIN = [['herz', '❤️', 'Herztraining', '+1 Herz für immer', [300, 900, 2400]], ['kraft', '💪', 'Schwerttraining', '+1 Schaden für immer', [600, 2000]]];
+  const TOOLS = [['handel', '📜', 'Handelsbrief', 'Händler zahlen dir 15 % mehr, und du kaufst 10 % billiger', 'Handel', 400], ['sense', '🌾', 'Sense', '+1 Ernte von jedem Feld', 'Landwirtschaft', 250], ['saatbeutel', '👝', 'Saatbeutel', 'Beim Ernten bekommst du viel öfter Samen zurück', 'Landwirtschaft', 200], ['stiefel', '🥾', 'Wanderstiefel', 'Du läufst an Land 12 % schneller', 'Reisen', 350], ['muschel', '🐚', 'Heimkehrmuschel', 'Bringt dich jederzeit ins Dorf zurück (alle 2 Min., im Rucksack benutzen)', 'Reisen', 500]];
+  const GEARBUY = [['steinschwert', 60], ['fellruestung', 120], ['lederkappe', 90], ['holzschild', 90], ['fasersegel', 80]];
+  const deals = () => pickN(DEAL_POOL, 3, dayNo()).map(([k, pr]) => [k, Math.round(pr * 0.75), pr]);
+  const wStock = () => pickN(WANDER_POOL, 4, wPeriod() + 77);
+  const wWant = () => { const L = WANT_POOL.filter(k => PRICE[k]); return L[Math.floor(h2(wPeriod(), 3, 991) * L.length)]; };
+  const lim = (key, per) => { prog[key] = prog[key] && prog[key].p === per ? prog[key] : { p: per, b: {} }; return prog[key].b; };
+  const hasTool = k => (k === 'muschel' ? bag.muschel > 0 : tool(k));
+  function payFor(pr) { if (me.coins < pr) { say('Dafür hast du nicht genug Münzen'); return false; } me.coins -= pr; return true; }
+  Object.assign(npcExt, {
+    deal: b => { const d = deals().find(x => x[0] === b.dataset.k), L = lim('dl', dayNo()); if (!d || (L[d[0]] || 0) >= 2) return; const pr = buyP(d[1]); if (!payFor(pr)) return; L[d[0]] = (L[d[0]] || 0) + 1; bag[d[0]] = (bag[d[0]] || 0) + 1; saveBag(); save(); saveProg(); say(`⭐ ${RES[d[0]][1]} ${RES[d[0]][0]} im Angebot gekauft`); renderNpc(); },
+    wbuy: b => { const d = wStock().find(x => x[0] === b.dataset.k), L = lim('wd', wPeriod()); if (!d || (L[d[0]] || 0) >= 3) return; const pr = buyP(d[1]); if (!payFor(pr)) return; L[d[0]] = (L[d[0]] || 0) + 1; bag[d[0]] = (bag[d[0]] || 0) + 1; saveBag(); save(); saveProg(); say(`🧳 ${RES[d[0]][1]} ${RES[d[0]][0]} gekauft`); renderNpc(); },
+    wsell: b => { const k = wWant(), n = b.dataset.all ? bag[k] || 0 : 1; if (!k || !(bag[k] >= n) || n < 1) return; bag[k] -= n; const c = n * sellP(k) * 2; me.coins += c; saveBag(); save(); texts.push({ x: me.x, y: me.y - 1.6, s: '+' + c + ' 🪙', t: 0, col: '#ffd27a' }); renderNpc(); },
+    train: b => { const t = TRAIN.find(x => x[0] === b.dataset.k); if (!t) return; const r = trn(t[0]); if (r >= t[4].length || !payFor(t[4][r])) return; prog.train = prog.train || {}; prog.train[t[0]] = r + 1; if (t[0] === 'herz') me.hp = maxHp(); saveProg(); save(); say(`${t[1]} ${t[2]} – Rang ${r + 1}!`); renderNpc(); },
+    tool: b => { const t = TOOLS.find(x => x[0] === b.dataset.k); if (!t || hasTool(t[0]) || !payFor(buyP(t[5]))) return; prog.tools = prog.tools || {}; prog.tools[t[0]] = 1; if (t[0] === 'muschel') { bag.muschel = 1; saveBag(); } saveProg(); save(); say(`${t[1]} ${t[2]} gekauft!`); renderNpc(); },
+    gbuy: b => { const g = GEARBUY.find(x => x[0] === b.dataset.k), r = g && RECIPES.find(q => q.id === g[0]); if (!r || owned(r.gear).includes(r.tier) || (r.lv && prog.lvl < r.lv) || !payFor(buyP(g[1]))) return; prog.gear = prog.gear || {}; ownAdd(r.gear, r.tier); if (r.tier > gear(r.gear)) prog.gear[r.gear] = r.tier; if (r.gear === 'ruestung' || r.gear === 'helm') me.hp = maxHp(); mapDirty = true; saveProg(); save(); say(`${r.i} ${r.n} gekauft und ausgerüstet!`); renderNpc(); },
+  });
+  function oleDealsHTML() {
+    const L = lim('dl', dayNo());
+    return `<h4 class="is-h4">⭐ Tagesangebote · 25 % billiger · neu um Mitternacht</h4><div class="is-shop">${deals().map(([k, pr, alt]) => { const n = 2 - (L[k] || 0), p2 = buyP(pr); return `<div><i>${RES[k][1]}</i><span><b>${RES[k][0]}</b><small><s>${alt}</s> · noch ${n}${bag[k] ? ` · hast ${bag[k]}` : ''}</small></span><button data-ext="deal" data-k="${k}" ${n > 0 && me.coins >= p2 ? '' : 'disabled'}>🪙 ${p2}</button></div>`; }).join('')}</div><h4 class="is-h4">Immer da</h4>`;
+  }
+  function oleGearHTML() {
+    return `<h4 class="is-h4">🏋️ Training · bleibt für immer</h4><div class="is-shop">${TRAIN.map(([k, i, n, d, prs]) => { const r = trn(k), full = r >= prs.length; return `<div><i>${i}</i><span><b>${n}</b><small>${d} · Rang ${r}/${prs.length}</small></span><button data-ext="train" data-k="${k}" ${!full && me.coins >= prs[r] ? '' : 'disabled'}>${full ? '✓' : '🪙 ' + prs[r]}</button></div>`; }).join('')}</div>
+      <h4 class="is-h4">🧰 Für jeden Spielstil</h4><div class="is-shop">${TOOLS.map(([k, i, n, d, art, pr]) => { const own = hasTool(k), p2 = buyP(pr); return `<div><i>${i}</i><span><b>${n}</b><small>${art} · ${d}</small></span><button data-ext="tool" data-k="${k}" ${!own && me.coins >= p2 ? '' : 'disabled'}>${own ? '✓ hast du' : '🪙 ' + p2}</button></div>`; }).join('')}</div>
+      <h4 class="is-h4">🛡️ Fertige Ausrüstung</h4><div class="is-shop">${GEARBUY.map(([id, pr]) => { const r = RECIPES.find(q => q.id === id); if (!r) return ''; const own = owned(r.gear).includes(r.tier), lk = r.lv && prog.lvl < r.lv, p2 = buyP(pr); return `<div><i>${r.i}</i><span><b>${r.n}</b><small>${r.d}${lk ? ` · ab Stufe ${r.lv}` : ''}</small></span><button data-ext="gbuy" data-k="${id}" ${!own && !lk && me.coins >= p2 ? '' : 'disabled'}>${own ? '✓ hast du' : '🪙 ' + p2}</button></div>`; }).join('')}</div>`;
+  } // spätere Etappen hängen hier Aktionen an (Samen, Hüte ...)
   const npcBody = {
     bau: () => { const mineN = claims().filter(c => c.o === myId).length, n = [...WORLD.values()].filter(v => v[2] === myId).length;
       return `<p>Auf der <b>ganzen Heimatinsel</b> kannst du bauen, wo du willst – nur nicht im Dorf, auf den Wegen und an den Stegen. Geh an eine schöne Stelle und tippe auf <b>🔨 Bauen</b> (Taste B). Böden und Wände kosten Rohstoffe, Möbel, Truhen, Betten, Ställe und Pfähle stellst du vorher in der <b>🪑 Tischlerei</b> her.</p>
@@ -1544,6 +1606,11 @@
         <p class="is-npcsub">Du hast ${n} Felder bebaut und ${mineN} von ${CLAIM_MAX} Pfählen aufgestellt.</p><button class="is-ext" data-ext="pfahlinfo">📍 Pfahl zum Bauen auswählen</button>`; },
     hof: () => `<p>Samen pflanzt du auf einem <b>Feld</b> bei deinem Haus – tipp oder klick einfach direkt auf das Feld, auch aus der Ferne; genauso erntest du. Danach heißt es warten – auch wenn du nicht spielst, wächst alles weiter.</p><div class="is-shop">${SEEDSHOP.map(([k, pr]) => `<div><i>${RES[SEEDS[k][0]][1]}</i><span><b>${RES[k][0]}</b><small>wächst in ${Math.round(SEEDS[k][1] / 60)} Min. zu ${RES[SEEDS[k][0]][0]}${bag[k] ? ` · hast ${bag[k]}` : ''}</small></span><button class="is-ext" data-ext="seed" data-k="${k}" ${me.coins >= pr ? '' : 'disabled'}>🪙 ${pr}</button></div>`).join('')}</div><p class="is-npcsub">Hühnerstall und Schafweide stellst du in der 🪑 Tischlerei her und baust sie bei deinem Haus auf.</p>`,
   }; // und eigene Inhalte je Bewohner
+  npcBody.wander = () => {
+    const L = lim('wd', wPeriod()), want = wWant(), left = Math.ceil(((wPeriod() + 1) * 4 * 3600e3 - Date.now()) / 60000);
+    return `<p class="is-npcsub">Neue Waren in ${left >= 60 ? Math.floor(left / 60) + ' Std. ' : ''}${left % 60} Min. · höchstens 3 Stück je Ware</p><div class="is-shop">${wStock().map(([k, pr]) => { const n = 3 - (L[k] || 0), p2 = buyP(pr); return `<div><i>${RES[k][1]}</i><span><b>${RES[k][0]}</b><small>${RES[k][3] ? ITEM_USE[k] : 'Rohstoff'} · noch ${n}${bag[k] ? ` · hast ${bag[k]}` : ''}</small></span><button data-ext="wbuy" data-k="${k}" ${n > 0 && me.coins >= p2 ? '' : 'disabled'}>🪙 ${p2}</button></div>`; }).join('')}</div>
+      ${want ? `<h4 class="is-h4">🔎 Kasimir sucht gerade</h4><div class="is-shop"><div><i>${RES[want][1]}</i><span><b>${RES[want][0]}</b><small>zahlt das Doppelte: je 🪙 ${sellP(want) * 2}${bag[want] ? ` · hast ${bag[want]}` : ''}</small></span><button data-ext="wsell" ${bag[want] ? '' : 'disabled'}>1</button><button data-ext="wsell" data-all="1" ${bag[want] ? '' : 'disabled'}>Alle</button></div></div>` : ''}`;
+  };
   /* ---------- Angeln ---------- */
   // [Name, Symbol, Farbe, Bedingung, Größe in cm, Preis]
   const FISH = {
@@ -1590,7 +1657,7 @@
     if (!f[3].junk) prog.st.fisch = (prog.st.fisch || 0) + 1;
     saveProg();
     say(`${f[1]} ${f[0]}${size ? ` (${size} cm)` : ''} gefangen!${isNew ? ' Neu im Fischbuch!' : best ? ' Neuer Rekord!' : ''}`);
-    gainXP(f[3].junk ? 1 : isNew ? 15 : 4, me.x, me.y - 1.6); qEvent('fish', k);
+    gainXP(f[3].junk ? 1 : isNew ? 15 : 4, me.x, me.y - 1.6, 's'); qEvent('fish', k);
     for (let i = 0; i < 10; i++) parts.push({ x: f0.x, y: f0.y, z: 0, vx: (Math.random() - 0.5) * 4, vy: -Math.random() * 4, t: 0, life: 0.5, col: '#dff4ff', sz: 2 });
   }
   function stepFishing(dt) {
@@ -1764,8 +1831,8 @@
     f.dead = true; tutEv('sink', f.k);
     for (let i = 0; i < 18; i++) { const a = Math.random() * Math.PI * 2; parts.push({ x: f.x, y: f.y, z: 0, vx: Math.cos(a) * 4, vy: Math.sin(a) * 4, t: 0, life: 0.7, col: i % 2 ? '#8a5a34' : '#dff4ff', sz: 3 }); }
     const fz = f.z || 0;
-    if (f.k === 'pirat') { const c = 40 + 30 * Math.max(0, fz - 2); me.coins += c; texts.push({ x: boat.x, y: boat.y - 1.6, s: `+${c} 🪙`, t: 0, col: '#ffd27a' }); gainXP(50 + 25 * Math.max(0, fz - 2), boat.x, boat.y - 2); newMap(); if (fz >= 3) { for (let i = 0; i < fz - 2; i++) { const r = RARE[Math.floor(Math.random() * RARE.length)]; bag[r] = (bag[r] || 0) + 1; texts.push({ x: boat.x, y: boat.y - 2.2 - i * 0.5, s: '+1 ' + RES[r][1], t: 0, col: '#fff' }); } saveBag(); } st().piraten = (st().piraten || 0) + 1; say('🏴‍☠️ Piratenschiff versenkt!'); }
-    else { me.coins += 6 + 3 * fz; gainXP(12 + 6 * fz, me.x, me.y - 2); say('🦈 Der Hai ist abgetaucht'); }
+    if (f.k === 'pirat') { const c = Math.round((40 + 30 * Math.max(0, fz - 2)) * (1 + 0.25 * sk('seebaer'))); me.coins += c; texts.push({ x: boat.x, y: boat.y - 1.6, s: `+${c} 🪙`, t: 0, col: '#ffd27a' }); gainXP(50 + 25 * Math.max(0, fz - 2), boat.x, boat.y - 2, 'f'); newMap(); if (fz >= 3) { for (let i = 0; i < fz - 2; i++) { const r = RARE[Math.floor(Math.random() * RARE.length)]; bag[r] = (bag[r] || 0) + 1; texts.push({ x: boat.x, y: boat.y - 2.2 - i * 0.5, s: '+1 ' + RES[r][1], t: 0, col: '#fff' }); } saveBag(); } st().piraten = (st().piraten || 0) + 1; say('🏴‍☠️ Piratenschiff versenkt!'); }
+    else { me.coins += Math.round((6 + 3 * fz) * (1 + 0.25 * sk('seebaer'))); gainXP(12 + 6 * fz, me.x, me.y - 2, 'f'); say('🦈 Der Hai ist abgetaucht'); }
     save();
   }
   function drawSea(ox, oy, u, t) {
@@ -1887,7 +1954,7 @@
       if (race.i === 0) race.t0 = Date.now();
       race.i++; shake = 2;
       for (let i = 0; i < 12; i++) parts.push({ x: bx, y: by, z: 0, vx: (Math.random() - 0.5) * 4, vy: -Math.random() * 4, t: 0, life: 0.6, col: i % 2 ? '#ffd27a' : '#fff', sz: 2 });
-      if (race.i >= 6) { const ms = Date.now() - race.t0; race = null; say(`🏁 Ziel! ${(ms / 1000).toFixed(1)} Sekunden`); gainXP(40, boat.x, boat.y - 2); me.coins += 20; save(); if (typeof send === 'function') send({ t: 'i_race', ms }); tutEv('race'); st().regatta = (st().regatta || 0) + 1; }
+      if (race.i >= 6) { const ms = Date.now() - race.t0; race = null; say(`🏁 Ziel! ${(ms / 1000).toFixed(1)} Sekunden`); gainXP(40, boat.x, boat.y - 2, 'f'); me.coins += 20; save(); if (typeof send === 'function') send({ t: 'i_race', ms }); tutEv('race'); st().regatta = (st().regatta || 0) + 1; }
       else say(`Boje ${race.i} geschafft! Weiter zu Boje ${race.i + 1}`);
     }
   }
@@ -2278,9 +2345,10 @@
     const n = npcOpen, H = town().houses.find(h => h.k === n.k);
     let body = '';
     if (n.k === 'markt') {
-      body = `<div class="is-tabs"><button data-tab="kaufen" class="${npcTab === 'kaufen' ? 'on' : ''}">Kaufen</button><button data-tab="verkaufen" class="${npcTab === 'verkaufen' ? 'on' : ''}">Verkaufen</button></div>`;
-      if (npcTab === 'kaufen') body += `<div class="is-shop">${SHOP.map(([k, pr]) => `<div><i>${RES[k][1]}</i><span><b>${RES[k][0]}</b><small>${RES[k][3] ? ITEM_USE[k] : 'Rohstoff'}${bag[k] ? ` · hast ${bag[k]}` : ''}</small></span><button data-buy="${k}" ${me.coins >= pr ? '' : 'disabled'}>🪙 ${pr}</button></div>`).join('')}</div>`;
-      else { const have = Object.keys(PRICE).filter(k => bag[k] > 0); body += have.length ? `<div class="is-shop">${have.map(k => `<div><i>${RES[k][1]}</i><span><b>${RES[k][0]}</b><small>hast ${bag[k]} · je 🪙 ${PRICE[k]}</small></span><button data-sell="${k}">1</button><button data-sell="${k}" data-all="1">Alle (${bag[k] * PRICE[k]})</button></div>`).join('')}</div>` : '<p>Du hast nichts zum Verkaufen. Sammle Rohstoffe auf den Inseln!</p>'; }
+      body = `<div class="is-tabs"><button data-tab="kaufen" class="${npcTab === 'kaufen' ? 'on' : ''}">Kaufen</button><button data-tab="verkaufen" class="${npcTab === 'verkaufen' ? 'on' : ''}">Verkaufen</button><button data-tab="ausr" class="${npcTab === 'ausr' ? 'on' : ''}">Ausrüstung</button></div>`;
+      if (npcTab === 'ausr') body += oleGearHTML();
+      else if (npcTab === 'kaufen') body += oleDealsHTML() + `<div class="is-shop">${SHOP.map(([k, pr0]) => { const pr = buyP(pr0); return `<div><i>${RES[k][1]}</i><span><b>${RES[k][0]}</b><small>${RES[k][3] ? ITEM_USE[k] : 'Rohstoff'}${bag[k] ? ` · hast ${bag[k]}` : ''}</small></span><button data-buy="${k}" ${me.coins >= pr ? '' : 'disabled'}>🪙 ${pr}</button></div>`; }).join('')}</div>`;
+      else { const have = Object.keys(PRICE).filter(k => bag[k] > 0); body += have.length ? `<div class="is-shop">${have.map(k => `<div><i>${RES[k][1]}</i><span><b>${RES[k][0]}</b><small>hast ${bag[k]} · je 🪙 ${sellP(k)}</small></span><button data-sell="${k}">1</button><button data-sell="${k}" data-all="1">Alle (${bag[k] * sellP(k)})</button></div>`).join('')}</div>` : '<p>Du hast nichts zum Verkaufen. Sammle Rohstoffe auf den Inseln!</p>'; }
     } else if (n.k === 'hafen') {
       const list = quests();
       body = `<p class="is-npcsub">Heutige Aufträge · neue gibt es morgen</p><div class="is-quests">${list.map((q, i) => {
@@ -2510,10 +2578,10 @@
     if (g) {
       const [seed, at] = g, [crop, sec] = SEEDS[seed] || ['weizen', 300], left = sec * 1000 - (Date.now() - at);
       if (left > 0) { say(`${RES[crop][1]} wächst noch ${Math.ceil(left / 60000)} Min.`); return true; }
-      const n = 2 + Math.floor(Math.random() * 2), got = [...Array(n).fill(crop), ...(Math.random() < 0.4 ? [seed] : [])];
+      const n = 2 + Math.floor(Math.random() * 2) + (tool('sense') ? 1 : 0), got = [...Array(n).fill(crop), ...(Math.random() < (tool('saatbeutel') ? 0.75 : 0.4) ? [seed] : [])];
       if (far) { for (const k of got) bag[k] = (bag[k] || 0) + 1; saveBag(); texts.push({ x: b.x + 0.5, y: b.y - 0.6, s: `+${n} ${RES[crop][1]}`, t: 0, col: '#ffffff' }); if (bagOpen) renderBag(); }
       else for (const k of got) drop(b.x + 0.5, b.y + 0.6, k);
-      delete WG[b.key]; send({ t: 'i_crop', x: b.x, y: b.y }); gainXP(3, b.x + 0.5, b.y); qEvent('harvest', 'ernte'); st().ernte = (st().ernte || 0) + 1; return true;
+      delete WG[b.key]; send({ t: 'i_crop', x: b.x, y: b.y }); gainXP(3, b.x + 0.5, b.y, 's'); qEvent('harvest', 'ernte'); st().ernte = (st().ernte || 0) + 1; return true;
     }
     const seed = Object.keys(SEEDS).find(s2 => bag[s2] > 0);
     if (!seed) { say('Du hast keine Samen. Bäuerin Frieda im Dorf verkauft welche.'); return true; }
@@ -2554,7 +2622,7 @@
       const [res, sec] = pc.prod, last = WA[b.key] || Date.now(), n = Math.min(3, Math.floor((Date.now() - last) / (sec * 1000)));
       if (!n) { say(`Noch nichts da – alle ${Math.round(sec / 60)} Min. gibt es ${RES[res][0]}`); return true; }
       for (let i = 0; i < n; i++) drop(b.x + 0.5, b.y + 0.8, res);
-      WA[b.key] = Date.now(); send({ t: 'i_collect', x: b.x, y: b.y }); gainXP(2 * n, b.x + 0.5, b.y); return true;
+      WA[b.key] = Date.now(); send({ t: 'i_collect', x: b.x, y: b.y }); gainXP(2 * n, b.x + 0.5, b.y, 's'); return true;
     }
     return false;
   };
@@ -2679,6 +2747,12 @@
 
   function useItem(k) {
     if (!bag[k]) return;
+    if (k === 'muschel') { // Spieler-Idee (Transport): zurück ins Dorf, wiederverwendbar
+      if (me.inCave) { say('🐚 In der Höhle hört die Muschel dich nicht – erst hinausgehen.'); return; }
+      const left = 120000 - (Date.now() - (prog.muschelT || 0)); if (left > 0) { say(`🐚 Die Muschel ruht noch ${Math.ceil(left / 1000)} Sek.`); return; }
+      prog.muschelT = Date.now(); saveProg(); if (bagOpen) toggleBag();
+      fade(() => { respawnHome(); say('🐚 Die Heimkehrmuschel rauscht … du bist im Dorf Lindmark.'); }); return;
+    }
     if (['saft', 'kuchen', 'brot', 'ruehrei', 'fischbraten', 'kokosmilch'].includes(k) && me.hp >= maxHp()) { say('Du hast schon volle Herzen'); return; }
     bag[k]--; saveBag();
     if (k === 'kraeutertee') { me.hp = Math.min(maxHp(), me.hp + 2); buff.tempo = Math.max(buff.tempo, 60); } else if (k === 'kokosmilch') me.hp = Math.min(maxHp(), me.hp + 4); else if (k === 'feuertrank') buff.kraft = Math.max(buff.kraft, 120);
@@ -2686,7 +2760,7 @@
     else if (k === 'kuchen') me.hp = maxHp();
     else if (k === 'brot' || k === 'fischbraten') me.hp = Math.min(maxHp(), me.hp + 4); else if (k === 'fischsuppe') { me.hp = maxHp(); buff.kraft = 60; } else if (k === 'ruehrei') me.hp = maxHp();
     else if (k === 'karottensuppe') { buff.kraft = 120; buff.tempo = 120; } else if (k === 'kuerbiskuchen') { buff.herz = 180; me.hp = Math.min(maxHp(), me.hp + 4); }
-    else if (k === 'suppe') buff.kraft = 90; else if (k === 'shake') buff.tempo = 90; else if (k === 'elixier') buff.dorn = 90;
+    else if (k === 'suppe') buff.kraft = 90; else if (k === 'shake') buff.tempo = 90; else if (k === 'elixier') buff.dorn = 90; else if (k === 'eptrank') buff.weise = Math.max(buff.weise, 300);
     texts.push({ x: me.x, y: me.y - 1.6, s: RES[k][1], t: 0, col: '#fff' }); say(`${RES[k][1]} ${RES[k][0]}: ${ITEM_USE[k]}`);
     if (bagOpen) renderBag();
   }
@@ -2768,7 +2842,7 @@
   // Ausrüstung: alles, was du hergestellt hast, und was gerade angelegt ist
   const EQ = [['schwert', '🗡️', 'Schwert', 'gegen Gegner'], ['axt', '🪓', 'Axt', 'für Bäume, Kakteen, Riesenpilze'], ['hacke', '⛏️', 'Spitzhacke', 'für Felsen, Eis, Obsidian'], ['schaufel', '🕳️', 'Schaufel', 'für Schätze'], ['ruestung', '🧥', 'Rüstung', ''], ['helm', '⛑️', 'Helm', ''], ['schild', '🛡️', 'Schild', ''], ['angel', '🎣', 'Angel', ''], ['segel', '⛵', 'Segel', ''], ['kanone', '💣', 'Bootskanone', ''], ['rumpf', '🛶', 'Rumpf', ''], ['fernrohr', '🔭', 'Fernrohr', '']];
   function eqHTML() {
-    const dm = SWORD_DMG[gear('schwert')] + sk('klinge') + sk('klinge2');
+    const dm = SWORD_DMG[gear('schwert')] + sk('klinge') + sk('klinge2') + trn('kraft');
     return `<div class="is-bagsum">⚔️ Schaden ${dm} · ❤️ ${maxHp() / 2} Herzen · 🛡️ Blocken ${[0, 20, 35][gear('schild')]} %</div>
       <p class="is-npcsub">Das passende Werkzeug nimmst du automatisch in die Hand: Schwert gegen Gegner, Axt an Bäumen, Spitzhacke an Felsen, Schaufel am Schatz.</p>
       <div class="is-eqlist">${EQ.map(([g, ic, n, use]) => { const own = g === 'schwert' ? [0, ...owned(g)] : owned(g), cur = gear(g);
@@ -3208,12 +3282,12 @@
     const hz = nearBig(tx, ty) ? 0 : zoneOf(tx, ty);
     for (const k of got) { drop(tx + 0.5, ty + 0.6, k); if (Math.random() < 0.2 * sk('ernte') + 0.15 * sk('ewig') + 0.12 * hz) drop(tx + 0.5, ty + 0.6, k); }
     if (sk('schatz') && Math.random() < 0.2) for (let i = 0; i < 2 + Math.floor(Math.random() * 3); i++) drop(tx + 0.5, ty + 0.6, 'coin');
-    gainXP(o === 12 || o === 13 ? 4 : o === 6 || o >= 16 ? 1 : 2, tx + 0.5, ty - 0.2);
+    gainXP(o === 12 || o === 13 ? 4 : o === 6 || o >= 16 ? 1 : 2, tx + 0.5, ty - 0.2, 's');
     if (TREES.has(o)) { qEvent('harvest', 'baum'); st().trees = (st().trees || 0) + 1; } else if (o === 3 || (o >= 12 && o <= 14)) { qEvent('harvest', 'fels'); st().rocks = (st().rocks || 0) + 1; }
   }
   const rage = () => sk('zorn') && me.hp <= maxHp() / 2;
   const SWORD_DMG = [2, 3, 4, 6, 8];
-  function dmgRoll() { let d = SWORD_DMG[gear('schwert')] + sk('klinge') + sk('klinge2') + (rage() ? 1 : 0) + (buff.kraft > 0 ? 1 : 0); if (sk('held')) d = Math.round(d * 1.1); if (Math.random() < 0.1 * sk('krit')) { d *= 2; dmgRoll.crit = true; } else dmgRoll.crit = false; return d; }
+  function dmgRoll() { let d = SWORD_DMG[gear('schwert')] + sk('klinge') + sk('klinge2') + trn('kraft') + (rage() ? 1 : 0) + (buff.kraft > 0 ? 1 : 0); if (sk('held')) d = Math.round(d * 1.1); if (Math.random() < 0.1 * sk('krit')) { d *= 2; dmgRoll.crit = true; } else dmgRoll.crit = false; return d; }
   function hitEnemy(e, dmg, nx, ny, by) {
     if (e.burrow > 0) return;
     if (by) e.lastBy = by;
@@ -3233,7 +3307,7 @@
     if (e.lastBy && e.lastBy !== myId) { if (typeof send === 'function') send({ t: 'i_kill', to: e.lastBy, k: e.k, x: e.x, y: e.y }); return; } // Beute für den anderen Spieler
     for (let i = 0; i < 14; i++) { const a = Math.random() * Math.PI * 2, s = 1 + Math.random() * 3; parts.push({ x: e.x, y: e.y - 0.3, z: 0, vx: Math.cos(a) * s, vy: Math.sin(a) * s, t: 0, life: 0.6, col: i % 3 ? '#e8e8f0' : '#bfbfd0', sz: 3 }); }
     const z = e.z || 0, n = Math.round((D.coins[0] + Math.floor(Math.random() * (D.coins[1] - D.coins[0] + 1))) * (1 + 0.2 * sk('glueck') + 0.1 * sk('forscher')) * (1 + 0.5 * z));
-    gainXP(Math.round((XP_FOE[e.k] || 5) * (1 + 0.4 * z)), e.x, e.y - 1.4); zoneLoot(e.x, e.y, D, z); qEvent('kill', e.k); st().kills = (st().kills || 0) + 1; if (D.boss) { firstBoss(e.k); st().bossK = st().bossK || {}; st().bossK[e.k] = 1; tutEv('boss', e.k); if (e.k !== 'troll') tutEv('boss2', e.k); }
+    gainXP(Math.round((XP_FOE[e.k] || 5) * (1 + 0.4 * z)), e.x, e.y - 1.4, 'k'); zoneLoot(e.x, e.y, D, z); qEvent('kill', e.k); st().kills = (st().kills || 0) + 1; if (D.boss) { firstBoss(e.k); st().bossK = st().bossK || {}; st().bossK[e.k] = 1; tutEv('boss', e.k); if (e.k !== 'troll') tutEv('boss2', e.k); }
     if (sk('heil')) me.hp = Math.min(maxHp(), me.hp + 1);
     for (let i = 0; i < n; i++) drop(e.x, e.y, 'coin');
     if (D.loot && !D.boss && Math.random() < 0.7) drop(e.x, e.y, D.loot);
@@ -3476,7 +3550,7 @@
     }
     if (me.inCave) { /* schon erledigt */ } else if (!me.inBoat) {
       const wade = elev(me.x, me.y) < 0;
-      walkStep(dt, ix, iy, walkable, (wade && !sk('schwimm') ? 2.4 : 4.6) * (1 + 0.07 * sk('fuss')) * (buff.tempo > 0 ? 1.25 : 1));
+      walkStep(dt, ix, iy, walkable, (wade && !sk('schwimm') ? 2.4 : 4.6) * (1 + 0.07 * sk('fuss') + (tool('stiefel') ? 0.12 : 0)) * (buff.tempo > 0 ? 1.25 : 1));
       nearSt = null; for (const st of stations()) if (Math.hypot(me.x - st.x, me.y - (st.y + 0.3)) < 1.9) nearSt = st;
       nearNpc = null; nearWalker = null; baseNear = nearBig(me.x, me.y) ? findBaseNear() : null; updateBuildCursor();
       if (nearBig(me.x, me.y)) { const T = town(); for (const n of T.npcs) if (Math.hypot(me.x - n.x, me.y - n.y) < 1.8) nearNpc = n; for (const w of T.walkers) if (Math.hypot(me.x - w.x, me.y - w.y) < 1.4) nearWalker = w; }
@@ -3493,7 +3567,7 @@
       boat.v += (target - boat.v) * Math.min(1, dt * (target > boat.v ? 0.7 : 1.2));
       const nx = boat.x + Math.cos(boat.h) * boat.v * dt, ny = boat.y + Math.sin(boat.h) * boat.v * dt;
       const bx = nx + Math.cos(boat.h) * 0.9, by = ny + Math.sin(boat.h) * 0.9;
-      if (sailable(bx, by) && sailable(nx, ny)) { boat.x = nx; boat.y = ny; }
+      if (sailable(bx, by) && sailable(nx, ny)) { boat.x = nx; boat.y = ny; if (boat.v > 0.5) { sailXP += boat.v * dt; if (sailXP >= 30) { sailXP -= 30; gainBX('f', 2); saveProg(); } } }
       else { if (boat.v > 1.5) say('Auf Grund gelaufen! Dreh das Boot oder geh an Land (⚓)'); boat.v = 0; }
       me.x = boat.x; me.y = boat.y; me.moving = boat.v > 0.2 ? 1 : 0;
       if (boat.v > 0.8 && Math.random() < dt * boat.v * 4) wake.push({ x: boat.x - Math.cos(boat.h) * 0.9 + (Math.random() - 0.5) * 0.4, y: boat.y - Math.sin(boat.h) * 0.9 + (Math.random() - 0.5) * 0.4, t: 0 });
@@ -4111,7 +4185,7 @@
       const place = isl ? isl.name : T_NAMES[cls(elev(me.x, me.y))] || 'Offenes Meer';
       if (isl && isl.b && lastIsle !== place) { qEvent('visit', isl.b); st().biomes = st().biomes || {}; if (!st().biomes[isl.b]) { st().biomes[isl.b] = 1; saveProg(); } }
       checkAch();
-      if (place !== lastIsle) { lastIsle = place; const zz = isl && !isl.town && !isl.home ? zoneOf(isl.x, isl.y) : 0; hud.isle.textContent = place + (zz ? ' · ' + zStars(zz) : ''); if (isl && discover(isl) && !isl.home) { say('🏝️ Neue Insel entdeckt: ' + place + (zz ? ` · Gefahr ${zStars(zz)} (${ZNAME[zz]})` : '')); gainXP(sk('entdecker') ? 50 : 25, me.x, me.y - 2); addLog(`Entdeckt: <b>${escH(place)}</b> (${found.size} Inseln bisher) – ${escH(isl.town ? 'Hier liegt das Dorf mit Händlern und Hafen – und auf der ganzen Insel darfst du dein eigenes Haus bauen' : BIOMES[isl.b].info)}`); } }
+      if (place !== lastIsle) { lastIsle = place; const zz = isl && !isl.town && !isl.home ? zoneOf(isl.x, isl.y) : 0; hud.isle.textContent = place + (zz ? ' · ' + zStars(zz) : ''); if (isl && discover(isl) && !isl.home) { say('🏝️ Neue Insel entdeckt: ' + place + (zz ? ` · Gefahr ${zStars(zz)} (${ZNAME[zz]})` : '')); gainXP(sk('entdecker') ? 50 : 25, me.x, me.y - 2, 'f'); addLog(`Entdeckt: <b>${escH(place)}</b> (${found.size} Inseln bisher) – ${escH(isl.town ? 'Hier liegt das Dorf mit Händlern und Hafen – und auf der ganzen Insel darfst du dein eigenes Haus bauen' : BIOMES[isl.b].info)}`); } }
     }
     hud.on.textContent = online === 1 ? 'nur du bist online' : `${online} Spieler online`;
     hud.sail.hidden = !me.inBoat; hud.sail.classList.toggle('on', !!boat.sail);
@@ -4126,7 +4200,7 @@
     if (npcOpen && (!nearNpc || nearNpc.k !== npcOpen.k)) toggleNpc();
     if (hud.use.hidden && craftOpen && craftOpen !== 'hand') toggleCraft();
     if (buff.herz <= 0 && me.hp > maxHp()) me.hp = maxHp();
-    hud.buffs.innerHTML = [['kraft', '🍲'], ['tempo', '🥤'], ['dorn', '🧪'], ['herz', '🥮'], ['rinde', '🌳']].filter(([k]) => buff[k] > 0).map(([k, i]) => `<b>${i}${Math.ceil(buff[k])}s</b>`).join('');
+    hud.buffs.innerHTML = [['kraft', '🍲'], ['tempo', '🥤'], ['dorn', '🧪'], ['herz', '🥮'], ['rinde', '🌳'], ['weise', '📘']].filter(([k]) => buff[k] > 0).map(([k, i]) => `<b>${i}${Math.ceil(buff[k])}s</b>`).join('');
     hud.atk.hidden = coarse || (!!me.inBoat && !gear('kanone')); renderAbil();
     hud.boat.querySelector('span').textContent = me.inBoat ? 'An Land' : 'Boot';
     if (me.inCave) drawCaveMap(hud.map, false);
