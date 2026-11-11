@@ -1670,3 +1670,8 @@ html.rl-appmode,html.rl-appmode body{overflow:hidden;overscroll-behavior:none}
 #rchat .rc-form{display:flex;gap:6px;padding:8px;border-top:1px solid var(--line)}
 #rchat .rc-form input{font-size:16px;padding:8px 10px}
 #rchat .rc-form .btn{min-height:40px;padding:8px 14px}
+
+/* Dungeon (v0.1 Testversion) */
+.dg-art{display:block;width:56px;height:56px;border-radius:12px;background:radial-gradient(circle at 50% 35%,#5a4866,#1a1520 70%);position:relative;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.dg-art::before{content:"🗝";position:absolute;inset:0;display:grid;place-items:center;font-size:28px}
+.dg-art::after{content:"";position:absolute;left:8px;right:8px;bottom:6px;height:4px;background:#ff9a3c;border-radius:2px;box-shadow:0 0 10px #ff9a3c}
