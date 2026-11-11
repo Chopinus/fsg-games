@@ -86,7 +86,7 @@ const IDLE_MS = 30 * 60 * 1000; // Räume ohne verbundene Spieler verschwinden n
 
 const STATIC = {
   '/': 'index.html', '/index.html': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css',
-  '/mini.js': 'mini.js', '/ritter.js': 'ritter.js', '/spiele2.js': 'spiele2.js', '/welt.js': 'welt.js', '/casino_ui.js': 'casino_ui.js', '/insel.js': 'insel.js', '/ideen.js': 'ideen.js', '/dungeon.html': 'dungeon.html', '/freunde.js': 'freunde.js',
+  '/mini.js': 'mini.js', '/ritter.js': 'ritter.js', '/spiele2.js': 'spiele2.js', '/welt.js': 'welt.js', '/casino_ui.js': 'casino_ui.js', '/insel.js': 'insel.js', '/ideen.js': 'ideen.js', '/dungeon.html': 'dungeon.html', '/freunde.js': 'freunde.js', '/wortle_ui.js': 'wortle_ui.js',
 };
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
 
@@ -318,7 +318,7 @@ function pushRoom(r) {
     send(c, {
       t: 'room',
       room: {
-        id: r.id, game: r.game, name: r.name, host: r.host, status: r.status, me: c.pid,
+        id: r.id, game: r.game, name: r.name, host: r.host, status: r.status, me: c.pid, priv: !!r.private, code: r.code || null,
         min: G.min, seats: G.seats,
         players: r.players.map(p => ({ id: p.id, name: p.name, online: online(r, p.id), adm: isAdm(p.id) })),
         view,
@@ -409,8 +409,15 @@ function handle(c, m) {
     return;
   }
   if (m.t === 'join') {
-    const r = rooms.get(m.room);
-    if (!r) return send(c, { t: 'err', msg: 'Diese Runde gibt es nicht mehr.' });
+    const code = String(m.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+    if (m.code != null) { // Beitreten mit Code (private Lobby); höchstens 10 Versuche pro Minute
+      const now = Date.now(); c.codeT = (c.codeT || []).filter(t => now - t < 60000);
+      if (c.codeT.length >= 10) return send(c, { t: 'err', msg: 'Zu viele Versuche – warte kurz.' });
+      c.codeT.push(now);
+    }
+    const r = m.code != null ? [...rooms.values()].find(x => x.code && x.code === code) : rooms.get(m.room);
+    if (!r) return send(c, { t: 'err', msg: m.code != null ? 'Zu diesem Code gibt es keine Runde.' : 'Diese Runde gibt es nicht mehr.' });
+    if (r.banned && r.banned.has(c.pid)) return send(c, { t: 'err', msg: 'Du wurdest aus dieser Runde entfernt.' });
     if (!c.name) return send(c, { t: 'err', msg: 'Gib zuerst deinen Namen ein.' });
     if (!r.players.some(p => p.id === c.pid)) {
       if (r.players.length >= ROOM_CAP) return send(c, { t: 'err', msg: 'Diese Runde ist voll.' });
@@ -427,6 +434,19 @@ function handle(c, m) {
   const G = GAMES[r.game];
   if (m.t === 'leave') { c.room = null; send(c, { t: 'closed' }); leaveRoom(r, c.pid); return; }
   if (m.t === 'close') { if (r.host === c.pid) deleteRoom(r); return; }
+  if (m.t === 'priv') { // Spieler-Idee: private Lobby mit Code – taucht nicht in „Offene Runden“ auf
+    if (r.host !== c.pid || r.game === 'casino' || r.game === 'welt') return;
+    r.private = !!m.on;
+    if (r.private && !r.code) { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; do r.code = Array.from(crypto.randomBytes(5), b => A[b % A.length]).join(''); while ([...rooms.values()].some(x => x !== r && x.code === r.code)); }
+    pushRoom(r); return;
+  }
+  if (m.t === 'kick') { // Gastgeber entfernt jemanden aus der Lobby (kommt mit demselben Gerät nicht wieder rein)
+    if (r.host !== c.pid || r.status !== 'lobby' || r.game === 'casino' || m.id === c.pid) return;
+    const p = r.players.find(p => p.id === m.id); if (!p) return;
+    (r.banned = r.banned || new Set()).add(p.id);
+    for (const x of clients) if (x.pid === p.id && x.room === r.id) { x.room = null; send(x, { t: 'closed' }); send(x, { t: 'err', msg: 'Du wurdest aus der Runde entfernt.' }); }
+    leaveRoom(r, p.id); return;
+  }
   if (m.t === 'start') {
     if (r.host !== c.pid) return;
     if (r.players.length < G.min && !(G.solo && G.solo(r, m))) return send(c, { t: 'err', msg: `Es braucht mindestens ${G.min} Spieler.` });

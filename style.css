@@ -1675,3 +1675,10 @@ html.rl-appmode,html.rl-appmode body{overflow:hidden;overscroll-behavior:none}
 .dg-art{display:block;width:56px;height:56px;border-radius:12px;background:radial-gradient(circle at 50% 35%,#5a4866,#1a1520 70%);position:relative;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.3)}
 .dg-art::before{content:"🗝";position:absolute;inset:0;display:grid;place-items:center;font-size:28px}
 .dg-art::after{content:"";position:absolute;left:8px;right:8px;bottom:6px;height:4px;background:#ff9a3c;border-radius:2px;box-shadow:0 0 10px #ff9a3c}
+
+/* Private Lobbys mit Code, Rauswerfen (Spieler-Idee) */
+.codejoin{display:flex;gap:8px;margin:0 0 10px}
+.codejoin input{flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--fg);border-radius:12px;padding:9px 12px;font:inherit;font-size:15px;text-transform:uppercase;letter-spacing:1px}
+.codejoin input::placeholder{text-transform:none;letter-spacing:0;color:var(--muted)}
+.chip .kick{margin-left:6px;border:0;background:rgba(229,72,77,.25);color:#ffb3b5;border-radius:50%;width:20px;height:20px;font-size:11px;line-height:20px;padding:0;cursor:pointer}
+.shareurl.lobbycode{font-family:var(--display);font-size:26px;letter-spacing:4px}

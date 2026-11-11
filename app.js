@@ -113,6 +113,8 @@ function renderTiles() {
       <button class="btn small" data-dungeon="1">Spielen</button></div>
     <div class="tile wide solo-tile cz-tile"><div class="art"><span class="cz-art"></span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b>Casino Aurum <span class="pill">Spielgeld</span></b><span class="sub">Blackjack, Roulette, Texas Hold'em, Pferderennen, Spielautomat und Glücksrad – allein gegen Bots oder am Tisch mit Freunden. Nur Spieljetons, kein echtes Geld.</span></div>
       <button class="btn small" data-casino="1">Spielen</button></div>
+    <div class="tile wide solo-tile wd-tile"><div class="art"><span class="wd-art">🟩</span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b>Wörtle <span class="pill">Täglich</span></b><span class="sub">Jeden Tag ein neues deutsches Wort mit 5 Buchstaben – 6 Versuche. Mit Rangliste des Tages und Serien.</span></div>
+      <button class="btn small" data-wd-open="1">Spielen</button></div>
     <div class="tile wide vz-tile"><div class="art"><span class="vz-art">💡</span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b>Ideen &amp; Vorschläge <span class="pill">Neu</span></b><span class="sub">Du hast eine Idee, wie ein Spiel besser wird? Schlag sie vor oder stimm über die Ideen der anderen ab. Updates kommen mittwochs, freitags und sonntags.</span></div>
       <button class="btn small" data-vz-open="1">Ideen ansehen</button></div>` + GAMES.map(g => g.key === 'party'
     ? `<div class="tile wide"><div class="art">${g.art}</div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b>${esc(g.title)}</b><span class="sub">${esc(g.sub)}</span></div>
@@ -138,7 +140,7 @@ function needNick() {
   store.set('fsg.nick', n); send({ t: 'name', name: n }); return true;
 }
 // Casino wird erst geladen, wenn es jemand braucht
-const CZ_V = 53; // bei jeder Casino-Änderung erhöhen, damit Geräte die neue Datei laden
+const CZ_V = 54; // bei jeder Casino-Änderung erhöhen, damit Geräte die neue Datei laden
 function loadCasino(cb) {
   if (window.Casino) { cb(); return; }
   if (loadCasino.busy) { loadCasino.q.push(cb); return; }
@@ -228,7 +230,7 @@ function openWelt(btn, then) {
 function hubWhere() {
   if (room) return room.game === 'casino' ? 'Casino' : (GAMES.find(g => g.key === room.game) || {}).title || 'Game Hub';
   if (window.Ritter && Ritter.isOpen()) return 'Ritterlauf'; if (window.Insel && Insel.isOpen()) return 'Inselreich';
-  if (window.Welt && Welt.isOpen()) return 'Würfelwelt'; if (window.Casino && Casino.isLobby && Casino.isLobby()) return 'Casino';
+  if (window.Welt && Welt.isOpen()) return 'Würfelwelt'; if (window.Wortle && Wortle.isOpen()) return 'Wörtle'; if (window.Casino && Casino.isLobby && Casino.isLobby()) return 'Casino';
   return 'Game Hub';
 }
 // Einladung angenommen: Runde beitreten oder das Spiel öffnen
@@ -249,6 +251,7 @@ if (window.Freunde) {
   window.addEventListener('fsg-konto', () => { Freunde.refresh(); setTimeout(() => send({ t: 'where', g: hubWhere() }), 300); });
 }
 $('#tiles').addEventListener('click', e => { if (e.target.closest('[data-dungeon]')) { location.href = '/dungeon.html'; return; } const so = e.target.closest('[data-solo]'); if (so) { openRitter(so); return; } const ww = e.target.closest('[data-welt]'); if (ww) { openWelt(ww); return; } if (e.target.closest('[data-casino]')) { loadCasino(() => Casino.openLobby()); return; } const isl = e.target.closest('[data-insel]'); if (isl) { if (needNick()) openInsel(isl); return; } const b = e.target.closest('[data-create]'); if (b && needNick()) send({ t: 'create', game: b.dataset.create }); });
+$('#codejoin').addEventListener('submit', e => { e.preventDefault(); const c = $('#joincode').value.toUpperCase().replace(/[^A-Z0-9]/g, ''); if (c.length < 4) { toast('Gib den Code der Lobby ein.'); return; } if (needNick()) { send({ t: 'join', code: c }); $('#joincode').value = ''; } });
 $('#rooms').addEventListener('click', e => { const b = e.target.closest('[data-join]'); if (b && needNick()) send({ t: 'join', room: b.dataset.join }); });
 $('#nick').addEventListener('change', () => { const n = nick(); if (n) { store.set('fsg.nick', n); send({ t: 'name', name: n }); } });
 
@@ -317,10 +320,14 @@ function renderRoom() {
 function setMode(st, mode) { if (st.dataset.mode !== mode) { st.dataset.mode = mode; st.innerHTML = ''; } }
 function lobbyHTML() {
   const r = room, n = r.players.length, need = r.min;
+  const canPriv = r.game !== 'casino' && r.game !== 'welt';
   return `<h2>Warten auf Mitspieler</h2>
-    <div class="seats">${r.players.map(p => `<span class="chip ${p.online ? '' : 'off'}">${admHTML(p.name, p.adm)}${p.id === r.host ? ' ★' : ''}${p.id === r.me ? ' (du)' : ''}</span>`).join('')}</div>
-    <p class="note">Freunde öffnen</p><div class="shareurl">${esc(location.host)}</div>
-    <p class="note">und tippen bei „${esc(r.name)}“ auf Beitreten.${r.seats < 12 ? ` Es spielen bis zu ${r.seats}, alle weiteren schauen zu.` : ''}</p>
+    <div class="seats">${r.players.map(p => `<span class="chip ${p.online ? '' : 'off'}">${admHTML(p.name, p.adm)}${p.id === r.host ? ' ★' : ''}${p.id === r.me ? ' (du)' : ''}${isHost() && p.id !== r.me ? `<button class="kick" data-kick="${esc(p.id)}" title="${esc(p.name)} aus der Lobby entfernen" aria-label="Entfernen">✕</button>` : ''}</span>`).join('')}</div>
+    ${r.priv && r.code ? `<p class="note">🔒 Private Lobby – nur mit Code oder Einladung. Code:</p><div class="shareurl lobbycode">${esc(r.code)}</div>
+    <p class="note">Freunde tippen im Hub bei „Offene Runden“ auf <b>Mit Code beitreten</b> und geben den Code ein – oder du lädst sie über 👥 ein.${r.seats < 12 ? ` Es spielen bis zu ${r.seats}, alle weiteren schauen zu.` : ''}</p>`
+    : `<p class="note">Freunde öffnen</p><div class="shareurl">${esc(location.host)}</div>
+    <p class="note">und tippen bei „${esc(r.name)}“ auf Beitreten.${r.seats < 12 ? ` Es spielen bis zu ${r.seats}, alle weiteren schauen zu.` : ''}</p>`}
+    ${isHost() && canPriv ? `<div class="row" style="justify-content:center;margin-bottom:6px"><button class="btn ghost small" data-priv="${r.priv ? 0 : 1}">${r.priv ? '🌐 Öffentlich machen' : '🔒 Privat machen (mit Code)'}</button></div>` : ''}
     ${isHost() ? `<div class="row" style="justify-content:center"><button class="btn" data-room="start" ${n < need ? 'disabled' : ''}>${n < need ? `Noch ${need - n} Spieler nötig` : 'Spiel starten'}</button>
       <button class="btn ghost" data-room="close">Runde auflösen</button></div>`
       : `<p class="status">${esc(nameOf(r.host))} startet das Spiel.</p>`}
@@ -341,6 +348,8 @@ function againHTML(label) {
     : `<p class="note">${esc(nameOf(room.host))} kann eine neue Runde starten.</p>`;
 }
 $('#room').addEventListener('click', e => {
+  const kb = e.target.closest('[data-kick]'); if (kb && isHost()) { const p = room.players.find(x => x.id === kb.dataset.kick); if (p && confirm(`${p.name} aus der Lobby entfernen?`)) send({ t: 'kick', id: p.id }); return; }
+  const pv = e.target.closest('[data-priv]'); if (pv && isHost()) { send({ t: 'priv', on: pv.dataset.priv === '1' }); return; }
   const b = e.target.closest('[data-room]');
   if (!b || b.disabled) return;
   const a = b.dataset.room;

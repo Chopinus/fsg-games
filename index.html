@@ -8,7 +8,7 @@
 <title>Game Hub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Figtree:wght@400;600;800&display=swap">
-<link rel="stylesheet" href="style.css?v=55">
+<link rel="stylesheet" href="style.css?v=56">
 </head>
 <body>
 <div id="conn" class="conn" hidden>Verbindung wird hergestellt …</div>
@@ -31,6 +31,7 @@
 
   <section class="stack">
     <h2>Offene Runden</h2>
+    <form class="codejoin" id="codejoin"><input id="joincode" maxlength="8" placeholder="Code einer privaten Lobby" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="btn small" type="submit">Mit Code beitreten</button></form>
     <div class="list" id="rooms"><div class="empty">Runden werden geladen …</div></div>
   </section>
 </main>
@@ -43,8 +44,9 @@
 <div id="toast" class="toast" hidden></div>
 <script src="mini.js"></script>
 <script src="freunde.js?v=1"></script>
-<script src="app.js?v=56"></script>
+<script src="app.js?v=57"></script>
 <script src="spiele2.js"></script>
 <script src="ideen.js?v=54"></script>
+<script src="wortle_ui.js?v=1"></script>
 </body>
 </html>
