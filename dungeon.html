@@ -3090,8 +3090,8 @@ function frame(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now;
   try {
     if (Run.active && Run.room) { if (!Run.paused) updateRun(dt); renderRun(); Touch.tick(); }
-    if (window.Freunde && Social.hub) Freunde.setHidden(Run.active && !Run.paused);
     else renderLobby(now / 1000);
+    if (window.Freunde && Social.hub) Freunde.setHidden(Run.active && !Run.paused); // 👥 im Run ausblenden
   } catch (err) { console.error(err); }
   requestAnimationFrame(frame);
 }
@@ -3099,8 +3099,8 @@ function frame(now) {
 /* ---------- Start ---------- */
 Profile.load();
 Social.connect(meInfo());
-Social.on('party', () => { if (UI.cur && (UI.cur[0] === 'party' || UI.cur[0] === 'lobby')) UI.refresh(); });
-Social.on('friends', () => { if (UI.cur && UI.cur[0] === 'party') UI.refresh(); });
+Social.on('party', () => { if (!Run.active && UI.cur && (UI.cur[0] === 'party' || UI.cur[0] === 'lobby')) UI.refresh(); });
+Social.on('friends', () => { if (!Run.active && UI.cur && UI.cur[0] === 'party') UI.refresh(); });
 UI.show('lobby');
 requestAnimationFrame(frame);
 // Schrift laden, damit Canvas-Texte die Pixel-Schrift nutzen
