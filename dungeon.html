@@ -617,7 +617,39 @@ class MockSocialService extends SocialService {
   async setReady(r) { this.party.members.find(m => m.id === 'me').ready = r; this.emit('party', this.party); }
   resetReady() { this.party.members.forEach(m => m.ready = m.id !== 'me'); this.emit('party', this.party); }
 }
-const Social = new MockSocialService();
+// Im Game Hub: echte Freunde (Online-Status, Chat, Einladungen) über freunde.js vom Hub-Server
+const FR_READY = IN_HUB ? new Promise(res => { const s = document.createElement('script'); s.src = '/freunde.js?v=1'; s.onload = () => res(!!window.Freunde); s.onerror = () => res(false); document.head.appendChild(s); }) : Promise.resolve(false);
+class HubSocialService extends MockSocialService {
+  async connect(me) {
+    this.me = me; this.friends = []; this.hub = true;
+    try { const k = JSON.parse(localStorage.getItem('fsg.konto') || 'null'); if (k && k.name && Profile.data.name === 'Abenteurer') { Profile.data.name = k.name.slice(0, 14); Profile.save(); me.name = Profile.data.name; } } catch (e) {}
+    this.party = { leader: 'me', members: [{ id: 'me', name: me.name, level: me.level, ready: false, look: me.look, weapon: me.weapon }] };
+    this.emit('party', this.party);
+    const ok = await FR_READY; if (!ok) return;
+    Freunde.init({ where: 'Dungeon', pos: 'bl', games: () => ['Dungeon'],
+      onAccept: inv => this.emit('toast', inv.game === 'Dungeon' ? 'Du bist der Dungeon-Party von ' + inv.from + ' beigetreten – du kämpfst im Run von ' + inv.from + ' als Begleiter mit.' : inv.from + ' wartet im Game Hub: ' + inv.game) });
+    Freunde.on('change', () => { this.sync(); this.emit('friends', this.friends); });
+    Freunde.on('answer', m => { if (m.game !== 'Dungeon') return; const f = this.friends.find(x => x.id === m.from); if (f) f.pending = false;
+      if (m.ok && this.party.members.length < 4 && !this.party.members.some(x => x.id === m.from)) {
+        const cls = Object.keys(ARMOR_CLASS), wps = Object.keys(WEAPONS);
+        this.party.members.push({ id: m.from, name: m.from, level: Profile.data.level, ready: true, look: { helm: pick([null, ...cls]), chest: pick(cls), pants: pick(cls), boots: pick(cls), skin: rint(0, 3) }, weapon: pick(wps) });
+        this.emit('toast', m.from + ' ist deiner Party beigetreten!'); this.emit('party', this.party); }
+      this.emit('friends', this.friends); });
+    this.sync(); this.emit('friends', this.friends);
+  }
+  sync() { if (!window.Freunde) return; const old = new Map((this.friends || []).map(f => [f.id, f]));
+    this.friends = Freunde.list().map(f => ({ id: f.name, name: f.name, level: '', status: f.online ? 'online' : 'offline', where: f.where || '', pending: old.has(f.name) && old.get(f.name).pending, look: {}, weapon: 'sword' })); }
+  async getFriends() { await FR_READY; this.sync(); return this.friends; }
+  async invite(id) {
+    const f = this.friends.find(x => x.id === id);
+    if (!f || this.party.members.length >= 4 || this.party.members.some(m => m.id === id)) return { ok: false, msg: 'Party ist voll.' };
+    if (f.status !== 'online') return { ok: false, msg: f.name + ' ist offline.' };
+    f.pending = true; Freunde.invite(f.name, 'Dungeon'); this.emit('friends', this.friends);
+    setTimeout(() => { if (f.pending) { f.pending = false; this.emit('friends', this.friends); } }, 40000);
+    return { ok: true };
+  }
+}
+const Social = IN_HUB ? new HubSocialService() : new MockSocialService();
 
 /* =====================================================================
    MODUL 4b: INHALTE – Dungeons & Schwierigkeit, Artefakte (Sets, Haupt- und
@@ -2650,7 +2682,7 @@ const UI = {
           <div class="s muted" style="text-align:center">${allReady ? 'Alle sind bereit!' : 'Start erst möglich, wenn alle bereit sind.'} ${P.members.length === 1 ? 'Du kannst auch allein losziehen.' : 'Im Koop könnt ihr euch gegenseitig wiederbeleben.'}</div>
         </div>
         <div class="panel col" style="flex:1;min-width:260px"><h3>Freundesliste</h3><div class="col" id="flist"></div>
-          <div class="s muted">Hinweis: Freunde sind im Prototyp simuliert. Die Party-Logik hängt an einer Schnittstelle, die später mit einem echten Server verbunden werden kann.</div></div>
+          <div class="s muted">${Social.hub ? (window.Freunde && Freunde.loggedIn() ? 'Deine Freunde aus dem Game Hub. Eingeladene Freunde kämpfen in deinem Run als KI-Begleiter mit – gemeinsames Spielen in Echtzeit kommt in einer späteren Version. Chatten und Freunde hinzufügen: 👥 unten links.' : 'Melde dich im Game Hub mit deinem Konto an, um deine Freunde hier zu sehen.') : 'Hinweis: Freunde sind im Prototyp simuliert.'}</div></div>
       </div>
       <div class="row" style="margin-top:12px"><button class="btn" id="bBack">← Zurück</button></div></div>`;
     const ps = document.getElementById('pslots'); this._partyBack = runMode ? (this.sel && this.sel.daily ? 'daily' : 'dungeons') : 'lobby';
@@ -2669,7 +2701,7 @@ const UI = {
       const order = { online: 0, ingame: 1, offline: 2 };
       fr.slice().sort((a, b) => order[a.status] - order[b.status]).forEach(f => {
         const inParty = P.members.some(m => m.id === f.id), el = document.createElement('div'); el.className = 'friend';
-        el.innerHTML = `<span class="dot ${f.status === 'online' ? 'on' : f.status === 'ingame' ? 'busy' : 'off'}"></span><div style="flex:1"><div style="font-size:10px">${esc(f.name)}</div><div class="s muted">Lv ${f.level} · ${f.status === 'online' ? 'Online' : f.status === 'ingame' ? 'Im Dungeon' : 'Offline'}</div></div>`;
+        el.innerHTML = `<span class="dot ${f.status === 'online' ? 'on' : f.status === 'ingame' ? 'busy' : 'off'}"></span><div style="flex:1"><div style="font-size:10px">${esc(f.name)}</div><div class="s muted">${f.level ? 'Lv ' + f.level + ' · ' : ''}${f.status === 'online' ? 'Online' + (f.where ? ' · ' + esc(f.where) : '') : f.status === 'ingame' ? 'Im Dungeon' : 'Offline'}</div></div>`;
         const b = document.createElement('button'); b.className = 'btn small'; b.textContent = inParty ? 'In Party' : f.pending ? '…' : 'Einladen';
         b.disabled = inParty || f.pending || f.status !== 'online' || P.members.length >= 4 || !leader;
         b.onclick = async () => { sfx('click'); const r = await Social.invite(f.id); if (r && !r.ok) toast(r.msg); else toast('Einladung an ' + f.name + ' gesendet…'); };
@@ -3058,6 +3090,7 @@ function frame(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now;
   try {
     if (Run.active && Run.room) { if (!Run.paused) updateRun(dt); renderRun(); Touch.tick(); }
+    if (window.Freunde && Social.hub) Freunde.setHidden(Run.active && !Run.paused);
     else renderLobby(now / 1000);
   } catch (err) { console.error(err); }
   requestAnimationFrame(frame);

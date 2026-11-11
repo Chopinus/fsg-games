@@ -114,7 +114,13 @@ function chatMark() { chatDirty = true; if (!chatTimer) chatTimer = setTimeout((
 const pairOf = (a, b) => (a < b ? a + '|' + b : b + '|' + a);
 const seen = new Map();            // wer zuletzt da war (nur im Speicher): key -> Zeitpunkt
 const ONLINE_MS = 45000;
-const isOnline = key => Date.now() - (seen.get(key) || 0) < ONLINE_MS;
+// Live-Status kommt vom Spielserver (offene Verbindungen), sonst zählt der letzte Abruf
+let presence = () => ({ on: false, where: null }), onChatHook = () => {};
+const setPresence = fn => { presence = fn; }, setChatHook = fn => { onChatHook = fn; };
+const isOnline = key => presence(key).on || Date.now() - (seen.get(key) || 0) < ONLINE_MS;
+const friendKeys = key => { const a = accounts[key]; return a ? frOf(a).f.slice() : []; };
+const areFriends = (a, b) => { const A = accounts[a]; return !!(A && frOf(A).f.includes(b)); };
+const accName = k => (accounts[k] ? accounts[k].name : null);
 const sendTimes = new Map();       // Bremse gegen Spam: höchstens 8 Nachrichten in 10 Sekunden
 const FR_MAX = 60, REQ_MAX = 30, MSG_MAX = 300, KEEP = 60;
 const frOf = acc => (acc.fr = acc.fr || { f: [], i: [], o: [] });
@@ -123,7 +129,7 @@ function friendsView(key, acc) {
   const fr = frOf(acc), rd = (chats._read && chats._read[key]) || {};
   const nameOf = k => (accounts[k] ? accounts[k].name : null);
   const friends = fr.f.filter(nameOf).map(k => { const c = chats[pairOf(key, k)] || [], last = c[c.length - 1];
-    return { name: nameOf(k), online: isOnline(k), unread: c.filter(m => m.f !== key && m.t > (rd[k] || 0)).length, last: last ? last.t : 0 }; })
+    return { name: nameOf(k), online: isOnline(k), where: presence(k).where || null, unread: c.filter(m => m.f !== key && m.t > (rd[k] || 0)).length, last: last ? last.t : 0 }; })
     .sort((a, b) => (b.online - a.online) || (b.last - a.last) || a.name.localeCompare(b.name));
   return { me: acc.name, friends, inc: fr.i.filter(nameOf).map(nameOf), out: fr.o.filter(nameOf).map(nameOf) };
 }
@@ -140,12 +146,12 @@ function social(action, key, acc, body) {
     if (fr.o.includes(wk)) return [400, { error: 'Anfrage ist schon unterwegs.' }];
     if (fr.f.length >= FR_MAX) return [400, { error: `Du hast schon ${FR_MAX} Freunde.` }];
     if (ofr.i.length >= REQ_MAX || fr.o.length >= REQ_MAX) return [400, { error: 'Gerade sind zu viele Anfragen offen.' }];
-    fr.o.push(wk); ofr.i.push(key); markDirty();
+    fr.o.push(wk); ofr.i.push(key); markDirty(); try { onChatHook(key, wk, 'req'); } catch {}
     return [200, { ...friendsView(key, acc), msg: `Anfrage an ${other.name} geschickt.` }];
   }
   if (action === 'friend_answer') {
     if (!fr.i.includes(wk)) return [400, { error: 'Diese Anfrage gibt es nicht mehr.' }];
-    drop(fr.i, wk); drop(ofr.o, key);
+    drop(fr.i, wk); drop(ofr.o, key); try { onChatHook(key, wk, 'fr'); } catch {}
     if (body.ok) { if (!fr.f.includes(wk)) fr.f.push(wk); if (!ofr.f.includes(key)) ofr.f.push(key); }
     markDirty();
     return [200, { ...friendsView(key, acc), msg: body.ok ? `Du und ${other.name} seid jetzt befreundet.` : 'Anfrage abgelehnt.' }];
@@ -166,7 +172,7 @@ function social(action, key, acc, body) {
     sendTimes.set(key, [...ts, Date.now()]);
     const list = chats[pk] = chats[pk] || [], t = Math.max(Date.now(), list.length ? list[list.length - 1].t + 1 : 0);
     list.push({ f: key, x: text, t }); if (list.length > KEEP) list.splice(0, list.length - KEEP);
-    chatMark();
+    chatMark(); try { onChatHook(key, wk); } catch {}
   }
   if (action === 'chat' || action === 'chat_send') {
     const list = chats[pk] || [], since = Number(body.since) || 0;
@@ -884,4 +890,4 @@ process.on('SIGINT', async () => { await flush(); await chatFlush(); await wbFlu
 
 const isAdmin = k => VS_ADMINS.includes(String(k || '').toLowerCase());
 const adminNames = () => VS_ADMINS.map(k => accounts[k] && accounts[k].name).filter(Boolean);
-module.exports = { handle, flush, durable, tokenKey, czAcc, czSync, czSeated, setCzRelease, czMaxBet, isAdmin, adminNames };
+module.exports = { setPresence, setChatHook, friendKeys, areFriends, accName, keyOfName: n => keyOf(cleanName(n)), handle, flush, durable, tokenKey, czAcc, czSync, czSeated, setCzRelease, czMaxBet, isAdmin, adminNames };

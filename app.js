@@ -46,8 +46,9 @@ function connect() {
 function send(m) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(m)); }
 function act(a) { send({ t: 'act', a }); }
 function onMsg(m) {
+  if (window.Freunde && Freunde.msg(m)) return; // Freunde: Status, Chat-Hinweise, Einladungen
   if (typeof m.t === 'string' && m.t.startsWith('i_')) { if (window.Insel) Insel.net(m); return; } // Inselreich
-  if (m.t === 'hi') { pid = m.pid; if (konto) send({ t: 'konto', name: konto.name, token: konto.token }); if (window.Insel && Insel.isOpen()) Insel.rejoin(); }
+  if (m.t === 'hi') { pid = m.pid; if (konto) send({ t: 'konto', name: konto.name, token: konto.token, where: hubWhere() }); if (window.Insel && Insel.isOpen()) Insel.rejoin(); }
   else if (m.t === 'rooms') { rooms = m.rooms; if (!room) renderRooms(); if (window.Casino && Casino.isLobby()) Casino.refreshLobby(); }
   else if (m.t === 'room') {
     room = m.room; roomId = room.id; store.set('fsg.room', roomId);
@@ -221,6 +222,31 @@ function openWelt(btn, then) {
   sc.onload = () => { openWelt.busy = false; if (btn) { btn.disabled = false; btn.textContent = 'Spielen'; } const q = openWelt.q; openWelt.q = []; q.forEach(f => f()); };
   sc.onerror = () => { openWelt.busy = false; openWelt.q = []; if (btn) { btn.disabled = false; btn.textContent = 'Spielen'; } toast('Würfelwelt konnte nicht geladen werden.'); sc.remove(); };
   document.body.appendChild(sc);
+}
+/* ---------- Freunde-Menü (freunde.js) ---------- */
+// Wo bin ich gerade? (für den Online-Status bei Freunden)
+function hubWhere() {
+  if (room) return room.game === 'casino' ? 'Casino' : (GAMES.find(g => g.key === room.game) || {}).title || 'Game Hub';
+  if (window.Ritter && Ritter.isOpen()) return 'Ritterlauf'; if (window.Insel && Insel.isOpen()) return 'Inselreich';
+  if (window.Welt && Welt.isOpen()) return 'Würfelwelt'; if (window.Casino && Casino.isLobby && Casino.isLobby()) return 'Casino';
+  return 'Game Hub';
+}
+// Einladung angenommen: Runde beitreten oder das Spiel öffnen
+function acceptInvite(inv) {
+  if (!nick() && konto) $('#nick').value = konto.name.slice(0, 16);
+  if (inv.room) { send({ t: 'join', room: inv.room }); return; }
+  const g = inv.game;
+  if (g === 'Dungeon') location.href = '/dungeon.html';
+  else if (g === 'Inselreich') { if (needNick()) openInsel(null); }
+  else if (g === 'Würfelwelt') openWelt(null);
+  else if (g === 'Ritterlauf') openRitter(null);
+  else if (g === 'Casino') loadCasino(() => Casino.openLobby());
+}
+if (window.Freunde) {
+  Freunde.init({ send, where: 'Game Hub', pos: 'tr', onAccept: acceptInvite,
+    games: () => [...(room ? [{ label: '➜ In meine Runde', game: hubWhere(), room: room.id }] : []), 'Dungeon', 'Inselreich', 'Würfelwelt', 'Ritterlauf', 'Casino'] });
+  setInterval(() => { const w = hubWhere(); Freunde.setWhere(w); Freunde.setHidden(w !== 'Game Hub'); }, 1000);
+  window.addEventListener('fsg-konto', () => { Freunde.refresh(); setTimeout(() => send({ t: 'where', g: hubWhere() }), 300); });
 }
 $('#tiles').addEventListener('click', e => { if (e.target.closest('[data-dungeon]')) { location.href = '/dungeon.html'; return; } const so = e.target.closest('[data-solo]'); if (so) { openRitter(so); return; } const ww = e.target.closest('[data-welt]'); if (ww) { openWelt(ww); return; } if (e.target.closest('[data-casino]')) { loadCasino(() => Casino.openLobby()); return; } const isl = e.target.closest('[data-insel]'); if (isl) { if (needNick()) openInsel(isl); return; } const b = e.target.closest('[data-create]'); if (b && needNick()) send({ t: 'create', game: b.dataset.create }); });
 $('#rooms').addEventListener('click', e => { const b = e.target.closest('[data-join]'); if (b && needNick()) send({ t: 'join', room: b.dataset.join }); });

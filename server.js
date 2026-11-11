@@ -41,6 +41,28 @@ if (konten && konten.czAcc) GAMES.casino.setBank({
   roomLive: (id, k) => !czRelease(k, id),
 });
 if (konten && konten.setCzRelease) konten.setCzRelease(k => czRelease(k));
+
+// ---------- Freunde: Live-Status, Einladungen, Chat-Benachrichtigung ----------
+// Online = mindestens eine offene Verbindung mit diesem Konto; "where" = in welchem Spiel (Hub, Dungeon, Runde …)
+function presenceOf(k) { let on = false, where = null; for (const c of clients) if (c.acc === k) { on = true; if (c.where && (!where || c.where !== 'Game Hub')) where = c.where; } return { on, where }; }
+function sendToAcc(k, m) { let n = 0; for (const c of clients) if (c.acc === k) { send(c, m); n++; } return n; }
+const frPingT = new Map();
+function pingFriends(k) { if (!k || !konten || !konten.friendKeys) return; if (frPingT.has(k)) return; frPingT.set(k, setTimeout(() => { frPingT.delete(k); for (const f of konten.friendKeys(k)) sendToAcc(f, { t: 'fr_ping' }); }, 400)); }
+if (konten && konten.setPresence) { konten.setPresence(presenceOf); konten.setChatHook((from, to, kind) => sendToAcc(to, { t: kind === 'req' ? 'fr_req' : kind === 'fr' ? 'fr_ping' : 'fr_msg', from: konten.accName(from) })); }
+const inviteT = new Map();
+function handleFriendMsg(c, m) {
+  if (m.t === 'where') { const w = clean(m.g, 24) || null; if (w !== c.where) { c.where = w; pingFriends(c.acc); } return true; }
+  if (m.t === 'invite') {
+    if (!c.acc) return send(c, { t: 'err', msg: 'Melde dich mit deinem Konto an, um Freunde einzuladen.' }), true;
+    const tk = konten.keyOfName(String(m.to || '').slice(0, 20)); if (!konten.areFriends(c.acc, tk)) return send(c, { t: 'err', msg: 'Ihr seid nicht befreundet.' }), true;
+    const last = inviteT.get(c.acc + '>' + tk) || 0; if (Date.now() - last < 4000) return true; inviteT.set(c.acc + '>' + tk, Date.now());
+    const game = clean(m.game, 24) || 'Game Hub', r = m.room && rooms.get(String(m.room)), inv = { t: 'invite', id: rid(), from: konten.accName(c.acc), game, room: r ? r.id : null, roomName: r ? r.name : null };
+    const n = sendToAcc(tk, inv); send(c, n ? { t: 'invite_sent', to: konten.accName(tk), game } : { t: 'err', msg: konten.accName(tk) + ' ist gerade offline.' }); return true;
+  }
+  if (m.t === 'invite_answer') { if (!c.acc) return true; const tk = konten.keyOfName(String(m.to || '').slice(0, 20)); if (!konten.areFriends(c.acc, tk)) return true;
+    sendToAcc(tk, { t: 'invite_answer', from: konten.accName(c.acc), ok: !!m.ok, game: clean(m.game, 24) }); return true; }
+  return false;
+}
 const MOVED_HOST = MOVED.replace(/^https?:\/\//i, '');
 if (MOVED) console.log(`Umzugs-Modus: alle Seiten zeigen den Hinweis auf ${MOVED}`);
 const MOVED_PAGE = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -64,7 +86,7 @@ const IDLE_MS = 30 * 60 * 1000; // Räume ohne verbundene Spieler verschwinden n
 
 const STATIC = {
   '/': 'index.html', '/index.html': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css',
-  '/mini.js': 'mini.js', '/ritter.js': 'ritter.js', '/spiele2.js': 'spiele2.js', '/welt.js': 'welt.js', '/casino_ui.js': 'casino_ui.js', '/insel.js': 'insel.js', '/ideen.js': 'ideen.js', '/dungeon.html': 'dungeon.html',
+  '/mini.js': 'mini.js', '/ritter.js': 'ritter.js', '/spiele2.js': 'spiele2.js', '/welt.js': 'welt.js', '/casino_ui.js': 'casino_ui.js', '/insel.js': 'insel.js', '/ideen.js': 'ideen.js', '/dungeon.html': 'dungeon.html', '/freunde.js': 'freunde.js',
 };
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
 
@@ -353,9 +375,10 @@ function handle(c, m) {
     return;
   }
   if (!c.pid) return;
+  if (handleFriendMsg(c, m)) return;
   if (m.t === 'konto') { // Hub-Konto für diese Verbindung (Casino-Jetons liegen beim Konto)
     const k = konten && konten.tokenKey && m.name && m.token ? konten.tokenKey(String(m.name).slice(0, 20), String(m.token).slice(0, 64)) : null;
-    c.acc = k || null; if (k) ACC_OF.set(c.pid, k); else ACC_OF.delete(c.pid);
+    const oldAcc = c.acc; c.acc = k || null; if (k) ACC_OF.set(c.pid, k); else ACC_OF.delete(c.pid); if (m.where) c.where = clean(m.where, 24); if (oldAcc !== c.acc) { pingFriends(oldAcc); pingFriends(c.acc); }
     if (c.room && rooms.get(c.room)) pushRoom(rooms.get(c.room)); broadcastRooms(); // Admin-Schild sofort zeigen
     return;
   }
@@ -448,7 +471,7 @@ wss.on('connection', (ws, req) => {
     try { handle(c, m); } catch (e) { console.error(e); send(c, { t: 'err', msg: 'Da ist etwas schiefgelaufen.' }); }
   });
   ws.on('close', () => {
-    clients.delete(c);
+    clients.delete(c); if (c.acc) pingFriends(c.acc);
     ISL.drop(c);
     const r = rooms.get(c.room);
     if (r) pushRoom(r);
