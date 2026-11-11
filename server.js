@@ -143,8 +143,43 @@ function devOf(req, res) {
   return ''; // neu vergeben: zählt erst ab der nächsten Anfrage
 }
 
+// ---------- Datenverkehr-Protokoll ----------
+// Zählt, wie viele Bytes der Server verschickt (Dateien, API, WebSocket-Nachrichten) und schreibt
+// alle 10 Minuten eine Übersicht ins Render-Log, wenn mehr als 30 MB rausgingen. So sieht man bei
+// einem Ausreißer sofort, welche Datei/Nachricht und welches Gerät dahintersteckt.
+const TRAFFIC = { by: new Map(), dev: new Map(), total: 0, hour: 0, start: Date.now() };
+function countTraffic(key, dev, n) {
+  if (!n) return; TRAFFIC.total += n; TRAFFIC.hour += n;
+  TRAFFIC.by.set(key, (TRAFFIC.by.get(key) || 0) + n);
+  if (dev) TRAFFIC.dev.set(dev, (TRAFFIC.dev.get(dev) || 0) + n);
+}
+{
+  const WS = require('ws').WebSocket, orig = WS.prototype.send;
+  WS.prototype.send = function (data, ...rest) {
+    try { const str = typeof data === 'string' ? data : ''; const m = /"(?:t|type|op|g)"\s*:\s*"([\w-]{1,24})"/.exec(str.slice(0, 200)); countTraffic('ws:' + (m ? m[1] : '?'), this._fsgDev, str ? Buffer.byteLength(str) : (data && data.length) || 0); } catch {}
+    return orig.call(this, data, ...rest);
+  };
+}
+const mb = n => (n / 1048576).toFixed(1) + ' MB';
+setInterval(() => {
+  const min = Math.round((Date.now() - TRAFFIC.start) / 60000);
+  if (TRAFFIC.total > 30 * 1048576) {
+    const top = (m, k) => [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, k).map(([n, v]) => `${n} ${mb(v)}`).join(' · ');
+    console.log(`DATENVERKEHR letzte ${min} min: ${mb(TRAFFIC.total)} | Top: ${top(TRAFFIC.by, 8)} | Top-Geräte: ${top(TRAFFIC.dev, 5)}`);
+  }
+  TRAFFIC.by.clear(); TRAFFIC.dev.clear(); TRAFFIC.total = 0; TRAFFIC.start = Date.now();
+}, 10 * 60e3).unref();
+setInterval(() => { console.log(`Datenverkehr letzte Stunde: ${mb(TRAFFIC.hour)}`); TRAFFIC.hour = 0; }, 60 * 60e3).unref();
+
 const server = http.createServer((req, res) => {
   const url = req.url.split('?')[0];
+  { // Bytes dieser Antwort mitzählen
+    const dm = DEV_RE.exec(req.headers.cookie || ''), dev = dm ? dm[1].slice(0, 6) : String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+    const key = url.startsWith('/api/') ? '/api/' + url.split('/')[2] : url.length > 40 ? url.slice(0, 40) : url;
+    const w = res.write, e = res.end; let n = 0;
+    res.write = function (ch, ...r) { if (ch) n += typeof ch === 'string' ? Buffer.byteLength(ch) : ch.length; return w.call(this, ch, ...r); };
+    res.end = function (ch, ...r) { if (ch && typeof ch !== 'function') n += typeof ch === 'string' ? Buffer.byteLength(ch) : ch.length; countTraffic(key, dev, n); return e.call(this, ch, ...r); };
+  }
   if (url === '/' || url.endsWith('.html') || url.startsWith('/api/')) req.dev = devOf(req, res);
   if (url === '/health') { res.end('ok'); return; }
   if (MOVED) {
@@ -355,7 +390,8 @@ function handle(c, m) {
 
 const ISL = require('./insel_srv.js')(send, konten); // Inselreich: offene Welt für alle
 
-wss.on('connection', ws => {
+wss.on('connection', (ws, req) => {
+  { const dm = DEV_RE.exec((req && req.headers.cookie) || ''); ws._fsgDev = dm ? dm[1].slice(0, 6) : String((req && req.headers['x-forwarded-for']) || '').split(',')[0].trim(); }
   const c = { ws, pid: null, name: '', room: null, alive: true };
   clients.add(c);
   ws.on('pong', () => { c.alive = true; });
