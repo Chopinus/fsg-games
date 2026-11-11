@@ -525,6 +525,8 @@ const czAgeDays = a => (a && a.created ? (Date.now() - a.created) / 864e5 : Infi
 function czLimit(key) { const d = czAgeDays(accounts[key]); for (const [days, n] of CZ_AGE_LIM) if (d < days) return { lim: n, next: CZ_AGE_LIM.find(x => x[0] > d && x[1] > n) ? accounts[key].created + days * 864e5 : 0, nextLim: (CZ_AGE_LIM.find(x => x[1] > n) || [0, CZ_LIM_MAX])[1] }; return { lim: CZ_LIM_MAX, next: 0, nextLim: 0 }; }
 const czMaxBet = key => czLimit(key).lim;
 const czSeated = new Map(); // Konto -> Raum, solange es an einem Tisch sitzt (nur im Speicher)
+let czRelease = () => false; // vom Server gesetzt: gibt einen verwaisten Tischplatz frei
+const setCzRelease = fn => { czRelease = fn; };
 const czDay = () => new Date(Date.now() + 3600e3).toISOString().slice(0, 10);
 function czAcc(key) {
   const a = accounts[key]; if (!a) return null;
@@ -565,6 +567,7 @@ async function czOldLoad() {
   console.log(`Alte Casino-Stände: ${Object.keys(best).length} Namen, ${cheat.size} ausgeschlossen`);
 }
 function czState(key, acc) {
+  if (czSeated.has(key)) czRelease(key); // verwaisten Platz freigeben (Jetons kommen zurück aufs Konto)
   const z = czAcc(key), now = Date.now();
   // einmalige Gutschriften – nicht während man am Tisch sitzt, sonst überschreibt der Platz sie
   let gift = 0, why = '', pops = []; acc.gifts = acc.gifts || []; // pops: Geschenke mit eigenem kleinen Fenster
@@ -606,7 +609,7 @@ function czAction(action, key, acc, body) {
     z.w += back; z.m = Math.max(z.m || 0, z.w - (z.d || 0)); z.t = Date.now(); markDirty();
     return [200, { ...czState(key, acc), gift: (st.gift || 0) + back, why: `dein alter Stand auf diesem Gerät (${Math.min(CZ_REST_MAX, Math.floor(Number(e.c) || 0)).toLocaleString('de-DE')} Jetons, höchstens 50.000)` }];
   }
-  if (czSeated.has(key) && action !== 'cz_eq') return [409, { error: 'Du sitzt noch an einem Tisch. Steh zuerst auf.' }];
+  if (czSeated.has(key) && action !== 'cz_eq' && !czRelease(key)) return [409, { error: 'Du sitzt noch an einem Tisch. Steh zuerst auf.' }];
   if (action === 'cz_bonus') { if (z.day === czDay()) return [409, { error: 'Den Tagesbonus gibt es morgen wieder.' }]; z.day = czDay(); z.w += 2000; return ok(); }
   if (action === 'cz_help') { if (z.w >= 100 || Date.now() - (z.help || 0) < 3600e3) return [409, { error: 'Starthilfe gibt es nur, wenn du fast nichts mehr hast – höchstens einmal pro Stunde.' }]; z.help = Date.now(); z.w += 1000; return ok(); }
   if (action === 'cz_loan') { const n = Math.min(Math.floor(Number(body.n) || 0), CZ_DEBT_MAX - (z.d || 0)); if (n <= 0) return [409, { error: 'Dein Kreditrahmen ist ausgeschöpft.' }]; z.d = (z.d || 0) + n; z.w += n; return ok(); }
@@ -881,4 +884,4 @@ process.on('SIGINT', async () => { await flush(); await chatFlush(); await wbFlu
 
 const isAdmin = k => VS_ADMINS.includes(String(k || '').toLowerCase());
 const adminNames = () => VS_ADMINS.map(k => accounts[k] && accounts[k].name).filter(Boolean);
-module.exports = { handle, flush, durable, tokenKey, czAcc, czSync, czSeated, czMaxBet, isAdmin, adminNames };
+module.exports = { handle, flush, durable, tokenKey, czAcc, czSync, czSeated, setCzRelease, czMaxBet, isAdmin, adminNames };

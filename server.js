@@ -38,8 +38,9 @@ if (konten && konten.czAcc) GAMES.casino.setBank({
   seated: konten.czSeated,
   isAdmin: k => konten.isAdmin(k),
   maxBet: k => konten.czMaxBet(k),
-  roomLive: (id, k) => { const r = rooms.get(id); return !!(r && r.state && (r.state.seats || []).some(x => x && x.acc === k)); },
+  roomLive: (id, k) => !czRelease(k, id),
 });
+if (konten && konten.setCzRelease) konten.setCzRelease(k => czRelease(k));
 const MOVED_HOST = MOVED.replace(/^https?:\/\//i, '');
 if (MOVED) console.log(`Umzugs-Modus: alle Seiten zeigen den Hinweis auf ${MOVED}`);
 const MOVED_PAGE = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -316,6 +317,18 @@ function deleteRoom(r) {
   for (const c of clients) if (c.room === r.id) { c.room = null; send(c, { t: 'closed' }); }
   broadcastRooms();
 }
+// Casino: Sitzt ein Konto noch an einem Tisch, an dem es gar nicht mehr ist (Zum Hub gegangen, Verbindung weg, Raum weg),
+// wird der Platz freigegeben und die Jetons kommen aufs Konto. Gibt true zurück, wenn das Konto jetzt frei ist.
+function czRelease(k, rid) {
+  const S = konten && konten.czSeated; if (!S) return true;
+  rid = rid || S.get(k); if (!rid) return true;
+  const r = rooms.get(rid), seat = r && r.state && (r.state.seats || []).find(x => x && x.acc === k);
+  if (!seat) { if (S.get(k) === rid) S.delete(k); return true; }
+  if ([...clients].some(c => c.pid === seat.id && c.room === r.id)) return false; // wirklich noch am Tisch
+  if (r.players.some(p => p.id === seat.id)) leaveRoom(r, seat.id); else { try { GAMES.casino.onLeave(r, seat.id); } catch (e) { console.error(e); } pushRoom(r); }
+  if (S.get(k) === rid) S.delete(k);
+  return true;
+}
 function leaveRoom(r, pid) {
   const i = r.players.findIndex(p => p.id === pid);
   if (i < 0) return;
@@ -386,7 +399,7 @@ function handle(c, m) {
     return;
   }
   const r = rooms.get(c.room);
-  if (m.t === 'hub') { c.room = null; send(c, { t: 'closed' }); if (r) pushRoom(r); return; }
+  if (m.t === 'hub') { c.room = null; send(c, { t: 'closed' }); if (r && r.game === 'casino') leaveRoom(r, c.pid); else if (r) pushRoom(r); return; } // Casino: Zum Hub = aufstehen
   if (!r) return;
   const G = GAMES[r.game];
   if (m.t === 'leave') { c.room = null; send(c, { t: 'closed' }); leaveRoom(r, c.pid); return; }
