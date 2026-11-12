@@ -62,7 +62,9 @@ function onMsg(m) {
 
 /* ---------- Helfer ---------- */
 // Admin-Schild: goldener Name + rotes Ⓐ (wie ©) oben rechts. Der Server sagt, wer Admin ist (über das angemeldete Konto, nicht über den Namen).
-const admHTML = (name, adm) => (adm ? `<span class="adm-name">${esc(name)}</span><sup class="adm-tag" title="Admin">A</sup>` : esc(name));
+// Ausgeschaltet (Wunsch des Admins, 12.11.2026): Namen werden überall normal angezeigt. Zum Wieder-Einschalten auf true setzen.
+const SHOW_ADMIN_BADGE = false;
+const admHTML = (name, adm) => (adm && SHOW_ADMIN_BADGE ? `<span class="adm-name">${esc(name)}</span><sup class="adm-tag" title="Admin">A</sup>` : esc(name));
 window.admHTML = admHTML;
 let FSG_ADMINS = []; // Anzeigenamen der Admin-Konten (Ritterlauf zeigt Kontonamen)
 fetch('/api/status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(r => r.json()).then(j => { FSG_ADMINS = (j && j.admins) || []; renderAcct(); admScan(); }).catch(() => {});
@@ -79,7 +81,7 @@ function admDecorate(root, names) {
 }
 let admBusy = false;
 function admScan() {
-  if (admBusy) return; admBusy = true;
+  if (!SHOW_ADMIN_BADGE || admBusy) return; admBusy = true;
   try {
     const solo = $('#solo');
     if (solo && !solo.hidden && window.Ritter && Ritter.isOpen && Ritter.isOpen()) admDecorate(solo, FSG_ADMINS); // Ritterlauf: Kontonamen

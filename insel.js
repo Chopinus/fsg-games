@@ -3673,6 +3673,7 @@
     }
   }
   function nameTag(x, y, name, gold, adm) {
+    adm = false; // Admin-Schild ausgeblendet (12.11.2026)
     ctx.font = `600 ${Math.round(4.2 * S)}px system-ui,sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
     if (adm) { // Admin: goldener Name und rotes Ⓐ oben rechts (wie ©)
       const w = ctx.measureText(name).width + 4 * S;
