@@ -66,7 +66,7 @@
   function formHTML() {
     const k = konto();
     if (!k) return `<div class="vz-note">🔐 Melde dich oben im Hub mit deinem Konto an, um Ideen einzureichen und zu bewerten.</div>`;
-    if (!formOpen) return `<button class="btn" data-vz="form" ${D && !D.left ? 'disabled' : ''}>💡 Neue Idee einreichen</button><span class="vz-small">${D ? `Noch ${D.left} von ${D.week} diese Woche` : ''}</span>`;
+    if (!formOpen) return `<button class="btn" data-vz="form" ${D && !D.left ? 'disabled' : ''}>💡 Neue Idee einreichen</button><span class="vz-small">${D && D.left ? 'Beliebig viele Ideen möglich' : ''}</span>`;
     return `<form class="vz-form" id="vzForm">
       <div class="vz-row"><div class="field"><label for="vzG">Spiel</label><select id="vzG" name="g"><option value="">Bitte wählen …</option>${games().map(g => `<option ${draft.g === g ? 'selected' : ''}>${h(g)}</option>`).join('')}</select></div>
       <div class="field"><label for="vzC">Art</label><select id="vzC" name="c">${Object.entries((D && D.cats) || {}).map(([k2, l]) => `<option value="${k2}" ${draft.c === k2 ? 'selected' : ''}>${h(l)}</option>`).join('')}</select></div></div>

@@ -732,8 +732,7 @@ async function vsAction(action, key, acc, body) {
     const old = now - 30 * 864e5;
     const list = vs.list.filter(v => (vsPublic(v) && !(v.st === 'abgelehnt' && v.ts < old)) || (authed && (v.k === key || admin)))
       .slice(-300).map(v => vsView(v, authed ? key : '', admin));
-    const used = authed ? vs.list.filter(v => v.k === key && now - v.ts < 7 * 864e5).length : 0;
-    return [200, { list, cats: VS_CATS, admin, left: authed ? Math.max(0, VS_WEEK - used) : 0, week: VS_WEEK }];
+    return [200, { list, cats: VS_CATS, admin, left: authed ? 999 : 0, week: 0 }];
   }
   if (!authed) return [401, { error: 'Melde dich im Hub mit deinem Konto an.' }];
   if (action === 'vs_add') {
@@ -742,7 +741,8 @@ async function vsAction(action, key, acc, body) {
     if (t.length < 4) return [400, { error: 'Gib deinem Vorschlag einen kurzen Titel (mindestens 4 Zeichen).' }];
     if (x.length < 15) return [400, { error: 'Beschreib deinen Vorschlag etwas genauer (mindestens 15 Zeichen).' }];
     if (!g) return [400, { error: 'Wähle aus, zu welchem Spiel der Vorschlag gehört.' }];
-    if (vs.list.filter(v => v.k === key && now - v.ts < 7 * 864e5).length >= VS_WEEK) return [429, { error: `Du kannst höchstens ${VS_WEEK} Vorschläge pro Woche einreichen.` }];
+    // Kein Limit pro Spieler mehr – nur ein kurzer Abstand gegen versehentliches Doppelt-Absenden
+    if (vs.list.some(v => v.k === key && now - v.ts < 15e3)) return [429, { error: 'Kurz warten – dein letzter Vorschlag ist gerade erst angekommen.' }];
     if (vs.list.filter(v => v.st === 'neu').length >= VS_MAX_NEW) return [429, { error: 'Gerade warten sehr viele Vorschläge auf die Prüfung. Versuch es morgen wieder.' }];
     const v = { id: 'v' + (++vs.seq), k: key, n: acc.name, g, c, t, x, st: 'neu', ts: now, votes: [] };
     vs.list.push(v); vsMark();
