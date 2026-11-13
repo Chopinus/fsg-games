@@ -518,6 +518,7 @@ const CZ_GIFTS = [
   { id: 'g-2026-11-13-cp', k: 'choptmis prime', n: 100000, pop: true },
   { id: 'g-2026-11-13-chop', k: 'chop', n: 100000, pop: true, msg: 'Admin-Geschenk' },
   { id: 'g-2026-11-13-maestro2', k: 'maestro', n: 10000000000, pop: true, msg: 'Geschenk vom Admin – viel Glück am Tisch! 🍀' },
+  { id: 'g-2026-11-13-maxisfuss', k: 'maxis fuß', n: 1e12, pop: true, msg: 'Geschenk vom Admin – viel Glück am Tisch! 🍀' },
 ];
 
 // ---------- Casino-Konto: Jetons liegen auf dem Server beim Hub-Konto (nicht mehr im Browser) ----------
@@ -585,7 +586,7 @@ function czState(key, acc) {
   // einmalige Gutschriften – nicht während man am Tisch sitzt, sonst überschreibt der Platz sie
   let gift = 0, why = '', pops = []; acc.gifts = acc.gifts || []; // pops: Geschenke mit eigenem kleinen Fenster
   if (!czSeated.has(key)) {
-    for (const g of CZ_GIFTS) if (g.k === key && !acc.gifts.includes(g.id)) { acc.gifts.push(g.id); z.w += g.n; markDirty(); if (g.pop) pops.push({ n: g.n, msg: g.msg || '' }); else { gift += g.n; why = g.why; } }
+    for (const g of CZ_GIFTS) if (g.k === key && !acc.gifts.includes(g.id)) { acc.gifts.push(g.id); z.w = Math.min(1e12, z.w + g.n); markDirty(); if (g.pop) pops.push({ n: g.n, msg: g.msg || '' }); else { gift += g.n; why = g.why; } }
     if (czOld && !acc.gifts.includes(CZ_REST_ID)) {
       acc.gifts.push(CZ_REST_ID); markDirty();
       const back = Math.min(CZ_REST_MAX, czOld[key] || 0) - CZ_START;
