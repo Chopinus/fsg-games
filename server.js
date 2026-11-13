@@ -41,6 +41,8 @@ if (konten && konten.czAcc) GAMES.casino.setBank({
   roomLive: (id, k) => !czRelease(k, id),
 });
 if (konten && konten.setCzRelease) konten.setCzRelease(k => czRelease(k));
+// Admin hat den Jetonstand gesetzt: auch den Platz am Tisch anpassen, sonst überschreibt der Tisch den neuen Stand
+if (konten && konten.setCzSetHook) konten.setCzSetHook((k, w) => { for (const r of rooms.values()) { if (r.game !== 'casino' || !r.state || !r.state.seats) continue; for (const x of r.state.seats) if (x && x.acc === k) { x.chips = w; if (x.stack != null) x.stack = 0; pushRoom(r); } } });
 
 // ---------- Freunde: Live-Status, Einladungen, Chat-Benachrichtigung ----------
 // Online = mindestens eine offene Verbindung mit diesem Konto; "where" = in welchem Spiel (Hub, Dungeon, Runde …)

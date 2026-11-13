@@ -542,9 +542,21 @@ const czSeated = new Map(); // Konto -> Raum, solange es an einem Tisch sitzt (n
 let czRelease = () => false; // vom Server gesetzt: gibt einen verwaisten Tischplatz frei
 const setCzRelease = fn => { czRelease = fn; };
 const czDay = () => new Date(Date.now() + 3600e3).toISOString().slice(0, 10);
+// Admin: Jetons eines Kontos einmalig auf einen festen Stand setzen (auch wenn es gerade am Tisch sitzt)
+const CZ_SET = [
+  { id: 's-2026-11-13-maestro', k: 'maestro', w: 200000 },
+  { id: 's-2026-11-13-maxisfuss', k: 'maxis fuß', w: 200000 },
+  { id: 's-2026-11-13-lauraskf', k: 'lauras käßefuß', w: 100000 },
+];
+let czSetHook = () => {}; const setCzSetHook = fn => { czSetHook = fn; };
 function czAcc(key) {
   const a = accounts[key]; if (!a) return null;
   if (!a.cz) { a.cz = { w: CZ_START, d: 0, m: CZ_START, own: [], eq: {}, day: '', help: 0, work: 0, t: Date.now() }; markDirty(); }
+  for (const s of CZ_SET) if (s.k === key && !(a.gifts || []).includes(s.id)) {
+    (a.gifts = a.gifts || []).push(s.id);
+    for (const g of CZ_GIFTS) if (g.k === key && !a.gifts.includes(g.id)) a.gifts.push(g.id); // offene Geschenke verfallen
+    a.cz.w = s.w; a.cz.d = 0; a.cz.m = s.w; a.cz.t = Date.now(); markDirty(); try { czSetHook(key, s.w); } catch {}
+  }
   return a.cz;
 }
 function czSync(key, w) { // vom Tisch: aktueller Stand des Platzes
@@ -902,4 +914,4 @@ process.on('SIGINT', async () => { await flush(); await chatFlush(); await wbFlu
 
 const isAdmin = k => VS_ADMINS.includes(String(k || '').toLowerCase());
 const adminNames = () => VS_ADMINS.map(k => accounts[k] && accounts[k].name).filter(Boolean);
-module.exports = { setPresence, setChatHook, friendKeys, areFriends, accName, keyOfName: n => keyOf(cleanName(n)), handle, flush, durable, tokenKey, czAcc, czSync, czSeated, setCzRelease, czMaxBet, isAdmin, adminNames };
+module.exports = { setCzSetHook, setPresence, setChatHook, friendKeys, areFriends, accName, keyOfName: n => keyOf(cleanName(n)), handle, flush, durable, tokenKey, czAcc, czSync, czSeated, setCzRelease, czMaxBet, isAdmin, adminNames };
