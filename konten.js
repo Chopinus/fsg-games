@@ -519,6 +519,7 @@ const CZ_GIFTS = [
   { id: 'g-2026-11-13-chop', k: 'chop', n: 100000, pop: true, msg: 'Admin-Geschenk' },
   { id: 'g-2026-11-13-maestro2', k: 'maestro', n: 10000000000, pop: true, msg: 'Geschenk vom Admin – viel Glück am Tisch! 🍀' },
   { id: 'g-2026-11-13-maxisfuss', k: 'maxis fuß', n: 1e12, pop: true, msg: 'Geschenk vom Admin – viel Glück am Tisch! 🍀' },
+  { id: 'g-2026-11-13-laurakf', k: 'lauras käsefuß', n: 100000, pop: true, msg: 'Geschenk vom Admin – viel Glück am Tisch! 🍀' },
 ];
 
 // ---------- Casino-Konto: Jetons liegen auf dem Server beim Hub-Konto (nicht mehr im Browser) ----------
@@ -546,7 +547,6 @@ const czDay = () => new Date(Date.now() + 3600e3).toISOString().slice(0, 10);
 const CZ_SET = [
   { id: 's-2026-11-13-maestro', k: 'maestro', w: 200000 },
   { id: 's-2026-11-13-maxisfuss', k: 'maxis fuß', w: 200000 },
-  { id: 's-2026-11-13-lauraskf', k: 'lauras käßefuß', w: 100000 },
 ];
 let czSetHook = () => {}; const setCzSetHook = fn => { czSetHook = fn; };
 function czAcc(key) {
