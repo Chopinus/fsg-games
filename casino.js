@@ -19,6 +19,9 @@ const clampChips = v => Math.max(0, Math.min(MAXC, Math.floor(Number(v) || 0)));
 const MAXBET = Infinity; // kein allgemeiner Höchsteinsatz mehr – nur junge Konten sind begrenzt (siehe limOf)
 let BANK = null; // vom Server gesetzt: Konto je Spieler und Jetons auf dem Server
 // Einsatzlimit je Platz: nur junge Konten sind begrenzt (wächst mit dem Kontoalter, nach einer Woche unbegrenzt)
+// Admin-Strafe: Konten (als Hash) mit halbierter Gewinnchance bei Spielautomat und Glücksrad
+const MALUS = new Set(['c480041a79f5ef45']);
+const malus = x => !!(x && x.acc && MALUS.has(require('crypto').createHash('sha256').update(String(x.acc)).digest('hex').slice(0, 16)));
 const limOf = x => { const l = x && x.acc && BANK && BANK.maxBet ? BANK.maxBet(x.acc) : 0; return l ? Math.max(10, l) : MAXBET; };
 const limMsg = x => { const l = limOf(x); return `Höchsteinsatz ${l.toLocaleString('de-DE')} pro Runde${l < MAXBET ? ' – das Limit steigt mit dem Alter deines Kontos' : ''}.`; };
 const roundBets = x => (x.bet || 0) + Object.values(x.bets || {}).reduce((a, b) => a + b, 0) + (x.hands || []).reduce((a, h) => a + (h.res ? 0 : h.bet || 0), 0);
@@ -256,7 +259,7 @@ const SLOT = {
   act(r, x, a) {
     if (a.type !== 'spin') return;
     const bet = clampChips(a.amount); if (bet < 10) return 'Mindesteinsatz 10.'; if (bet > x.chips) return 'Nicht genug Jetons.'; if (bet > limOf(x)) return limMsg(x);
-    x.chips -= bet; const res = SLOT.spin(bet); x.chips = clampChips(x.chips + res.pay); x.win = res.pay - bet;
+    x.chips -= bet; let res = SLOT.spin(bet); if (res.pay > 0 && malus(x) && Math.random() < .79) res = SLOT.spin(bet); // halbiert die Gewinnquote x.chips = clampChips(x.chips + res.pay); x.win = res.pay - bet;
     x.slot = { id: (x.slot ? x.slot.id : 0) + 1, ...res, bet };
     if (res.pay >= bet * 15) log(r.state, `${x.name} knackt den Automaten: ${res.pay.toLocaleString('de-DE')}!`);
   },
@@ -267,12 +270,14 @@ const SLOT = {
 // Felder mit Multiplikator von ×0,1 bis ×10. Die Breite eines Feldes ist genau seine Gewinnchance (w von 100). Rückfluss etwa 97 %, fast jede zweite Drehung gewinnt.
 const RAD_SEGS = [[10, 0.8], [0.2, 5], [1.2, 6.75], [0.5, 4], [2, 2], [0.1, 6.5], [1.5, 5], [0.2, 5], [1.2, 6.75], [1, 5], [5, 1.2], [0.5, 4], [1.2, 6.75], [0.2, 5], [3, 2], [0.1, 6.5], [1.5, 5], [0.5, 4], [1.2, 6.75], [1, 5], [2, 2], [0.2, 5]];
 const RAD_W = RAD_SEGS.reduce((a, s) => a + s[1], 0);
+const RAD_MALUS_Q = Math.min(1, .5 / (1 - RAD_SEGS.filter(s => s[0] >= 1).reduce((a, s) => a + s[1], 0) / RAD_W)); // so wird die Gewinnchance genau halbiert
 const RAD = {
   start(r) { r.state.phase = 'free'; },
   act(r, x, a) {
     if (a.type !== 'spin') return;
     const bet = clampChips(a.amount); if (bet < 10) return 'Mindesteinsatz 10.'; if (bet > x.chips) return 'Nicht genug Jetons.'; if (bet > limOf(x)) return limMsg(x);
-    let v = Math.random() * RAD_W, i = 0; for (; i < RAD_SEGS.length - 1; i++) { v -= RAD_SEGS[i][1]; if (v <= 0) break; }
+    const roll = () => { let v = Math.random() * RAD_W, j = 0; for (; j < RAD_SEGS.length - 1; j++) { v -= RAD_SEGS[j][1]; if (v <= 0) break; } return j; };
+    let i = roll(); if (RAD_SEGS[i][0] >= 1 && malus(x) && Math.random() < RAD_MALUS_Q) i = roll();
     const m = RAD_SEGS[i][0], pay = Math.floor(bet * m);
     x.chips = clampChips(x.chips - bet + pay); x.win = pay - bet;
     x.rad = { id: (x.rad ? x.rad.id : 0) + 1, i, m, pay, bet, off: Math.random() };
