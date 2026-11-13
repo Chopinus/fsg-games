@@ -534,7 +534,7 @@ const CZ_JOBS = { mine: 1400, teller: 900, putzen: 2200 }; // so schnell kann ma
 // Einsatzlimit wächst mit dem Alter des Kontos: Neue Konten so lange neu anlegen, bis eins Glück hat, lohnt sich so nicht.
 // Konten von vor dieser Regel (ohne created) gelten als alt.
 // Neue Konten: am ersten Tag höchstens 1.000 pro Runde, danach unbegrenzt. Alle Konten, die es am 13.11.2026 schon gab, sind sofort unbegrenzt.
-const CZ_AGE_LIM = [[1, 1000]], CZ_LIM_FREE_BEFORE = 1794560047429, CZ_LIM_MAX = 0, CZ_BOARD_DAYS = 3; // 0 = unbegrenzt
+const CZ_AGE_LIM = [[1, 1000]], CZ_LIM_FREE_BEFORE = 1794560047429, CZ_LIM_MAX = 0, CZ_BOARD_DAYS = 0; // 0 = unbegrenzt · Rangliste: jedes Konto sofort sichtbar
 const czAgeDays = a => (a && a.created ? (Date.now() - a.created) / 864e5 : Infinity);
 function czLimit(key) { const A = accounts[key]; if (A && (!A.created || A.created < CZ_LIM_FREE_BEFORE)) return { lim: CZ_LIM_MAX, next: 0, nextLim: 0 }; const d = czAgeDays(A); for (const [days, n] of CZ_AGE_LIM) if (d < days) return { lim: n, next: CZ_AGE_LIM.find(x => x[0] > d && x[1] > n) ? accounts[key].created + days * 864e5 : 0, nextLim: (CZ_AGE_LIM.find(x => x[1] > n) || [0, CZ_LIM_MAX])[1] }; return { lim: CZ_LIM_MAX, next: 0, nextLim: 0 }; }
 const czMaxBet = key => czLimit(key).lim;
@@ -609,7 +609,7 @@ function czState(key, acc) {
   return { pops, lim: L.lim, limNext: L.next, limNextN: L.nextLim, boardFrom: young ? acc.created + CZ_BOARD_DAYS * 864e5 : 0, name: acc.name, w: z.w, d: z.d || 0, m: z.m || 0, bonus: z.day !== czDay(), help: z.w < 100 && now - (z.help || 0) > 3600e3, own: z.own || [], eq: z.eq || {}, work: z.work || 0, seated: czSeated.has(key), gift, why };
 }
 function czTop(key) {
-  const old = Date.now() - 30 * 864e5, all = Object.entries(accounts).filter(([, a]) => a.cz && czAgeDays(a) >= CZ_BOARD_DAYS); // Rangliste erst ab 3 Tage altem Konto
+  const old = Date.now() - 30 * 864e5, all = Object.entries(accounts).filter(([, a]) => a.cz && czAgeDays(a) >= CZ_BOARD_DAYS);
   const live = all.filter(([, a]) => (a.cz.t || 0) > old).sort((a, b) => (b[1].cz.w - (b[1].cz.d || 0)) - (a[1].cz.w - (a[1].cz.d || 0)));
   const best = all.slice().sort((a, b) => (b[1].cz.m || 0) - (a[1].cz.m || 0));
   const pack = (list, f) => ({ top: list.slice(0, 50).map(([k, a]) => ({ n: a.name, c: f(a.cz), b: (a.cz.eq && a.cz.eq.badge) || '', me: k === key, adm: VS_ADMINS.includes(k) })), rank: key ? list.findIndex(([k]) => k === key) + 1 : 0, mine: key && accounts[key] && accounts[key].cz ? f(accounts[key].cz) : 0, players: list.length });
