@@ -531,9 +531,10 @@ const CZ_PRICES = {
 const CZ_JOBS = { mine: 1400, teller: 900, putzen: 2200 }; // so schnell kann man frühestens fertig sein (ms)
 // Einsatzlimit wächst mit dem Alter des Kontos: Neue Konten so lange neu anlegen, bis eins Glück hat, lohnt sich so nicht.
 // Konten von vor dieser Regel (ohne created) gelten als alt.
-const CZ_AGE_LIM = [[1, 1000], [2, 2500], [3, 5000], [5, 10000], [7, 25000]], CZ_LIM_MAX = 0, CZ_BOARD_DAYS = 3; // 0 = unbegrenzt
+// Neue Konten: am ersten Tag höchstens 1.000 pro Runde, danach unbegrenzt. Alle Konten, die es am 13.11.2026 schon gab, sind sofort unbegrenzt.
+const CZ_AGE_LIM = [[1, 1000]], CZ_LIM_FREE_BEFORE = 1794560047429, CZ_LIM_MAX = 0, CZ_BOARD_DAYS = 3; // 0 = unbegrenzt
 const czAgeDays = a => (a && a.created ? (Date.now() - a.created) / 864e5 : Infinity);
-function czLimit(key) { const d = czAgeDays(accounts[key]); for (const [days, n] of CZ_AGE_LIM) if (d < days) return { lim: n, next: CZ_AGE_LIM.find(x => x[0] > d && x[1] > n) ? accounts[key].created + days * 864e5 : 0, nextLim: (CZ_AGE_LIM.find(x => x[1] > n) || [0, CZ_LIM_MAX])[1] }; return { lim: CZ_LIM_MAX, next: 0, nextLim: 0 }; }
+function czLimit(key) { const A = accounts[key]; if (A && (!A.created || A.created < CZ_LIM_FREE_BEFORE)) return { lim: CZ_LIM_MAX, next: 0, nextLim: 0 }; const d = czAgeDays(A); for (const [days, n] of CZ_AGE_LIM) if (d < days) return { lim: n, next: CZ_AGE_LIM.find(x => x[0] > d && x[1] > n) ? accounts[key].created + days * 864e5 : 0, nextLim: (CZ_AGE_LIM.find(x => x[1] > n) || [0, CZ_LIM_MAX])[1] }; return { lim: CZ_LIM_MAX, next: 0, nextLim: 0 }; }
 const czMaxBet = key => czLimit(key).lim;
 const czSeated = new Map(); // Konto -> Raum, solange es an einem Tisch sitzt (nur im Speicher)
 let czRelease = () => false; // vom Server gesetzt: gibt einen verwaisten Tischplatz frei

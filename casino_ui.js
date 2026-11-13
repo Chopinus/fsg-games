@@ -27,7 +27,7 @@
       <p><b>Deine Jetons liegen jetzt bei deinem Hub-Konto</b> auf dem Server – nicht mehr auf dem Gerät. Du hast auf jedem Gerät denselben Stand, und er geht nicht mehr verloren.</p>
       <p><b>Neustart:</b> Weil sich viele über neue Konten Millionen erschummelt hatten, haben alle wieder bei 10.000 Jetons angefangen. Auch die Rangliste fängt neu an.</p>
       <p><b>Alte Stände:</b> Wer vor der Umstellung Jetons hatte, bekommt seinen alten Stand einmalig zurück – bis höchstens 50.000. Öffne das Casino dafür auf dem <b>Gerät, auf dem du damals gespielt hast</b>, angemeldet mit deinem Konto. Wer über 1 Million hatte, bekommt nichts zurück.</p>
-      ${g}<p class="cz-note">Spielen geht nur noch mit Hub-Konto. Neue Konten haben ein Einsatzlimit, das mit dem Alter des Kontos wächst (1.000 am ersten Tag, ab 7 Tagen unbegrenzt). In der Rangliste erscheinen Konten ab 3 Tagen.</p>
+      ${g}<p class="cz-note">Spielen geht nur noch mit Hub-Konto. Neue Konten können am ersten Tag höchstens 1.000 pro Runde setzen, danach ist der Einsatz unbegrenzt. In der Rangliste erscheinen Konten ab 3 Tagen.</p>
       <button class="cz-btn" data-cz="infook">Alles klar</button></div></div>`;
   }
   function sendKonto() { const k = konto(); if (typeof send === 'function') send(k ? { t: 'konto', name: k.name, token: k.token } : { t: 'konto' }); }
@@ -455,7 +455,7 @@
         <div class="cz-wallet">${chipHTML(1000, '', 'tabindex="-1"')}<div><small>DEINE JETONS</small><b data-cz-wallet>${fmtN(wallet)}</b></div></div></div>
       <div class="cz-ltabs">${[...(W.job ? [['work', '⛏️ Schicht']] : []), ['games', '🎰 Spiele'], ['shop', '🛍️ Shop'], ['bank', '🏦 Bank' + (debt ? ' · ' + short(debt) : '')], ['board', '🏆 Rangliste']].map(([k, t]) => `<button class="cz-btn small ${lobbyTab === k ? '' : 'dark'}" data-cz-tab="${k}">${t}</button>`).join('')}</div>
       ${lobbyTab === 'work' ? workHTML() : lobbyTab === 'shop' ? shopHTML() : lobbyTab === 'bank' ? bankHTML() : lobbyTab === 'board' ? '<div class="cz-sec">🏆 Rangliste</div><div id="czBoard"></div>' : `<div class="cz-toprow" style="justify-content:flex-start">
-        ${CZ && CZ.lim ? `<span class="cz-note cz-lim">🔰 Neues Konto: Höchsteinsatz <b>${fmtN(CZ.lim)}</b> pro Runde${CZ.limNext ? ` · ab ${new Date(CZ.limNext).toLocaleString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} Uhr ${CZ.limNextN ? fmtN(CZ.limNextN) : 'unbegrenzt'}` : ''} – ab 7 Tagen unbegrenzt.</span>` : ''}
+        ${CZ && CZ.lim ? `<span class="cz-note cz-lim">🔰 Neues Konto: Höchsteinsatz <b>${fmtN(CZ.lim)}</b> pro Runde${CZ.limNext ? ` · ab ${new Date(CZ.limNext).toLocaleString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} Uhr ${CZ.limNextN ? fmtN(CZ.limNextN) : 'unbegrenzt'}` : ''} – nach 24 Stunden unbegrenzt.</span>` : ''}
         ${bonus ? '<button class="cz-btn small" data-cz="bonus">🎁 Tagesbonus: 2.000 Jetons</button>' : '<span class="cz-note">Tagesbonus abgeholt – morgen gibt es neuen.</span>'}
         ${helpOk ? '<button class="cz-btn small dark" data-cz="help">Pleite? 1.000 Jetons Starthilfe</button>' : ''}
       </div>
