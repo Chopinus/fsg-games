@@ -37,6 +37,10 @@ function schedule(r, ms, fn) {
   }, ms);
 }
 const humans = s => s.seats.filter(x => x && !x.bot);
+// Tisch mit genau einem echten Spieler, der den Malus hat (nur dann wirkt er bei gemeinsamen Ergebnissen)
+const soloMalus = s => { const hs = humans(s); return hs.length === 1 && malus(hs[0]) ? hs[0] : null; };
+// Ergebnis neu ziehen, wenn der Malus-Spieler gewinnen würde – so oft, dass seine Gewinnchance halbiert wird
+const malusQ = p => Math.min(1, .5 / Math.max(.01, 1 - p));
 const seatOf = (s, id) => s.seats.findIndex(x => x && x.id === id);
 // Tische ohne Aktion eines echten Spielers pausieren nach 8 Minuten (sonst spielen Bots ewig weiter)
 function idleStop(r) { const s = r.state; if (now() - (s.touched || 0) > 8 * 60e3) { s.paused = true; s.phase = 'paused'; s.ends = null; clearTimeout(r.timer); return true; } return false; }
@@ -57,6 +61,12 @@ const BJ = {
   val(cards) { let v = 0, a = 0; for (const c of cards) { const r = c[0]; if (r === 'A') { a++; v += 11; } else v += 'TJQK'.includes(r) ? 10 : +r; } while (v > 21 && a) { v -= 10; a--; } return { v, soft: a > 0 }; },
   bj: cards => cards.length === 2 && BJ.val(cards).v === 21,
   draw(s) { if (s.shoe.length < 60) { s.shoe = deck(6); log(s, 'Neue Karten werden gemischt.'); } return s.shoe.pop(); },
+  // Malus-Tisch: von zwei Karten die schlechtere für den Spieler bzw. die bessere für die Bank (andere Karte zurück unter den Stapel)
+  drawM(s, cards, forDealer) {
+    const a = BJ.draw(s); if (!soloMalus(s) || Math.random() < .1) return a; const b = BJ.draw(s);
+    const sc = c => { const v = BJ.val([...cards, c]).v; return forDealer ? (v > 21 ? -1 : v >= 17 ? v : v / 2) : (v > 21 ? 100 : Math.abs(21 - v)); };
+    const [keep, back] = (forDealer ? sc(a) >= sc(b) : sc(a) >= sc(b)) ? [a, b] : [b, a]; s.shoe.unshift(back); return keep;
+  },
   start(r) { const s = r.state; s.shoe = s.shoe || deck(6); BJ.toBet(r); },
   toBet(r) {
     if (idleStop(r)) return;
@@ -89,9 +99,9 @@ const BJ = {
   move(r, x, a) {
     const s = r.state; if (s.phase !== 'play' || !s.turn || s.seats[s.turn.i] !== x) return 'Du bist gerade nicht dran.';
     const hand = x.hands[s.turn.h];
-    if (a === 'hit') { hand.cards.push(BJ.draw(s)); if (BJ.val(hand.cards).v >= 21) hand.done = true; }
+    if (a === 'hit') { hand.cards.push(BJ.drawM(s, hand.cards, false)); if (BJ.val(hand.cards).v >= 21) hand.done = true; }
     else if (a === 'stand') hand.done = true;
-    else if (a === 'double') { if (hand.cards.length !== 2 || x.chips < hand.bet) return 'Verdoppeln geht nur mit zwei Karten und genug Jetons.'; x.chips -= hand.bet; hand.bet *= 2; hand.dbl = true; hand.cards.push(BJ.draw(s)); hand.done = true; }
+    else if (a === 'double') { if (hand.cards.length !== 2 || x.chips < hand.bet) return 'Verdoppeln geht nur mit zwei Karten und genug Jetons.'; x.chips -= hand.bet; hand.bet *= 2; hand.dbl = true; hand.cards.push(BJ.drawM(s, hand.cards, false)); hand.done = true; }
     else if (a === 'split') {
       const c = hand.cards; if (x.hands.length > 1 || c.length !== 2 || BJ.val([c[0]]).v !== BJ.val([c[1]]).v || x.chips < hand.bet) return 'Teilen geht nur mit einem Paar und genug Jetons.';
       x.chips -= hand.bet; x.hands = [{ cards: [c[0], BJ.draw(s)], bet: hand.bet, done: false }, { cards: [c[1], BJ.draw(s)], bet: hand.bet, done: false }];
@@ -109,7 +119,7 @@ const BJ = {
   dealer(r) {
     const s = r.state; s.phase = 'dealer'; s.hole = false;
     const live = s.seats.some(x => x && x.hands.some(h => BJ.val(h.cards).v <= 21 && !BJ.bj(h.cards)));
-    const step = () => { if (live && BJ.val(s.dealer).v < 17) { s.dealer.push(BJ.draw(s)); schedule(r, 750, step); } else BJ.settle(r); };
+    const step = () => { if (live && BJ.val(s.dealer).v < 17) { s.dealer.push(BJ.drawM(s, s.dealer, true)); schedule(r, 750, step); } else BJ.settle(r); };
     schedule(r, 700, step);
   },
   settle(r) {
@@ -176,6 +186,8 @@ const RL = {
   },
   spinNow(r) {
     const s = r.state; s.phase = 'spin'; s.result = rnd(37); s.spinId = (s.spinId || 0) + 1; s.ends = now() + RL.spin;
+    { const m = soloMalus(s); if (m && Object.keys(m.bets).length) { const net = n => Object.entries(m.bets).reduce((a, [k, v]) => a + v * RL.pays(k, n) - v, 0); let w = 0; for (let n = 0; n < 37; n++) if (net(n) > 0) w++;
+      if (net(s.result) > 0 && Math.random() < malusQ(w / 37)) s.result = rnd(37); } }
     for (const x of s.seats) if (x && Object.keys(x.bets).length) x.last = { ...x.bets };
     schedule(r, RL.spin, () => RL.settle(r));
   },
@@ -218,6 +230,9 @@ const RACE = {
     // Reihenfolge nach Gewinnwahrscheinlichkeit ziehen, dann Zielzeiten und Laufstil festlegen
     const left = s.horses.map((h, i) => i), order = [];
     while (left.length) { const tot = left.reduce((a, i) => a + s.horses[i].p, 0); let x = Math.random() * tot, k = 0; for (; k < left.length - 1; k++) { x -= s.horses[left[k]].p; if (x <= 0) break; } order.push(left.splice(k, 1)[0]); }
+    { const m = soloMalus(s); if (m && Object.keys(m.bets).length) { const draw = () => { const l = s.horses.map((h, i) => i), o = []; while (l.length) { const tot = l.reduce((a, i) => a + s.horses[i].p, 0); let x = Math.random() * tot, k = 0; for (; k < l.length - 1; k++) { x -= s.horses[l[k]].p; if (x <= 0) break; } o.push(l.splice(k, 1)[0]); } return o; };
+      const net = o => { let pay = 0, st = 0; for (const [k, v] of Object.entries(m.bets)) { st += v; const h = +k.slice(1), pos = o.indexOf(h), H = s.horses[h]; if (k[0] === 's' && pos === 0) pay += v * H.odds; if (k[0] === 'p' && pos <= 2) pay += v * Math.max(1.1, Math.round((1 + (H.odds - 1) / 4) * 10) / 10); } return pay - st; };
+      if (net(order) > 0) { let w = 0; for (let i = 0; i < 300; i++) if (net(draw()) > 0) w++; if (Math.random() < malusQ(w / 300)) { const o2 = draw(); order.length = 0; order.push(...o2); } } } }
     const times = []; let t = 9.2 + Math.random() * 0.6; for (const i of order) { times[i] = t; t += 0.15 + Math.random() * 0.45; }
     s.race = { id: (s.race && s.race.id || 0) + 1 + rnd(1000), order, times, style: s.horses.map(() => rnd(3)) };
     for (const x of s.seats) if (x && Object.keys(x.bets).length) x.last = { ...x.bets };
