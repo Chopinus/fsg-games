@@ -206,7 +206,7 @@
     if (g) {
       const members = list.filter(x => groupOf(x.id) === g);
       if (members.length > 1) sub = members.map(t => { const h = HERO[t.id];
-        return `<button data-tab="${t.id}" class="${t.id === tab ? 'on' : ''} ${t.locked ? 'locked' : ''}" style="--tc:${t.color}" title="${esc(t.label)}">${h ? `<span class="pt">${PORTRAIT[h.id]}</span>` : ''}<span class="sl">${t.label}</span>${h && S.ahn && S.ahn.place[h.id] ? '<i class="sig" title="Ahnensiegel">✦</i>' : ''}${dot(isNew(t.id))}</button>`; }).join('');
+        return `<button data-tab="${t.id}" class="${t.id === tab ? 'on' : ''} ${t.locked ? 'locked' : ''}" style="--tc:${t.color}" title="${esc(t.label)}">${h ? `<span class="pt">${PORTRAIT[h.id]}</span>` : ''}<span class="sl">${t.label}</span>${h && S.ahn && S.ahn.place[h.id] ? (S.ahn.place[h.id] >= 2 ? '<i class="sig" title="Zwei Ahnensiegel">✦✦</i>' : '<i class="sig" title="Ahnensiegel">✦</i>') : ''}${dot(isNew(t.id))}</button>`; }).join('');
     }
     const cur = list.find(x => x.id === tab) || {};
     $('.rl-tabs').innerHTML = html;
@@ -1185,7 +1185,7 @@
 
   /* ---------- Bäume ---------- */
   function treeSVG(tree) {
-    const sg = sigOn(S, tree), list = NODES.filter(n => n.tree === tree && (!n.sig || sg));
+    const sg = sigOn(S, tree), sg2 = sig2On(S, tree), list = NODES.filter(n => n.tree === tree && (!n.sig || sg) && (!n.sig2 || sg2));
     const P = n => [n.x * 100 + 50, n.y * 100 + 50];
     let lines = '', nodes = '';
     for (const n of list) for (const pid of n.p || []) {
@@ -1201,12 +1201,13 @@
       const lbl = n.max > 1 ? (n.max > 99 ? r : `${r}/${n.max}`) : '';
       nodes += `<g class="${cls}" data-node="${n.id}" role="button" aria-label="${esc(n.name)}">${afford ? `<circle cx="${x}" cy="${y}" r="${R + 10}" class="glow"/>` : ''}${shape}<text x="${x}" y="${y + 2}" class="ic">${n.icon}</text>${lbl ? `<text x="${x}" y="${y + 52}" class="rk">${lbl}</text>` : ''}</g>`;
     }
-    const band = sg ? `<rect class="sigband" x="6" y="702" width="688" height="404" rx="28"/><text class="sigtxt" x="350" y="1096">✦ Ahnensiegel ✦</text>` : '';
-    return `<svg class="rl-tree2" viewBox="0 0 700 ${sg ? 1110 : 710}">${band}${lines}${nodes}</svg>`;
+    const band = (sg ? `<rect class="sigband" x="6" y="702" width="688" height="404" rx="28"/><text class="sigtxt" x="350" y="1096">✦ Ahnensiegel ✦</text>` : '')
+      + (sg2 ? `<rect class="sigband sig2" x="6" y="1112" width="688" height="204" rx="28"/><text class="sigtxt sig2" x="350" y="1306">✦✦ Zweites Siegel ✦✦</text>` : '');
+    return `<svg class="rl-tree2" viewBox="0 0 700 ${sg2 ? 1320 : sg ? 1110 : 710}">${band}${lines}${nodes}</svg>`;
   }
   function detailHTML(tree) {
     const n = NODE[sel[tree]], r = rank(S, n.id), maxed = r >= n.max, h = HERO[tree], why = blockReason(S, n);
-    const type = n.kind === 'start' ? (n.cost ? 'Anheuern' : 'Start') : n.active ? (n.sig ? 'Siegel-Fähigkeit' : 'Aktive Fähigkeit') : n.kind === 'key' ? (n.sig ? 'Siegel-Schlüssel' : 'Schlüssel') : n.kind === 'inf' ? 'Endlos' : n.sig ? 'Siegel · Passiv' : 'Passiv';
+    const type = n.kind === 'start' ? (n.cost ? 'Anheuern' : 'Start') : n.active ? (n.sig ? 'Siegel-Fähigkeit' : 'Aktive Fähigkeit') : n.kind === 'key' ? (n.sig ? 'Siegel-Schlüssel' : 'Schlüssel') : n.kind === 'inf' ? 'Endlos' : n.sig2 ? 'Zweites Siegel' : n.sig ? 'Siegel · Passiv' : 'Passiv';
     let act = '';
     if (n.cost) {
       if (maxed && n.kind === 'key') { const c = nodeCost(S, { ...n, id: '_' }); act = `<button class="btn ${confirm === 'unkey' ? 'danger' : 'ghost'} small" data-rl="unkey" ${inCamp() ? '' : 'disabled'}>${confirm === 'unkey' ? 'Wirklich abnehmen?' : 'Schlüssel abnehmen'}</button><span class="note">Du bekommst ${costHTML(c)} zurück und kannst einen anderen Schlüssel wählen.</span>`; }
@@ -1217,7 +1218,7 @@
     }
     if (n.active && r) {
       const on = S.equip.includes(n.id), used = eqOf(S, tree, n.sig).length, lim = slotLim(S, tree, n.sig);
-      act += `<button class="btn ghost small" data-rl="equip" ${inCamp() && lim > 0 ? '' : 'disabled'}>${on ? 'Ablegen' : used >= lim ? 'Ausrüsten (tauscht)' : 'Ausrüsten'}</button>${n.sig ? '<span class="note">Kommt in den Siegel-Platz.</span>' : ''}`;
+      act += `<button class="btn ghost small" data-rl="equip" ${inCamp() && lim > 0 ? '' : 'disabled'}>${on ? 'Ablegen' : used >= lim ? 'Ausrüsten (tauscht)' : 'Ausrüsten'}</button>${n.sig ? `<span class="note">Kommt in den Siegel-Platz${lim > 1 ? ` (${used}/${lim} belegt)` : ''}.</span>` : ''}`;
     }
     const mcd = n.active && ACT[n.id] && typeof ACT[n.id].minCd === 'number' ? ACT[n.id].minCd : 0;
     if (mcd) act = `<span class="note">Höchstens alle ${mcd} s, auch wenn die Fähigkeit schneller lädt.</span>` + act;
@@ -1369,15 +1370,15 @@
     const h = HERO[tree], eq = eqOf(S, tree, false), eqS = eqOf(S, tree, true), ok = hired(S, tree), sg = sigOn(S, tree);
     const lockedNote = !classOpen(S, tree) ? `<p class="warn">${h.puzzle ? 'Diese Klasse bekommst du nur im Sternenruf (Banner).' : `Diese Klasse wird mit der ${h.rebirth}. Wiedergeburt freigeschaltet.`} Du kannst dir den Baum schon ansehen.</p>` : '';
     return `${lockedNote}<div class="rl-hhead" style="--hc:${h.color}">${ok ? `<div class="rl-hsbtn"><button class="btn ghost small" data-rl="ward" aria-label="Aussehen" title="Aussehen: Kopf, Oberteil, Beine">👕</button><button class="btn ghost small" data-rl="hstats" aria-label="Alle Werte" title="Alle Werte">📊<span class="rl-backtxt"> Werte</span></button></div>` : ''}<span class="pt">${PORTRAIT[h.id]}</span><div class="rl-hbody"><h3>${h.name}${gachaOpen(S) ? ` <span class="rl-hrar">${rarStars(heroRar(h.id))}</span>${consStars(h.id)}` : ''}</h3><p class="note rl-long">${h.desc}</p>
-      ${ok ? `<div class="rl-actchips" title="Aktive Fähigkeiten ${eq.length}/${slotsOf(S, tree)}">${Array.from({ length: slotsOf(S, tree) }, (_, i) => eq[i] ? `<span class="on">⚡${esc(ACT_NAME(eq[i]))}</span>` : '<span>leer</span>').join('')}${sg ? (eqS.length ? eqS.map(id => `<span class="on sig">✦${esc(ACT_NAME(id))}</span>`).join('') : '<span class="sig">✦ frei</span>') : ''}</div>${mastHTML(h)}${sockRow(tree)}` : ''}</div></div>
+      ${ok ? `<div class="rl-actchips" title="Aktive Fähigkeiten ${eq.length}/${slotsOf(S, tree)}">${Array.from({ length: slotsOf(S, tree) }, (_, i) => eq[i] ? `<span class="on">⚡${esc(ACT_NAME(eq[i]))}</span>` : '<span>leer</span>').join('')}${sg ? Array.from({ length: Math.max(1, sigActCap(S, tree)) }, (_, i) => eqS[i] ? `<span class="on sig">✦${esc(ACT_NAME(eqS[i]))}</span>` : '<span class="sig">✦ frei</span>').join('') : ''}</div>${mastHTML(h)}${sockRow(tree)}` : ''}</div></div>
       ${acct && acct.tester ? `<div class="rl-test"><b>🧪 Test</b> <button class="btn small ${confirm === 'tbuild' ? 'danger' : ''}" data-rl="tbuild" ${inCamp() && classOpen(S, tree) ? '' : 'disabled'}>${confirm === 'tbuild' ? 'Wirklich den ganzen Baum setzen?' : 'Baum komplett ausbauen'}</button><span class="note">Alles auf voll, beide Endlos-Fertigkeiten auf 42. Kostet nichts. Schlüssel bleiben, wie sie sind.</span>
         <button class="btn small ${S.tKeepTree ? '' : 'ghost'}" data-rl="tkeep">${S.tKeepTree ? '✓ Bäume bleiben bei Wiedergeburt' : 'Bäume bleiben bei Wiedergeburt: aus'}</button><span class="note">Wenn an, behalten alle Helden bei einer Wiedergeburt ihre Fertigkeitenbäume und ausgerüsteten Fähigkeiten. Gilt für alle Helden.</span></div>` : ''}
-      <div class="rl-treewrap"><div class="rl-treebox">${treeSVG(tree)}${!sg && ahnOpen(S) && classOpen(S, tree) ? `<p class="note rl-signote rl-long">✦ Mit einem Ahnensiegel wächst dieser Baum nach unten: 5 passive Fähigkeiten, 3 Siegel-Fähigkeiten mit eigenem Platz und 4 Siegel-Schlüssel mit eigenem Sockel. ${S.ahn.sig > 0 ? 'Du hast ein freies Siegel, setze es im Reiter Ahnenprüfung.' : 'Siegel bekommst du in der Ahnenprüfung.'}</p>` : ''}</div>${detailHTML(tree)}</div>`;
+      <div class="rl-treewrap"><div class="rl-treebox">${treeSVG(tree)}${!sg && ahnOpen(S) && classOpen(S, tree) ? `<p class="note rl-signote rl-long">✦ Mit einem Ahnensiegel wächst dieser Baum nach unten: 5 passive Fähigkeiten, 3 Siegel-Fähigkeiten mit eigenem Platz und 4 Siegel-Schlüssel mit eigenem Sockel. ${S.ahn.sig > 0 ? 'Du hast ein freies Siegel, setze es im Reiter Ahnenprüfung.' : 'Siegel bekommst du in der Ahnenprüfung.'}</p>` : ''}${sg && !sig2On(S, tree) && classOpen(S, tree) ? `<p class="note rl-signote rl-long">✦✦ Mit einem zweiten Ahnensiegel wächst dieser Baum noch weiter: 3 starke passive Fähigkeiten, ein zweiter Siegel-Platz und ein zusätzlicher Platz für normale aktive Fähigkeiten. ${sig2Open(S) ? (S.ahn.sig > 0 ? 'Du hast ein freies Siegel, setze es im Reiter Ahnenprüfung.' : 'Siegel bekommst du in der Ahnenprüfung.') : `Wird nach ${SIG2_ASC} Aufstiegen freigeschaltet (du hast ${S.asc || 0}).`}</p>` : ''}</div>${detailHTML(tree)}</div>`;
   }
   function testBuild(tree) {
     const inf = NODES.filter(n => n.tree === tree && n.kind === 'inf');
     for (const n of NODES) {
-      if (n.tree !== tree || n.kind === 'key' || (n.sig && !sigOn(S, tree))) continue;
+      if (n.tree !== tree || n.kind === 'key' || (n.sig && !sigOn(S, tree)) || (n.sig2 && !sig2On(S, tree))) continue;
       S.nodes[n.id] = n.kind === 'inf' ? 42 : n.max;
     }
     const acts = NODES.filter(n => n.tree === tree && n.active).map(n => n.id);

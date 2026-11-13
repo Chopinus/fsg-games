@@ -627,6 +627,31 @@
     const gid = Object.fromEntries(Object.entries(GOLEM_SIG).map(([slot, n]) => [slot, n.id])); gid.S0 = 'o_hire';
     for (const [slot, n] of Object.entries(GOLEM_SIG)) { const [x, y, ps] = SIG_TPL[slot]; NODES.push({ ...n, tree: 'runengolem', x, y, p: ps.map(q => gid[q]), sig: true }); }
   }
+  /* ================= Zweites Ahnensiegel (Spieler-Idee v22) ================= */
+  // Ab 3 Aufstiegen kann ein zweites Siegel auf einen Helden mit Ahnensiegel gesetzt werden. Der Baum wächst noch zwei Reihen weiter:
+  // 3 starke Passive und 2 Knoten, die mehr Fähigkeiten gleichzeitig erlauben (2. Siegel-Platz, +1 normaler Platz).
+  const SIG2_ASC = 3;
+  const SIG2_TPL = { X1: [1, 11, ['P4']], X2: [3, 11, ['P4', 'P5']], X3: [5, 11, ['P5']], Z1: [2, 12, ['X1', 'X2']], Z2: [4, 12, ['X2', 'X3']] };
+  const SIG2C = { p: G(60000, 1.7), q: SL([20, 28, 38, 50, 65]), z: KEYC(400000, 120) };
+  const SIG2_ID = {};
+  {
+    const who = { r: 'des Ritters', w: 'des Wächters', s: 'der Schützin', m: 'des Magiers', p: 'der Priesterin', t: 'des Tierbändigers', a: 'der Assassine', n: 'des Nekromanten', b: 'des Barden', d: 'der Druidin', e: 'der Tüftlerin', o: 'des Runengolems' };
+    const trees = [...Object.entries(SIG).map(([tree, d]) => [tree, d.h]), ['runengolem', 'o']];
+    for (const [tree, h] of trees) {
+      const heal = h === 'p', wn = who[h] || 'des Helden';
+      const def = {
+        X1: { id: `sg2_${h}_kraft`, name: 'Ahnenkraft', icon: '✧', max: 10, cost: SIG2C.p, fx: [pw(h, heal ? 'heal' : 'atk', 1.06), pw(h, 'hp', 1.06)], desc: `+6 % ${heal ? 'Heilung' : 'Schaden'} und Leben ${wn} je Stufe (wächst aufeinander auf)` },
+        X2: { id: `sg2_${h}_ruhe`, name: 'Ahnenruhe', icon: '⌛', max: 5, cost: SIG2C.q, fx: [ad(h, 'cdr', 0.03)], desc: `Fähigkeiten ${wn} laden 3 % schneller je Stufe` },
+        X3: { id: `sg2_${h}_schild`, name: 'Ahnenschild', icon: 'R', max: 5, cost: SIG2C.q, fx: [ad(h, 'dr', 0.03)], desc: `−3 % erlittener Schaden ${wn} je Stufe` },
+        Z1: { id: `sg2_${h}_siegelhand`, name: 'Siegelgedächtnis', icon: '✦', max: 1, cost: SIG2C.z, desc: `+1 Siegel-Platz: zwei Siegel-Fähigkeiten ${wn} können gleichzeitig ausgerüstet sein` },
+        Z2: { id: `sg2_${h}_hand`, name: 'Ahnenhand', icon: '⚡', max: 1, cost: SIG2C.z, desc: `+1 Platz für normale aktive Fähigkeiten ${wn}` },
+      };
+      const sid = Object.fromEntries(Object.entries(def).map(([slot, n]) => [slot, n.id]));
+      for (const slot of ['P4', 'P5']) sid[slot] = NODES.find(n => n.tree === tree && n.sig && n.x === SIG_TPL[slot][0] && n.y === SIG_TPL[slot][1]).id;
+      for (const [slot, n] of Object.entries(def)) { const [x, y, ps] = SIG2_TPL[slot]; NODES.push({ ...n, tree, x, y, p: ps.map(q => sid[q]), sig: true, sig2: true }); }
+      SIG2_ID[tree] = { z1: sid.Z1, z2: sid.Z2 };
+    }
+  }
   // Schalter, die Siegel-Schlüssel setzen (Startwert 0)
   const SIG_FLAGS = ['wmaster', 'schwur', 'brother', 'vorbild', 'blockStun', 'koloss', 'wille', 'protector', 'sharp', 'hunt', 'falcon', 'toxik', 'schauer', 'overload', 'focus',
     'angel', 'holyFire', 'hohe', 'wrath', 'packLead', 'bleed', 'loyal', 'leit', 'dancer', 'soulBlade', 'coldBlood', 'flow', 'minionLong', 'boneArmor', 'collect', 'necro',
@@ -990,12 +1015,18 @@
     const out = { m: Math.min(AHN_COUNT - 1, n(a.m)), lvl: n(a.lvl), sig: n(a.sig), got: n(a.got), place: {}, boons: [], bgot: [] };
     for (const b of Array.isArray(a.boons) ? a.boons.slice(0, 80) : []) if (b && AHN_BOONS[b.id] && Number(b.v) > 0) { const o = { id: b.id, v: Math.min(1000, Number(b.v)) }; if (AHN_BOONS[b.id].kind === 'hero') { if (!HERO_BY_ID[b.h]) continue; o.h = b.h; } out.boons.push(o); }
     for (const k of Array.isArray(a.bgot) ? a.bgot.slice(0, 80) : []) if (/^\d+-\d+$/.test(String(k))) out.bgot.push(String(k));
-    for (const h of HEROES) if (a.place && a.place[h.id]) out.place[h.id] = 1;
+    for (const h of HEROES) if (a.place && a.place[h.id]) out.place[h.id] = Number(a.place[h.id]) >= 2 ? 2 : 1;
     return out;
   }
   function placeSigil(S, hid) {
     if (!HERO_BY_ID[hid] || S.ahn.place[hid] || S.ahn.sig <= 0) return false;
     S.ahn.sig--; S.ahn.place[hid] = 1; return true;
+  }
+  // Zweites Siegel: nur auf einen Helden, der schon ein Siegel trägt, und erst ab SIG2_ASC Aufstiegen
+  const sig2Open = S => (S.asc || 0) >= SIG2_ASC;
+  function placeSigil2(S, hid) {
+    if (!HERO_BY_ID[hid] || S.ahn.place[hid] !== 1 || S.ahn.sig <= 0 || !sig2Open(S)) return false;
+    S.ahn.sig--; S.ahn.place[hid] = 2; return true;
   }
   function ahnInit(S, run) {
     S.ahn.lvl = ahnLevelFor(S);
@@ -1767,7 +1798,7 @@
   const pieceCount = (S, id) => { let m = pieceMask(S, id), n = 0; while (m) { n += m & 1; m >>= 1; } return n; };
   const assembled = (S, id) => pieceMask(S, id) === 63;
   const perk = (S, id) => S.perks[id] || 0;
-  const slotsOf = (S, tree) => HERO[tree].slots + (tree === 'ritter' ? (S.perks?.p_platz || 0) : 0) + (S.cperks?.k_hand || 0);
+  const slotsOf = (S, tree) => HERO[tree].slots + (tree === 'ritter' ? (S.perks?.p_platz || 0) : 0) + (S.cperks?.k_hand || 0) + (sig2On(S, tree) && SIG2_ID[tree] ? rank(S, SIG2_ID[tree].z2) : 0);
   const cperk = (S, id) => (S.cperks && S.cperks[id]) || 0;
   const hired = (S, tree) => tree === 'ritter' || (rank(S, HERO[tree].hire) > 0 && (!HERO[tree].puzzle || assembled(S, HERO[tree].id)));
   const classOpen = (S, tree) => (HERO[tree].puzzle ? assembled(S, HERO[tree].id) : S.rebirths >= HERO[tree].rebirth) || hired(S, tree);
@@ -1775,15 +1806,18 @@
   // Ahnensiegel: eigener Platz für eine Siegel-Fähigkeit und eigener Sockel für einen Siegel-Schlüssel
   const sigOn = (S, tree) => !!(S.ahn && S.ahn.place && HERO[tree] && S.ahn.place[HERO[tree].id]);
   const sigKeysUsed = (S, tree) => NODES.filter(n => n.tree === tree && n.kind === 'key' && n.sig && rank(S, n.id) > 0).length;
+  const sig2On = (S, tree) => !!(S.ahn && S.ahn.place && HERO[tree] && S.ahn.place[HERO[tree].id] >= 2);
+  const sigActCap = (S, tree) => (sigOn(S, tree) ? 1 + (sig2On(S, tree) && SIG2_ID[tree] ? rank(S, SIG2_ID[tree].z1) : 0) : 0);
   const sigCap = (S, tree) => (sigOn(S, tree) ? 1 : 0);
   // Belegte normale Sockel: normale Schlüssel plus Siegel-Schlüssel, die nicht mehr in den Siegelsockel passen
   const keyNeed = (S, tree, addSig = 0, addBase = 0) => keysUsed(S, tree) + addBase + Math.max(0, sigKeysUsed(S, tree) + addSig - sigCap(S, tree));
   const eqOf = (S, tree, sg) => S.equip.filter(id => NODE[id] && NODE[id].tree === tree && !!NODE[id].sig === !!sg);
-  const slotLim = (S, tree, sg) => (sg ? sigCap(S, tree) : slotsOf(S, tree));
+  const slotLim = (S, tree, sg) => (sg ? sigActCap(S, tree) : slotsOf(S, tree));
   function blockReason(S, n) {
     if (n.reqPuzzle && !assembled(S, n.reqPuzzle)) return 'Diesen Helden bekommst du nur im Sternenruf (Banner).';
     if (n.reqRebirth && S.rebirths < n.reqRebirth && !rank(S, n.id)) return `Wird mit der ${n.reqRebirth}. Wiedergeburt freigeschaltet.`;
     if (n.sig && !sigOn(S, n.tree)) return 'Setze zuerst im Reiter Ahnenprüfung ein Ahnensiegel auf diesen Helden.';
+    if (n.sig2 && !sig2On(S, n.tree)) return `Setze zuerst im Reiter Ahnenprüfung ein zweites Ahnensiegel auf diesen Helden (ab ${SIG2_ASC} Aufstiegen).`;
     if (n.kind === 'key' && !rank(S, n.id) && keyNeed(S, n.tree, n.sig ? 1 : 0, n.sig ? 0 : 1) > keyCap(S, n.tree)) return n.sig ? `Der Siegelsockel und alle ${keyCap(S, n.tree)} Schlüsselsockel dieser Klasse sind belegt. Nimm einen Schlüssel ab oder setze oben einen freien Sockel auf diese Klasse.` : `Alle ${keyCap(S, n.tree)} Schlüsselsockel dieser Klasse sind belegt. Setze oben einen freien Sockel auf diese Klasse (du bekommst einen pro Wiedergeburt).`;
     if (n.kind !== 'start' && !(n.p || []).some(p => rank(S, p) > 0)) return `Schalte zuerst ${(n.p || []).map(id => NODE[id].name).join(' oder ')} frei.`;
     return '';
@@ -2045,7 +2079,7 @@
     const g = { gold: 1, chest: 0, eliteSoul: 0, soulMul: 1, partyAtk: 1, partyHp: 1, partyDr: 0, partyRegen: 0, eliteGold: 1, walk: 1, permafrost: 0 };
     const each = (h, fn) => (h === 'all' ? Object.values(hs).forEach(fn) : h === 'g' ? fn(g) : hs[h] && fn(hs[h]));
     for (const n of NODES) {
-      const r0 = rank(S, n.id); if (!r0 || !n.fx || (n.sig && !sigOn(S, n.tree))) continue;
+      const r0 = rank(S, n.id); if (!r0 || !n.fx || (n.sig && !sigOn(S, n.tree)) || (n.sig2 && !sig2On(S, n.tree))) continue;
       const r = n.cap ? Math.min(r0, n.cap) : r0;
       if (n.over && r0 > n.cap) for (const e of n.over) each(e.h, T => { const ro = r0 - n.cap; if (e.pow) T[e.s] *= Math.pow(e.pow, ro); else if (e.add) T[e.s] += e.add * ro; });
       for (const e of n.fx) each(e.h, T => {
@@ -2900,7 +2934,7 @@
 
   const core = { RAR, RAR_COL, GEAR_SLOTS, TINTS, HERO_SETS, DECO_SLOTS, ITEMS, TROPHY_N, BSET_AT, itemOf, invN, invAdd, invUsed, invFree, equipGear, setDeco, chestRoll, chestCount, openChest, trophyRoll, bsetCount, bsetAdd, CHEST, TROPHY, TRIPS, TRIP_SHARE, onTrip, tripLeft, rateOf, noteRate, hoursReward, tripReward, startTrip, claimTrip, WB, WB_BOSS, wbScore, wbBarReward, wbBarSecs, wbGoalHours, wbReward, GACHA, G_FIVE, G_FOUR, CONS_H, consList, consApply, evtBanner, evtPeriod, starSock, gachaOpen, evtOpen, gemOpen, gemBossFirst, GIFT_PULLS, consOf, bannerOf, gachaPull, GEM_SRC, LOGIN, loginItem, loginToday, claimLogin, BOUNTY, bountiesOf, bountyDone, bountyClaim, ahnLike, AHN_MISSIONS, AHN_ABIL, AHN_MECH, AHN_BOONS, ahnRollBoons, ahnPickBoon, ahnBoonText, ahnApplyBoons, AHN_TRAIT, AHNE, AHN_TUNE, AHN_COUNT, ahnOpen, ahnBossesOf, ahnLevelFor, placeSigil, ahnClaim, unrebirth, transmute, bossRuneTier, resetPerks, buyLager, lagerCost, LAGER_MAX, runeCap, shardOf, mergeCost, ALTAR_MAX, altarCost, altarMul, buyAltar, kSlots, kFree, keyCap, addSock, removeSock, removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, splTrade, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
     SEASON, rankOf, RANKS, rankBonus, AREAS, areaOf, MISSIONS, extraSocks, XSOCK, sockOk, runeAmp, mastInfo, mastLevel, SKINS, WF_STAGE, WF, wfSpawn,
-    sigOn, sigKeysUsed, keyNeed, eqOf, slotLim, SIG, SIG_FLAGS, newRun, step, stats, buy, available, blockReason, NODE, migrate, fresh,
+    sigOn, sig2On, sig2Open, placeSigil2, SIG2_ASC, SIG2_ID, sigActCap, sigKeysUsed, keyNeed, eqOf, slotLim, SIG, SIG_FLAGS, newRun, step, stats, buy, available, blockReason, NODE, migrate, fresh,
     rebirth, ascend, crownsFor, buyCperk, cperkCost, cperk, CPERKS, levelComp, toggleComp, compCost, compMax, compSlots, COMPS, checkAch, ACH, claimWeekly, weekId, dayId, weekRules, RULE, WEEK_TIERS, statsFor, starsFor, toggleEquip, slotsOf, hired, classOpen, keysUsed, keyLimit, capOf, reqOf, feature, encode, decode, fmt, socket, unsocket, merge, canMerge, dismantle, buyRune, runeVal, addRune };
   if (typeof module !== 'undefined') { module.exports = core; return; }
   // ---------- Automatische Updates ----------

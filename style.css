@@ -764,6 +764,8 @@ input{font:inherit;font-size:18px;color:var(--fg);background:var(--bg);border:1p
 /* Ahnensiegel: Erweiterung der Bäume */
 .rl-tree2 .sigband{fill:rgba(255,210,122,.05);stroke:rgba(255,210,122,.3);stroke-width:2;stroke-dasharray:10 8}
 .rl-tree2 .sigtxt{fill:#ffd27a;font:800 17px "Figtree",sans-serif;text-anchor:middle;letter-spacing:.12em;opacity:.8}
+.rl-tree2 .sigband.sig2{fill:rgba(255,170,90,.07);stroke:rgba(255,170,90,.45)}
+.rl-tree2 .sigtxt.sig2{fill:#ffb36a}
 .rl-tree2 .nd.sig circle:not(.glow),.rl-tree2 .nd.sig rect,.rl-tree2 .nd.sig polygon{fill:#2c2616}
 .rl-tree2 .nd.sig.av circle:not(.glow),.rl-tree2 .nd.sig.av rect,.rl-tree2 .nd.sig.av polygon{stroke:#c9a86a}
 .rl-tree2 .nd.sig.own circle:not(.glow),.rl-tree2 .nd.sig.own rect,.rl-tree2 .nd.sig.own polygon{fill:#4a3b17;stroke:#ffd27a}

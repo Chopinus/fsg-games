@@ -298,6 +298,12 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 63, title: 'Spieler-Idee: Zweites Ahnensiegel', date: '13.11.2026', items: [
+      'Ab 3 Aufstiegen kannst du im Reiter Ahnenprüfung ein zweites Ahnensiegel auf einen Helden setzen, der schon eins trägt.',
+      'Sein Fertigkeitenbaum wächst dann noch zwei Reihen weiter: Ahnenkraft (+6 % Schaden und Leben je Stufe), Ahnenruhe (schnellere Fähigkeiten) und Ahnenschild (weniger Schaden).',
+      'Siegelgedächtnis gibt einen zweiten Siegel-Platz: zwei Siegel-Fähigkeiten gleichzeitig. Ahnenhand gibt einen zusätzlichen Platz für normale aktive Fähigkeiten.',
+      'Danke an Pandoem für die Idee!',
+    ] },
     { id: 62, title: 'Spieler-Idee: Wörtle – das Wort des Tages', date: '11.11.2026', items: [
       'Neu im Game Hub: Wörtle. Jeden Tag ein neues deutsches Wort mit 5 Buchstaben, du hast 6 Versuche.',
       'Grün heißt richtiger Platz, Gelb kommt woanders vor, Grau kommt nicht vor. Das Wort prüft der Server, niemand kann es vorher auslesen.',
@@ -943,7 +949,8 @@
     // Siegel setzen
     const hiredH = HEROES.filter(h => hired(S, h.tree));
     html += `<div class="ahn-sigils"><h3 class="rl-h3">Ahnensiegel</h3><p class="note">Ein Siegel setzt du auf einen Helden. Sein Fertigkeitenbaum wächst dann nach unten: 5 passive Fähigkeiten, 3 Siegel-Fähigkeiten mit einem eigenen Platz und 4 Siegel-Schlüssel mit einem eigenen Sockel. Die neuen Knoten kaufst du wie alle anderen mit Gold und Seelen. Das Siegel bleibt bei Wiedergeburt und Aufstieg auf dem Helden.</p>
-      <div class="ahn-sgrid">${hiredH.map(h => { const on = S.ahn.place[h.id]; return `<button class="ahn-sh ${on ? 'on' : ''}" style="--hc:${h.color}" data-sig="${h.id}" ${on || S.ahn.sig <= 0 ? 'disabled' : ''}><span class="pt">${PORTRAIT[h.id]}</span><b>${h.name}</b><small>${on ? '✦ Siegel gesetzt' : S.ahn.sig > 0 ? 'Siegel setzen' : 'kein Siegel frei'}</small></button>`; }).join('')}</div></div>`;
+      <div class="ahn-sgrid">${hiredH.map(h => { const on = S.ahn.place[h.id], two = on && sig2Open(S); if (two) return `<button class="ahn-sh on" style="--hc:${h.color}" data-sig2="${h.id}" ${on >= 2 || S.ahn.sig <= 0 ? 'disabled' : ''}><span class="pt">${PORTRAIT[h.id]}</span><b>${h.name}</b><small>${on >= 2 ? '✦✦ Zwei Siegel' : S.ahn.sig > 0 ? '✦ Zweites Siegel setzen' : '✦ Siegel gesetzt'}</small></button>`; return `<button class="ahn-sh ${on ? 'on' : ''}" style="--hc:${h.color}" data-sig="${h.id}" ${on || S.ahn.sig <= 0 ? 'disabled' : ''}><span class="pt">${PORTRAIT[h.id]}</span><b>${h.name}</b><small>${on ? '✦ Siegel gesetzt' : S.ahn.sig > 0 ? 'Siegel setzen' : 'kein Siegel frei'}</small></button>`; }).join('')}</div>
+      <p class="note">✦✦ <b>Zweites Siegel</b>${sig2Open(S) ? '' : ` (ab ${SIG2_ASC} Aufstiegen, du hast ${S.asc || 0})`}: Auf einen Helden, der schon ein Siegel trägt, kannst du ein zweites setzen. Sein Baum wächst dann noch zwei Reihen weiter: 3 starke passive Fähigkeiten, ein zweiter Siegel-Platz (zwei Siegel-Fähigkeiten gleichzeitig) und ein zusätzlicher Platz für normale aktive Fähigkeiten.</p></div>`;
     if (acct && acct.tester && hiredH.some(h => S.ahn.place[h.id])) html += `<div class="rl-test"><b>🧪 Test</b> <button class="btn ghost small" data-rl="tahnsigclear">Alle Siegel von den Helden nehmen (Siegel kommen zurück)</button></div>`;
     if (acct && acct.tester) html += `<div class="rl-test"><b>🧪 Test</b> <button class="btn small" data-rl="tahnwin">Aktuelle Mission als geschafft werten</button> <button class="btn small" data-rl="tahnsig">+1 Siegel</button> <span class="note">Boss direkt starten:</span> ${ahnBossesOf(S.ahn.m).map((d, i) => `<button class="btn ghost small" data-rl="tahnboss" data-bi="${i}" title="${esc(d.name)}">${d.ahne ? '♛' : i + 1}</button>`).join('')} <button class="btn ghost small" data-rl="tahnreset">Prüfung zurücksetzen</button></div>`;
     return html;
@@ -959,7 +966,7 @@
     if (a === 'ahncur') { ahnSel = null; panel(); return true; }
     if (!(acct && acct.tester) || !/^tahn/.test(a)) return false;
     if (a === 'tahnwin') { const r = ahnClaim(S, { victory: true, ahn: { mi: S.ahn.m } }); ahnSel = null; if (r && r.sigil) sigilGot(); else toast(`Mission ${r.mission + 1} als geschafft gewertet`); afterChange(); }
-    if (a === 'tahnsigclear') { for (const id of Object.keys(S.ahn.place)) { const h = HERO_BY_ID[id]; delete S.ahn.place[id]; S.ahn.sig++; S.equip = S.equip.filter(x => !(NODE[x].sig && NODE[x].tree === h.tree)); for (const n of NODES) if (n.sig && n.tree === h.tree) delete S.nodes[n.id]; } toast('Siegel zurückgenommen'); afterChange(); }
+    if (a === 'tahnsigclear') { for (const id of Object.keys(S.ahn.place)) { const h = HERO_BY_ID[id]; S.ahn.sig += S.ahn.place[id] >= 2 ? 2 : 1; delete S.ahn.place[id]; S.equip = S.equip.filter(x => !(NODE[x].sig && NODE[x].tree === h.tree)); for (const n of NODES) if (n.sig && n.tree === h.tree) delete S.nodes[n.id]; } for (const hh of HEROES) { const mine = eqOf(S, hh.tree, false), lim = slotsOf(S, hh.tree); if (mine.length > lim) S.equip = S.equip.filter(x => !mine.slice(lim).includes(x)); } toast('Siegel zurückgenommen'); afterChange(); }
     if (a === 'tahnsig') { S.ahn.sig++; S.ahn.got++; toast('+1 Ahnensiegel'); afterChange(); }
     if (a === 'tahnreset') { S.ahn = ahnFix(); ahnSel = null; toast('Ahnenprüfung zurückgesetzt'); afterChange(); }
     return true;
@@ -969,6 +976,8 @@
     if (n) { ahnSel = Number(n.dataset.ahn); SND.play('tick'); panel(); return true; }
     const sg = e.target.closest('[data-sig]');
     if (sg) { const h = HERO_BY_ID[sg.dataset.sig]; if (placeSigil(S, h.id)) { SND.play('forge'); toast(`Ahnensiegel auf ${h.name} gesetzt`, true); afterChange(); } return true; }
+    const sg2 = e.target.closest('[data-sig2]');
+    if (sg2) { const h = HERO_BY_ID[sg2.dataset.sig2]; if (placeSigil2(S, h.id)) { SND.play('forge'); toast(`Zweites Ahnensiegel auf ${h.name} gesetzt`, true); afterChange(); } return true; }
     return false;
   }
   function sigilGot() {
