@@ -513,6 +513,8 @@ const CZ_GIFTS = [
   { id: 'g-2026-11-09-himmler', k: 'himmler', n: 30000, why: 'Geschenk vom Admin' },
   { id: 'g-2026-11-09-himmler2', k: 'himmler', n: 150000, pop: true, msg: 'Geschenk vom Admin – viel Glück am Tisch! 🍀' },
   { id: 'g-2026-11-11-himmler3', k: 'himmler', n: 69000, pop: true, msg: 'Es wird Spaß machen – Jam Jam' },
+  { id: 'g-2026-11-13-maestro', k: 'maestro', n: 100000, pop: true, msg: 'Geschenk vom Admin – viel Glück am Tisch! 🍀' },
+  { id: 'g-2026-11-13-niclas', k: 'niclas', n: 100000, pop: true, msg: 'Geschenk vom Admin – viel Glück am Tisch! 🍀' },
 ];
 
 // ---------- Casino-Konto: Jetons liegen auf dem Server beim Hub-Konto (nicht mehr im Browser) ----------
