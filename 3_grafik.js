@@ -298,6 +298,11 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 66, title: 'Spieler-Idee: Gegner mit Eigenschaften', date: '15.11.2026', items: [
+      'Ab Stufe 40 bekommen Gegner besondere Eigenschaften – je tiefer du kommst, desto öfter und desto mehr (bis zu 3 pro Gegner, Bosse ab Stufe 50 immer).',
+      '⛨ Gepanzert (wenig Schaden von Grundangriffen, viel von Fähigkeiten), ✧ Bannschild (umgekehrt), ☣ Fäulnis (halbe Heilung), ⛓ Fessler (fesselt Helden kurz), ☠ Henker (dreifacher Schaden gegen angeschlagene Helden), » Flink und ✚ Zäh.',
+      'Die Eigenschaften siehst du als Zeichen über dem Gegner, eine Erklärung steht während des Laufs im Lager-Bereich. Jede Eigenschaft gibt +25 % Gold.',
+    ] },
     { id: 65, title: 'Spieler-Idee: Runen bis Stufe XV', date: '15.11.2026', items: [
       'Runen lassen sich jetzt im Runenschmied bis Stufe XV verschmelzen.',
       'Die Stufen XI bis XV gibt es nur durch Verschmelzen – Bosse und Belohnungen geben weiterhin höchstens Stufe X.',
@@ -7047,6 +7052,7 @@
     if (e.dissT > 0) add('♭', '#ff8ac8', 1);
     if (e.quakeT > 0) add('≋', '#d2a878', 1);
     if (e.shieldHp > 0) add('◈', '#a0d7ff');
+    if (e.tr) for (const t of e.tr) if (TRAITS[t]) add(TRAITS[t].i, TRAITS[t].c);
     if (e.invT > 0) add('✧', '#ffffff');
     if (e.reflT > 0) add('◐', '#c8e6ff');
     if (e.healT > 0 || (e.traits && e.traits.regen)) add('✚', '#7ee08a');

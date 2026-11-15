@@ -1400,6 +1400,7 @@
       return `<div class="rl-dead"><b>Lauf vorbei auf Stufe ${run.stage}</b><span>${extra}</span><span class="note">Verbessere deine Helden und starte dann den nächsten Lauf.</span></div>`;
     }
     if (!run && !acct && S.runs >= 2 && HERO[tab]) return `<div class="rl-hint"><span>☁ Fortschritt noch nicht gesichert</span><button class="btn small" data-rl="gosave">Sichern</button></div>`;
+    if (run && run.trSeen) { const ks = Object.keys(run.trSeen).filter(t => TRAITS[t]); if (ks.length) return `<div class="rl-traits"><b>Gegner-Eigenschaften in diesem Lauf</b>${ks.map(t => `<span><i style="color:${TRAITS[t].c}">${TRAITS[t].i}</i> <b>${TRAITS[t].n}</b>: ${TRAITS[t].d}</span>`).join('')}</div>`; }
     if (!run) return '<p class="note rl-long">Du bist im Lager. Hier verbesserst du deine Helden mit Gold und Seelen. Seelen gibt es von Bossen (alle 10 Stufen) und manchmal von Elite-Gegnern mit lila Schimmer.</p>';
     return '';
   }

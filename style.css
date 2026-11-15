@@ -1684,3 +1684,6 @@ html.rl-appmode,html.rl-appmode body{overflow:hidden;overscroll-behavior:none}
 .codejoin input::placeholder{text-transform:none;letter-spacing:0;color:var(--muted)}
 .chip .kick{margin-left:6px;border:0;background:rgba(229,72,77,.25);color:#ffb3b5;border-radius:50%;width:20px;height:20px;font-size:11px;line-height:20px;padding:0;cursor:pointer}
 .shareurl.lobbycode{font-family:var(--display);font-size:26px;letter-spacing:4px}
+/* Ritterlauf: Gegner-Eigenschaften (Spieler-Idee v27) */
+.rl-traits{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,#ff5a5a 10%,var(--surface));border:1px solid color-mix(in srgb,#ff5a5a 35%,transparent);font-size:12.5px}
+.rl-traits>b{font-size:13px}.rl-traits span{color:var(--muted,#c8c0d8)}.rl-traits i{font-style:normal;font-weight:800;display:inline-block;min-width:14px;text-align:center}

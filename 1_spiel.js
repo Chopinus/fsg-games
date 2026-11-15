@@ -2442,6 +2442,36 @@
     return { x: 560 + i * 46, hp, max: hp, dmg: 4 * hm[1] * (boss ? Math.sqrt(hm[2]) : 1) * grow(stage, ...TUNE.dmg) * (boss ? 2 : elite ? 1.5 : 1) * diff, atkT: 1.2, rate: (boss ? 1.6 : 1.3) / ((run && run.speed) || 1),
       gold: grow(stage, ...TUNE.gold) * (boss ? 10 : elite ? 4 : 1), boss, bk: zoneOf(stage) % BOSS_NAMES.length, elite, ranged: !!ranged, shotT: 0.8 + Math.random() * 1.2, type: ENEMY_KINDS[zoneOf(stage) % ENEMY_KINDS.length], stun: 0, hitT: 0, poison: 0, poisonT: 0, burn: 0, burnT: 0, mark: 0, markT: 0, bob: Math.random() * 6 };
   }
+  // Spieler-Idee (v27): Gegner-Eigenschaften. Ab Stufe 40 bekommen Gegner nach und nach besondere Eigenschaften,
+  // je tiefer im Lauf, desto öfter und desto mehr (bis zu 3). Jede Eigenschaft gibt +25 % Gold.
+  const TRAITS = {
+    panzer: { n: 'Gepanzert', i: '⛨', c: '#c9ced8', d: 'nimmt 50 % weniger Schaden von Grundangriffen, aber 30 % mehr von aktiven Fähigkeiten' },
+    bann: { n: 'Bannschild', i: '✧', c: '#c08cff', d: 'nimmt 50 % weniger Schaden von aktiven Fähigkeiten, aber 30 % mehr von Grundangriffen' },
+    faeule: { n: 'Fäulnis', i: '☣', c: '#9be36b', d: 'solange er lebt, heilen sich deine Helden nur halb so stark' },
+    fessel: { n: 'Fessler', i: '⛓', c: '#ffb547', d: 'fesselt alle 6 s einen zufälligen Helden 1,5 s lang (kein Angriff, keine Fähigkeiten)' },
+    henker: { n: 'Henker', i: '☠', c: '#ff5a5a', d: 'Treffer gegen Helden unter 30 % Leben machen dreifachen Schaden', melee: true },
+    flink: { n: 'Flink', i: '»', c: '#4fc3ff', d: 'greift 50 % schneller an' },
+    zaeh: { n: 'Zäh', i: '✚', c: '#7ee08a', d: 'heilt sich um 2 % seines Lebens pro Sekunde' },
+  };
+  const TRAIT_IDS = Object.keys(TRAITS), TRAIT_MIN = 40;
+  const hasTr = (e, t) => !!(e && e.tr && e.tr.includes(t));
+  function traitCount(stage, e) {
+    if (stage < TRAIT_MIN || e.wf || e.ahn) return 0;
+    const deep = 1 + (stage >= 120 ? 1 : 0) + (stage >= 250 ? 1 : 0);
+    if (e.boss) return stage >= 50 ? deep : 0;
+    if (Math.random() >= Math.min(0.7, (stage - TRAIT_MIN + 10) / 180)) return 0;
+    return Math.min(3, Math.max(1, Math.ceil(Math.random() * deep)) + (e.elite && stage >= 80 ? 1 : 0));
+  }
+  function giveTraits(run, stage) {
+    for (const e of run.enemies) {
+      const n = traitCount(stage, e); if (!n) continue;
+      const pool = TRAIT_IDS.filter(t => !(TRAITS[t].melee && e.ranged)); e.tr = [];
+      while (e.tr.length < n && pool.length) { const t = pool.splice(Math.floor(Math.random() * pool.length), 1)[0]; if ((t === 'panzer' && e.tr.includes('bann')) || (t === 'bann' && e.tr.includes('panzer'))) continue; e.tr.push(t); }
+      if (hasTr(e, 'flink')) e.rate /= 1.5;
+      e.gold *= 1 + 0.25 * e.tr.length; e.fesT = 3 + Math.random() * 3;
+      run.trSeen = run.trSeen || {}; for (const t of e.tr) run.trSeen[t] = 1;
+    }
+  }
   const FRONT = LINE_ORDER.filter(k => HERO_BY_ID[k].line === 'front'), BACK = LINE_ORDER.filter(k => HERO_BY_ID[k].line !== 'front');
   function newRun(S, mode) {
     const st = statsFor(S, mode), tower = mode === 'tower', weekly = mode === 'weekly', exp = mode === 'exp', rules = weekly || exp ? st.rules : [];
@@ -2490,6 +2520,7 @@
       const s = towerStage(run.stage), boss = run.stage % 5 === 0;
       for (let i = 0; i < 3; i++) run.enemies.push(makeEnemy(s, i, false, true, run, i === 2));
       if (boss) { run.enemies.push(makeEnemy(s, 3.6, true, false, run)); run.bannerT = 2.2; }
+      giveTraits(run, s);
       return;
     }
     if (run.mode === 'normal' && run.stage === WF_STAGE) return wfSpawn(run);
@@ -2499,6 +2530,7 @@
     for (let i = 0; i < n; i++) run.enemies.push(makeEnemy(run.stage, i, false, false, run, i >= n - nr));
     if (boss) { run.enemies.push(makeEnemy(run.stage, n + 0.6, true, false, run)); run.bannerT = 2.2; }
     const A = areaOf(run); if (A) for (const e of run.enemies) { e.type = e.ranged ? A.ranged : A.melee; if (e.boss) e.bk = A.bk; }
+    if (run.mode === 'normal' || run.mode === 'weekly') giveTraits(run, run.stage);
   }
   function wfSpawn(run) {
     const e = makeEnemy(WF_STAGE, 1.6, true, false, run);
@@ -2536,6 +2568,7 @@
       if (run.blindT > 0 && Math.random() < 0.33) { c.efloat(e, 'Verfehlt', '#9aa3ad', 11); return 0; }
       let dmg = (wolf ? T.wolfAtk : T.atk) * mult * (run.buffT > 0 ? 1 + run.buffMul : 1) * (1 + (e.markT > 0 ? e.mark : 0)) * sigMul(run, st, k, e, wolf);
       if ((e.boss || e.elite) && T.bossDmg) dmg *= 1 + T.bossDmg;
+      if (e.tr) { if (e.tr.includes('panzer')) dmg *= c.inCast ? 1.3 : 0.5; if (e.tr.includes('bann')) dmg *= c.inCast ? 0.5 : 1.3; }
       const hh = run.h[k], tur = !!(opt && opt.turret && T.precise), forced = !!(k === 'a' && hh && hh.nextCrit);
       if (forced) hh.nextCrit = false;
       const nCrit = Math.max(forced ? 1 : 0, procs((wolf ? T.crit + T.wolfCrit : T.crit) * (tur ? 2 : 1) + (run.critBT > 0 ? run.critBV : 0))), crit = nCrit > 0;
@@ -2557,6 +2590,7 @@
     c.healOne = (k, amt, src) => {
       const h = run.h[k], T = st[k]; if (!h || !h.alive || run.noheal) return;
       if (run.curseT > 0) amt *= 0.4;
+      if (run.rotOn) amt *= 0.5;
       if (k === 'd' && T.bloom) run.bloomT = 4;
       if (src === 'p' && st.p && st.p.holyFire && st.p.atk > 0 && run.enemies[0]) c.hit('p', run.enemies[0], Math.min(amt * st.p.holyFire, st.p.heal) / st.p.atk, '#fff2b0');
       const over = h.hp + amt - T.hp; h.hp = Math.min(T.hp, h.hp + amt);
@@ -2567,7 +2601,7 @@
     };
     c.healAll = (f, src) => { run.order.forEach(k => run.h[k].alive && c.healOne(k, st[k].hp * f, src)); run.fx.heal = 0.5; };
     c.healSplit = (me, fMe, fOther) => { run.order.forEach(k => run.h[k].alive && c.healOne(k, st[k].hp * (k === me ? fMe : fOther))); run.fx.heal = 0.5; };
-    c.healAllAbs = a => !run.noheal && (a *= run.curseT > 0 ? 0.4 : 1) && run.order.forEach(k => { const h = run.h[k]; if (h.alive) h.hp = Math.min(st[k].hp, h.hp + a); });
+    c.healAllAbs = a => !run.noheal && (a *= (run.curseT > 0 ? 0.4 : 1) * (run.rotOn ? 0.5 : 1)) && run.order.forEach(k => { const h = run.h[k]; if (h.alive) h.hp = Math.min(st[k].hp, h.hp + a); });
     return c;
   }
   function frontHero(run) { return run.order.find(k => run.h[k].alive); }
@@ -2580,6 +2614,7 @@
     if (boss && attacker.enrage) raw *= attacker.enrage;
     if (attacker && attacker.duelT > 0) raw *= 0.7;
     if (h.markT > 0) raw *= 2;
+    if (hasTr(attacker, 'henker') && h.hp < T.hp * 0.3) raw *= 3;
     if (T.block && Math.random() < T.block * (boss ? 0.5 : 1)) { c.float(k, 'Abgewehrt', '#9fd0ff', 12); if (attacker && T.blockStun) attacker.stun = Math.max(attacker.stun, boss ? 0.25 : 0.5); return; }
     if (T.dodge && Math.random() < T.dodge) { c.float(k, 'Ausgewichen', '#c8f5cf', 12); if (T.dancer) h.nextCrit = true; return; }
     let d = raw * (1 - T.dr * (boss ? 0.6 : 1));
@@ -2612,9 +2647,10 @@
     run.time += dt; run.bannerT -= dt; run.buffT -= dt; run.hautT -= dt; run.racheT -= dt; run.packT -= dt; run.songT -= dt; run.roarT -= dt; run.extraTurretT -= dt; run.shake = Math.max(0, run.shake - dt);
     for (const k of run.order) {
       const h = run.h[k]; if (!h.alive) continue;
-      if (st[k].regen) h.hp = Math.min(st[k].hp, h.hp + st[k].hp * st[k].regen * dt * (run.curseT > 0 ? 0.4 : 1));
+      if (st[k].regen) h.hp = Math.min(st[k].hp, h.hp + st[k].hp * st[k].regen * dt * (run.curseT > 0 ? 0.4 : 1) * (run.rotOn ? 0.5 : 1));
       h.swing = Math.max(0, h.swing - dt * 4); h.hurtT -= dt;
       if (h.invT > 0) h.invT -= dt; if (h.protT > 0) h.protT -= dt;
+      if (h.stunT > 0 && !ahnLike(run)) h.stunT -= dt;
     }
     for (const k in run.cds) run.cds[k] = Math.max(0, run.cds[k] - dt);
     for (const k in run.fx) if (typeof run.fx[k] === 'number' && !/X$/.test(k)) run.fx[k] -= dt;
@@ -2715,10 +2751,21 @@
         if (h.wolfT <= 0) { const n = T.wolves + (run.packT > 0 ? 2 + T.packBonus : 0); h.wolfT += 1 / T.wolfAps; for (let i = 0; i < n; i++) c.hit('t', run.enemies[0] || tgtSafe(run), 1, '#ffd2a8', true); }
       }
     }
+    // Gegner-Eigenschaften (Fäulnis, Fessler, Zäh)
+    run.rotOn = false;
+    for (const e of run.enemies) {
+      if (!e.tr || e.hp <= 0) continue;
+      if (e.tr.includes('faeule')) run.rotOn = true;
+      if (e.tr.includes('zaeh')) e.hp = Math.min(e.max, e.hp + e.max * 0.02 * dt);
+      if (e.tr.includes('fessel') && e.x < 450 && e.stun <= 0) {
+        e.fesT -= dt;
+        if (e.fesT <= 0) { e.fesT = 6; const al = run.order.filter(k => run.h[k].alive && !(run.h[k].invT > 0)); if (al.length) { const k = al[Math.floor(Math.random() * al.length)]; run.h[k].stunT = Math.max(run.h[k].stunT || 0, 1.5); c.float(k, 'Gefesselt!', '#ffb547', 13); } }
+      }
+    }
     // Fernkämpfer schießen von hinten auf zufällige Helden
     for (const e of run.enemies) {
       if (!e.ranged || e.stun > 0 || e.x > 450 || e.hp <= 0) continue;
-      e.shotT -= dt * (e.dissT > 0 ? 0.5 : 1);
+      e.shotT -= dt * (e.dissT > 0 ? 0.5 : 1) * (hasTr(e, 'flink') ? 1.5 : 1);
       if (e.shotT > 0) continue;
       e.shotT += RANGED.rate / run.speed;
       const alive = run.order.filter(k => run.h[k].alive); if (!alive.length) break;
@@ -2938,7 +2985,7 @@
   const core = { RAR, RAR_COL, GEAR_SLOTS, TINTS, HERO_SETS, DECO_SLOTS, ITEMS, TROPHY_N, BSET_AT, itemOf, invN, invAdd, invUsed, invFree, equipGear, setDeco, chestRoll, chestCount, openChest, trophyRoll, bsetCount, bsetAdd, CHEST, TROPHY, TRIPS, TRIP_SHARE, onTrip, tripLeft, rateOf, noteRate, hoursReward, tripReward, startTrip, claimTrip, WB, WB_BOSS, wbScore, wbBarReward, wbBarSecs, wbGoalHours, wbReward, GACHA, G_FIVE, G_FOUR, CONS_H, consList, consApply, evtBanner, evtPeriod, starSock, gachaOpen, evtOpen, gemOpen, gemBossFirst, GIFT_PULLS, consOf, bannerOf, gachaPull, GEM_SRC, LOGIN, loginItem, loginToday, claimLogin, BOUNTY, bountiesOf, bountyDone, bountyClaim, ahnLike, AHN_MISSIONS, AHN_ABIL, AHN_MECH, AHN_BOONS, ahnRollBoons, ahnPickBoon, ahnBoonText, ahnApplyBoons, AHN_TRAIT, AHNE, AHN_TUNE, AHN_COUNT, ahnOpen, ahnBossesOf, ahnLevelFor, placeSigil, ahnClaim, unrebirth, transmute, bossRuneTier, resetPerks, buyLager, lagerCost, LAGER_MAX, runeCap, shardOf, mergeCost, ALTAR_MAX, altarCost, altarMul, buyAltar, kSlots, kFree, keyCap, addSock, removeSock, removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, splTrade, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
     SEASON, rankOf, RANKS, rankBonus, AREAS, areaOf, MISSIONS, extraSocks, XSOCK, sockOk, runeAmp, mastInfo, mastLevel, SKINS, WF_STAGE, WF, wfSpawn,
     sigOn, sig2On, sig2Open, placeSigil2, SIG2_ASC, SIG2_ID, sigActCap, sigKeysUsed, keyNeed, eqOf, slotLim, SIG, SIG_FLAGS, newRun, step, stats, buy, available, blockReason, NODE, migrate, fresh,
-    rebirth, ascend, crownsFor, buyCperk, cperkCost, cperk, CPERKS, levelComp, toggleComp, compCost, compMax, compSlots, COMPS, checkAch, ACH, claimWeekly, weekId, dayId, weekRules, RULE, WEEK_TIERS, statsFor, starsFor, toggleEquip, slotsOf, hired, classOpen, keysUsed, keyLimit, capOf, reqOf, feature, encode, decode, fmt, socket, unsocket, merge, canMerge, dismantle, buyRune, runeVal, addRune };
+    rebirth, ascend, crownsFor, buyCperk, cperkCost, cperk, CPERKS, levelComp, toggleComp, compCost, compMax, compSlots, COMPS, checkAch, ACH, claimWeekly, weekId, dayId, weekRules, RULE, WEEK_TIERS, statsFor, starsFor, toggleEquip, slotsOf, hired, classOpen, keysUsed, keyLimit, capOf, reqOf, feature, encode, decode, fmt, socket, unsocket, merge, canMerge, dismantle, buyRune, runeVal, addRune, TRAITS };
   if (typeof module !== 'undefined') { module.exports = core; return; }
   // ---------- Automatische Updates ----------
   // Prüft alle 2 Minuten (und beim Zurückkehren in den Tab), ob auf dem Server eine neue ritter.js liegt.
