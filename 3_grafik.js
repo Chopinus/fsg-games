@@ -298,6 +298,11 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 65, title: 'Spieler-Idee: Runen bis Stufe XV', date: '15.11.2026', items: [
+      'Runen lassen sich jetzt im Runenschmied bis Stufe XV verschmelzen.',
+      'Die Stufen XI bis XV gibt es nur durch Verschmelzen – Bosse und Belohnungen geben weiterhin höchstens Stufe X.',
+      'Ist das Runen-Lager bei 100 Plätzen voll ausgebaut, kannst du es beliebig oft um weitere 5 Plätze erweitern – immer zum gleichen Preis.',
+    ] },
     { id: 64, title: 'Spieler-Idee: Farm-Knopf im Inselreich', date: '15.11.2026', items: [
       'Im Inselreich gibt es auf der Heimatinsel jetzt einen eigenen Knopf 🌾 Farmen (am PC Taste V) – genau wie beim Bauen.',
       'In der Leiste wählst du Ernten oder eine Samensorte; dann tippst du auf deine Felder, auch aus der Ferne.',

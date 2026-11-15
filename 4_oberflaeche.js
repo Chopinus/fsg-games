@@ -76,9 +76,9 @@
   // Test: bestimmte Rune auswählen
   let tRSort = 'art', tRFilt = 'all';
   function testRunePicker(amt = 1) {
-    const chips = tRSort === 'art' ? RUNES.map(r => [r.id, r.name, r.color]) : Array.from({ length: 10 }, (_, i) => [String(i + 1), 'Stufe ' + ROMAN[i + 1], '#c9a6ff']);
+    const chips = tRSort === 'art' ? RUNES.map(r => [r.id, r.name, r.color]) : Array.from({ length: RUNE_MAX }, (_, i) => [String(i + 1), 'Stufe ' + ROMAN[i + 1], '#c9a6ff']);
     const tiles = [];
-    for (const R of RUNES) for (let tier = 1; tier <= 10; tier++) {
+    for (const R of RUNES) for (let tier = 1; tier <= RUNE_MAX; tier++) {
       if (tRFilt !== 'all' && (tRSort === 'art' ? R.id !== tRFilt : String(tier) !== tRFilt)) continue;
       tiles.push({ R, tier });
     }
@@ -1584,16 +1584,16 @@
     fSlots = fSlots.filter(id => S.runes.some(r => r.id === id) && !used.has(id));
     const sel = fSlots.map(id => S.runes.find(r => r.id === id)), g0 = sel[0];
     const inUse = k => sel.filter(r => r.t + ':' + r.tier === k).length;
-    const mc = g0 ? mergeCost(g0.tier) : 0, canM = canForge && sel.length === 3 && g0.tier < 10 && S.dust >= mc;
+    const mc = g0 ? mergeCost(g0.tier) : 0, canM = canForge && sel.length === 3 && g0.tier < RUNE_MAX && S.dust >= mc;
     const killN = list.reduce((a, g) => a + g.free, 0), killS = list.reduce((a, g) => a + g.free * shardOf(g.tier), 0);
     const slot = (r, i) => r ? `<button class="rl-wslot full" data-frm="${i}" style="--rc:${RUNE[r.t].color}"><b>${ROMAN[r.tier]}</b><small>${RUNE[r.t].name}</small><span class="x">✕</span></button>` : '<div class="rl-wslot"><span>?</span></div>';
     let html = `<div class="rl-forge2"><div class="rl-fmain">
       <div class="rl-wallet"><span class="rl-cur dust">${dust}${S.dust} Runensplitter</span><span class="note">Lager ${S.runes.length}/${runeCap(S)}</span>
-        <button class="btn small" data-rl="lager" ${ln < LAGER_MAX && S.dust >= lc && inCamp() ? '' : 'disabled'}>${ln >= LAGER_MAX ? 'Lager voll ausgebaut' : `Lager +5 (${dust}${lc})`}</button>
+        <button class="btn small" data-rl="lager" ${ln < LAGER_HARD && S.dust >= lc && inCamp() ? '' : 'disabled'}>${ln >= LAGER_HARD ? 'Lager voll ausgebaut' : `Lager +5 (${dust}${lc})`}</button>
         ${canForge ? `<button class="btn ghost small" data-rl="buyrune" ${S.dust >= DUST_RUNE && S.runes.length < runeCap(S) ? '' : 'disabled'}>Zufällige Rune (${dust}${DUST_RUNE})</button>` : ''}</div>
       <p class="note">${canForge ? 'Tippe eine Rune an, um sie auf den Amboss zu legen (bis zu 3 gleiche). <b>3 gleiche</b> schmiedest du zu einer Rune der nächsten Stufe. Alles auf dem Amboss kannst du auch zerstören.' : 'Tippe Runen an, die du nicht brauchst (bis zu 3 gleiche), und zerstöre sie für Runensplitter. Schmieden und Wandeln kommen erst mit der 4. Wiedergeburt.'}</p>
       <div class="rl-wmach">${slot(sel[0], 0)}<span class="plus">+</span>${slot(sel[1], 1)}<span class="plus">+</span>${slot(sel[2], 2)}${canForge ? `<span class="plus">→</span>
-        <div class="rl-wslot res ${fRes ? 'reveal' : ''}" ${fRes ? `style="--rc:${RUNE[fRes.t].color}"` : ''}>${fRes ? `<span class="roll">⚒️</span><b>${ROMAN[fRes.tier]}</b><small>${RUNE[fRes.t].name}</small>` : (g0 && canForge && g0.tier < 10 ? `<b style="opacity:.35">${ROMAN[g0.tier + 1]}</b><small style="opacity:.5">${RUNE[g0.t].name}</small>` : '<span>⚒️</span>')}</div>` : ''}</div>
+        <div class="rl-wslot res ${fRes ? 'reveal' : ''}" ${fRes ? `style="--rc:${RUNE[fRes.t].color}"` : ''}>${fRes ? `<span class="roll">⚒️</span><b>${ROMAN[fRes.tier]}</b><small>${RUNE[fRes.t].name}</small>` : (g0 && canForge && g0.tier < RUNE_MAX ? `<b style="opacity:.35">${ROMAN[g0.tier + 1]}</b><small style="opacity:.5">${RUNE[g0.t].name}</small>` : '<span>⚒️</span>')}</div>` : ''}</div>
       <div class="row" style="justify-content:center;margin:8px 0;flex-wrap:wrap">${canForge ? `<button class="btn" data-rl="fup" ${canM && inCamp() ? '' : 'disabled'}>⚒️ Schmieden${g0 ? ` (${dust}${mc})` : ''}</button>` : ''}
         <button class="btn ghost" data-rl="fdel" ${sel.length && inCamp() ? '' : 'disabled'}>💥 Zerstören${sel.length ? ` (+${dust}${sel.reduce((a, r) => a + shardOf(r.tier), 0)})` : ''}</button></div>
       <div class="rl-fbar"><span class="note">Sortieren:</span><button data-fsort="art" class="${forgeSort === 'art' ? 'on' : ''}">nach Art</button><button data-fsort="stufe" class="${forgeSort === 'stufe' ? 'on' : ''}">nach Stufe</button></div>
@@ -1976,14 +1976,14 @@
     const used = socketed(S), groups = {};
     for (const r of S.runes) { const k = r.t + ':' + r.tier; (groups[k] = groups[k] || { t: r.t, tier: r.tier, n: 0, free: 0 }).n++; if (!used.has(r.id)) groups[k].free++; }
     const list = Object.values(groups).sort((a, b) => b.tier - a.tier || RUNES.findIndex(x => x.id === a.t) - RUNES.findIndex(x => x.id === b.t));
-    const row = g => { const R = RUNE[g.t], mc = mergeCost(g.tier), canM = feature(S, 'schmiede') && g.n >= 3 && g.tier < 10 && S.dust >= mc;
+    const row = g => { const R = RUNE[g.t], mc = mergeCost(g.tier), canM = feature(S, 'schmiede') && g.n >= 3 && g.tier < RUNE_MAX && S.dust >= mc;
       return `<div class="rl-frow" style="--rc:${R.color}"><span class="rl-rune mini"><b>${ROMAN[g.tier]}</b></span><div class="nm"><b>${R.name} ${ROMAN[g.tier]}</b><small>${g.n}× im Besitz${g.n - g.free ? ` · ${g.n - g.free} eingesetzt` : ''}</small></div>
         <button class="btn ghost small" data-rforge="d:${g.t}:${g.tier}" ${g.free ? '' : 'disabled title="Alle eingesetzt"'}>Zerstören +${dust}${shardOf(g.tier)}</button>
-        ${feature(S, 'schmiede') ? `<button class="btn small" data-rforge="m:${g.t}:${g.tier}" ${canM ? '' : 'disabled'}>${g.tier >= 10 ? 'Höchste Stufe' : `3 → ${ROMAN[g.tier + 1]} · ${dust}${mc}`}</button>` : ''}</div>`; };
+        ${feature(S, 'schmiede') ? `<button class="btn small" data-rforge="m:${g.t}:${g.tier}" ${canM ? '' : 'disabled'}>${g.tier >= RUNE_MAX ? 'Höchste Stufe' : `3 → ${ROMAN[g.tier + 1]} · ${dust}${mc}`}</button>` : ''}</div>`; };
     const ln = S.rlager || 0, lc = lagerCost(ln);
     return `<h3 class="rl-h3">Runenschmied</h3><p class="note">Zerstöre Runen, die du nicht brauchst, und bekomme <b>Runensplitter</b>. Mit Splittern erweiterst du dein <b>Runen-Lager</b>${feature(S, 'schmiede') ? ' und verschmilzt <b>3 gleiche Runen</b> zu einer Rune der nächsten Stufe. Ein Verschmelzen kostet genau so viel, wie 3 zerstörte Runen dieser Stufe geben' : '. Ab der 4. Wiedergeburt kannst du außerdem 3 gleiche Runen verschmelzen'}. Eingesetzte Runen werden nie zerstört.</p>
       <div class="rl-wallet"><span class="rl-cur dust">${dust}${S.dust} Runensplitter</span><span class="note">Lager ${S.runes.length}/${runeCap(S)}</span>
-      <button class="btn small" data-rl="lager" ${ln < LAGER_MAX && S.dust >= lc && inCamp() ? '' : 'disabled'}>${ln >= LAGER_MAX ? 'Lager voll ausgebaut' : `Lager +5 Plätze (${dust}${lc})`}</button>
+      <button class="btn small" data-rl="lager" ${ln < LAGER_HARD && S.dust >= lc && inCamp() ? '' : 'disabled'}>${ln >= LAGER_HARD ? 'Lager voll ausgebaut' : `Lager +5 Plätze (${dust}${lc})`}</button>
       ${feature(S, 'schmiede') ? `<button class="btn ghost small" data-rl="buyrune" ${S.dust >= DUST_RUNE && S.runes.length < runeCap(S) ? '' : 'disabled'}>Zufällige Rune I (${dust}${DUST_RUNE})</button>` : ''}</div>
       <div class="rl-forgelist">${list.map(row).join('') || '<p class="note">Noch keine Runen. Bosse lassen Runen fallen.</p>'}</div>`;
   }

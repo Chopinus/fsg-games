@@ -812,9 +812,12 @@
   const runeVal = (type, tier) => RUNE[type].val * Math.pow(RUNE[type].grow || 2.2, tier - 1);
   // Chancen über 100 %: 380 % = sicher 3 Mal, dazu 80 % Chance auf ein 4. Mal
   const procs = p => (p > 0 ? Math.floor(p) + (Math.random() < p - Math.floor(p) ? 1 : 0) : 0);
-  const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
-  const LAGER_STEP = 5, LAGER_MAX = 12;
-  const lagerCost = n => 10 * Math.pow(2, n);
+  const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV'];
+  // Spieler-Idee (v32): Runen bis Stufe XV – XI bis XV gibt es nur durch Verschmelzen, nie als Beute (RUNE_DROP_MAX)
+  const RUNE_MAX = 15, RUNE_DROP_MAX = 10;
+  // Lager: 12 Ausbaustufen bis 100 Plätze, danach beliebig oft +5 Plätze zum gleichen Preis wie die letzte Stufe
+  const LAGER_STEP = 5, LAGER_MAX = 12, LAGER_HARD = 400;
+  const lagerCost = n => 10 * Math.pow(2, Math.min(n, LAGER_MAX - 1));
   const runeCap = S => 40 + LAGER_STEP * (S.rlager || 0);
   const DUST_RUNE = 4;
   const shardOf = tier => Math.pow(3, tier - 1), mergeCost = tier => Math.pow(3, tier);
@@ -1703,7 +1706,7 @@
     for (const k of ['gold', 'souls', 'best', 'bestEver', 'runs', 'stars', 'rebirths', 'dust', 'runeSeq', 'towerBest']) out[k] = Math.max(0, Math.floor(Number(out[k]) || 0));
     out.runeSeq = Math.max(1, out.runeSeq);
     out.bestEver = Math.max(out.bestEver, out.best);
-    for (const r of Array.isArray(d.runes) ? d.runes : []) if (r && RUNE[r.t] && r.tier >= 1) out.runes.push({ id: Math.floor(r.id) || out.runeSeq++, t: r.t, tier: Math.min(10, Math.floor(r.tier)) });
+    for (const r of Array.isArray(d.runes) ? d.runes : []) if (r && RUNE[r.t] && r.tier >= 1) out.runes.push({ id: Math.floor(r.id) || out.runeSeq++, t: r.t, tier: Math.min(RUNE_MAX, Math.floor(r.tier)) });
     out.runeSeq = Math.max(out.runeSeq, ...out.runes.map(r => r.id + 1));
     const ids = new Set(out.runes.map(r => r.id)), used = new Set();
     for (const h of HEROES) {
@@ -1771,7 +1774,7 @@
     if (!d.starV && Object.keys(out.perks).length) { const back = resetPerks(out); if (out.runs > 0 && back) out.starNews = back; }
     out.starV = 1;
     out.rbHist = (Array.isArray(d.rbHist) ? d.rbHist : []).map(x => Math.max(0, Math.floor(Number(x) || 0))).slice(-40);
-    out.rlager = Math.max(0, Math.min(LAGER_MAX, Math.floor(Number(d.rlager) || 0)));
+    out.rlager = Math.max(0, Math.min(LAGER_HARD, Math.floor(Number(d.rlager) || 0)));
     out.altar = Math.max(0, Math.min(ALTAR_MAX, Math.floor(Number(d.altar) || 0)));
     out.ahn = ahnFix(d.ahn);
     out.ascBest = d.ascBest != null ? Math.max(0, Math.floor(Number(d.ascBest) || 0)) : out.asc > 0 ? out.best : Math.max(out.bestEver, out.best); // vor Version 37 unbekannt: beste Schätzung
@@ -1953,7 +1956,7 @@
     S.sockets[hid][slot] = runeId; return true;
   }
   function unsocket(S, hid, slot) { S.sockets[hid][slot] = null; }
-  function canMerge(S, r) { return feature(S, 'schmiede') && S.runes.filter(x => x.t === r.t && x.tier === r.tier).length >= 3 && r.tier < 10 && S.dust >= mergeCost(r.tier); }
+  function canMerge(S, r) { return feature(S, 'schmiede') && S.runes.filter(x => x.t === r.t && x.tier === r.tier).length >= 3 && r.tier < RUNE_MAX && S.dust >= mergeCost(r.tier); }
   function merge(S, r) {
     if (!canMerge(S, r)) return null;
     const used = socketed(S);
@@ -1975,7 +1978,7 @@
   }
   // Boss-Runen kommen in einem Bereich: unter 25 nur I, ab 25 I–II, ab 50 II–III, ab 75 II–IV, ab 100 III–V …
   function bossRuneTier(stage) {
-    const b = Math.min(10, 1 + Math.floor(stage / 25)), x = Math.random();
+    const b = Math.min(RUNE_DROP_MAX, 1 + Math.floor(stage / 25)), x = Math.random();
     if (b === 1) return 1;
     if (b <= 3) return x < 0.6 ? b - 1 : b;
     return x < 0.4 ? b - 2 : x < 0.75 ? b - 1 : b;
@@ -2009,7 +2012,7 @@
     S.area = Math.min(S.area || 0, areaMax(S));
     return { lost, back };
   }
-  function buyLager(S) { const n = S.rlager || 0; if (!feature(S, 'runen') || n >= LAGER_MAX || S.dust < lagerCost(n)) return false; S.dust -= lagerCost(n); S.rlager = n + 1; return true; }
+  function buyLager(S) { const n = S.rlager || 0; if (!feature(S, 'runen') || n >= LAGER_HARD || S.dust < lagerCost(n)) return false; S.dust -= lagerCost(n); S.rlager = n + 1; return true; }
   function dismantle(S, r) {
     if (!feature(S, 'runen')) return 0;
     for (const h of HEROES) S.sockets[h.id] = S.sockets[h.id].map(x => (x === r.id ? null : x));
@@ -2787,7 +2790,7 @@
       if (run.mode === 'weekly' || run.mode === 'exp' || ahnLike(run) || run.mode === 'wboss') souls = 0;
       if (souls) { sfx('soul'); S.tot.souls += souls; S.souls += souls; run.souls += souls; run.floats.push({ x: e.x, y: 95, text: `+${souls} Seele${souls > 1 ? 'n' : ''}`, color: '#c9a6ff', size: 16, t: 1 }); }
       if (feature(S, 'runen') && run.mode === 'normal' && (e.boss || (e.elite && Math.random() < 0.03))) {
-        const tier = e.boss ? bossRuneTier(run.stage) : Math.min(10, 1 + Math.floor(run.stage / 40));
+        const tier = e.boss ? bossRuneTier(run.stage) : Math.min(RUNE_DROP_MAX, 1 + Math.floor(run.stage / 40));
         const r = addRune(S, RUNES[Math.floor(Math.random() * RUNES.length)].id, tier);
         if (r) { sfx('rune'); run.runes.push(r); run.floats.push({ x: e.x, y: 75, text: `Rune: ${RUNE[r.t].name} ${ROMAN[r.tier]}`, color: RUNE[r.t].color, size: 14, t: 1.4 }); }
       }
