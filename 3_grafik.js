@@ -298,6 +298,17 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 68, title: 'Spieler-Idee: Neues ab Aufstieg 6 bis 10', date: '15.11.2026', items: [
+      'Aufstieg 6: Begleiter bis Stufe 150. Aufstieg 7: dritter Begleiter-Platz.',
+      'Aufstieg 8: Unterklassen-Meisterschaft – alle Unterklassen-Boni wirken 50 % stärker.',
+      'Aufstieg 9: siebter Platz auf dem Feld, 7 Helden kämpfen gleichzeitig.',
+      'Aufstieg 10: Kaiserkrone – jeder weitere Aufstieg gibt +5 Kronen, und ab dem 10. Aufstieg bekommen alle Helden +10 % Schaden und Leben je Aufstieg.',
+    ] },
+    { id: 67, title: 'Spieler-Idee: Unterklassen', date: '15.11.2026', items: [
+      'Ab dem 2. Aufstieg wählst du für jeden Helden eine von zwei Unterklassen – zum Beispiel Paladin oder Klingenmeister beim Ritter, Kampfmagier oder Erzmagier beim Magier.',
+      'Die Wahl findest du oben im Reiter des Helden. Die erste Wahl ist kostenlos, ein Wechsel kostet 2 Kronen.',
+      'Damit das Spiel am Anfang übersichtlich bleibt, gibt es Unterklassen erst nach dem Aufstieg.',
+    ] },
     { id: 66, title: 'Spieler-Idee: Gegner mit Eigenschaften', date: '15.11.2026', items: [
       'Ab Stufe 40 bekommen Gegner besondere Eigenschaften – je tiefer du kommst, desto öfter und desto mehr (bis zu 3 pro Gegner, Bosse ab Stufe 50 immer).',
       '⛨ Gepanzert (wenig Schaden von Grundangriffen, viel von Fähigkeiten), ✧ Bannschild (umgekehrt), ☣ Fäulnis (halbe Heilung), ⛓ Fessler (fesselt Helden kurz), ☠ Henker (dreifacher Schaden gegen angeschlagene Helden), » Flink und ✚ Zäh.',

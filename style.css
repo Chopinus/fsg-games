@@ -1687,3 +1687,10 @@ html.rl-appmode,html.rl-appmode body{overflow:hidden;overscroll-behavior:none}
 /* Ritterlauf: Gegner-Eigenschaften (Spieler-Idee v27) */
 .rl-traits{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,#ff5a5a 10%,var(--surface));border:1px solid color-mix(in srgb,#ff5a5a 35%,transparent);font-size:12.5px}
 .rl-traits>b{font-size:13px}.rl-traits span{color:var(--muted,#c8c0d8)}.rl-traits i{font-style:normal;font-weight:800;display:inline-block;min-width:14px;text-align:center}
+/* Ritterlauf: Unterklassen (Spieler-Idee v29) */
+.rl-subs{margin:0 0 10px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--hc) 10%,var(--surface));border:1px solid color-mix(in srgb,var(--hc) 40%,transparent)}
+.rl-subhd{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px}.rl-subhd small{color:var(--muted);font-size:12px}
+.rl-subrow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rl-sub{display:flex;flex-direction:column;gap:3px;text-align:left;padding:9px 10px;border-radius:10px;border:2px solid transparent;background:var(--surface);color:var(--fg);font:inherit;cursor:pointer}
+.rl-sub small{color:var(--muted);font-size:12px;line-height:1.3}.rl-sub.on{border-color:var(--hc);background:color-mix(in srgb,var(--hc) 18%,var(--surface))}.rl-sub:disabled{opacity:.55;cursor:default}.rl-sub.on:disabled{opacity:1}
+@media (max-width:480px){.rl-subrow{grid-template-columns:1fr}}

@@ -691,13 +691,49 @@
   ];
   const CPERK = Object.fromEntries(CPERKS.map(p => [p.id, p]));
   // Grundwert: 1. Aufstieg 25, 2. Aufstieg 18, danach 10 Kronen. Dazu ein Bonus für tiefe Läufe, der langsamer wächst und bei 20 endet
-  const ascBase = S => [25, 18][S.asc || 0] ?? 10;
+  const ascBase = S => ([25, 18][S.asc || 0] ?? 10) + ((S.asc || 0) >= 10 ? 5 : 0);
   const ascDeep = best => Math.min(20, Math.floor(Math.sqrt(Math.max(0, best - ASC_REQ_STAGE)) * 1.2));
   const crownsFor = S => (S.rebirths >= ASC_REQ_REBIRTHS && S.best >= ASC_REQ_STAGE ? ascBase(S) + ascDeep(S.best) : 0);
   const ASC_ROAD = [
-    { a: 1, text: 'Kronen-Laden mit dauerhaften Königs-Boni' }, { a: 2, text: 'Begleiter: Drache und Eule' }, { a: 3, text: 'Begleiter: Golem' },
+    { a: 1, text: 'Kronen-Laden mit dauerhaften Königs-Boni' }, { a: 2, text: 'Begleiter: Drache und Eule. Dazu Unterklassen: jeder Held wählt einen von zwei Pfaden' }, { a: 3, text: 'Begleiter: Golem' },
     { a: 4, text: 'Begleiter: Phönix und ein zweiter Begleiter-Platz' }, { a: 5, text: 'Begleiter bis Stufe 100' },
+    // Spieler-Idee (v33): auch Aufstieg 6–10 schalten Neues frei
+    { a: 6, text: 'Begleiter bis Stufe 150' }, { a: 7, text: 'Dritter Begleiter-Platz' }, { a: 8, text: 'Unterklassen-Meisterschaft: alle Unterklassen-Boni wirken 50 % stärker' },
+    { a: 9, text: 'Siebter Platz auf dem Feld: 7 Helden kämpfen gleichzeitig' }, { a: 10, text: 'Kaiserkrone: jeder weitere Aufstieg gibt +5 Kronen, und alle Helden bekommen +10 % Schaden und Leben je Aufstieg ab dem 10.' },
   ];
+  // Spieler-Idee (v29): Unterklassen ab dem 2. Aufstieg – pro Held einer von zwei Pfaden. m = mal, a = plus
+  const SUB_ASC = 2, SUB_SWITCH = 2;
+  const SUBS = {
+    r: [{ id: 'paladin', n: 'Paladin', d: '+35 % Leben, +8 % Schadensreduktion', m: { hp: 1.35 }, a: { dr: 0.08 } }, { id: 'klinge', n: 'Klingenmeister', d: '+30 % Schaden, +8 % Krit-Chance', m: { atk: 1.3 }, a: { crit: 0.08 } }],
+    w: [{ id: 'bollwerk', n: 'Bollwerk', d: '+40 % Leben, +5 % Blocken', m: { hp: 1.4 }, a: { block: 0.05 } }, { id: 'raecher', n: 'Rächer', d: '+50 % Schaden, wirft 25 % des erlittenen Schadens zurück', m: { atk: 1.5 }, a: { thorns: 0.25 } }],
+    s: [{ id: 'waldl', n: 'Waldläuferin', d: '+25 % Angriffstempo', m: { aps: 1.25 } }, { id: 'scharf', n: 'Scharfschützin', d: '+10 % Krit-Chance, +30 % Krit-Schaden', m: { critD: 1.3 }, a: { crit: 0.1 } }],
+    m: [{ id: 'kampfm', n: 'Kampfmagier', d: '+40 % Schaden der aktiven Fähigkeiten', m: { actMul: 1.4 } }, { id: 'erzm', n: 'Erzmagier', d: '+25 % Schaden, +50 % Flächenschaden', m: { atk: 1.25, splash: 1.5 } }],
+    p: [{ id: 'heilige', n: 'Heilige', d: '+40 % Heilung', m: { heal: 1.4 } }, { id: 'inqu', n: 'Inquisitorin', d: '+80 % Schaden, 5 % Lebensraub', m: { atk: 1.8 }, a: { lifesteal: 0.05 } }],
+    t: [{ id: 'rudelf', n: 'Rudelführer', d: '+50 % Wolfsschaden, Wölfe +15 % schneller', m: { wolfAtk: 1.5, wolfAps: 1.15 } }, { id: 'berserk', n: 'Berserker', d: '+30 % Schaden, +15 % Angriffstempo, −10 % Leben', m: { atk: 1.3, aps: 1.15, hp: 0.9 } }],
+    a: [{ id: 'schattenk', n: 'Schattenklinge', d: '+10 % Krit-Chance, +20 % Krit-Schaden', m: { critD: 1.2 }, a: { crit: 0.1 } }, { id: 'meuchler', n: 'Meuchler', d: '+35 % Schaden, +25 % Schaden gegen Fernkämpfer', m: { atk: 1.35 }, a: { rangedDmg: 0.25 } }],
+    n: [{ id: 'knochenh', n: 'Knochenherr', d: '+50 % Schaden der Diener, +1 Diener', m: { minionMul: 1.5 }, a: { minionMax: 1 } }, { id: 'seelenr', n: 'Seelenräuber', d: '+25 % Schaden, 5 % Lebensraub', m: { atk: 1.25 }, a: { lifesteal: 0.05 } }],
+    b: [{ id: 'spielm', n: 'Spielmann', d: 'Sein Lied gibt allen +4 % mehr Schaden und +3 % mehr Tempo', a: { songAtk: 0.04, songAps: 0.03 } }, { id: 'schallk', n: 'Schallkrieger', d: '+50 % Schaden, +20 % Schaden der Fähigkeiten', m: { atk: 1.5, actMul: 1.2 } }],
+    d: [{ id: 'hueterin', n: 'Hüterin', d: '+25 % Leben, heilt sich um 0,5 % Leben pro Sekunde', m: { hp: 1.25 }, a: { regen: 0.005 } }, { id: 'bestie', n: 'Bestie', d: '+35 % Schaden, 3 % Lebensraub', m: { atk: 1.35 }, a: { lifesteal: 0.03 } }],
+    e: [{ id: 'ingen', n: 'Ingenieurin', d: '+50 % Geschützschaden, Geschütz +15 % schneller', m: { turretMul: 1.5, turretAps: 1.15 } }, { id: 'spreng', n: 'Sprengmeisterin', d: '+30 % Schaden, +50 % Flächenschaden', m: { atk: 1.3, splash: 1.5 } }],
+    o: [{ id: 'monolith', n: 'Monolith', d: '+40 % Leben, +6 % Schadensreduktion', m: { hp: 1.4 }, a: { dr: 0.06 } }, { id: 'brecher', n: 'Runenbrecher', d: '+40 % Schaden, +15 % Schaden der Fähigkeiten', m: { atk: 1.4, actMul: 1.15 } }],
+  };
+  const subOpen = S => (S.asc || 0) >= SUB_ASC;
+  const subOf = (S, hid) => (subOpen(S) && S.sub && SUBS[hid] ? SUBS[hid].find(x => x.id === S.sub[hid]) || null : null);
+  const subPow = S => ((S.asc || 0) >= 8 ? 1.5 : 1);
+  function subApply(S, T, hid) {
+    const sb = subOf(S, hid); if (!sb) return; const f = subPow(S);
+    for (const [k, v] of Object.entries(sb.m || {})) if (typeof T[k] === 'number') T[k] *= 1 + (v - 1) * f;
+    for (const [k, v] of Object.entries(sb.a || {})) if (typeof T[k] === 'number') T[k] += v * f;
+    if (sb.a && sb.a.minionMax) T.minionMax = Math.round(T.minionMax);
+  }
+  // Erste Wahl kostenlos, wechseln kostet Kronen
+  function pickSub(S, hid, id) {
+    if (!subOpen(S) || !SUBS[hid] || !SUBS[hid].some(x => x.id === id)) return false;
+    S.sub = S.sub || {}; if (S.sub[hid] === id) return false;
+    if (S.sub[hid]) { if ((S.crowns || 0) < SUB_SWITCH) return false; S.crowns -= SUB_SWITCH; }
+    S.sub[hid] = id; return true;
+  }
+  const kaiserMul = S => Math.pow(1.1, Math.max(0, (S.asc || 0) - 9));
   const ascDiff = S => Math.pow(1.6, S.asc || 0);
   // Aufstiegsränge: ein Titel pro Aufstieg, ab dem 10. Aufstieg Kaiser mit Zählung
   const RANKS = [
@@ -731,8 +767,8 @@
     { id: 'phoenix', name: 'Phönix', asc: 4, color: '#ff9a3d', desc: l => `Heilt alle Helden um ${(0.15 * l).toFixed(2).replace('.', ',')} % pro Sekunde${l >= 10 ? ', belebt einmal pro Lauf alle Gefallenen wieder' : ' (ab Stufe 10: Wiederbelebung)'}` },
   ];
   const COMP = Object.fromEntries(COMPS.map(c => [c.id, c]));
-  const compMax = S => ((S.asc || 0) >= 5 ? 100 : 50);
-  const compSlots = S => ((S.asc || 0) >= 4 ? 2 : 1);
+  const compMax = S => ((S.asc || 0) >= 6 ? 150 : (S.asc || 0) >= 5 ? 100 : 50);
+  const compSlots = S => ((S.asc || 0) >= 7 ? 3 : (S.asc || 0) >= 4 ? 2 : 1);
   const compCost = lvl => Math.ceil(5 * Math.pow(1.28, lvl));
 
   /* ================= Erfolge ================= */
@@ -1723,8 +1759,8 @@
     if (d.tst) out.tst = 1;
     out.daily = { day: String(d.daily?.day || ''), best: Math.max(0, Math.floor(Number(d.daily?.best) || 0)), claimed: Math.max(0, Math.floor(Number(d.daily?.claimed) || 0)) };
     out.weekly = { week: String(d.weekly?.week || ''), best: Math.max(0, Math.floor(Number(d.weekly?.best) || 0)), claimed: Math.max(0, Math.floor(Number(d.weekly?.claimed) || 0)) };
-    out.comps = {}; for (const c of COMPS) { const l = Math.floor(Number(d.comps?.[c.id]) || 0); if (l > 0) out.comps[c.id] = Math.min(100, l); }
-    out.compActive = (Array.isArray(d.compActive) ? d.compActive : []).filter(id => out.comps[id]).slice(0, 2);
+    out.comps = {}; for (const c of COMPS) { const l = Math.floor(Number(d.comps?.[c.id]) || 0); if (l > 0) out.comps[c.id] = Math.min(150, l); }
+    out.compActive = (Array.isArray(d.compActive) ? d.compActive : []).filter(id => out.comps[id]).slice(0, 3);
     out.seenIntro = !!d.seenIntro || out.runs > 0;
     out.area = Math.max(0, Math.min(99, Math.floor(Number(d.area) || 0)));
     out.tempo = Math.max(0, Math.min(TEMPO_COST.length, Math.floor(Number(d.tempo) || 0)));
@@ -1775,6 +1811,7 @@
     out.starV = 1;
     out.rbHist = (Array.isArray(d.rbHist) ? d.rbHist : []).map(x => Math.max(0, Math.floor(Number(x) || 0))).slice(-40);
     out.rlager = Math.max(0, Math.min(LAGER_HARD, Math.floor(Number(d.rlager) || 0)));
+    out.sub = {}; if (d.sub && typeof d.sub === 'object') for (const [hid, id] of Object.entries(d.sub)) if (SUBS[hid] && SUBS[hid].some(x => x.id === id)) out.sub[hid] = id;
     out.altar = Math.max(0, Math.min(ALTAR_MAX, Math.floor(Number(d.altar) || 0)));
     out.ahn = ahnFix(d.ahn);
     out.ascBest = d.ascBest != null ? Math.max(0, Math.floor(Number(d.ascBest) || 0)) : out.asc > 0 ? out.best : Math.max(out.bestEver, out.best); // vor Version 37 unbekannt: beste Schätzung
@@ -2061,7 +2098,7 @@
     bossDmg: 0, vuln: 0, extraShot: 0, revive: 0, heal: 0, overShield: 0, reviveFast: 0, miracle: 0, wolfAtk: 0, wolfAps: 0, wolves: 0, wolfCrit: 0, wolfHeal: 0, packBonus: 0,
     ...Object.fromEntries(SIG_FLAGS.map(f => [f, 0])), rangedDmg: 0, raise: 0, minionMax: 0, minionMul: 1, minionDur: 0, songAtk: 0, songAps: 0, turrets: 0, turretMul: 0, turretAps: 0 };
   // Aufstellung: 4 Plätze auf dem Feld, +1 aus dem Sternen-Laden, +1 aus dem Kronen-Laden
-  const fieldSlots = S => Math.min(6, 4 + perk(S, 'p_feld') + cperk(S, 'k_feld'));
+  const fieldSlots = S => Math.min(7, 4 + perk(S, 'p_feld') + cperk(S, 'k_feld') + ((S.asc || 0) >= 9 ? 1 : 0));
   function fieldOf(S) {
     const avail = HEROES.filter(h => hired(S, h.tree) && !onTrip(S, h.id)).map(h => h.id), bench = S.bench || [];
     const f = avail.filter(id => !bench.includes(id)).slice(0, fieldSlots(S));
@@ -2094,8 +2131,9 @@
         if (e.h === 'all' && e.s === 'atk' && T.heal) T.heal *= Math.pow(e.pow, r);
       });
     }
+    for (const [hid, T] of Object.entries(hs)) subApply(S, T, hid);
     const achN = Object.keys(S.ach || {}).length;
-    const perm = Math.pow(1.1, perk(S, 'p_macht')) * (1 + 0.03 * S.towerBest) * Math.pow(1 + ACH_BONUS, achN) * Math.pow(1.5, cperk(S, 'k_blut'));
+    const perm = Math.pow(1.1, perk(S, 'p_macht')) * (1 + 0.03 * S.towerBest) * Math.pow(1 + ACH_BONUS, achN) * Math.pow(1.5, cperk(S, 'k_blut')) * kaiserMul(S);
     g.gold *= (1 + 0.15 * perk(S, 'p_gold')) * Math.pow(2, cperk(S, 'k_schatz'));
     g.soulMul *= Math.pow(2, cperk(S, 'k_seele')) * altarMul(S);
     const comp = {};
@@ -2985,7 +3023,7 @@
   const core = { RAR, RAR_COL, GEAR_SLOTS, TINTS, HERO_SETS, DECO_SLOTS, ITEMS, TROPHY_N, BSET_AT, itemOf, invN, invAdd, invUsed, invFree, equipGear, setDeco, chestRoll, chestCount, openChest, trophyRoll, bsetCount, bsetAdd, CHEST, TROPHY, TRIPS, TRIP_SHARE, onTrip, tripLeft, rateOf, noteRate, hoursReward, tripReward, startTrip, claimTrip, WB, WB_BOSS, wbScore, wbBarReward, wbBarSecs, wbGoalHours, wbReward, GACHA, G_FIVE, G_FOUR, CONS_H, consList, consApply, evtBanner, evtPeriod, starSock, gachaOpen, evtOpen, gemOpen, gemBossFirst, GIFT_PULLS, consOf, bannerOf, gachaPull, GEM_SRC, LOGIN, loginItem, loginToday, claimLogin, BOUNTY, bountiesOf, bountyDone, bountyClaim, ahnLike, AHN_MISSIONS, AHN_ABIL, AHN_MECH, AHN_BOONS, ahnRollBoons, ahnPickBoon, ahnBoonText, ahnApplyBoons, AHN_TRAIT, AHNE, AHN_TUNE, AHN_COUNT, ahnOpen, ahnBossesOf, ahnLevelFor, placeSigil, ahnClaim, unrebirth, transmute, bossRuneTier, resetPerks, buyLager, lagerCost, LAGER_MAX, runeCap, shardOf, mergeCost, ALTAR_MAX, altarCost, altarMul, buyAltar, kSlots, kFree, keyCap, addSock, removeSock, removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, splTrade, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
     SEASON, rankOf, RANKS, rankBonus, AREAS, areaOf, MISSIONS, extraSocks, XSOCK, sockOk, runeAmp, mastInfo, mastLevel, SKINS, WF_STAGE, WF, wfSpawn,
     sigOn, sig2On, sig2Open, placeSigil2, SIG2_ASC, SIG2_ID, sigActCap, sigKeysUsed, keyNeed, eqOf, slotLim, SIG, SIG_FLAGS, newRun, step, stats, buy, available, blockReason, NODE, migrate, fresh,
-    rebirth, ascend, crownsFor, buyCperk, cperkCost, cperk, CPERKS, levelComp, toggleComp, compCost, compMax, compSlots, COMPS, checkAch, ACH, claimWeekly, weekId, dayId, weekRules, RULE, WEEK_TIERS, statsFor, starsFor, toggleEquip, slotsOf, hired, classOpen, keysUsed, keyLimit, capOf, reqOf, feature, encode, decode, fmt, socket, unsocket, merge, canMerge, dismantle, buyRune, runeVal, addRune, TRAITS };
+    rebirth, ascend, crownsFor, buyCperk, cperkCost, cperk, CPERKS, levelComp, toggleComp, compCost, compMax, compSlots, COMPS, checkAch, ACH, claimWeekly, weekId, dayId, weekRules, RULE, WEEK_TIERS, statsFor, starsFor, toggleEquip, slotsOf, hired, classOpen, keysUsed, keyLimit, capOf, reqOf, feature, encode, decode, fmt, socket, unsocket, merge, canMerge, dismantle, buyRune, runeVal, addRune, TRAITS, SUBS, subOf, pickSub, subOpen, fieldSlots };
   if (typeof module !== 'undefined') { module.exports = core; return; }
   // ---------- Automatische Updates ----------
   // Prüft alle 2 Minuten (und beim Zurückkehren in den Tab), ob auf dem Server eine neue ritter.js liegt.

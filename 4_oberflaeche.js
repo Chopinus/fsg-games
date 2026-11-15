@@ -1369,11 +1369,20 @@
   function heroTab(tree) {
     const h = HERO[tree], eq = eqOf(S, tree, false), eqS = eqOf(S, tree, true), ok = hired(S, tree), sg = sigOn(S, tree);
     const lockedNote = !classOpen(S, tree) ? `<p class="warn">${h.puzzle ? 'Diese Klasse bekommst du nur im Sternenruf (Banner).' : `Diese Klasse wird mit der ${h.rebirth}. Wiedergeburt freigeschaltet.`} Du kannst dir den Baum schon ansehen.</p>` : '';
-    return `${lockedNote}<div class="rl-hhead" style="--hc:${h.color}">${ok ? `<div class="rl-hsbtn"><button class="btn ghost small" data-rl="ward" aria-label="Aussehen" title="Aussehen: Kopf, Oberteil, Beine">👕</button><button class="btn ghost small" data-rl="hstats" aria-label="Alle Werte" title="Alle Werte">📊<span class="rl-backtxt"> Werte</span></button></div>` : ''}<span class="pt">${PORTRAIT[h.id]}</span><div class="rl-hbody"><h3>${h.name}${gachaOpen(S) ? ` <span class="rl-hrar">${rarStars(heroRar(h.id))}</span>${consStars(h.id)}` : ''}</h3><p class="note rl-long">${h.desc}</p>
+    return `${lockedNote}${subBox(h)}<div class="rl-hhead" style="--hc:${h.color}">${ok ? `<div class="rl-hsbtn"><button class="btn ghost small" data-rl="ward" aria-label="Aussehen" title="Aussehen: Kopf, Oberteil, Beine">👕</button><button class="btn ghost small" data-rl="hstats" aria-label="Alle Werte" title="Alle Werte">📊<span class="rl-backtxt"> Werte</span></button></div>` : ''}<span class="pt">${PORTRAIT[h.id]}</span><div class="rl-hbody"><h3>${h.name}${gachaOpen(S) ? ` <span class="rl-hrar">${rarStars(heroRar(h.id))}</span>${consStars(h.id)}` : ''}</h3><p class="note rl-long">${h.desc}</p>
       ${ok ? `<div class="rl-actchips" title="Aktive Fähigkeiten ${eq.length}/${slotsOf(S, tree)}">${Array.from({ length: slotsOf(S, tree) }, (_, i) => eq[i] ? `<span class="on">⚡${esc(ACT_NAME(eq[i]))}</span>` : '<span>leer</span>').join('')}${sg ? Array.from({ length: Math.max(1, sigActCap(S, tree)) }, (_, i) => eqS[i] ? `<span class="on sig">✦${esc(ACT_NAME(eqS[i]))}</span>` : '<span class="sig">✦ frei</span>').join('') : ''}</div>${mastHTML(h)}${sockRow(tree)}` : ''}</div></div>
       ${acct && acct.tester ? `<div class="rl-test"><b>🧪 Test</b> <button class="btn small ${confirm === 'tbuild' ? 'danger' : ''}" data-rl="tbuild" ${inCamp() && classOpen(S, tree) ? '' : 'disabled'}>${confirm === 'tbuild' ? 'Wirklich den ganzen Baum setzen?' : 'Baum komplett ausbauen'}</button><span class="note">Alles auf voll, beide Endlos-Fertigkeiten auf 42. Kostet nichts. Schlüssel bleiben, wie sie sind.</span>
         <button class="btn small ${S.tKeepTree ? '' : 'ghost'}" data-rl="tkeep">${S.tKeepTree ? '✓ Bäume bleiben bei Wiedergeburt' : 'Bäume bleiben bei Wiedergeburt: aus'}</button><span class="note">Wenn an, behalten alle Helden bei einer Wiedergeburt ihre Fertigkeitenbäume und ausgerüsteten Fähigkeiten. Gilt für alle Helden.</span></div>` : ''}
       <div class="rl-treewrap"><div class="rl-treebox">${treeSVG(tree)}${!sg && ahnOpen(S) && classOpen(S, tree) ? `<p class="note rl-signote rl-long">✦ Mit einem Ahnensiegel wächst dieser Baum nach unten: 5 passive Fähigkeiten, 3 Siegel-Fähigkeiten mit eigenem Platz und 4 Siegel-Schlüssel mit eigenem Sockel. ${S.ahn.sig > 0 ? 'Du hast ein freies Siegel, setze es im Reiter Ahnenprüfung.' : 'Siegel bekommst du in der Ahnenprüfung.'}</p>` : ''}${sg && !sig2On(S, tree) && classOpen(S, tree) ? `<p class="note rl-signote rl-long">✦✦ Mit einem zweiten Ahnensiegel wächst dieser Baum noch weiter: 3 starke passive Fähigkeiten, ein zweiter Siegel-Platz und ein zusätzlicher Platz für normale aktive Fähigkeiten. ${sig2Open(S) ? (S.ahn.sig > 0 ? 'Du hast ein freies Siegel, setze es im Reiter Ahnenprüfung.' : 'Siegel bekommst du in der Ahnenprüfung.') : `Wird nach ${SIG2_ASC} Aufstiegen freigeschaltet (du hast ${S.asc || 0}).`}</p>` : ''}</div>${detailHTML(tree)}</div>`;
+  }
+  // Spieler-Idee (v29): Unterklassen ab dem 2. Aufstieg
+  function subBox(h) {
+    if (!hired(S, h.tree) || !SUBS[h.id]) return '';
+    if (!subOpen(S)) return (S.asc || 0) >= 1 ? `<p class="note rl-long">⚜ Ab dem ${SUB_ASC}. Aufstieg wählst du für jeden Helden eine Unterklasse.</p>` : '';
+    const cur = subOf(S, h.id), pw = (S.asc || 0) >= 8;
+    return `<div class="rl-subs" style="--hc:${h.color}"><div class="rl-subhd"><b>⚜ Unterklasse</b><small>${cur ? `Wechseln kostet ${crown}${SUB_SWITCH} Kronen` : 'Wähle einen Pfad – die erste Wahl ist kostenlos'}${pw ? ' · Meisterschaft: Boni +50 %' : ''}</small></div><div class="rl-subrow">${SUBS[h.id].map(x => {
+      const on = cur && cur.id === x.id, can = !on && inCamp() && (!cur || S.crowns >= SUB_SWITCH);
+      return `<button class="rl-sub ${on ? 'on' : ''}" data-sub="${h.id}:${x.id}" ${can || on ? '' : 'disabled'}><b>${on ? '✓ ' : ''}${esc(x.n)}</b><small>${esc(x.d)}</small></button>`; }).join('')}</div></div>`;
   }
   function testBuild(tree) {
     const inf = NODES.filter(n => n.tree === tree && n.kind === 'inf');
@@ -1706,6 +1715,8 @@
     if (ahnClick(e)) return;
     const g = e.target.closest('[data-node]');
     if (g) { sel[tab] = g.dataset.node; panel(); return; }
+    const sb = e.target.closest('[data-sub]');
+    if (sb) { const [hid, id] = sb.dataset.sub.split(':'); if (inCamp() && pickSub(S, hid, id)) { SND.play('forge'); toast(`${HERO_BY_ID[hid].name}: ${SUBS[hid].find(x => x.id === id).n}`, true); afterChange(); } return; }
     const tm = e.target.closest('[data-tmenu]');
     if (tm) { if (acct && acct.tester) testMenu(tm.dataset.tmenu); return; }
     const rf = e.target.closest('[data-rforge]');
