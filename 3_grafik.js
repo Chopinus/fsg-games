@@ -175,7 +175,7 @@
   /* ---------- Anschlagbrett: alle Spielarten als Plakate ---------- */
   const boardOpenIds = () => ['weekly', 'login', 'deko', ...((S.bestEver || 0) > 150 || chestCount(S) ? ['truhen'] : []), ...(feature(S, 'turm') ? ['tower'] : []), ...(ahnOpen(S) ? ['ahn'] : []), ...(expOpen(S) ? ['exp'] : []), ...(gachaOpen(S) ? ['ruf', 'kopf'] : [])];
   const boardNew = () => { if (!Array.isArray(S.knownBoard)) S.knownBoard = boardOpenIds(); return boardOpenIds().filter(id => !S.knownBoard.includes(id)); };
-  const POSTER_ID = { 'Tages-Herausforderung': 'weekly', Turm: 'tower', Ahnenprüfung: 'ahn', Expedition: 'exp', Sternenruf: 'ruf', Kopfgeldjagd: 'kopf', 'Täglicher Lohn': 'login', 'Lager einrichten': 'deko', 'Albtraum-Truhen': 'truhen' };
+  const POSTER_ID = { 'Artefakt-Prüfung': 'arte', 'Tages-Herausforderung': 'weekly', Turm: 'tower', Ahnenprüfung: 'ahn', Expedition: 'exp', Sternenruf: 'ruf', Kopfgeldjagd: 'kopf', 'Täglicher Lohn': 'login', 'Lager einrichten': 'deko', 'Albtraum-Truhen': 'truhen' };
   function poster(o) {
     const lock = o.lock ? `<span class="rl-pstamp">${esc(o.lock)}</span>` : '', fresh = !o.lock && o.isNew;
     return `<article class="rl-poster ${o.lock ? 'locked' : ''}" style="--pc:${o.col};--rot:${o.rot}deg">${fresh ? '<i class="rl-reddot rl-pdot" aria-label="neu"></i>' : ''}
@@ -213,6 +213,9 @@
       { title: 'Expedition', art: ['exp1', 'exp2'], icon: '🧭', col: '#9bd14a', rot: -1.5, desc: 'Kurze Aufträge für Heldensplitter – tausch sie gegen Sternkristalle für den Sternenruf.',
         info: eOpen ? [`Heldensplitter: <b>${S.exp.spl}</b>`] : [],
         lock: eOpen ? '' : 'Ab dem 1. Aufstieg', acts: '<button class="btn" data-m="go" data-go="exp">Aufträge ansehen</button>' },
+      { title: 'Artefakt-Prüfung', art: ['exp2', 'ruf1'], icon: '♛', col: '#8fe3ff', rot: 1, desc: 'Schaffe 8 Wellen samt Boss in 3 Minuten und gewinne ein Artefakt mit Haupt- und Nebenwerten. Jeder Sieg kostet ein Prüfungssiegel.',
+        info: artOpen(S) ? (artRefill(S), [`Prüfungssiegel: <b>${S.arteK}/${ARTE.max}</b>`, `Artefakte: <b>${(S.arts || []).length}</b> · Splitter: <b>${S.artDust || 0}</b>`]) : [],
+        lock: artOpen(S) ? '' : 'Ab dem 1. Aufstieg', acts: '<button class="btn" data-m="go" data-go="arte">Zu den Artefakten</button>' },
       { title: 'Täglicher Lohn', art: ['lohn1', 'lohn2'], icon: '🎁', col: '#ff8ac8', rot: 1, desc: 'Jeden Tag ein Geschenk, das für immer bleibt: Runen, Splitter, Heldensplitter und Sternkristalle. Am 7. Tag gibt es am meisten.',
         info: [loginToday(S) ? 'Heute schon abgeholt. Morgen gibt es mehr.' : '<b style="color:#9be36b">Heute noch nicht abgeholt!</b>', `Tag ${(S.login.n % 7) + (loginToday(S) ? 0 : 1)} von 7`], acts: '<button class="btn" data-m="go" data-go="login">Ansehen</button>' },
       { title: 'Sternenruf', art: ['ruf2', 'ruf1'], icon: '🌠', col: '#8fe3ff', rot: -2, desc: 'Ruf mit Sternkristallen nach Helden. Fünf-Sterne-Helden sind selten, jede weitere Kopie stärkt sie mit einem Sternbild.',
@@ -243,6 +246,8 @@
     else if (go === 'exp' && run && run.mission && MISSION[run.mission]) { S.exp.mission = run.mission; startRun('exp'); }
     else if (go === 'exp') toTab('exp');
     else if (go === 'sigil') toTab('ahnen');
+    else if (go === 'arte' && artOpen(S)) toTab('arte');
+    else if (go === 'arterun' && artOpen(S)) { artRefill(S); if (S.arteK > 0) startRun('arte'); else toTab('arte'); }
     else if (go === 'trips') showTrips();
     else if (go === 'ruf' && gachaOpen(S)) showBanner();
     else if (go === 'kopf' && gachaOpen(S)) showBounty();
@@ -298,6 +303,12 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 69, title: 'Spieler-Idee: Artefakte', date: '15.11.2026', items: [
+      'Ab dem 1. Aufstieg gibt es unter Abenteuer den neuen Reiter Artefakte mit der Artefakt-Prüfung: 8 Wellen samt Boss in 3 Minuten schaffen.',
+      'Jeder Sieg kostet ein Prüfungssiegel (höchstens 6, alle 2 Stunden kommt eins nach) und bringt ein Artefakt: Krone, Ring oder Kelch mit ★★★ bis ★★★★★, einem Hauptwert und 2 bis 4 Nebenwerten.',
+      'Jeder Held trägt eine Krone, einen Ring und einen Kelch. Je schwerer und tiefer die Prüfung, desto stärker die Artefakte.',
+      'Schlechte Artefakte zerstörst du zu Artefaktsplittern. Damit würfelst du die Nebenwerte eines anderen Artefakts neu – gute Nebenwerte kannst du vorher sperren.',
+    ] },
     { id: 68, title: 'Spieler-Idee: Neues ab Aufstieg 6 bis 10', date: '15.11.2026', items: [
       'Aufstieg 6: Begleiter bis Stufe 150. Aufstieg 7: dritter Begleiter-Platz.',
       'Aufstieg 8: Unterklassen-Meisterschaft – alle Unterklassen-Boni wirken 50 % stärker.',
@@ -6367,12 +6378,13 @@
       ctx.font = '15px "Bungee","Arial Black",sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = '#fff';
       ctx.fillText(tower ? `Turm · Etage ${R.stage}` : R.mode === 'wboss' ? 'Wochenboss' : `Stufe ${R.stage}`, 12, 22);
       ctx.font = '12px "Figtree",sans-serif';
-      const bossNow = R.mode === 'exp' || R.mode === 'wboss' ? R.enemies.some(e => e.boss) : tower || (R.rules && R.rules.includes('boss')) ? R.stage % 5 === 0 : R.stage % 10 === 0;
+      const bossNow = R.mode === 'exp' || R.mode === 'wboss' || R.mode === 'arte' ? R.enemies.some(e => e.boss) : tower || (R.rules && R.rules.includes('boss')) ? R.stage % 5 === 0 : R.stage % 10 === 0;
       ctx.fillStyle = bossNow ? '#c9a6ff' : 'rgba(255,255,255,.8)';
       ctx.fillText(R.wf || R.wfKilled ? 'Der Weltenfresser' : bossNow ? `Boss: ${bossNameOf(R, stage)}` : tower ? `Rekord ${S.towerBest}` : areaOf(R) ? areaOf(R).name : `${zoneName(R.stage)} · Grenze ${st.cap === Infinity ? '∞' : st.cap}`, tower ? 170 : 106, 21);
       ctx.textAlign = 'right'; ctx.fillStyle = '#ffcf4a'; if (R.mode === 'normal') ctx.fillText(`+${fmt(R.gold)} Gold`, W - 12, 21);
       if (R.mode === 'weekly') { ctx.fillStyle = '#ffd23f'; ctx.fillText('Tages-Herausforderung', W - 12, 21); }
       if (R.mode === 'wboss') { ctx.fillStyle = '#ffb4b4'; ctx.fillText(`Leiste ${wbScore(R) + 1} · ${wbScore(R)} geschafft`, W - 12, 21); }
+      if (R.mode === 'arte') { ctx.fillStyle = R.time > ARTE.time - 30 ? '#ff8a7a' : '#8fe3ff'; ctx.fillText(`Artefakt-Prüfung: Welle ${Math.min(ARTE.waves, R.waves + 1)}/${ARTE.waves} · ${Math.max(0, Math.ceil(ARTE.time - R.time))} s`, W - 12, 21); }
       if (R.mode === 'exp') { const ms = MISSION[R.mission]; ctx.fillStyle = '#c8f08a'; ctx.fillText(`${ms.name}: ${ms.bosses ? `Bosse ${R.bossKills}/${ms.bosses}` : `Welle ${R.waves}/${ms.waves}`}`, W - 12, 21); }
       }
       if (R.bannerT > 0) {

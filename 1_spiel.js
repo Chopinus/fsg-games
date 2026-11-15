@@ -857,6 +857,80 @@
   const runeCap = S => 40 + LAGER_STEP * (S.rlager || 0);
   const DUST_RUNE = 4;
   const shardOf = tier => Math.pow(3, tier - 1), mergeCost = tier => Math.pow(3, tier);
+  /* ================= Artefakte (Spieler-Idee v26) ================= */
+  // Artefakt-Prüfung ab dem 1. Aufstieg: 8 Wellen (die letzte mit Boss) in 3 Minuten schaffen. Jeder Sieg kostet ein Prüfungssiegel
+  // (höchstens 6, alle 2 Stunden kommt eins nach) und gibt ein Artefakt mit Hauptwert und Nebenwerten wie in Genshin.
+  // Schlechte Artefakte werden zu Artefaktsplittern; damit würfelt man die Nebenwerte eines anderen neu, einzelne kann man sperren.
+  const ARTE = { waves: 8, time: 180, max: 6, regen: 2 * 3600000, cap: 80, lv: [0.7, 0.85, 1], name: ['Leicht', 'Mittel', 'Schwer'], rar: [[0.6, 0.35, 0.05], [0.35, 0.5, 0.15], [0.15, 0.5, 0.35]], dust: { 3: 2, 4: 5, 5: 12 }, reroll: 10, lockCost: 10 };
+  const ART_SLOTS = [{ k: 'krone', n: 'Krone', i: '♛' }, { k: 'ring', n: 'Ring', i: '◍' }, { k: 'kelch', n: 'Kelch', i: '♅' }];
+  // s: wächst mit der Prüfungsstufe (Schaden, Leben, Krit-Schaden, Fähigkeiten, Heilung); feste Werte für Krit, Tempo, Schutz
+  const ART_STAT = {
+    atkP: { n: 'Schaden', main: [0.2, 0.3, 0.45], sub: [0.04, 0.08], s: 1 }, hpP: { n: 'Leben', main: [0.2, 0.3, 0.45], sub: [0.04, 0.08], s: 1 },
+    crit: { n: 'Krit-Chance', main: [0.06, 0.09, 0.13], sub: [0.015, 0.03] }, critD: { n: 'Krit-Schaden', main: [0.15, 0.25, 0.35], sub: [0.04, 0.08], s: 1 },
+    aps: { n: 'Angriffstempo', main: [0.1, 0.15, 0.22], sub: [0.02, 0.05] }, act: { n: 'Fähigkeiten-Schaden', main: [0.2, 0.3, 0.45], sub: [0.04, 0.08], s: 1 },
+    heal: { n: 'Heilung', main: [0.2, 0.3, 0.45], sub: [0.04, 0.08], s: 1 }, dr: { n: 'Schadensreduktion', main: [0.04, 0.06, 0.09], sub: [0.01, 0.02] },
+  };
+  const ART_MAIN = { krone: ['atkP', 'hpP'], ring: ['crit', 'critD'], kelch: ['aps', 'act', 'heal', 'dr'] };
+  const artScale = lv => Math.max(1, (lv || 10) / 40);
+  const artVal = (a, k, v) => v * (ART_STAT[k].s ? artScale(a.lv) : 1);
+  const artOpen = S => (S.asc || 0) >= 1;
+  const artStage = (S, d = S.arteSel || 0) => Math.max(10, Math.round(ARTE.lv[d] * Math.max(S.ascBest || 0, S.best || 0, 10)));
+  function artRefill(S, now = Date.now()) {
+    if (S.arteK == null) { S.arteK = ARTE.max; S.arteT = now; }
+    if (S.arteK >= ARTE.max) { S.arteT = now; return; }
+    const n = Math.floor((now - (S.arteT || now)) / ARTE.regen); if (n > 0) { S.arteK = Math.min(ARTE.max, S.arteK + n); S.arteT = S.arteK >= ARTE.max ? now : S.arteT + n * ARTE.regen; }
+  }
+  const artNext = (S, now = Date.now()) => (S.arteK >= ARTE.max ? 0 : Math.max(0, (S.arteT || now) + ARTE.regen - now));
+  function artRollSub(a, keep) {
+    const used = new Set([a.main, ...keep.map(x => x.k)]), pool = Object.keys(ART_STAT).filter(k => !used.has(k)), out = [];
+    const f = [0.7, 0.85, 1][a.rar - 3];
+    while (keep.length + out.length < a.rar - 1 && pool.length) { const k = pool.splice(Math.floor(Math.random() * pool.length), 1)[0], [lo, hi] = ART_STAT[k].sub; out.push({ k, v: Math.round((lo + Math.random() * (hi - lo)) * f * 10000) / 10000 }); }
+    return out;
+  }
+  function artMake(S, lv, d) {
+    const R = ARTE.rar[d] || ARTE.rar[0], x = Math.random(), rar = x < R[2] ? 5 : x < R[2] + R[1] ? 4 : 3;
+    const slot = ART_SLOTS[Math.floor(Math.random() * ART_SLOTS.length)].k, mains = ART_MAIN[slot];
+    const a = { id: (S.artSeq = (S.artSeq || 0) + 1), slot, rar, lv, main: mains[Math.floor(Math.random() * mains.length)], subs: [], lock: [] };
+    a.subs = artRollSub(a, []); return a;
+  }
+  function arteClaim(S, run) {
+    if (!run.victory) return null; artRefill(S); if (S.arteK <= 0) return { none: true };
+    S.arteK--; if (S.arteK === ARTE.max - 1) S.arteT = Date.now();
+    S.arts = S.arts || []; const a = artMake(S, run.startStage, run.arteD || 0);
+    if (S.arts.length >= ARTE.cap) { const d = ARTE.dust[a.rar]; S.artDust = (S.artDust || 0) + d; return { art: a, dust: d }; }
+    S.arts.push(a); return { art: a };
+  }
+  const artById = (S, id) => (S.arts || []).find(a => a.id === id);
+  const artWorn = (S, id) => Object.entries(S.artEq || {}).find(([, e]) => Object.values(e).includes(id));
+  function artEquip(S, hid, id) {
+    const a = artById(S, id); if (!a || !HERO_BY_ID[hid]) return false;
+    S.artEq = S.artEq || {}; for (const e of Object.values(S.artEq)) for (const k in e) if (e[k] === id) delete e[k];
+    (S.artEq[hid] = S.artEq[hid] || {})[a.slot] = id; return true;
+  }
+  function artUnequip(S, hid, slot) { if (S.artEq && S.artEq[hid]) delete S.artEq[hid][slot]; }
+  function artDestroy(S, id) {
+    const a = artById(S, id); if (!a || a.fav) return 0;
+    for (const e of Object.values(S.artEq || {})) for (const k in e) if (e[k] === id) delete e[k];
+    S.arts = S.arts.filter(x => x !== a); const d = ARTE.dust[a.rar] || 1; S.artDust = (S.artDust || 0) + d; return d;
+  }
+  const artRerollCost = a => ARTE.reroll + ARTE.lockCost * (a.lock || []).length;
+  function artToggleLock(S, id, i) {
+    const a = artById(S, id); if (!a || !a.subs[i]) return false; a.lock = a.lock || [];
+    if (a.lock.includes(i)) a.lock = a.lock.filter(x => x !== i); else { if (a.lock.length >= a.subs.length - 1) return false; a.lock.push(i); }
+    return true;
+  }
+  function artReroll(S, id) {
+    const a = artById(S, id); if (!a) return false; const c = artRerollCost(a); if ((S.artDust || 0) < c) return false;
+    S.artDust -= c; const keep = a.subs.filter((_, i) => (a.lock || []).includes(i)); const fresh = artRollSub(a, keep);
+    a.subs = [...keep, ...fresh]; a.lock = keep.map((_, i) => i); return true;
+  }
+  function artBonus(S, hid) {
+    const b = {}, eq = (S.artEq || {})[hid]; if (!eq) return b;
+    for (const id of Object.values(eq)) { const a = artById(S, id); if (!a) continue;
+      b[a.main] = (b[a.main] || 0) + artVal(a, a.main, ART_STAT[a.main].main[a.rar - 3]);
+      for (const x of a.subs) b[x.k] = (b[x.k] || 0) + artVal(a, x.k, x.v); }
+    return b;
+  }
   /* ================= Ahnenprüfung ================= */
   // 10 Missionen mit je 5 eigenen Bossen (3 Phasen), am Ende von Mission 10 wartet der Urahn. Wer die Kette schafft, bekommt ein Ahnensiegel.
   // len: Bosskämpfe dauern so viel länger. Leben ×len, Fähigkeiten und Wut entsprechend seltener bzw. später, Grundangriff schwächer.
@@ -1811,6 +1885,16 @@
     out.starV = 1;
     out.rbHist = (Array.isArray(d.rbHist) ? d.rbHist : []).map(x => Math.max(0, Math.floor(Number(x) || 0))).slice(-40);
     out.rlager = Math.max(0, Math.min(LAGER_HARD, Math.floor(Number(d.rlager) || 0)));
+    out.arts = []; for (const a of Array.isArray(d.arts) ? d.arts.slice(0, ARTE.cap) : []) {
+      if (!a || !ART_MAIN[a.slot] || !ART_MAIN[a.slot].includes(a.main) || ![3, 4, 5].includes(a.rar)) continue;
+      const subs = (Array.isArray(a.subs) ? a.subs : []).filter(x => x && ART_STAT[x.k] && x.k !== a.main && Number(x.v) > 0).slice(0, a.rar - 1).map(x => ({ k: x.k, v: Math.min(ART_STAT[x.k].sub[1], Number(x.v)) }));
+      out.arts.push({ id: Math.floor(a.id) || 0, slot: a.slot, rar: a.rar, lv: Math.max(10, Math.floor(Number(a.lv) || 10)), main: a.main, subs, lock: (Array.isArray(a.lock) ? a.lock : []).filter(i => Number.isInteger(i) && i >= 0 && i < subs.length).slice(0, Math.max(0, subs.length - 1)), fav: !!a.fav });
+    }
+    out.artSeq = Math.max(Math.floor(Number(d.artSeq) || 0), ...out.arts.map(a => a.id), 0);
+    out.artEq = {}; if (d.artEq && typeof d.artEq === 'object') for (const [hid, e] of Object.entries(d.artEq)) if (HERO_BY_ID[hid] && e && typeof e === 'object') for (const sl of ART_SLOTS) { const a = out.arts.find(x => x.id === e[sl.k] && x.slot === sl.k); if (a) (out.artEq[hid] = out.artEq[hid] || {})[sl.k] = a.id; }
+    out.artDust = Math.max(0, Math.floor(Number(d.artDust) || 0));
+    if (d.arteK != null) { out.arteK = Math.max(0, Math.min(ARTE.max, Math.floor(Number(d.arteK) || 0))); out.arteT = Math.min(Date.now(), Math.floor(Number(d.arteT) || Date.now())); }
+    out.arteSel = Math.max(0, Math.min(2, Math.floor(Number(d.arteSel) || 0)));
     out.sub = {}; if (d.sub && typeof d.sub === 'object') for (const [hid, id] of Object.entries(d.sub)) if (SUBS[hid] && SUBS[hid].some(x => x.id === id)) out.sub[hid] = id;
     out.altar = Math.max(0, Math.min(ALTAR_MAX, Math.floor(Number(d.altar) || 0)));
     out.ahn = ahnFix(d.ahn);
@@ -2147,6 +2231,8 @@
     let seeleSum = 0;
     for (const [hid, T] of Object.entries(hs)) {
       consApply(T, hid, consOf(S, hid));
+      { const ab = artBonus(S, hid); if (ab.atkP) { T.atk *= 1 + ab.atkP; if (T.wolfAtk) T.wolfAtk *= 1 + ab.atkP; } if (ab.hpP) T.hp *= 1 + ab.hpP; if (ab.crit) T.crit += ab.crit; if (ab.critD) T.critD *= 1 + ab.critD;
+        if (ab.aps) T.aps *= 1 + ab.aps; if (ab.act) T.actMul *= 1 + ab.act; if (ab.heal && T.heal) T.heal *= 1 + ab.heal; if (ab.dr) T.dr += ab.dr; }
       const rb = runeBonus(S, hid, runeAmp(S) * (1 + (T.runeSelf || 0))), mb = 1 + 0.02 * mastLevel(S, hid);
       T.atk *= mb; T.hp *= mb; if (T.heal) T.heal *= mb; if (T.wolfAtk) T.wolfAtk *= mb;
       if (bardOn) T.aps *= 1 + hs.b.songAps;
@@ -2517,7 +2603,7 @@
     if (rules.includes('trio')) order = order.slice(0, 3);
     const pos = {}; order.forEach((k, i) => (pos[k] = 152 - i * 25));
     const h = {}; for (const k of order) h[k] = { hp: st[k].hp, alive: true, atkT: 0.3 + Math.random() * 0.4, wolfT: 0.5, swing: 0, hurtT: 0, revived: false, shield: 0 };
-    const run = { mode: tower ? 'tower' : weekly ? 'weekly' : exp ? 'exp' : mode === 'ahnen' ? 'ahnen' : mode === 'bounty' ? 'bounty' : mode === 'wboss' ? 'wboss' : 'normal', stage: tower || weekly ? 1 : st.startStage, startStage: tower || weekly ? 1 : st.startStage, rules, losses: 0,
+    const run = { mode: tower ? 'tower' : weekly ? 'weekly' : exp ? 'exp' : mode === 'ahnen' ? 'ahnen' : mode === 'bounty' ? 'bounty' : mode === 'wboss' ? 'wboss' : mode === 'arte' ? 'arte' : 'normal', stage: tower || weekly ? 1 : st.startStage, startStage: tower || weekly ? 1 : st.startStage, rules, losses: 0,
       mission: exp ? (MISSION[S.exp.mission] ? S.exp.mission : 'streif') : null, waves: 0, bossKills: 0, minions: [], turretT: 1, extraTurretT: 0, songT: 0, songMul: 0, roarT: 0,
       hard: hardMul(S, false), diff: ascDiff(S), speed: rules.includes('speed') ? 1.5 : 1, hpMul: rules.includes('giant') ? 2 : 1, eliteChance: rules.includes('elite') ? 0.4 : 0.12, noheal: rules.includes('noheal'),
       dragonT: 2, compRevive: false, bannerT: 0, kills: 0, gold: 0, souls: 0, runes: [], phoenixUsed: false, miracleUsed: false,
@@ -2543,6 +2629,7 @@
       run.ahn = { mi: B.mi, bi: 0, wave: AHN_TUNE.waves, boss: null, fx: [], banner: null, big: null, spot: null, spotFx: null, wallFx: null, bigs: 0, blocked: 0, spots: 0, list: [B.def], hpMul: BOUNTY.hp, noScale: true, bounty: B };
       run.swT = 0; run.swCd = 0; }
     if (run.mode === 'wboss') { run.stage = run.startStage = WB.lvl; run.wb = { bars: 0, bk: Math.max(0, Math.floor(S.wbBk || 0)) % WB_BOSS.length }; }
+    if (run.mode === 'arte') { run.arteD = S.arteSel || 0; run.stage = run.startStage = artStage(S, run.arteD); run.floats.push({ x: 300, y: 100, text: `Artefakt-Prüfung: ${ARTE.waves} Wellen in ${ARTE.time / 60} Minuten`, color: '#8fe3ff', size: 14, t: 2.6 }); }
     spawnWave(run);
     return run;
   }
@@ -2563,12 +2650,12 @@
     }
     if (run.mode === 'normal' && run.stage === WF_STAGE) return wfSpawn(run);
     const MS = run.mode === 'exp' ? MISSION[run.mission] : null;
-    const boss = MS ? !!((MS.bosses && (run.waves + 1) % 3 === 0) || (MS.bossEvery && (run.waves + 1) % MS.bossEvery === 0)) : run.stage % (run.rules && run.rules.includes('boss') ? 5 : 10) === 0, n = boss ? 3 : 5;
+    const boss = run.mode === 'arte' ? run.waves + 1 >= ARTE.waves : MS ? !!((MS.bosses && (run.waves + 1) % 3 === 0) || (MS.bossEvery && (run.waves + 1) % MS.bossEvery === 0)) : run.stage % (run.rules && run.rules.includes('boss') ? 5 : 10) === 0, n = boss ? 3 : 5;
     const nr = Math.min(boss ? 1 : 2, rangedCount(run.stage));
     for (let i = 0; i < n; i++) run.enemies.push(makeEnemy(run.stage, i, false, false, run, i >= n - nr));
     if (boss) { run.enemies.push(makeEnemy(run.stage, n + 0.6, true, false, run)); run.bannerT = 2.2; }
     const A = areaOf(run); if (A) for (const e of run.enemies) { e.type = e.ranged ? A.ranged : A.melee; if (e.boss) e.bk = A.bk; }
-    if (run.mode === 'normal' || run.mode === 'weekly') giveTraits(run, run.stage);
+    if (run.mode === 'normal' || run.mode === 'weekly' || run.mode === 'arte') giveTraits(run, run.stage);
   }
   function wfSpawn(run) {
     const e = makeEnemy(WF_STAGE, 1.6, true, false, run);
@@ -2694,6 +2781,7 @@
     for (const k in run.fx) if (typeof run.fx[k] === 'number' && !/X$/.test(k)) run.fx[k] -= dt;
     const fk = frontHero(run);
     if (!fk) { run.dead = true; S.runs++; return 'dead'; }
+    if (run.mode === 'arte' && run.time > ARTE.time) { run.dead = true; run.failNote = 'Die Zeit ist abgelaufen.'; return 'dead'; }
     if (run.mode === 'exp' && run.losses > 0 && MISSION[run.mission].noLoss) { run.dead = true; run.failNote = 'Ein Held ist gefallen.'; return 'dead'; }
     run.frontX = run.pos[fk];
     run.enemies.sort((a, b) => a.x - b.x);
@@ -2872,7 +2960,7 @@
       if (e.boss) souls = roundSouls((1 + Math.floor(run.stage / 20)) * g.soulMul) + st.soulBonus;
       else if (e.elite) { const n = procs(g.eliteSoul); if (n) souls = n * Math.max(1, roundSouls(altarMul(S))); }
       if (run.mode === 'tower') souls = e.boss ? 1 : 0;
-      if (run.mode === 'weekly' || run.mode === 'exp' || ahnLike(run) || run.mode === 'wboss') souls = 0;
+      if (run.mode === 'weekly' || run.mode === 'exp' || run.mode === 'arte' || ahnLike(run) || run.mode === 'wboss') souls = 0;
       if (souls) { sfx('soul'); S.tot.souls += souls; S.souls += souls; run.souls += souls; run.floats.push({ x: e.x, y: 95, text: `+${souls} Seele${souls > 1 ? 'n' : ''}`, color: '#c9a6ff', size: 16, t: 1 }); }
       if (feature(S, 'runen') && run.mode === 'normal' && (e.boss || (e.elite && Math.random() < 0.03))) {
         const tier = e.boss ? bossRuneTier(run.stage) : Math.min(RUNE_DROP_MAX, 1 + Math.floor(run.stage / 40));
@@ -2891,6 +2979,11 @@
           if (run.stage % 5 === 0) { const r = addRune(S, RUNES[Math.floor(Math.random() * RUNES.length)].id, Math.min(10, 1 + Math.floor(run.stage / 15))); if (r) run.runes.push(r); }
         }
       } else if (ahnLike(run)) { return ahnNext(S, st, run, c);
+      } else if (run.mode === 'arte') {
+        run.waves++;
+        if (run.waves >= ARTE.waves) { run.victory = true; run.dead = true; return 'dead'; }
+        for (const k of run.order) { const h = run.h[k]; if (h.alive) h.hp = Math.min(st[k].hp, h.hp + st[k].hp * 0.15); }
+        spawnWave(run); return;
       } else if (run.mode === 'exp') {
         run.waves++;
         const m = MISSION[run.mission];
@@ -3023,7 +3116,7 @@
   const core = { RAR, RAR_COL, GEAR_SLOTS, TINTS, HERO_SETS, DECO_SLOTS, ITEMS, TROPHY_N, BSET_AT, itemOf, invN, invAdd, invUsed, invFree, equipGear, setDeco, chestRoll, chestCount, openChest, trophyRoll, bsetCount, bsetAdd, CHEST, TROPHY, TRIPS, TRIP_SHARE, onTrip, tripLeft, rateOf, noteRate, hoursReward, tripReward, startTrip, claimTrip, WB, WB_BOSS, wbScore, wbBarReward, wbBarSecs, wbGoalHours, wbReward, GACHA, G_FIVE, G_FOUR, CONS_H, consList, consApply, evtBanner, evtPeriod, starSock, gachaOpen, evtOpen, gemOpen, gemBossFirst, GIFT_PULLS, consOf, bannerOf, gachaPull, GEM_SRC, LOGIN, loginItem, loginToday, claimLogin, BOUNTY, bountiesOf, bountyDone, bountyClaim, ahnLike, AHN_MISSIONS, AHN_ABIL, AHN_MECH, AHN_BOONS, ahnRollBoons, ahnPickBoon, ahnBoonText, ahnApplyBoons, AHN_TRAIT, AHNE, AHN_TUNE, AHN_COUNT, ahnOpen, ahnBossesOf, ahnLevelFor, placeSigil, ahnClaim, unrebirth, transmute, bossRuneTier, resetPerks, buyLager, lagerCost, LAGER_MAX, runeCap, shardOf, mergeCost, ALTAR_MAX, altarCost, altarMul, buyAltar, kSlots, kFree, keyCap, addSock, removeSock, removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, splTrade, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
     SEASON, rankOf, RANKS, rankBonus, AREAS, areaOf, MISSIONS, extraSocks, XSOCK, sockOk, runeAmp, mastInfo, mastLevel, SKINS, WF_STAGE, WF, wfSpawn,
     sigOn, sig2On, sig2Open, placeSigil2, SIG2_ASC, SIG2_ID, sigActCap, sigKeysUsed, keyNeed, eqOf, slotLim, SIG, SIG_FLAGS, newRun, step, stats, buy, available, blockReason, NODE, migrate, fresh,
-    rebirth, ascend, crownsFor, buyCperk, cperkCost, cperk, CPERKS, levelComp, toggleComp, compCost, compMax, compSlots, COMPS, checkAch, ACH, claimWeekly, weekId, dayId, weekRules, RULE, WEEK_TIERS, statsFor, starsFor, toggleEquip, slotsOf, hired, classOpen, keysUsed, keyLimit, capOf, reqOf, feature, encode, decode, fmt, socket, unsocket, merge, canMerge, dismantle, buyRune, runeVal, addRune, TRAITS, SUBS, subOf, pickSub, subOpen, fieldSlots };
+    rebirth, ascend, crownsFor, buyCperk, cperkCost, cperk, CPERKS, levelComp, toggleComp, compCost, compMax, compSlots, COMPS, checkAch, ACH, claimWeekly, weekId, dayId, weekRules, RULE, WEEK_TIERS, statsFor, starsFor, toggleEquip, slotsOf, hired, classOpen, keysUsed, keyLimit, capOf, reqOf, feature, encode, decode, fmt, socket, unsocket, merge, canMerge, dismantle, buyRune, runeVal, addRune, arteClaim, artMake, artEquip, artReroll, artDestroy, artToggleLock, artBonus, artRefill, ARTE, TRAITS, SUBS, subOf, pickSub, subOpen, fieldSlots };
   if (typeof module !== 'undefined') { module.exports = core; return; }
   // ---------- Automatische Updates ----------
   // Prüft alle 2 Minuten (und beim Zurückkehren in den Tab), ob auf dem Server eine neue ritter.js liegt.

@@ -172,16 +172,17 @@
     if (feature(S, 'runen') || S.runes.length) t.push({ id: 'runen', label: 'Runen', color: '#ff7a3d' });
     if (S.asc >= 2 || Object.keys(S.comps).length) t.push({ id: 'begleiter', label: 'Begleiter', color: '#ff9a3d' });
     if (ahnOpen(S)) t.push({ id: 'ahnen', label: 'Ahnenprüfung', color: '#ffd27a' });
+    if (artOpen(S)) t.push({ id: 'arte', label: 'Artefakte', color: '#8fe3ff' });
     t.push({ id: 'halle', label: 'Ruhmeshalle', color: '#ffd23f' }, { id: 'ruhm', label: S.asc || S.rebirths >= 9 ? 'Wiedergeburt & Aufstieg' : 'Wiedergeburt', color: '#c9a6ff' }, { id: 'stand', label: 'Spielstand', color: '#a99fbb' });
     return t;
   }
   // Reiter in Gruppen: alle Helden unter „Helden“, Ahnenprüfung und Expedition unter „Abenteuer“
   const TAB_GROUPS = { helden: { label: 'Helden', color: '#ffb547' }, abenteuer: { label: 'Abenteuer', color: '#ffd27a' } };
-  const groupOf = id => (HERO[id] ? 'helden' : id === 'ahnen' || id === 'exp' ? 'abenteuer' : null);
+  const groupOf = id => (HERO[id] ? 'helden' : id === 'ahnen' || id === 'exp' || id === 'arte' ? 'abenteuer' : null);
   const lastSub = { helden: 'ritter', abenteuer: 'ahnen' };
   // Untere Leiste wie in einem Handyspiel: Symbol und kurzer Name
-  const NAV_ICON = { helden: '⚔️', laeden: '🛒', abenteuer: '🗺️', exp: '🗺️', ahnen: '🗺️', runen: '🔷', begleiter: '🐉', halle: '🏆', ruhm: '✨', stand: '⚙️' };
-  const NAV_SHORT = { helden: 'Helden', laeden: 'Läden', abenteuer: 'Abenteuer', exp: 'Abenteuer', ahnen: 'Abenteuer', runen: 'Runen', begleiter: 'Begleiter', halle: 'Ruhm', ruhm: 'Aufstieg', stand: 'Konto' };
+  const NAV_ICON = { helden: '⚔️', laeden: '🛒', abenteuer: '🗺️', exp: '🗺️', ahnen: '🗺️', arte: '🗺️', runen: '🔷', begleiter: '🐉', halle: '🏆', ruhm: '✨', stand: '⚙️' };
+  const NAV_SHORT = { helden: 'Helden', laeden: 'Läden', abenteuer: 'Abenteuer', exp: 'Abenteuer', ahnen: 'Abenteuer', arte: 'Abenteuer', runen: 'Runen', begleiter: 'Begleiter', halle: 'Ruhm', ruhm: 'Aufstieg', stand: 'Konto' };
   function renderTabs() {
     const list = tabsList();
     if (!list.some(t => t.id === tab)) tab = 'ritter';
@@ -1050,6 +1051,7 @@
     if (R.mode === 'exp') { const r = claimExp(S, R); R.expReward = r; }
     if (R.mode === 'ahnen') { const r = ahnClaim(S, R); R.ahnReward = r; ahnSel = null; }
     if (R.mode === 'bounty') R.bountyReward = bountyClaim(S, R);
+    if (R.mode === 'arte') R.arteReward = arteClaim(S, R);
     if (R.mode === 'wboss') { R.victory = true; wbFinish(R); }
     noteRate(S, R);
     if (R.mode === 'normal' && areaMax(S) > areaBefore) res.area = zoneName(10 * areaMax(S) + 1);
@@ -1073,6 +1075,8 @@
     if (R.mode === 'wboss') { title = `Wochenboss: ${wbScore(R)} Leisten`; sub = esc(wbBossName(R.wb.bk)); again = 'wboss'; againLabel = 'Zum Wochenboss';
       special = `<div class="rl-wbres"><b>${wbScore(R)}</b><small>Leisten abgezogen</small><p class="note" id="wbRes">${esc(R.wbMsg || 'Wird gemeldet …')}</p></div>`;
       if (R.wbLoot) { const L = R.wbLoot; if (L.gold) add(coin, `<b>+${fmt(L.gold)}</b> Gold`, '#ffcf4a'); if (L.souls) add(soul, `<b>+${L.souls}</b> Seelen`, '#c9a6ff'); if (L.dust) add(dust, `<b>+${L.dust}</b> Runensplitter`, '#e2c9ff'); if (L.spl) add('◈', `<b>+${L.spl}</b> Heldensplitter`, '#9bd14a'); } }
+    if (R.mode === 'arte') { title = win ? 'Artefakt-Prüfung geschafft!' : 'Artefakt-Prüfung gescheitert'; sub = win ? `${ARTE.name[R.arteD || 0]} · Stufe ${R.startStage}` : esc(R.failNote || `Bei Welle ${R.waves + 1} von ${ARTE.waves}`); again = 'arterun'; againLabel = 'Nochmal';
+      const ar = R.arteReward; if (ar && ar.art) add(ART_SLOTS.find(x => x.k === ar.art.slot).i, `Artefakt: <b>${artName(ar.art)}</b> ${'★'.repeat(ar.art.rar)}${ar.dust ? ` · Lager voll, zu ${ar.dust} Splittern zerlegt` : ''}`, ['', '', '', '#7fb2ff', '#c98aff', '#ffd23f'][ar.art.rar], 'hot'); else if (ar && ar.none) add('♛', 'Kein Prüfungssiegel mehr – diesmal kein Artefakt', '#8fe3ff'); }
     if (R.mode === 'bounty') { const b = R.ahn.bounty; title = win ? `Kopfgeld eingelöst: ${esc(b.def.name)}` : `${esc(b.def.name)} ist entkommen`; sub = `${b.diff} · Stufe ${b.lvl}`; again = 'kopf'; againLabel = 'Steckbriefe';
       if (R.bountyReward) { add('💠', `<b>+${R.bountyReward.gem}</b> Sternkristalle`, '#8fe3ff', 'hot'); if (R.bountyReward.spl) add('◈', `<b>+${R.bountyReward.spl}</b> Heldensplitter`, '#9bd14a'); } else if (win) add('📜', 'Belohnung für diesen Steckbrief heute schon erhalten', '#d9935a'); }
     // Belohnungen
@@ -1375,6 +1379,58 @@
         <button class="btn small ${S.tKeepTree ? '' : 'ghost'}" data-rl="tkeep">${S.tKeepTree ? '✓ Bäume bleiben bei Wiedergeburt' : 'Bäume bleiben bei Wiedergeburt: aus'}</button><span class="note">Wenn an, behalten alle Helden bei einer Wiedergeburt ihre Fertigkeitenbäume und ausgerüsteten Fähigkeiten. Gilt für alle Helden.</span></div>` : ''}
       <div class="rl-treewrap"><div class="rl-treebox">${treeSVG(tree)}${!sg && ahnOpen(S) && classOpen(S, tree) ? `<p class="note rl-signote rl-long">✦ Mit einem Ahnensiegel wächst dieser Baum nach unten: 5 passive Fähigkeiten, 3 Siegel-Fähigkeiten mit eigenem Platz und 4 Siegel-Schlüssel mit eigenem Sockel. ${S.ahn.sig > 0 ? 'Du hast ein freies Siegel, setze es im Reiter Ahnenprüfung.' : 'Siegel bekommst du in der Ahnenprüfung.'}</p>` : ''}${sg && !sig2On(S, tree) && classOpen(S, tree) ? `<p class="note rl-signote rl-long">✦✦ Mit einem zweiten Ahnensiegel wächst dieser Baum noch weiter: 3 starke passive Fähigkeiten, ein zweiter Siegel-Platz und ein zusätzlicher Platz für normale aktive Fähigkeiten. ${sig2Open(S) ? (S.ahn.sig > 0 ? 'Du hast ein freies Siegel, setze es im Reiter Ahnenprüfung.' : 'Siegel bekommst du in der Ahnenprüfung.') : `Wird nach ${SIG2_ASC} Aufstiegen freigeschaltet (du hast ${S.asc || 0}).`}</p>` : ''}</div>${detailHTML(tree)}</div>`;
   }
+  // Spieler-Idee (v26): Artefakte
+  let artHero = null, artSelId = null, artFilt = 'all';
+  const artName = a => `${['', '', '', 'Schlichte', 'Edle', 'Göttliche'][a.rar]}${a.slot === 'krone' ? '' : 'r'} ${ART_SLOTS.find(x => x.k === a.slot).n}`;
+  const artPct = (a, k, v) => `+${pct(artVal(a, k, v))}`;
+  const ART_RCOL = ['', '', '', '#7fb2ff', '#c98aff', '#ffd23f'];
+  function artCard(a, big) {
+    const worn = artWorn(S, a.id), lk = a.lock || [];
+    return `<button class="rl-art ${artSelId === a.id ? 'on' : ''} ${big ? 'big' : ''}" data-artsel="${a.id}" style="--ac:${ART_RCOL[a.rar]}"><span class="ai">${ART_SLOTS.find(x => x.k === a.slot).i}</span><span class="ab"><b>${artName(a)} <em>${'★'.repeat(a.rar)}</em></b>
+      <small class="am">${ART_STAT[a.main].n} ${artPct(a, a.main, ART_STAT[a.main].main[a.rar - 3])}</small>${a.subs.map((x, i) => `<small>${lk.includes(i) ? '🔒 ' : '· '}${ART_STAT[x.k].n} ${artPct(a, x.k, x.v)}</small>`).join('')}
+      <small class="al">Stufe ${a.lv}${worn ? ` · trägt ${HERO_BY_ID[worn[0]].name}` : ''}</small></span></button>`;
+  }
+  function arteTab() {
+    artRefill(S);
+    const hs = HEROES.filter(h => hired(S, h.tree)); if (!hs.some(h => h.id === artHero)) artHero = (hs[0] || HEROES[0]).id;
+    const d = S.arteSel || 0, nx = artNext(S), eq = (S.artEq || {})[artHero] || {}, sel = artSelId && artById(S, artSelId);
+    let html = `<h3 class="rl-h3">Artefakt-Prüfung</h3><p class="note">Schaffe ${ARTE.waves} Wellen (die letzte mit Boss) in ${ARTE.time / 60} Minuten. Jeder Sieg kostet ein Prüfungssiegel und bringt ein Artefakt. Höchstens ${ARTE.max} Siegel, alle 2 Stunden kommt eins dazu. Je höher die Stufe, desto stärker die Artefakte.</p>
+      <div class="rl-wallet"><span class="rl-cur">♛ ${S.arteK}/${ARTE.max} Prüfungssiegel</span>${nx ? `<span class="note">nächstes in ${durStr(nx)}</span>` : ''}<span class="rl-cur">✧ ${S.artDust || 0} Artefaktsplitter</span></div>
+      <div class="rl-fbar"><span class="note">Schwierigkeit:</span>${ARTE.name.map((n, i) => `<button data-artd="${i}" class="${d === i ? 'on' : ''}">${n} · Stufe ${artStage(S, i)}</button>`).join('')}</div>
+      <p class="note">Chancen: ${['3', '4', '5'].map((r, i) => `${'★'.repeat(+r)} ${Math.round(ARTE.rar[d][i] * 100)} %`).join(' · ')}</p>
+      <div class="row"><button class="btn gold" data-m2="arterun" ${S.arteK > 0 && inCamp() ? '' : 'disabled'}>Prüfung starten</button></div>
+      <h3 class="rl-h3">Ausrüstung</h3><div class="rl-fbar chips">${hs.map(h => `<button data-arth="${h.id}" class="${artHero === h.id ? 'on' : ''}" style="--rc:${h.color}">${h.name}</button>`).join('')}</div>
+      <div class="rl-artslots">${ART_SLOTS.map(sl => { const a = eq[sl.k] && artById(S, eq[sl.k]); return a ? `<div class="rl-artslot full">${artCard(a)}<button class="btn ghost small" data-arta="off:${sl.k}">Ablegen</button></div>` : `<div class="rl-artslot"><span class="ai">${sl.i}</span><small>${sl.n}: leer</small></div>`; }).join('')}</div>`;
+    if (sel) {
+      const lk = sel.lock || [], c = artRerollCost(sel), worn = artWorn(S, sel.id);
+      html += `<div class="rl-artsel" style="--ac:${ART_RCOL[sel.rar]}"><b>${artName(sel)} ${'★'.repeat(sel.rar)}</b><span>Hauptwert: ${ART_STAT[sel.main].n} ${artPct(sel, sel.main, ART_STAT[sel.main].main[sel.rar - 3])}</span>
+        <div class="rl-artsubs">${sel.subs.map((x, i) => `<button class="${lk.includes(i) ? 'on' : ''}" data-arta="lock:${i}" title="Sperren: bleibt beim Neu-Würfeln">${lk.includes(i) ? '🔒' : '🔓'} ${ART_STAT[x.k].n} ${artPct(sel, x.k, x.v)}</button>`).join('')}</div>
+        <p class="note">Gesperrte Nebenwerte bleiben beim Neu-Würfeln. Jede Sperre kostet ${ARTE.lockCost} Splitter mehr.</p>
+        <div class="row"><button class="btn small" data-arta="eq" ${inCamp() && hired(S, HERO_BY_ID[artHero].tree) && !(worn && worn[0] === artHero) ? '' : 'disabled'}>${HERO_BY_ID[artHero].name} anlegen</button>
+        <button class="btn small" data-arta="roll" ${(S.artDust || 0) >= c && inCamp() ? '' : 'disabled'}>Nebenwerte neu würfeln (✧ ${c})</button>
+        <button class="btn ghost small ${confirm === 'artdel' ? 'danger' : ''}" data-arta="del" ${inCamp() ? '' : 'disabled'}>${confirm === 'artdel' ? 'Wirklich zerstören?' : `Zerstören +✧ ${ARTE.dust[sel.rar]}`}</button></div></div>`;
+    }
+    const list = (S.arts || []).filter(a => artFilt === 'all' || a.slot === artFilt).sort((a, b) => b.rar - a.rar || b.lv - a.lv || b.id - a.id);
+    html += `<h3 class="rl-h3">Lager (${(S.arts || []).length}/${ARTE.cap})</h3><div class="rl-fbar"><button data-artf="all" class="${artFilt === 'all' ? 'on' : ''}">Alle</button>${ART_SLOTS.map(sl => `<button data-artf="${sl.k}" class="${artFilt === sl.k ? 'on' : ''}">${sl.i} ${sl.n}</button>`).join('')}</div>
+      <div class="rl-artlist">${list.map(a => artCard(a)).join('') || '<p class="note">Noch keine Artefakte. Schaffe die Prüfung, um dein erstes zu bekommen.</p>'}</div>`;
+    return html;
+  }
+  function artClick(e) {
+    const t = e.target.closest('[data-artsel],[data-arth],[data-artd],[data-artf],[data-arta],[data-m2="arterun"]'); if (!t) return false;
+    if (t.dataset.m2 === 'arterun') { artRefill(S); if (inCamp() && S.arteK > 0) { startRun('arte'); $('#soloCanvas').scrollIntoView({ behavior: 'smooth', block: 'center' }); } return true; }
+    if (t.dataset.artsel) { artSelId = +t.dataset.artsel; confirm = ''; panel(); return true; }
+    if (t.dataset.arth) { artHero = t.dataset.arth; panel(); return true; }
+    if (t.dataset.artd) { S.arteSel = +t.dataset.artd; save(); panel(); return true; }
+    if (t.dataset.artf) { artFilt = t.dataset.artf; panel(); return true; }
+    const [op, v] = t.dataset.arta.split(':');
+    if (!inCamp()) return true;
+    if (op === 'off') { artUnequip(S, artHero, v); afterChange(); }
+    else if (op === 'lock') { if (artToggleLock(S, artSelId, +v)) panel(); else toast('Mindestens ein Nebenwert muss frei bleiben.'); }
+    else if (op === 'eq') { if (artEquip(S, artHero, artSelId)) { SND.play('forge'); afterChange(); } }
+    else if (op === 'roll') { if (artReroll(S, artSelId)) { SND.play('soul'); toast('Nebenwerte neu gewürfelt!'); afterChange(); } }
+    else if (op === 'del') { if (ask('artdel', panel)) { const d = artDestroy(S, artSelId); if (d) { artSelId = null; SND.play('crit'); toast(`Artefakt zerstört: +${d} Artefaktsplitter`); afterChange(); } } }
+    return true;
+  }
   // Spieler-Idee (v29): Unterklassen ab dem 2. Aufstieg
   function subBox(h) {
     if (!hired(S, h.tree) || !SUBS[h.id]) return '';
@@ -1398,6 +1454,7 @@
       const extra = `${run.kills} Gegner besiegt${run.gold ? ` · ${coin}+${fmt(run.gold)}` : ''}${run.souls ? ` · ${soul}+${run.souls}` : ''}${run.runes.length ? ` · ${run.runes.length} Rune${run.runes.length > 1 ? 'n' : ''}` : ''}`;
       if (run.mode === 'weekly') { const r = run.weeklyReward || {}; return `<div class="rl-dead week"><b>Tages-Herausforderung: Stufe ${run.stage}</b><span>Bestes Ergebnis heute: Stufe ${(S.daily || {}).best || 0}${r.stars ? ` · ${star}+${r.stars}` : ''}${r.crowns ? ` · ${crown}+${r.crowns}` : ''}</span><span class="note">Belohnungen und Bestenliste findest du in der Ruhmeshalle.</span></div>`; }
       if (run.mode === 'ahnen') return ahnEndInfo();
+      if (run.mode === 'arte') return `<div class="rl-dead ${run.victory ? 'win' : ''}"><b>Artefakt-Prüfung ${run.victory ? 'geschafft' : 'gescheitert'}</b><span>${run.arteReward && run.arteReward.art ? `Neues Artefakt: ${artName(run.arteReward.art)} ${'★'.repeat(run.arteReward.art.rar)}` : esc(run.failNote || `Welle ${run.waves + 1} von ${ARTE.waves}`)}</span></div>`;
       if (run.mode === 'bounty') return `<div class="rl-dead ${run.victory ? 'win' : ''}"><b>${run.victory ? 'Kopfgeld eingelöst' : 'Jagd gescheitert'}: ${esc(run.ahn.bounty.def.name)}</b><span>${run.bountyReward ? `+${run.bountyReward.gem} Sternkristalle` : run.victory ? 'Belohnung heute schon erhalten' : 'Versuch es nochmal mit Schildwall und Schwachstellen.'}</span></div>`;
       if (run.mode === 'exp') {
         const m = MISSION[run.mission], r = run.expReward;
@@ -1650,6 +1707,7 @@
     else if (tab === 'zeit' || tab === 'laeden') html += ladenTab();
     else if (tab === 'exp') html += campInfo() + expTab();
     else if (tab === 'ahnen') html += campInfo() + ahnTab();
+    else if (tab === 'arte') html += campInfo() + arteTab();
     else if (tab === 'ruhm') html += ruhmTab();
     else html += standHTML();
     const openDet = p.querySelector('details[open]');
@@ -1713,6 +1771,7 @@
   function afterChange() { save(); refresh(); }
   function onClick(e) {
     if (ahnClick(e)) return;
+    if (artClick(e)) return;
     const g = e.target.closest('[data-node]');
     if (g) { sel[tab] = g.dataset.node; panel(); return; }
     const sb = e.target.closest('[data-sub]');
