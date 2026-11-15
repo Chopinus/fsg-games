@@ -1326,7 +1326,7 @@
 <div class="is-mapwrap"><canvas class="is-map" width="132" height="132" title="Karte vergrößern (M)"></canvas><div class="is-wind"><i></i><span data-wind></span></div></div>
 <div class="is-log"></div>
 <div class="is-chat"><input maxlength="120" placeholder="Nachricht an alle …" enterkeyhint="send"><button class="is-btn" data-send>Senden</button></div>
-<div class="is-acts"><button class="is-act" data-skill>🌟<span>Skills</span><em class="is-dot" data-dot hidden></em></button><button class="is-act" data-bag>🎒<span>Rucksack</span></button><button class="is-act" data-chat>💬<span>Chat</span></button><button class="is-act" data-sail hidden>⛵<span>Segel</span></button><button class="is-act" data-fish hidden>🎣<span>Angeln</span></button><button class="is-act" data-build hidden>🔨<span>Bauen</span></button><button class="is-act" data-use hidden>🛠️<span>Benutzen</span></button><button class="is-act" data-travel hidden>🧭<span>Reisen</span></button><button class="is-act" data-boat>⚓<span>Boot</span></button><button class="is-act big" data-atk>⚔️<span>Angriff</span></button></div>
+<div class="is-acts"><button class="is-act" data-skill>🌟<span>Skills</span><em class="is-dot" data-dot hidden></em></button><button class="is-act" data-bag>🎒<span>Rucksack</span></button><button class="is-act" data-chat>💬<span>Chat</span></button><button class="is-act" data-sail hidden>⛵<span>Segel</span></button><button class="is-act" data-fish hidden>🎣<span>Angeln</span></button><button class="is-act" data-build hidden>🔨<span>Bauen</span></button><button class="is-act" data-farm hidden>🌾<span>Farmen</span></button><button class="is-act" data-use hidden>🛠️<span>Benutzen</span></button><button class="is-act" data-travel hidden>🧭<span>Reisen</span></button><button class="is-act" data-boat>⚓<span>Boot</span></button><button class="is-act big" data-atk>⚔️<span>Angriff</span></button></div>
 <div class="is-hint">WASD laufen · Leertaste/Klick: angreifen · 1–3 Fähigkeiten · E Benutzen/Boot · R Reisen · G Angeln · I Rucksack · K Skills · T Chat · M Karte</div><div class="is-tut" hidden></div>
 <div class="is-joy"><i></i></div><div class="is-joy is-aimj"><i></i></div><div class="is-abil" hidden></div><div class="is-zones"><span>👆 Hier ziehen<br>zum Laufen</span><span>👆 Tippen = Angriff<br>Ziehen = Zielen</span></div>
 <div class="is-say" style="opacity:0"></div><div class="is-fade"></div>`;
@@ -1355,6 +1355,7 @@
     if (coarse) { const z = root.querySelector('.is-zones'); z.style.display = 'flex'; setTimeout(() => { z.style.opacity = 0; }, 14000); }
     hud.travel = root.querySelector('[data-travel]'); hud.travel.onclick = () => toggleTravel(); hud.tut = root.querySelector('.is-tut');
     hud.build = root.querySelector('[data-build]'); hud.build.onclick = () => toggleBuild();
+    hud.farm = root.querySelector('[data-farm]'); hud.farm.onclick = () => toggleFarm();
     hud.fish = root.querySelector('[data-fish]'); hud.fish.addEventListener('pointerdown', e => { e.preventDefault(); fishAction(); });
     hud.buffs = document.createElement('span'); hud.buffs.className = 'is-buffs'; root.querySelector('.is-stats').appendChild(hud.buffs);
     root.querySelector('[data-xpbox]').onclick = () => toggleSkills();
@@ -1604,7 +1605,7 @@
         <p><b>📍 Absteckpfahl:</b> Er schützt <b>${2 * CLAIM_R + 1} × ${2 * CLAIM_R + 1} Felder</b> rund um sich. Dort können nur du und deine Crew bauen und abreißen. Jeder darf höchstens <b>${CLAIM_MAX} Pfähle</b> aufstellen. Ohne Pfahl dürfen andere deine Wände und Böden abreißen – Werkbänke, Truhen, Betten und Pfähle aber nie.</p>
         <p><b>Werkbänke</b> stellst du im 🎒 Rucksack unter <b>✋ Handwerk</b> her. Aufstellen darfst du sie überall – auch unterwegs auf jeder Insel. Abbauen und mitnehmen geht jederzeit.</p>
         <p class="is-npcsub">Du hast ${n} Felder bebaut und ${mineN} von ${CLAIM_MAX} Pfählen aufgestellt.</p><button class="is-ext" data-ext="pfahlinfo">📍 Pfahl zum Bauen auswählen</button>`; },
-    hof: () => `<p>Samen pflanzt du auf einem <b>Feld</b> bei deinem Haus – tipp oder klick einfach direkt auf das Feld, auch aus der Ferne; genauso erntest du. Danach heißt es warten – auch wenn du nicht spielst, wächst alles weiter.</p><div class="is-shop">${SEEDSHOP.map(([k, pr]) => `<div><i>${RES[SEEDS[k][0]][1]}</i><span><b>${RES[k][0]}</b><small>wächst in ${Math.round(SEEDS[k][1] / 60)} Min. zu ${RES[SEEDS[k][0]][0]}${bag[k] ? ` · hast ${bag[k]}` : ''}</small></span><button class="is-ext" data-ext="seed" data-k="${k}" ${me.coins >= pr ? '' : 'disabled'}>🪙 ${pr}</button></div>`).join('')}</div><p class="is-npcsub">Hühnerstall und Schafweide stellst du in der 🪑 Tischlerei her und baust sie bei deinem Haus auf.</p>`,
+    hof: () => `<p>Samen pflanzt du auf einem <b>Feld</b> bei deinem Haus – drück unten auf <b>🌾 Farmen</b> (am PC Taste V), wähl Ernten oder eine Samensorte und tipp dann auf die Felder, auch aus der Ferne. Danach heißt es warten – auch wenn du nicht spielst, wächst alles weiter.</p><div class="is-shop">${SEEDSHOP.map(([k, pr]) => `<div><i>${RES[SEEDS[k][0]][1]}</i><span><b>${RES[k][0]}</b><small>wächst in ${Math.round(SEEDS[k][1] / 60)} Min. zu ${RES[SEEDS[k][0]][0]}${bag[k] ? ` · hast ${bag[k]}` : ''}</small></span><button class="is-ext" data-ext="seed" data-k="${k}" ${me.coins >= pr ? '' : 'disabled'}>🪙 ${pr}</button></div>`).join('')}</div><p class="is-npcsub">Hühnerstall und Schafweide stellst du in der 🪑 Tischlerei her und baust sie bei deinem Haus auf.</p>`,
   }; // und eigene Inhalte je Bewohner
   npcBody.wander = () => {
     const L = lim('wd', wPeriod()), want = wWant(), left = Math.ceil(((wPeriod() + 1) * 4 * 3600e3 - Date.now()) / 60000);
@@ -2485,7 +2486,7 @@
   for (const [k, p] of Object.entries(PIECES)) if (needKit(k)) RECIPES.push({ id: 'm_' + k, st: p.station ? 'hand' : 'tischler', i: p.i, n: p.n, d: p.station ? STATIONS[p.station][2] + ' · aufstellen mit 🔨 Bauen' : p.claim ? `Schützt 13 × 13 Felder rund um den Pfahl: dort bauen und abreißen nur du und deine Crew (höchstens 3 Pfähle)` : p.use ? 'Bauteil für dein Haus · ' + p.use : 'Bauteil für dein Haus', cost: p.cost, kit: k });
   const SEEDS = { samen_weizen: ['weizen', 300], samen_karotte: ['karotte', 480], samen_kuerbis: ['kuerbis', 720] };
   const CLAIM_R = 6, CLAIM_MAX = 3;
-  let WIDX = new Map(), WG = {}, WA = {}, STASH = {}, worldReady = false, buildOn = false, buildSel = 'werkbank', buildCur = null, chestOpen = false, baseNear = null, CLAIMS = null;
+  let WIDX = new Map(), WG = {}, WA = {}, STASH = {}, worldReady = false, farmOn = false, farmSel = 'ernte', buildOn = false, buildSel = 'werkbank', buildCur = null, chestOpen = false, baseNear = null, CLAIMS = null;
   const wkey = (x, y) => x + ',' + y, cidxOf = (x, y) => Math.floor(x / 16) + ',' + Math.floor(y / 16);
   function wset(k, v) { // v = [Boden, Gegenstand, Besitzer-id, Name] oder null
     const [x, y] = k.split(',').map(Number), ci = cidxOf(x, y);
@@ -2555,15 +2556,16 @@
   }
   function toggleBuild(on) {
     buildOn = on ?? !buildOn;
-    let bar = root.querySelector('.is-build'); if (bar) bar.remove();
+    let bar = root.querySelector('.is-build:not(.is-farm)'); if (bar) bar.remove();
     if (!buildOn) return;
+    if (farmOn) toggleFarm(false);
     if (!onHome(Math.floor(me.x), Math.floor(me.y)) && !PIECES[buildSel].station && buildSel !== 'abriss') buildSel = 'werkbank';
     bar = document.createElement('div'); bar.className = 'is-build'; root.appendChild(bar);
     bar.onclick = e => { const b = e.target.closest('[data-pc]'); if (b) { buildSel = b.dataset.pc; renderBuild(); return; } if (e.target.closest('[data-bdone]')) toggleBuild(false); };
     renderBuild();
   }
   function renderBuild() {
-    const bar = root.querySelector('.is-build'); if (!bar) return;
+    const bar = root.querySelector('.is-build:not(.is-farm)'); if (!bar) return;
     const pc = PIECES[buildSel], home = onHome(Math.floor(me.x), Math.floor(me.y));
     const why = buildCur && !buildCur[2] && buildCur[3] ? ` · <em class="no">${buildCur[3]}</em>` : '';
     const info = buildSel === 'abriss' ? 'Tippe auf ein Bauteil, um es abzureißen (deine Bauteile kommen zurück, Böden geben halbe Rohstoffe)' : needKit(buildSel) ? `${pc.i} ${pc.n}: ${kit(buildSel) ? `<em class="ok">hast ${kit(buildSel)}</em>` : `<em class="no">erst ${pc.station ? 'im Rucksack (✋ Handwerk)' : 'in der 🪑 Tischlerei'} herstellen</em>`}` : `${pc.i} ${pc.n}: ${Object.entries(pc.cost).map(([k, v]) => `<em class="${(bag[k] || 0) >= v ? 'ok' : 'no'}">${RES[k][1]}${v}</em>`).join(' ')}`;
@@ -2581,19 +2583,37 @@
       const n = 2 + Math.floor(Math.random() * 2) + (tool('sense') ? 1 : 0), got = [...Array(n).fill(crop), ...(Math.random() < (tool('saatbeutel') ? 0.75 : 0.4) ? [seed] : [])];
       if (far) { for (const k of got) bag[k] = (bag[k] || 0) + 1; saveBag(); texts.push({ x: b.x + 0.5, y: b.y - 0.6, s: `+${n} ${RES[crop][1]}`, t: 0, col: '#ffffff' }); if (bagOpen) renderBag(); }
       else for (const k of got) drop(b.x + 0.5, b.y + 0.6, k);
-      delete WG[b.key]; send({ t: 'i_crop', x: b.x, y: b.y }); gainXP(3, b.x + 0.5, b.y, 's'); qEvent('harvest', 'ernte'); st().ernte = (st().ernte || 0) + 1; return true;
+      delete WG[b.key]; send({ t: 'i_crop', x: b.x, y: b.y }); gainXP(3, b.x + 0.5, b.y, 's'); qEvent('harvest', 'ernte'); st().ernte = (st().ernte || 0) + 1; if (farmOn) renderFarm(); return true;
     }
-    const seed = Object.keys(SEEDS).find(s2 => bag[s2] > 0);
-    if (!seed) { say('Du hast keine Samen. Bäuerin Frieda im Dorf verkauft welche.'); return true; }
+    if (farmOn && farmSel === 'ernte') { say('Dieses Feld ist leer – wähl unten Samen aus, um zu pflanzen'); return true; }
+    const seed = farmOn && SEEDS[farmSel] ? (bag[farmSel] > 0 ? farmSel : null) : Object.keys(SEEDS).find(s2 => bag[s2] > 0);
+    if (!seed) { say(farmOn && SEEDS[farmSel] ? `Du hast keine ${RES[farmSel][0]}. Bäuerin Frieda im Dorf verkauft welche.` : 'Du hast keine Samen. Bäuerin Frieda im Dorf verkauft welche.'); return true; }
     bag[seed]--; saveBag(); WG[b.key] = [seed, Date.now()]; send({ t: 'i_plant', x: b.x, y: b.y, k: seed });
-    say(`${RES[seed][1]} gepflanzt – fertig in ${Math.round(SEEDS[seed][1] / 60)} Min.`); return true;
+    say(`${RES[seed][1]} gepflanzt – fertig in ${Math.round(SEEDS[seed][1] / 60)} Min.`); if (farmOn) renderFarm(); return true;
+  }
+  // Spieler-Idee (v25): Farm-Modus mit eigenem Knopf wie beim Bauen – nur dann reagieren Felder aufs Antippen, sonst läuft der Joystick ungestört
+  function toggleFarm(on) {
+    farmOn = on ?? !farmOn;
+    let bar = root.querySelector('.is-farm'); if (bar) bar.remove();
+    if (hud.farm) hud.farm.classList.toggle('on', farmOn);
+    if (!farmOn) return;
+    if (buildOn) toggleBuild(false);
+    bar = document.createElement('div'); bar.className = 'is-build is-farm'; root.appendChild(bar);
+    bar.onclick = e => { const b = e.target.closest('[data-fs]'); if (b) { farmSel = b.dataset.fs; renderFarm(); return; } if (e.target.closest('[data-fdone]')) toggleFarm(false); };
+    renderFarm();
+  }
+  function renderFarm() {
+    const bar = root.querySelector('.is-farm'); if (!bar) return;
+    const info = farmSel === 'ernte' ? 'Tippe auf reife Felder, um zu ernten' : `${RES[farmSel][0]}: ${bag[farmSel] ? `<em class="ok">hast ${bag[farmSel]}</em>` : '<em class="no">keine – Frieda im Dorf verkauft welche</em>'} · tippe auf leere Felder (reife werden geerntet)`;
+    bar.innerHTML = `<div class="is-bhead"><b>🌾 Farmen</b><span>${info}</span><button data-fdone>Fertig</button></div>
+      <div class="is-bpieces"><button data-fs="ernte" class="${farmSel === 'ernte' ? 'on' : ''}"><i>🧺</i>Ernten</button>${Object.keys(SEEDS).map(k => `<button data-fs="${k}" class="${farmSel === k ? 'on' : ''} ${bag[k] ? '' : 'no'}"><i>${RES[SEEDS[k][0]][1]}</i>${RES[k][0]}<sup>${bag[k] || 0}</sup></button>`).join('')}</div>`;
   }
   function fieldAtTile(tx, ty) {
     const v = WORLD.get(wkey(tx, ty)); if (!v || v[1] !== 'feld') return null;
     return { key: wkey(tx, ty), k: 'feld', x: tx, y: ty, o: v[2], n: v[3] };
   }
   function tapField(cx, cy) { // true, wenn auf ein eigenes Feld getippt wurde
-    if (buildOn || me.inBoat || me.inCave || !worldReady) return false;
+    if (!farmOn || buildOn || me.inBoat || me.inCave || !worldReady) return false;
     const [tx, ty] = screenTile(cx, cy), b = fieldAtTile(tx, ty); if (!b) return false;
     if (!friendOf(b.o, b.n)) return false;
     farmField(b, Math.hypot(me.x - (tx + 0.5), me.y - (ty + 0.8)) > 2.5); return true;
@@ -2859,7 +2879,7 @@
   function joyDown(e) {
     if (chatOpen || bigMap || titleOn) return;
     if (buildOn) { const tt = screenTile(e.clientX, e.clientY); if (e.pointerType === 'mouse') { if (e.button === 0) { mouseTile = tt; updateBuildCursor(); if (buildCur && buildCur[2]) placeAt(buildCur[0], buildCur[1]); } return; } joy.tap = { x: e.clientX, y: e.clientY, t: Date.now(), tt }; }
-    if (!buildOn && (e.pointerType !== 'mouse' || e.button === 0) && tapField(e.clientX, e.clientY)) return; // Feld angetippt: pflanzen oder ernten
+    if (farmOn && (e.pointerType !== 'mouse' || e.button === 0) && tapField(e.clientX, e.clientY)) return; // Farm-Modus: Feld angetippt – pflanzen oder ernten
     if (e.pointerType !== 'mouse' && !buildOn) { const r = cv.getBoundingClientRect(); if (e.clientX - r.left > r.width * 0.5) { aimStart(e, 'atk'); return; } }
     if (e.pointerType === 'mouse') { // am PC: Klick greift in Mausrichtung an
       if (e.button !== 0) return;
@@ -2898,6 +2918,7 @@
       if (k === 'escape' && (npcOpen || craftOpen)) { toggleNpc(); toggleCraft(); return; }
       if (k === ' ' || k === 'q') { e.preventDefault(); if (!e.repeat) { if (fishing) fishAction(); else if (me.inBoat) toggleSail(); else if (buildOn) { mouseTile = null; updateBuildCursor(); if (buildCur && buildCur[2]) placeAt(buildCur[0], buildCur[1]); } else attack(); } return; }
       if (k === 'b' && !e.repeat && !hud.build.hidden) { toggleBuild(); return; }
+      if (k === 'v' && !e.repeat && !hud.farm.hidden) { toggleFarm(); return; }
       if ((k === 'f' || k === 'j') && !e.repeat) { attack(); return; }
       if (k === 'c' && !e.repeat) { bagTab = 'crew'; if (!bagOpen) toggleBag(); else renderBag(); return; }
       if (k === 'g' && !e.repeat) { fishAction(); return; }
@@ -4193,6 +4214,8 @@
     hud.boat.hidden = !!me.inCave; hud.travel.hidden = !canTravel(); if (travelOpen && !canTravel()) toggleTravel(); tutPoll();
     const inMine = !me.inBoat && !me.inCave && !titleOn && elev(me.x, me.y) >= -0.05;
     hud.build.hidden = !inMine;
+    const canFarm = inMine && onHome(Math.floor(me.x), Math.floor(me.y)); hud.farm.hidden = !canFarm && !farmOn;
+    if (!inMine && farmOn) toggleFarm(false);
     const canF = gear('angel') && !me.inCave && (fishing || waterAhead()); hud.fish.hidden = !canF; hud.fish.classList.toggle('on', !!fishing && fishing.ph === 'bite');
     hud.fish.querySelector('span').textContent = fishing ? (fishing.ph === 'bite' ? 'ZIEHEN!' : 'Warten …') : 'Angeln'; hud.build.classList.toggle('on', buildOn);
     if (!inMine && buildOn) toggleBuild(false);

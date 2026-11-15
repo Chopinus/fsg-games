@@ -298,6 +298,11 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 64, title: 'Spieler-Idee: Farm-Knopf im Inselreich', date: '15.11.2026', items: [
+      'Im Inselreich gibt es auf der Heimatinsel jetzt einen eigenen Knopf 🌾 Farmen (am PC Taste V) – genau wie beim Bauen.',
+      'In der Leiste wählst du Ernten oder eine Samensorte; dann tippst du auf deine Felder, auch aus der Ferne.',
+      'Ohne Farm-Modus reagieren Felder nicht mehr aufs Antippen – der Joystick blockiert also nicht mehr, wenn du über einem Feld startest.',
+    ] },
     { id: 63, title: 'Spieler-Idee: Zweites Ahnensiegel', date: '13.11.2026', items: [
       'Ab 3 Aufstiegen kannst du im Reiter Ahnenprüfung ein zweites Ahnensiegel auf einen Helden setzen, der schon eins trägt.',
       'Sein Fertigkeitenbaum wächst dann noch zwei Reihen weiter: Ahnenkraft (+6 % Schaden und Leben je Stufe), Ahnenruhe (schnellere Fähigkeiten) und Ahnenschild (weniger Schaden).',
