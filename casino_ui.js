@@ -352,6 +352,13 @@
   .cz-sym.sieben{font-family:Bungee,Figtree,sans-serif;font-size:calc(var(--cell)*.62);color:#d1162a;text-shadow:0 2px 0 #7a0a12,0 0 10px rgba(255,80,80,.4)}
   .cz-sym.hit{animation:czPulse .7s ease-in-out infinite alternate;background:radial-gradient(circle,rgba(255,220,100,.55),transparent 70%)}
   @keyframes czPulse{to{transform:scale(1.12)}}
+  .cz-royal{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;pointer-events:none;background:radial-gradient(circle,rgba(80,50,0,.75),rgba(10,6,0,.85));animation:czRoyalIn .5s ease-out;transition:opacity .7s}
+  .cz-royal.out{opacity:0}.cz-royal .crown{font-size:84px;animation:czPulse .6s ease-in-out infinite alternate;filter:drop-shadow(0 0 24px #ffd24a)}
+  .cz-royal b{font-family:Bungee,'Arial Black',sans-serif;font-size:clamp(34px,9vw,72px);letter-spacing:2px;background:linear-gradient(90deg,#fff3b0,#ffd24a,#ffb000,#fff3b0);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:czShine 1.6s linear infinite;text-shadow:0 0 30px rgba(255,210,74,.4)}
+  .cz-royal span{color:#ffe9a8;font-weight:800;font-size:20px}.cz-royal .cards{font-size:56px;color:#fff;letter-spacing:6px}
+  .cz-royaltxt{color:#ffd24a;font-weight:900;text-shadow:0 0 12px rgba(255,210,74,.7)}
+  @keyframes czRoyalIn{from{opacity:0;transform:scale(1.3)}to{opacity:1;transform:none}}
+  @keyframes czShine{to{background-position:200% 0}}
   .cz-lines{position:absolute;inset:10px;pointer-events:none}
   .cz-win{text-align:center;font-family:Bungee,Figtree,sans-serif;font-size:26px;color:#ffe9a8;min-height:36px;margin-top:10px;text-shadow:0 0 16px rgba(255,200,80,.7)}
   .cz-win.big{animation:czBig 1s ease-in-out infinite alternate}@keyframes czBig{to{transform:scale(1.15);color:#fff}}
@@ -775,12 +782,21 @@
   }
 
   /* ---------- Poker ---------- */
+  // Spieler-Idee (v36): Royal Flush – die beste Hand überhaupt – bekommt einen eigenen großen Auftritt
+  let royalKey = '';
+  function royalFx(r) {
+    const k = (r.hn ?? '') + ':' + r.names.join(','); if (k === royalKey) return; royalKey = k;
+    const d = document.createElement('div'); d.className = 'cz-royal'; d.innerHTML = `<div class="crown">👑</div><b>ROYAL FLUSH</b><span>${esc(r.names.join(' & '))}</span><div class="cards">🂡 🂮 🂭 🂫 🂪</div>`;
+    document.body.appendChild(d); winFx('gold', 3); setTimeout(() => winFx('feuerwerk', 2), 600); winSound(SH.eq.sfx || 'klingeln', true); snd('win');
+    setTimeout(() => d.classList.add('out'), 3600); setTimeout(() => d.remove(), 4300);
+  }
   const PPOS = [[50, 92], [10, 70], [10, 28], [50, 8], [90, 28], [90, 70]];
   let raiseTo = 0;
   function pk(main, v, me) {
     if (lastKind !== 'pk') { lastKind = 'pk'; main.innerHTML = `<div class="cz-pk"><div class="oval"></div><div class="center"></div><div class="cz-pseats"></div></div><div class="cz-status"></div><div class="cz-bar"></div>`; }
     const n = v.seats.length, rot = v.mySeat >= 0 ? v.mySeat : 0;
-    set(main.querySelector('.center'), `<div class="stamp" style="font-family:Bungee;color:rgba(255,233,168,.3);margin-bottom:6px">TEXAS HOLD'EM · ${v.bb / 2}/${v.bb}</div>${cardsHTML(v.board, 'pkb')}<div class="pot">${stackHTML(v.pot)} Topf ${fmtN(v.pot)}</div>${v.result ? `<div class="cz-status">${esc(v.result.names.join(' & '))} gewinnt${v.result.hand ? ' mit ' + esc(v.result.hand) : ''}</div>` : ''}`);
+    set(main.querySelector('.center'), `<div class="stamp" style="font-family:Bungee;color:rgba(255,233,168,.3);margin-bottom:6px">TEXAS HOLD'EM · ${v.bb / 2}/${v.bb}</div>${cardsHTML(v.board, 'pkb')}<div class="pot">${stackHTML(v.pot)} Topf ${fmtN(v.pot)}</div>${v.result ? `<div class="cz-status ${v.result.royal ? 'cz-royaltxt' : ''}">${v.result.royal ? '👑 ' : ''}${esc(v.result.names.join(' & '))} gewinnt${v.result.hand ? ' mit ' + esc(v.result.hand) : ''}${v.result.royal ? ' 👑' : ''}</div>` : ''}`);
+    if (v.result && v.result.royal) royalFx(v.result);
     set(main.querySelector('.cz-pseats'), v.seats.map((x, i) => {
       const [px, py] = PPOS[((i - rot) % n + n) % n] || [50, 50];
       if (!x) return `<div class="cz-pseat" style="left:${px}%;top:${py}%"><div class="box cz-ghost">freier Platz</div></div>`;

@@ -311,14 +311,14 @@ function eval5(c) {
   const cnt = {}; v.forEach(x => (cnt[x] = (cnt[x] || 0) + 1));
   const groups = Object.entries(cnt).map(([k, n]) => [n, +k]).sort((a, b) => b[0] - a[0] || b[1] - a[1]), kick = groups.map(g => g[1]);
   let cat;
-  if (straight && flush) return [8, straight];
+  if (straight && flush) return straight === 14 ? [9, 14] : [8, straight]; // Spieler-Idee (v36): Royal Flush ist eine eigene, besondere Hand
   if (groups[0][0] === 4) cat = 7; else if (groups[0][0] === 3 && groups[1][0] === 2) cat = 6; else if (flush) return [5, ...v];
   else if (straight) return [4, straight]; else if (groups[0][0] === 3) cat = 3; else if (groups[0][0] === 2 && groups[1][0] === 2) cat = 2; else if (groups[0][0] === 2) cat = 1; else cat = 0;
   return [cat, ...kick];
 }
 const cmp = (a, b) => { for (let i = 0; i < Math.max(a.length, b.length); i++) { const d = (a[i] || 0) - (b[i] || 0); if (d) return d; } return 0; };
 function best7(cards) { let best = null; const n = cards.length; for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) { const five = cards.filter((_, i) => i !== a && i !== b); if (five.length !== 5) continue; const e = eval5(five); if (!best || cmp(e, best) > 0) best = e; } if (n === 5) best = eval5(cards); return best; }
-const HAND_NAMES = ['Höchste Karte', 'Ein Paar', 'Zwei Paare', 'Drilling', 'Straße', 'Flush', 'Full House', 'Vierling', 'Straight Flush'];
+const HAND_NAMES = ['Höchste Karte', 'Ein Paar', 'Zwei Paare', 'Drilling', 'Straße', 'Flush', 'Full House', 'Vierling', 'Straight Flush', 'Royal Flush'];
 const PK = {
   sb: 10, bb: 20, buy: 2000, turn: 25000, show: 6000,
   start(r) { const s = r.state; s.btn = -1; s.hand = 0; PK.newHand(r); },
@@ -403,7 +403,7 @@ const PK = {
       s.seats.forEach((x, i) => { if (x) x.win = (got[i] || 0) - (x.put || 0); });
       const ws = Object.keys(got).map(Number).filter(i => got[i] > s.seats[i].put).sort((a, b) => got[b] - got[a]);
       if (!ws.length) ws.push(+Object.keys(got)[0]);
-      s.result = { names: ws.map(i => s.seats[i].name), hand: HAND_NAMES[score[ws[0]][0]] };
+      s.result = { names: ws.map(i => s.seats[i].name), hand: HAND_NAMES[score[ws[0]][0]], royal: score[ws[0]][0] === 9, hn: s.hand };
       log(s, `${s.result.names.join(' und ')} gewinnt mit ${s.result.hand}`);
     }
     s.phase = 'show'; s.ends = now() + PK.show; s.street = 'show';

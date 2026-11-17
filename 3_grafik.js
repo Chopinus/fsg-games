@@ -303,6 +303,10 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 74, title: 'Spieler-Idee: Royal Flush im Casino', date: '17.11.2026', items: [
+      'Beim Texas Hold\'em ist der Royal Flush jetzt eine eigene Hand mit eigenem Namen statt nur „Straight Flush“.',
+      'Wer ihn bekommt, wird am ganzen Tisch mit einer goldenen Krone, Goldregen und Feuerwerk gefeiert.',
+    ] },
     { id: 73, title: 'Spieler-Idee: Runen-Werkzeuge', date: '17.11.2026', items: [
       'Im Reiter Runen gibt es oben die neuen ⚙ Runen-Werkzeuge.',
       'Alles verschmelzen: Ein Knopf schmiedet alle Runen, die sich gerade verschmelzen lassen – von unten nach oben.',
