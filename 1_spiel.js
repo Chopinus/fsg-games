@@ -1960,6 +1960,21 @@
     if (n.active && S.nodes[n.id] === 1 && eqOf(S, n.tree, n.sig).length < slotLim(S, n.tree, n.sig)) S.equip.push(n.id);
     return true;
   }
+  // Spieler-Ideen (v37, v41): mehrere Stufen auf einmal kaufen und ganzen Helden maximal verbessern
+  function buyN(S, n, k) { let c = 0; while (c < k && c < 100000 && buy(S, n)) c++; return c; }
+  function buyMaxTree(S, tree) {
+    let c = 0;
+    while (c < 20000) {
+      let best = null, bv = Infinity;
+      for (const n of NODES) {
+        if (n.tree !== tree || n.kind === 'key' || !canBuy(S, n)) continue;
+        const k = nodeCost(S, n), v = k.g / Math.max(1, S.gold) + k.s / Math.max(1, S.souls);
+        if (v < bv) { bv = v; best = n; }
+      }
+      if (!best || !buy(S, best)) break; c++;
+    }
+    return c;
+  }
   // Seelenaltar: Gold opfern für einen dauerhaften Seelen-Multiplikator (bleibt bei Wiedergeburt und Aufstieg)
   const ALTAR_MAX = 25, ALTAR_STEP = 0.15;
   const altarCost = L => Math.ceil(25000 * Math.pow(3, L));

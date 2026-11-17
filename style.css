@@ -1709,3 +1709,5 @@ html.rl-appmode,html.rl-appmode body{overflow:hidden;overscroll-behavior:none}
 .rl-artsubs{display:flex;flex-wrap:wrap;gap:6px}.rl-artsubs button{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;padding:5px 9px;font:inherit;font-size:12.5px;cursor:pointer}
 .rl-artsubs button.on{border-color:var(--ac);background:color-mix(in srgb,var(--ac) 20%,var(--surface))}
 @media (max-width:560px){.rl-artslots{grid-template-columns:1fr}}
+/* Ritterlauf: Mehrfach-Kauf (Spieler-Ideen v37, v41) */
+.rl-buyn{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}

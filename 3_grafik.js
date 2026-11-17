@@ -303,6 +303,11 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 71, title: 'Spieler-Ideen: Mehrfach-Kauf und Max-Knopf', date: '17.11.2026', items: [
+      'Bei Endlos-Fertigkeiten gibt es jetzt Knöpfe für ×10, ×100 und ×1000 Stufen auf einmal.',
+      'Jede Fertigkeit mit mehreren Stufen hat einen Max-Knopf: Er kauft so viele Stufen, wie Gold und Seelen reichen.',
+      'Neu oben im Heldenreiter: ⏫ Max verbessert den ganzen Helden – es werden immer die günstigsten Fertigkeiten gekauft, bis das Geld nicht mehr reicht. Schlüssel wählst du weiter selbst.',
+    ] },
     { id: 70, title: 'Spieler-Idee: Heldenleiste wieder übersichtlich', date: '17.11.2026', items: [
       'Die Heldenauswahl über dem Fertigkeitenbaum ist wieder eine schmale Leiste zum Wischen – mit vielen Helden war sie zuletzt fälschlich untereinander angeordnet und hat den Baum verdeckt.',
       'Eine gewählte Unterklasse wird nur noch als kleine Zeile angezeigt; mit „Wechseln“ klappst du die Auswahl auf.',
