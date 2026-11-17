@@ -873,7 +873,7 @@ async function handle(action, body, ip) {
     if (!acc || !(acc.tokens || []).includes(sha256(String(body.token || '')))) return [401, { error: 'Bitte melde dich neu an.' }];
     return wbAction(action, key, acc, body);
   }
-  if (action === 'wd_state' || action === 'wd_guess') { // Wörtle: tägliches Worträtsel mit Rangliste (wortle.js)
+  if (['wd_state', 'wd_guess', 'wd_free', 'wd_free_guess'].includes(action)) { // Wörtle: tägliches Worträtsel mit Rangliste (wortle.js)
     if (!acc || !(acc.tokens || []).includes(sha256(String(body.token || '')))) return [401, { error: 'Melde dich im Game Hub an, um bei Wörtle mitzuspielen.' }];
     return WORTLE.action(action, key, acc, body, accounts, markDirty, isTester);
   }

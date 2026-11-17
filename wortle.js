@@ -53,12 +53,47 @@ function view(acc, accounts, isTester) {
     st: liveStreak(W), best: W.best || 0, wins: W.wins || 0, plays: W.plays || 0, top: top(accounts, isTester) };
 }
 
+// Freies Spiel: beliebig viele Runden mit Zufallswort, zählt nicht für Rangliste oder Serie (acc.wdf)
+function freeOf(acc, fresh) {
+  let F = acc.wdf && typeof acc.wdf === 'object' ? acc.wdf : null;
+  if (!F || fresh) {
+    const daily = wordOf(dayNo());
+    let i; do i = Math.floor(Math.random() * SOL.length); while (SOL[i] === daily && SOL.length > 1);
+    F = acc.wdf = { i, g: [], r: [], wins: (F && F.wins) || 0, plays: (F && F.plays) || 0 };
+  }
+  return F;
+}
+function freeView(acc) {
+  const F = freeOf(acc), done = !!(F.win || F.g.length >= MAX);
+  return { free: true, g: F.g, r: F.r, done, win: !!F.win, word: done ? SOL[F.i] : null, wins: F.wins || 0, plays: F.plays || 0 };
+}
+const norm = w => String(w || '').toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').trim();
+
 function action(act, key, acc, body, accounts, markDirty, isTester) {
   if (act === 'wd_state') return [200, view(acc, accounts, isTester)];
+  if (act === 'wd_free') { // Stand holen, mit {neu:true} neues Wort (nur wenn die Runde fertig oder noch nicht angefangen ist)
+    const F = freeOf(acc);
+    if (body.neu && (F.win || F.g.length >= MAX || !F.g.length)) { freeOf(acc, true); markDirty(); }
+    return [200, freeView(acc)];
+  }
+  if (act === 'wd_free_guess') {
+    const F = freeOf(acc);
+    if (F.win || F.g.length >= MAX) return [400, { error: 'Diese Runde ist vorbei – starte ein neues Wort.' }];
+    const g = norm(body.w);
+    if (!/^[a-z]{5}$/.test(g)) return [400, { error: 'Bitte genau 5 Buchstaben (A–Z) eingeben.' }];
+    if (!ALLOWED.has(g)) return [400, { error: 'Dieses Wort kennt Wörtle nicht.', unknown: true }];
+    if (F.g.includes(g)) return [400, { error: 'Dieses Wort hast du in dieser Runde schon versucht.' }];
+    const r = score(g, SOL[F.i]);
+    if (!F.g.length) F.plays = (F.plays || 0) + 1;
+    F.g.push(g); F.r.push(r);
+    if (r === '22222') { F.win = 1; F.wins = (F.wins || 0) + 1; }
+    markDirty();
+    return [200, freeView(acc)];
+  }
   if (act === 'wd_guess') {
     const W = stateOf(acc);
     if (W.win || W.g.length >= MAX) return [400, { error: 'Das heutige Wörtle ist schon fertig. Morgen gibt es ein neues Wort!' }];
-    const g = String(body.w || '').toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').trim();
+    const g = norm(body.w);
     if (!/^[a-z]{5}$/.test(g)) return [400, { error: 'Bitte genau 5 Buchstaben (A–Z) eingeben.' }];
     if (!ALLOWED.has(g)) return [400, { error: 'Dieses Wort kennt Wörtle nicht.', unknown: true }];
     if (W.g.includes(g)) return [400, { error: 'Dieses Wort hast du heute schon versucht.' }];

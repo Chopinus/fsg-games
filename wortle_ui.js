@@ -39,17 +39,22 @@
   #wortle .wd-board li span{color:var(--muted);font-size:13px;margin-left:6px}
   #wortle .wd-board li.me{color:var(--accent);font-weight:700}
   #wortle .wd-help{color:var(--muted);font-size:13px;line-height:1.5}
+  #wortle .wd-tabs{display:flex;gap:6px;margin:0 0 10px}#wortle .wd-tabs button{flex:1;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:10px;padding:8px 6px;font:700 13.5px var(--body);cursor:pointer}
+  #wortle .wd-tabs button.on{background:var(--accent);border-color:var(--accent);color:#1b1400}
   .wd-tile .wd-art{font-size:34px}`;
 
-  let page = null, D = null, cur = '', busy = false, lastN = 0, shakeRow = -1;
+  let page = null, D = null, F = null, mode = 'day', cur = '', busy = false, lastN = 0, shakeRow = -1;
   const KB = ['qwertzuiop', 'asdfghjkl', '+yxcvbnm-'];
-  function keyState() { const st = {}; if (!D) return st; D.g.forEach((g, i) => [...g].forEach((ch, j) => { st[ch] = Math.max(st[ch] ?? -1, +D.r[i][j]); })); return st; }
+  const S = () => (mode === 'free' ? F : D);
+  function keyState() { const st = {}, X = S(); if (!X) return st; X.g.forEach((g, i) => [...g].forEach((ch, j) => { st[ch] = Math.max(st[ch] ?? -1, +X.r[i][j]); })); return st; }
   const fmtT = ms => { const s = Math.round(ms / 1000); return s < 60 ? s + ' Sek.' : Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') + ' Min.'; };
   function render() {
     if (!page) return;
     const k = konto();
     if (!k) { page.innerHTML = `<div class="wd-top"><button class="btn ghost small" data-wd="back">‹ Spiele</button><h2>Wörtle</h2></div><p class="wd-help">Jeden Tag ein neues Wort mit 5 Buchstaben – du hast 6 Versuche. Um mitzuspielen und in die Rangliste zu kommen, melde dich oben im Game Hub mit deinem Konto an.</p>`; return; }
-    if (!D) { page.innerHTML = `<div class="wd-top"><button class="btn ghost small" data-wd="back">‹ Spiele</button><h2>Wörtle</h2></div><p class="wd-help">Wird geladen …</p>`; return; }
+    const tabs = `<div class="wd-tabs"><button class="${mode === 'day' ? 'on' : ''}" data-wd="day">📅 Wort des Tages</button><button class="${mode === 'free' ? 'on' : ''}" data-wd="free">♾️ Freies Spiel</button></div>`;
+    if (!S()) { page.innerHTML = `<div class="wd-top"><button class="btn ghost small" data-wd="back">‹ Spiele</button><h2>Wörtle</h2></div>${tabs}<p class="wd-help">Wird geladen …</p>`; return; }
+    if (mode === 'free') return renderFree(k, tabs);
     const ks = keyState(), rows = [];
     for (let i = 0; i < 6; i++) {
       const g = D.g[i], r = D.r[i], live = !D.done && i === D.g.length;
@@ -60,9 +65,9 @@
     }
     lastN = D.g.length; shakeRow = -1;
     const kb = D.done ? '' : `<div class="wd-kb">${KB.map(row => `<div class="wd-kr">${[...row].map(c => c === '+' ? '<button class="wd-k wide" data-wk="enter">Raten</button>' : c === '-' ? '<button class="wd-k wide" data-wk="back">⌫</button>' : `<button class="wd-k ${ks[c] != null ? 's' + ks[c] : ''}" data-wk="${c}">${c}</button>`).join('')}</div>`).join('')}</div>`;
-    const end = D.done ? `<div class="wd-end">${D.win ? `<b>🎉 Geschafft in ${D.g.length} von 6 Versuchen!</b><small>Zeit ab dem ersten Versuch: ${fmtT(D.ms)}</small>` : `<b>Leider nicht geschafft.</b><small>Das Wort war <b>${h(String(D.word || '').toUpperCase())}</b>.</small>`}<button class="btn small" data-wd="share">📋 Ergebnis kopieren</button><small class="wd-help">Morgen gibt es ein neues Wort.</small></div>` : '';
+    const end = D.done ? `<div class="wd-end">${D.win ? `<b>🎉 Geschafft in ${D.g.length} von 6 Versuchen!</b><small>Zeit ab dem ersten Versuch: ${fmtT(D.ms)}</small>` : `<b>Leider nicht geschafft.</b><small>Das Wort war <b>${h(String(D.word || '').toUpperCase())}</b>.</small>`}<button class="btn small" data-wd="share">📋 Ergebnis kopieren</button><small class="wd-help">Morgen gibt es ein neues Wort. Bis dahin: ♾️ Freies Spiel.</small></div>` : '';
     const T = D.top || { today: [], streaks: [] }, me = k.name.toLowerCase();
-    page.innerHTML = `<div class="wd-top"><button class="btn ghost small" data-wd="back">‹ Spiele</button><h2>Wörtle Nr. ${D.nr}</h2><button class="btn ghost small" data-wd="help">?</button></div>
+    page.innerHTML = `<div class="wd-top"><button class="btn ghost small" data-wd="back">‹ Spiele</button><h2>Wörtle Nr. ${D.nr}</h2><button class="btn ghost small" data-wd="help">?</button></div>${tabs}
       <p class="wd-sub">Errate das Wort des Tages mit 5 Buchstaben. 🟩 richtiger Platz · 🟨 kommt woanders vor · ⬛ kommt nicht vor. Ä = AE, Ö = OE, Ü = UE, ß = SS.</p>
       <div class="wd-grid">${rows.join('')}</div>${kb}${end}
       <div class="wd-stats"><div><b>${D.plays}</b><small>gespielt</small></div><div><b>${D.plays ? Math.round(D.wins / D.plays * 100) : 0} %</b><small>gewonnen</small></div><div><b>🔥 ${D.st}</b><small>Serie</small></div><div><b>${D.best}</b><small>beste Serie</small></div></div>
@@ -70,17 +75,42 @@
         <p class="wd-help" style="margin:8px 0 0">${T.played || 0} haben heute mitgeraten, ${T.solved || 0} haben es gelöst. Weniger Versuche zählen zuerst, bei Gleichstand die schnellere Zeit.</p></div>
       ${T.streaks.length ? `<div class="wd-board"><h3>🔥 Längste Serien</h3><ol>${T.streaks.map(x => `<li class="${x.name.toLowerCase() === me ? 'me' : ''}">${h(x.name)}<span>${x.st} Tage am Stück</span></li>`).join('')}</ol></div>` : ''}`;
   }
+  function gridHtml(X) {
+    const rows = [];
+    for (let i = 0; i < 6; i++) {
+      const g = X.g[i], r = X.r[i], live = !X.done && i === X.g.length;
+      rows.push(`<div class="wd-row ${i === shakeRow ? 'shake' : ''}">${[0, 1, 2, 3, 4].map(j => {
+        if (g) return `<div class="wd-c s${r[j]} ${i >= lastN ? 'new' : ''}" style="animation-delay:${j * 0.12}s">${h(g[j])}</div>`;
+        const ch = live ? cur[j] || '' : ''; return `<div class="wd-c ${ch ? 'f' : ''}">${h(ch)}</div>`;
+      }).join('')}</div>`);
+    }
+    lastN = X.g.length; shakeRow = -1;
+    const ks = keyState();
+    const kb = X.done ? '' : `<div class="wd-kb">${KB.map(row => `<div class="wd-kr">${[...row].map(c => c === '+' ? '<button class="wd-k wide" data-wk="enter">Raten</button>' : c === '-' ? '<button class="wd-k wide" data-wk="back">⌫</button>' : `<button class="wd-k ${ks[c] != null ? 's' + ks[c] : ''}" data-wk="${c}">${c}</button>`).join('')}</div>`).join('')}</div>`;
+    return `<div class="wd-grid">${rows.join('')}</div>${kb}`;
+  }
+  function renderFree(k, tabs) {
+    const X = F;
+    const end = X.done ? `<div class="wd-end">${X.win ? `<b>🎉 Geschafft in ${X.g.length} von 6 Versuchen!</b>` : `<b>Leider nicht geschafft.</b><small>Das Wort war <b>${h(String(X.word || '').toUpperCase())}</b>.</small>`}<button class="btn small" data-wd="next">🔄 Neues Wort</button></div>` : '';
+    page.innerHTML = `<div class="wd-top"><button class="btn ghost small" data-wd="back">‹ Spiele</button><h2>Wörtle · Freies Spiel</h2><button class="btn ghost small" data-wd="help">?</button></div>${tabs}
+      <p class="wd-sub">So oft du willst, jedes Mal ein neues Zufallswort. Zählt nicht für die Tagesrangliste und nicht für deine Serie.</p>
+      ${gridHtml(X)}${end}
+      <div class="wd-stats"><div><b>${X.plays}</b><small>frei gespielt</small></div><div><b>${X.wins}</b><small>gelöst</small></div><div><b>${X.plays ? Math.round(X.wins / X.plays * 100) : 0} %</b><small>gewonnen</small></div></div>`;
+  }
+  async function loadFree(neu) { const r = await call('wd_free', neu ? { neu: true } : {}); if (r.error) { if (!r.login) say(r.error); } else { lastN = neu || !F ? r.g.length : lastN; F = r; cur = ''; } render(); }
+  function setMode(m) { if (m === mode) return; mode = m; cur = ''; const X = S(); lastN = X ? X.g.length : 0; render(); if (m === 'free') loadFree(); else load(); }
   async function load() { const r = await call('wd_state'); if (r.error) { if (!r.login) say(r.error); } else { if (!D) lastN = r.g.length; D = r; } render(); }
   async function guess() {
-    if (busy || !D || D.done) return;
-    if (cur.length < 5) { shakeRow = D.g.length; render(); say('Zu wenige Buchstaben.'); return; }
-    busy = true; const r = await call('wd_guess', { w: cur }); busy = false;
-    if (r.error) { shakeRow = D.g.length; render(); say(r.error); return; }
-    D = r; cur = ''; render();
-    if (D.done) setTimeout(() => say(D.win ? '🎉 Richtig!' : 'Das Wort war ' + String(D.word || '').toUpperCase()), 700);
+    const X = S(); if (busy || !X || X.done) return;
+    if (cur.length < 5) { shakeRow = X.g.length; render(); say('Zu wenige Buchstaben.'); return; }
+    const free = mode === 'free';
+    busy = true; const r = await call(free ? 'wd_free_guess' : 'wd_guess', { w: cur }); busy = false;
+    if (r.error) { shakeRow = X.g.length; render(); say(r.error); return; }
+    if (free) F = r; else D = r; cur = ''; render();
+    if (r.done) setTimeout(() => say(r.win ? '🎉 Richtig!' : 'Das Wort war ' + String(r.word || '').toUpperCase()), 700);
   }
   function key(k) {
-    if (!page || page.hidden || !D || D.done) return;
+    const X = S(); if (!page || page.hidden || !X || X.done) return;
     if (k === 'enter') return guess();
     if (k === 'back') { cur = cur.slice(0, -1); render(); return; }
     if (/^[a-z]$/.test(k) && cur.length < 5) { cur += k; render(); }
@@ -98,11 +128,13 @@
         if (b.dataset.wk) return key(b.dataset.wk);
         if (b.dataset.wd === 'back') return close();
         if (b.dataset.wd === 'share') return share();
+        if (b.dataset.wd === 'day' || b.dataset.wd === 'free') return setMode(b.dataset.wd);
+        if (b.dataset.wd === 'next') return loadFree(true);
         if (b.dataset.wd === 'help') say('Grün: Buchstabe am richtigen Platz. Gelb: kommt im Wort vor, aber woanders. Grau: kommt nicht vor. Jeden Tag um Mitternacht gibt es ein neues Wort.');
       });
     }
     const hub = q('#hub'); if (hub) hub.hidden = true;
-    page.hidden = false; scrollTo(0, 0); if (D) lastN = D.g.length; render(); load();
+    page.hidden = false; scrollTo(0, 0); { const X = S(); if (X) lastN = X.g.length; } render(); if (mode === 'free') loadFree(); else load();
   }
   function close() { if (page) page.hidden = true; const hub = q('#hub'); if (hub) hub.hidden = false; }
   document.addEventListener('keydown', e => {
