@@ -1714,3 +1714,22 @@ html.rl-appmode,html.rl-appmode body{overflow:hidden;overscroll-behavior:none}
 /* Ritterlauf: Runen-Werkzeuge (Spieler-Idee v38) */
 .rl-rtools{margin:8px 0;padding:8px 12px;border-radius:12px;border:1px solid var(--line);background:var(--surface)}
 .rl-rtools summary{cursor:pointer;font-weight:700}.rl-rtools .row{flex-wrap:wrap;align-items:center;margin:8px 0}
+/* Hub-Kosmetik aus dem Casino-Shop (nur auf dem eigenen Bildschirm) */
+html[data-chb="chb_turnier"]{--sq-light:#eeeed2;--sq-dark:#769656}
+html[data-chb="chb_holz"]{--sq-light:#f0d9b5;--sq-dark:#b58863}
+html[data-chb="chb_holz"] .sq.l{background:repeating-linear-gradient(100deg,#f0d9b5 0 6px,#ead0a6 6px 9px)}html[data-chb="chb_holz"] .sq.d{background:repeating-linear-gradient(100deg,#b58863 0 6px,#a87b56 6px 9px)}
+html[data-chb="chb_eis"]{--sq-light:#e6f6ff;--sq-dark:#7fb2d6}
+html[data-chb="chb_eis"] .sq.d{background:linear-gradient(135deg,#9cc8e6,#6a9ec4)}html[data-chb="chb_eis"] .chess{border-color:#bfe6ff;box-shadow:0 0 24px rgba(160,220,255,.45)}
+html[data-chb="chb_marmor"] .sq.l{background:radial-gradient(120% 80% at 20% 30%,#fff 0,#e8e4dc 60%,#d8d2c6 100%)}html[data-chb="chb_marmor"] .sq.d{background:radial-gradient(120% 80% at 70% 60%,#6a6a72 0,#3e3e46 70%,#2a2a30 100%)}
+html[data-chb="chb_nacht"] .sq.l{background:#4a4a7a}html[data-chb="chb_nacht"] .sq.d{background:radial-gradient(1px 1px at 30% 40%,#fff,transparent),radial-gradient(1px 1px at 70% 75%,#cfe8ff,transparent),#1c1c3a}
+html[data-chb="chb_nacht"] .chess{border-color:#3a3a7a;box-shadow:0 0 24px rgba(120,120,255,.35)}
+html[data-chb="chb_gold"] .sq.l{background:linear-gradient(135deg,#fff3c4,#f0d27a)}html[data-chb="chb_gold"] .sq.d{background:linear-gradient(135deg,#c8962a,#8a6414)}
+html[data-chb="chb_gold"] .chess{border-color:#e8c46a;box-shadow:0 0 0 2px #8a6414,0 0 30px rgba(255,210,80,.45)}
+html[data-chp="chp_holz"] .pw{color:#f3ddb0;text-shadow:0 0 1px #5a3a18,0 0 2px #5a3a18,0 2px 0 rgba(0,0,0,.35)}html[data-chp="chp_holz"] .pb{color:#5a3418;text-shadow:0 0 1px #2a1808,0 1px 0 rgba(255,220,170,.35)}
+html[data-chp="chp_neon"] .pw{color:#7ff6ff;text-shadow:0 0 4px #00e5ff,0 0 10px #00b8ff}html[data-chp="chp_neon"] .pb{color:#ff7ad6;text-shadow:0 0 4px #ff2fbf,0 0 10px #c000ff}
+html[data-chp="chp_kristall"] .pw{color:rgba(230,250,255,.85);text-shadow:0 0 2px #fff,0 0 8px #9ae8ff,0 2px 0 rgba(0,40,80,.3)}html[data-chp="chp_kristall"] .pb{color:rgba(90,40,160,.85);text-shadow:0 0 2px #e0c8ff,0 0 8px #a46aff}
+html[data-chp="chp_gold"] .pw{color:#ffd24a;text-shadow:0 0 1px #6a4a08,0 0 2px #6a4a08,0 0 8px rgba(255,210,74,.6)}html[data-chp="chp_gold"] .pb{color:#c8ccd6;text-shadow:0 0 1px #2a2c34,0 0 2px #2a2c34,0 0 6px rgba(220,230,255,.5)}
+html[data-chp="chp_feuer"] .pw{color:#ffb03a;text-shadow:0 0 3px #ff5a1a,0 -2px 8px #ff3a00}html[data-chp="chp_feuer"] .pb{color:#bfe8ff;text-shadow:0 0 3px #4ab8ff,0 0 8px #1a7aff}
+html[data-c4="c4_neon"] .c4{background:#14102a;box-shadow:0 0 24px rgba(160,80,255,.4)}html[data-c4="c4_neon"] .c4 .p1{background:#ff2fbf;box-shadow:0 0 12px #ff2fbf}html[data-c4="c4_neon"] .c4 .p2{background:#00e5ff;box-shadow:0 0 12px #00e5ff}
+html[data-c4="c4_edel"] .c4 .p1{background:radial-gradient(circle at 35% 30%,#ffb0b8,#e0102a 45%,#6a0010)}html[data-c4="c4_edel"] .c4 .p2{background:radial-gradient(circle at 35% 30%,#b0d4ff,#1a5ae0 45%,#08205a)}
+html[data-c4="c4_muenze"] .c4 .p1{background:radial-gradient(circle at 35% 30%,#fff3b0,#e8b830 50%,#8a6414);box-shadow:inset 0 0 0 4px rgba(120,80,10,.5)}html[data-c4="c4_muenze"] .c4 .p2{background:radial-gradient(circle at 35% 30%,#ffffff,#c8ccd6 50%,#6a6e7a);box-shadow:inset 0 0 0 4px rgba(60,60,70,.5)}

@@ -537,6 +537,12 @@ const CZ_PRICES = {
 Object.assign(CZ_PRICES.fx, { herzen: 15000, sterne: 45000, drachenfeuer: 150000 });
 Object.assign(CZ_PRICES.sfx, { harfe: 10000, trommel: 30000, orchester: 120000 });
 Object.assign(CZ_PRICES.felt, { eis: 20000, lava: 30000, sternen: 80000 });
+// Kosmetik für andere Spiele im Hub (gilt nur auf dem eigenen Bildschirm): Schachbrett, Schachfiguren, Vier-gewinnt-Steine
+Object.assign(CZ_PRICES, {
+  chb: { chb_std: 0, chb_turnier: 8000, chb_holz: 15000, chb_eis: 25000, chb_marmor: 40000, chb_nacht: 50000, chb_gold: 90000 },
+  chp: { chp_std: 0, chp_holz: 10000, chp_neon: 30000, chp_kristall: 50000, chp_gold: 90000, chp_feuer: 120000 },
+  c4: { c4_std: 0, c4_neon: 12000, c4_edel: 35000, c4_muenze: 60000 },
+});
 const CZ_JOBS = { mine: 1400, teller: 900, putzen: 2200 }; // so schnell kann man frühestens fertig sein (ms)
 // Einsatzlimit wächst mit dem Alter des Kontos: Neue Konten so lange neu anlegen, bis eins Glück hat, lohnt sich so nicht.
 // Konten von vor dieser Regel (ohne created) gelten als alt.
@@ -647,6 +653,7 @@ function czAction(action, key, acc, body) {
   if (!acc || !(acc.tokens || []).includes(sha256(String(body.token || '')))) return [401, { error: 'Bitte melde dich im Hub an, um im Casino zu spielen.' }];
   const z = czAcc(key), ok = () => { z.t = Date.now(); markDirty(); return [200, czState(key, acc)]; };
   if (action === 'cz_state') return [200, czState(key, acc)];
+  if (action === 'cz_look') return [200, { eq: { chb: z.eq && z.eq.chb || '', chp: z.eq && z.eq.chp || '', c4: z.eq && z.eq.c4 || '' } }]; // nur lesen: Hub-Kosmetik
   if (action === 'cz_claim') { // alten Stand dieses Geräts zurückholen (einmal pro Konto und pro Gerät)
     const st = czState(key, acc); acc.gifts = acc.gifts || [];
     if (!czOldDev || acc.gifts.includes(CZ_DEV_ID) || czSeated.has(key)) return [200, st];
@@ -669,7 +676,7 @@ function czAction(action, key, acc, body) {
   if (action === 'cz_buy' || action === 'cz_eq') {
     const cat = String(body.cat || ''), k = String(body.k || ''), P = CZ_PRICES[cat]; if (!P || !(k in P)) return [400, { error: 'Gibt es nicht.' }];
     z.own = z.own || []; z.eq = z.eq || {};
-    if (action === 'cz_buy' && P[k] && !z.own.includes(k)) { const fromK = Math.min(z.k || 0, P[k]), rest = P[k] - fromK; if (z.w - (z.d || 0) < rest) return [409, { error: 'Dafür fehlen dir Glanzmarken oder eigene Jetons (Schulden zählen nicht).' }]; z.k = (z.k || 0) - fromK; z.w -= rest; z.own.push(k); }
+    if (action === 'cz_buy' && P[k] && !z.own.includes(k)) { const fromK = Math.min(z.k || 0, P[k]), rest = P[k] - fromK; if (rest > 0) return [409, { error: 'Shop-Stücke gibt es nur für Glanzmarken – die bekommst du jeden Montag für deine Jetons.' }]; z.k = (z.k || 0) - fromK; z.own.push(k); }
     if (P[k] && !z.own.includes(k)) return [409, { error: 'Das hast du noch nicht gekauft.' }];
     z.eq[cat] = k; return ok();
   }

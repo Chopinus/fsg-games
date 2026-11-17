@@ -142,7 +142,7 @@ function needNick() {
   store.set('fsg.nick', n); send({ t: 'name', name: n }); return true;
 }
 // Casino wird erst geladen, wenn es jemand braucht
-const CZ_V = 58; // bei jeder Casino-Änderung erhöhen, damit Geräte die neue Datei laden
+const CZ_V = 59; // bei jeder Casino-Änderung erhöhen, damit Geräte die neue Datei laden
 function loadCasino(cb) {
   if (window.Casino) { cb(); return; }
   if (loadCasino.busy) { loadCasino.q.push(cb); return; }
@@ -181,6 +181,11 @@ try { konto = JSON.parse(store.get(AK) || 'null'); } catch {}
 if (!konto || !konto.token) { konto = null; // schon im Ritterlauf oder Inselreich angemeldet? Dann gilt das Konto jetzt überall
   for (const k of ['fsg.ritter.konto', 'insel.konto']) { try { const a = JSON.parse(store.get(k) || 'null'); if (a && a.name && a.token) { konto = { name: a.name, token: a.token }; store.set(AK, JSON.stringify(konto)); break; } } catch {} }
 }
+// Kosmetik aus dem Casino-Shop für Hub-Spiele (Schachbrett, Schachfiguren, Vier gewinnt) – gilt nur auf dem eigenen Bildschirm
+window.fsgLook = eq => { const H = document.documentElement, L = {}; for (const k of ['chb', 'chp', 'c4']) { const v = (eq && eq[k]) || ''; L[k] = v; if (v && !v.endsWith('_std')) H.dataset[k] = v; else delete H.dataset[k]; } try { store.set('fsg.look', JSON.stringify(L)); } catch {} };
+try { window.fsgLook(JSON.parse(store.get('fsg.look') || '{}')); } catch {}
+function lookLoad() { if (konto) kontoApi('cz_look', { name: konto.name, token: konto.token }).then(r => { if (r && r.eq) window.fsgLook(r.eq); }); }
+setTimeout(lookLoad, 1500);
 async function kontoApi(action, body) {
   try { const r = await fetch('/api/' + action, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); const j = await r.json().catch(() => ({})); return r.ok ? j : { ...j, error: j.error || 'Der Server antwortet gerade nicht.' }; }
   catch { return { error: 'Keine Verbindung zum Server.' }; }
@@ -200,12 +205,12 @@ async function kontoLogin(create) {
   f.querySelectorAll('button').forEach(b => (b.disabled = true));
   const r = await kontoApi(create ? 'create' : 'login', create ? { name: n, pass: pw, data: {} } : { name: n, pass: pw });
   if (r.error) { kontoMsg = r.error; renderAcct(); const g = $('#acctForm'); if (g) g.n.value = n; return; }
-  konto = { name: r.name, token: r.token }; store.set(AK, JSON.stringify(konto)); kontoForm = false; kontoMsg = '';
+  konto = { name: r.name, token: r.token }; store.set(AK, JSON.stringify(konto)); kontoForm = false; kontoMsg = ''; lookLoad();
   if (!nick()) { $('#nick').value = r.name.slice(0, 16); $('#nick').dispatchEvent(new Event('change')); }
   toast(create ? `Konto ${r.name} angelegt – es gilt für alle Spiele` : `Willkommen, ${r.name}!`); renderAcct(); send({ t: 'konto', name: konto.name, token: konto.token }); window.dispatchEvent(new Event('fsg-konto'));
 }
 function kontoLogout() {
-  konto = null; store.set(AK, null); store.set('fsg.ritter.konto', null); store.set('insel.konto', JSON.stringify({ out: 1 }));
+  konto = null; window.fsgLook({}); store.set(AK, null); store.set('fsg.ritter.konto', null); store.set('insel.konto', JSON.stringify({ out: 1 }));
   kontoMsg = 'Abgemeldet. Deine Spielstände bleiben auf diesem Gerät.'; renderAcct(); send({ t: 'konto' }); window.dispatchEvent(new Event('fsg-konto'));
 }
 document.addEventListener('click', e => {

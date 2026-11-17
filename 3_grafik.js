@@ -303,6 +303,11 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 78, title: 'Casino-Shop: nur Glanzmarken und Kosmetik für andere Spiele', date: '17.11.2026', items: [
+      'Im Casino-Shop bezahlt man jetzt nur noch mit Glanzmarken – die gibt es jeden Montag für deine Jetons. Jetons kann man im Shop nicht mehr ausgeben.',
+      'Neu im Shop: Schachbretter (Turnier-Grün, Edelholz, Eispalast, Marmor, Sternennacht, Königsgold), Schachfiguren-Stile (Holz, Neon, Kristall, Gold & Silber, Feuer & Eis) und Vier-gewinnt-Steine (Neon, Rubin & Saphir, Münzen).',
+      'Was du im Shop aktivierst, siehst du im Hub bei Schach und Vier gewinnt auf deinem Bildschirm.',
+    ] },
     { id: 77, title: 'Spieler-Idee: Casino – Wochen-Neustart und Glanzmarken', date: '17.11.2026', items: [
       'Jeden Montag um 0 Uhr startet das Casino neu: Deine eigenen Jetons (ohne Bankschulden) werden 1:1 zu Glanzmarken, danach beginnen alle wieder mit 10.000 Jetons ohne Schulden. Der erste Neustart ist am Montag, 23.11.',
       'Glanzmarken gelten im Casino-Shop und werden beim Kaufen zuerst benutzt, der Rest kommt aus deinen Jetons.',
