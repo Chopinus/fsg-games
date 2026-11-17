@@ -1711,3 +1711,6 @@ html.rl-appmode,html.rl-appmode body{overflow:hidden;overscroll-behavior:none}
 @media (max-width:560px){.rl-artslots{grid-template-columns:1fr}}
 /* Ritterlauf: Mehrfach-Kauf (Spieler-Ideen v37, v41) */
 .rl-buyn{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+/* Ritterlauf: Runen-Werkzeuge (Spieler-Idee v38) */
+.rl-rtools{margin:8px 0;padding:8px 12px;border-radius:12px;border:1px solid var(--line);background:var(--surface)}
+.rl-rtools summary{cursor:pointer;font-weight:700}.rl-rtools .row{flex-wrap:wrap;align-items:center;margin:8px 0}

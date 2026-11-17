@@ -1885,6 +1885,8 @@
     out.starV = 1;
     out.rbHist = (Array.isArray(d.rbHist) ? d.rbHist : []).map(x => Math.max(0, Math.floor(Number(x) || 0))).slice(-40);
     out.rlager = Math.max(0, Math.min(LAGER_HARD, Math.floor(Number(d.rlager) || 0)));
+    out.rauto = { on: !!(d.rauto && d.rauto.on), t: (d.rauto && Array.isArray(d.rauto.t) ? d.rauto.t : []).filter(t => RUNE[t]), max: Math.max(1, Math.min(RUNE_DROP_MAX, Math.floor(Number(d.rauto && d.rauto.max) || 1))) };
+    if (d.dustBuy && typeof d.dustBuy.d === 'string') out.dustBuy = { d: d.dustBuy.d, n: Math.max(0, Math.min(DUSTBUY.max, Math.floor(Number(d.dustBuy.n) || 0))) };
     out.arts = []; for (const a of Array.isArray(d.arts) ? d.arts.slice(0, ARTE.cap) : []) {
       if (!a || !ART_MAIN[a.slot] || !ART_MAIN[a.slot].includes(a.main) || ![3, 4, 5].includes(a.rar)) continue;
       const subs = (Array.isArray(a.subs) ? a.subs : []).filter(x => x && ART_STAT[x.k] && x.k !== a.main && Number(x.v) > 0).slice(0, a.rar - 1).map(x => ({ k: x.k, v: Math.min(ART_STAT[x.k].sub[1], Number(x.v)) }));
@@ -2113,6 +2115,31 @@
     return back;
   }
   // Boss-Runen kommen in einem Bereich: unter 25 nur I, ab 25 I–II, ab 50 II–III, ab 75 II–IV, ab 100 III–V …
+  // Spieler-Idee (v39): 1 Rune bis Stufe 49, ab 50 zwei, ab 150 drei, ab 300 vier – dazu 30 % Chance auf eine weitere
+  const bossRuneCount = stage => 1 + (stage >= 50 ? 1 : 0) + (stage >= 150 ? 1 : 0) + (stage >= 300 ? 1 : 0) + (Math.random() < 0.3 ? 1 : 0);
+  // Spieler-Idee (v38): ausgewählte Runen-Arten bis zu einer Stufe werden beim Fund sofort zu Splittern
+  function dropRune(S, t, tier) {
+    const A = S.rauto; if (A && A.on && A.t && A.t.includes(t) && tier <= (A.max || 1)) { const d = shardOf(tier); S.dust += d; return { auto: true, d }; }
+    return addRune(S, t, tier);
+  }
+  // Alle möglichen Verschmelzungen auf einmal (von unten nach oben, damit neue Runen gleich weiter verschmelzen)
+  function mergeAll(S) {
+    let n = 0;
+    for (let tier = 1; tier < RUNE_MAX; tier++) for (const R of RUNES) {
+      let guard = 0; while (guard++ < 5000) { const r = S.runes.find(x => x.t === R.id && x.tier === tier); if (!r || !canMerge(S, r) || !merge(S, r)) break; n++; }
+    }
+    return n;
+  }
+  // Splitter für Gold: Preis wächst mit dem Rekord, höchstens 20 Käufe am Tag, jeder Kauf am selben Tag 15 % teurer
+  const DUSTBUY = { max: 20, step: 1.15 };
+  function dustOffer(S) {
+    const b = Math.max(10, S.ascBest || 0, S.best || 0), day = dayId(), k = S.dustBuy && S.dustBuy.d === day ? S.dustBuy.n : 0;
+    return { n: 10 * shardOf(Math.min(RUNE_DROP_MAX, 1 + Math.floor(b / 25))), g: Math.ceil(grow(b, ...TUNE.gold) * 60 * Math.pow(DUSTBUY.step, k)), left: DUSTBUY.max - k };
+  }
+  function buyDust(S) {
+    const o = dustOffer(S); if (o.left <= 0 || S.gold < o.g || !feature(S, 'runen')) return 0;
+    const day = dayId(); S.gold -= o.g; S.dust += o.n; S.dustBuy = { d: day, n: (S.dustBuy && S.dustBuy.d === day ? S.dustBuy.n : 0) + 1 }; return o.n;
+  }
   function bossRuneTier(stage) {
     const b = Math.min(RUNE_DROP_MAX, 1 + Math.floor(stage / 25)), x = Math.random();
     if (b === 1) return 1;
@@ -2978,9 +3005,14 @@
       if (run.mode === 'weekly' || run.mode === 'exp' || run.mode === 'arte' || ahnLike(run) || run.mode === 'wboss') souls = 0;
       if (souls) { sfx('soul'); S.tot.souls += souls; S.souls += souls; run.souls += souls; run.floats.push({ x: e.x, y: 95, text: `+${souls} Seele${souls > 1 ? 'n' : ''}`, color: '#c9a6ff', size: 16, t: 1 }); }
       if (feature(S, 'runen') && run.mode === 'normal' && (e.boss || (e.elite && Math.random() < 0.03))) {
-        const tier = e.boss ? bossRuneTier(run.stage) : Math.min(RUNE_DROP_MAX, 1 + Math.floor(run.stage / 40));
-        const r = addRune(S, RUNES[Math.floor(Math.random() * RUNES.length)].id, tier);
-        if (r) { sfx('rune'); run.runes.push(r); run.floats.push({ x: e.x, y: 75, text: `Rune: ${RUNE[r.t].name} ${ROMAN[r.tier]}`, color: RUNE[r.t].color, size: 14, t: 1.4 }); }
+        // Spieler-Idee (v39): Bosse lassen je nach Stufe mehrere Runen fallen
+        const cnt = e.boss ? bossRuneCount(run.stage) : 1;
+        for (let i = 0; i < cnt; i++) {
+          const tier = e.boss ? bossRuneTier(run.stage) : Math.min(RUNE_DROP_MAX, 1 + Math.floor(run.stage / 40));
+          const r = dropRune(S, RUNES[Math.floor(Math.random() * RUNES.length)].id, tier);
+          if (r && r.auto) run.floats.push({ x: e.x, y: 75 - 14 * i, text: `+${r.d} Splitter (automatisch)`, color: '#e2c9ff', size: 12, t: 1.2 });
+          else if (r) { sfx('rune'); run.runes.push(r); run.floats.push({ x: e.x, y: 75 - 14 * i, text: `Rune: ${RUNE[r.t].name} ${ROMAN[r.tier]}`, color: RUNE[r.t].color, size: 14, t: 1.4 }); }
+        }
       }
     }
     // Besiegte Gegner bleiben kurz als Zerfall-Animation sichtbar (nur Optik)
@@ -2991,7 +3023,7 @@
       if (run.mode === 'tower') {
         if (run.stage > S.towerBest) {
           S.towerBest = run.stage;
-          if (run.stage % 5 === 0) { const r = addRune(S, RUNES[Math.floor(Math.random() * RUNES.length)].id, Math.min(10, 1 + Math.floor(run.stage / 15))); if (r) run.runes.push(r); }
+          if (run.stage % 5 === 0) { const r = dropRune(S, RUNES[Math.floor(Math.random() * RUNES.length)].id, Math.min(10, 1 + Math.floor(run.stage / 15))); if (r && !r.auto) run.runes.push(r); }
         }
       } else if (ahnLike(run)) { return ahnNext(S, st, run, c);
       } else if (run.mode === 'arte') {

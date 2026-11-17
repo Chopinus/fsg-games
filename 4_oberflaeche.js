@@ -1616,8 +1616,18 @@
 </svg>`;
   function runenWrap() {
     if (!feature(S, 'runen')) return runenTab();
-    return `${wallet(['dust'])}<div class="rl-subtabs"><button data-runeview="ausr" class="${runeView === 'ausr' ? 'on' : ''}">🛡️ Ausrüstung</button>${feature(S, 'schmiede') ? `<button data-runeview="schmied" class="${runeView === 'schmied' ? 'on' : ''}">⚒️ Schmied</button><button data-runeview="wandler" class="${runeView === 'wandler' ? 'on' : ''}">🎲 Wandler</button>` : `<button data-runeview="schmied" class="${runeView === 'schmied' ? 'on' : ''}">💥 Zerlegen</button>`}</div>`
+    return `${wallet(['dust'])}<div class="rl-subtabs"><button data-runeview="ausr" class="${runeView === 'ausr' ? 'on' : ''}">🛡️ Ausrüstung</button>${feature(S, 'schmiede') ? `<button data-runeview="schmied" class="${runeView === 'schmied' ? 'on' : ''}">⚒️ Schmied</button><button data-runeview="wandler" class="${runeView === 'wandler' ? 'on' : ''}">🎲 Wandler</button>` : `<button data-runeview="schmied" class="${runeView === 'schmied' ? 'on' : ''}">💥 Zerlegen</button>`}</div>` + runeTools()
       + (runeView === 'schmied' ? forgeView() : runeView === 'wandler' && feature(S, 'schmiede') ? wandlerView() : runenTab());
+  }
+  // Spieler-Idee (v38): Alles verschmelzen, Splitter für Gold, ausgewählte Runen automatisch zerlegen
+  function runeTools() {
+    const A = S.rauto || { on: false, t: [], max: 1 }, o = dustOffer(S), sm = feature(S, 'schmiede');
+    return `<details class="rl-rtools"><summary>⚙ Runen-Werkzeuge${A.on && A.t.length ? ' · Auto-Zerlegen an' : ''}</summary>
+      <div class="row">${sm ? `<button class="btn small" data-rt="all" ${inCamp() ? '' : 'disabled'}>⚒️ Alles verschmelzen, was geht</button>` : ''}
+        <button class="btn ghost small" data-rt="dust" ${o.left > 0 && S.gold >= o.g && inCamp() ? '' : 'disabled'}>+${fmt(o.n)} Splitter für ${coin}${fmt(o.g)}</button><span class="note">heute noch ${o.left}×</span></div>
+      <p class="note"><b>Automatisch zerlegen:</b> Gefundene Runen der gewählten Arten bis zur gewählten Stufe werden sofort zu Splittern.</p>
+      <div class="rl-fbar chips"><button data-rt="on" class="${A.on ? 'on' : ''}">${A.on ? '✓ an' : 'aus'}</button>${RUNES.map(R => `<button data-rt="t:${R.id}" class="${A.t.includes(R.id) ? 'on' : ''}" style="--rc:${R.color}">${R.name}</button>`).join('')}</div>
+      <div class="rl-fbar"><span class="note">bis Stufe</span>${Array.from({ length: RUNE_DROP_MAX }, (_, i) => `<button data-rt="m:${i + 1}" class="${(A.max || 1) === i + 1 ? 'on' : ''}">${ROMAN[i + 1]}</button>`).join('')}</div></details>`;
   }
   // Runenschmied: Stapel als Kacheln, sortierbar nach Art oder Stufe, mit Kobold am Amboss
   function forgeGroups() {
@@ -1778,6 +1788,14 @@
     const g = e.target.closest('[data-node]');
     if (g) { sel[tab] = g.dataset.node; panel(); return; }
     const sb = e.target.closest('[data-sub]');
+    const rt = e.target.closest('[data-rt]');
+    if (rt) { const v = rt.dataset.rt; S.rauto = S.rauto || { on: false, t: [], max: 1 };
+      if (v === 'all') { if (inCamp()) { const n = mergeAll(S); if (n) { SND.play('forge'); toast(`${n}× verschmolzen`, true); achCheck(); afterChange(); } else toast('Gerade lässt sich nichts verschmelzen (3 gleiche Runen und genug Splitter nötig).'); } return; }
+      if (v === 'dust') { if (inCamp()) { const n = buyDust(S); if (n) { SND.play('buy'); toast(`+${fmt(n)} Runensplitter`); afterChange(); } } return; }
+      if (v === 'on') S.rauto.on = !S.rauto.on;
+      else if (v.startsWith('t:')) { const t = v.slice(2); S.rauto.t = S.rauto.t.includes(t) ? S.rauto.t.filter(x => x !== t) : [...S.rauto.t, t]; }
+      else if (v.startsWith('m:')) S.rauto.max = +v.slice(2);
+      save(); panel(); const d = document.querySelector('.rl-rtools'); if (d) d.open = true; return; }
     const bn = e.target.closest('[data-buyn]');
     if (bn) { const n = NODE[sel[tab]]; if (inCamp() && n) { const k = bn.dataset.buyn === 'max' ? 1e9 : +bn.dataset.buyn, c = buyN(S, n, k); if (c) { SND.play('buy'); toast(`${n.name}: +${fmt(c)} Stufe${c > 1 ? 'n' : ''}`); achCheck(); afterChange(); } } return; }
     const bm = e.target.closest('[data-buymax]');

@@ -303,6 +303,15 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 73, title: 'Spieler-Idee: Runen-Werkzeuge', date: '17.11.2026', items: [
+      'Im Reiter Runen gibt es oben die neuen ⚙ Runen-Werkzeuge.',
+      'Alles verschmelzen: Ein Knopf schmiedet alle Runen, die sich gerade verschmelzen lassen – von unten nach oben.',
+      'Automatisch zerlegen: Wähle Runen-Arten und eine Höchststufe – solche Runen werden beim Fund sofort zu Splittern.',
+      'Splitter für Gold: Bis zu 20 Mal am Tag tauschst du Gold gegen viele Runensplitter. Die Menge wächst mit deinem Rekord, jeder Kauf am selben Tag wird etwas teurer.',
+    ] },
+    { id: 72, title: 'Spieler-Idee: Mehr Runen von Bossen', date: '17.11.2026', items: [
+      'Bosse lassen jetzt mehrere Runen fallen: ab Stufe 50 zwei, ab Stufe 150 drei, ab Stufe 300 vier – und mit 30 % Chance noch eine dazu.',
+    ] },
     { id: 71, title: 'Spieler-Ideen: Mehrfach-Kauf und Max-Knopf', date: '17.11.2026', items: [
       'Bei Endlos-Fertigkeiten gibt es jetzt Knöpfe für ×10, ×100 und ×1000 Stufen auf einmal.',
       'Jede Fertigkeit mit mehreren Stufen hat einen Max-Knopf: Er kauft so viele Stufen, wie Gold und Seelen reichen.',
