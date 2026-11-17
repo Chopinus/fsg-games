@@ -14,9 +14,9 @@
   // Die Jetons liegen auf dem Server beim Hub-Konto. Im Browser wird nur angezeigt, was der Server sagt.
   let wallet = 0, CZ = null; // CZ: Stand vom Server { w, d, m, bonus, help, own, eq, work, seated }
   const konto = () => { try { const k = JSON.parse(store.get('fsg.konto') || 'null'); return k && k.name && k.token ? k : null; } catch { return null; } };
-  async function czCall(action, extra) { const k = konto(); if (!k) return { error: 'Bitte melde dich im Hub an.' }; const r = await czApi(action, { name: k.name, token: k.token, ...(extra || {}) }); if (!r) return { error: 'Keine Verbindung zum Server.' }; if (r.gift > 0) { infoGift += r.gift; infoWhy = r.why || ''; } if (r.pops && r.pops.length) giftPops.push(...r.pops); if (r.w != null) { CZ = r; wallet = r.w; debt = r.d || 0; SH.own = ['konfetti', 'klingeln', 'gruen', '', ...(r.own || [])]; SH.eq = { fx: 'konfetti', sfx: 'klingeln', felt: 'gruen', badge: '', ...(r.eq || {}) }; feltApply(); showWallet(); if (r.gift > 0) { toast(`🎁 ${fmtN(r.gift)} Jetons gutgeschrieben${r.why ? ' – ' + r.why : ''}`); snd('win'); } } return r; }
+  async function czCall(action, extra) { const k = konto(); if (!k) return { error: 'Bitte melde dich im Hub an.' }; const r = await czApi(action, { name: k.name, token: k.token, ...(extra || {}) }); if (!r) return { error: 'Keine Verbindung zum Server.' }; if (r.gift > 0) { infoGift += r.gift; infoWhy = r.why || ''; } if (r.pops && r.pops.length) giftPops.push(...r.pops); if (r.week) giftPops.push({ week: r.week.n }); if (r.w != null) { CZ = r; wallet = r.w; debt = r.d || 0; SH.own = ['konfetti', 'klingeln', 'gruen', '', ...(r.own || [])]; SH.eq = { fx: 'konfetti', sfx: 'klingeln', felt: 'gruen', badge: '', ...(r.eq || {}) }; feltApply(); showWallet(); if (r.gift > 0) { toast(`🎁 ${fmtN(r.gift)} Jetons gutgeschrieben${r.why ? ' – ' + r.why : ''}`); snd('win'); } } return r; }
   let giftPops = []; // Geschenke mit eigenem kleinen Fenster (nur Betrag + Nachricht)
-  const popHTML = () => { const g = giftPops[0]; return g ? `<div class="cz-news"><div class="cz-news-box cz-gift-box"><div class="cz-gift-ic">🎁</div><div class="cz-gift-n">+${fmtN(g.n)} Jetons</div>${g.msg ? `<p>${esc(g.msg)}</p>` : ''}<button class="cz-btn" data-cz="popok">Danke!</button></div></div>` : ''; };
+  const popHTML = () => { const g = giftPops[0]; if (g && g.week != null) return `<div class="cz-news"><div class="cz-news-box cz-gift-box"><div class="cz-gift-ic">📅</div><div class="cz-gift-n">Neue Casino-Woche!</div><p>Deine ${fmtN(g.week)} Jetons wurden zu <b>${fmtN(g.week)} Glanzmarken</b> – die gelten im 🛍️ Shop. Alle starten wieder mit 10.000 Jetons, die Wochen-Rangliste fängt neu an.</p><button class="cz-btn" data-cz="popok">Los geht’s!</button></div></div>`; return g ? `<div class="cz-news"><div class="cz-news-box cz-gift-box"><div class="cz-gift-ic">🎁</div><div class="cz-gift-n">+${fmtN(g.n)} Jetons</div>${g.msg ? `<p>${esc(g.msg)}</p>` : ''}<button class="cz-btn" data-cz="popok">Danke!</button></div></div>` : ''; };
   let infoGift = 0, infoWhy = ''; // Gutschrift, die im Info-Fenster gezeigt wird
   const INFO_KEY = () => 'fsg.cz.info2.' + ((konto() || {}).name || '').toLowerCase();
   const infoSeen = () => { try { return !!localStorage.getItem(INFO_KEY()); } catch { return false; } };
@@ -41,25 +41,32 @@
   /* ---------- Shop: Gewinn-Effekte, Gewinn-Sounds, Tischfarben und Abzeichen für Jetons ---------- */
   const SHOP_ITEMS = {
     fx: { t: '🎆 Gewinn-Effekte', d: 'Erscheinen bei großen Gewinnen (ab 2.500 Jetons) – je größer der Gewinn, desto mehr.', items: [
-      ['konfetti', '🎉', 'Konfetti', 0], ['gold', '🪙', 'Goldregen', 8000], ['feuerwerk', '🎆', 'Feuerwerk', 20000], ['blitz', '⚡', 'Blitzgewitter', 35000], ['diamant', '💎', 'Diamantenregen', 60000], ['regenbogen', '🌈', 'Regenbogen-Explosion', 100000]] },
+      ['konfetti', '🎉', 'Konfetti', 0], ['gold', '🪙', 'Goldregen', 8000], ['feuerwerk', '🎆', 'Feuerwerk', 20000], ['blitz', '⚡', 'Blitzgewitter', 35000], ['diamant', '💎', 'Diamantenregen', 60000], ['regenbogen', '🌈', 'Regenbogen-Explosion', 100000], ['herzen', '💖', 'Herzregen', 15000], ['sterne', '🌠', 'Sternschnuppen', 45000], ['drachenfeuer', '🐉', 'Drachenfeuer', 150000]] },
     sfx: { t: '🎺 Gewinn-Sounds', d: 'Spielen bei großen Gewinnen.', items: [
-      ['klingeln', '🔔', 'Klingeln', 0], ['fanfare', '🎺', 'Fanfare', 6000], ['glocken', '🛎️', 'Glockenspiel', 12000], ['jackpot', '🚨', 'Jackpot-Sirene', 25000], ['applaus', '👏', 'Applaus', 40000], ['koenig', '👑', 'Königsfanfare', 80000]] },
+      ['klingeln', '🔔', 'Klingeln', 0], ['fanfare', '🎺', 'Fanfare', 6000], ['glocken', '🛎️', 'Glockenspiel', 12000], ['jackpot', '🚨', 'Jackpot-Sirene', 25000], ['applaus', '👏', 'Applaus', 40000], ['koenig', '👑', 'Königsfanfare', 80000], ['harfe', '🎶', 'Harfe', 10000], ['trommel', '🥁', 'Trommelwirbel', 30000], ['orchester', '🎻', 'Orchester', 120000]] },
     felt: { t: '🟩 Tischfarbe', d: 'Die Farbe des Spieltischs bei dir.', items: [
-      ['gruen', '🟩', 'Klassisch Grün', 0], ['blau', '🟦', 'Ozeanblau', 5000], ['rot', '🟥', 'Samtrot', 5000], ['lila', '🟪', 'Königslila', 10000], ['nacht', '⬛', 'Mitternacht', 15000], ['goldf', '🟨', 'Goldener Tisch', 50000]] },
+      ['gruen', '🟩', 'Klassisch Grün', 0], ['blau', '🟦', 'Ozeanblau', 5000], ['rot', '🟥', 'Samtrot', 5000], ['lila', '🟪', 'Königslila', 10000], ['nacht', '⬛', 'Mitternacht', 15000], ['goldf', '🟨', 'Goldener Tisch', 50000], ['eis', '🧊', 'Eiskristall', 20000], ['lava', '🌋', 'Lava', 30000], ['sternen', '🌌', 'Sternenhimmel', 80000]] },
     badge: { t: '🏅 Abzeichen', d: 'Steht in der Rangliste vor deinem Namen – alle sehen es.', items: [
-      ['', '➖', 'Keins', 0], ['zylinder', '🎩', 'Zylinder', 5000], ['klee', '🍀', 'Glücksklee', 10000], ['hai', '🦈', 'Kartenhai', 20000], ['feuer', '🔥', 'Glückssträhne', 40000], ['dia', '💎', 'Diamant', 80000], ['krone', '👑', 'Casino-König', 150000]] },
+      ['', '➖', 'Keins', 0], ['zylinder', '🎩', 'Zylinder', 5000], ['klee', '🍀', 'Glücksklee', 10000], ['hai', '🦈', 'Kartenhai', 20000], ['feuer', '🔥', 'Glückssträhne', 40000], ['dia', '💎', 'Diamant', 80000], ['krone', '👑', 'Casino-König', 150000], ['einhorn', '🦄', 'Einhorn', 30000], ['rakete', '🚀', 'Rakete', 60000], ['drachenherz', '🐉', 'Drachenherz', 250000], ['superstar', '🌟', 'Superstar', 400000]] },
   };
-  const FELT = { gruen: ['#0f5a3a', '#083d27'], blau: ['#0f3e6a', '#082440'], rot: ['#6a1420', '#3e0810'], lila: ['#4a1a6a', '#2a0a40'], nacht: ['#1a1a22', '#08080c'], goldf: ['#7a5a14', '#3e2c08'] };
-  const BADGE = { zylinder: '🎩', klee: '🍀', hai: '🦈', feuer: '🔥', dia: '💎', krone: '👑' };
+  const FELT = { gruen: ['#0f5a3a', '#083d27'], blau: ['#0f3e6a', '#082440'], rot: ['#6a1420', '#3e0810'], lila: ['#4a1a6a', '#2a0a40'], nacht: ['#1a1a22', '#08080c'], goldf: ['#7a5a14', '#3e2c08'], eis: ['#3a7a9a', '#123a52'], lava: ['#8a2a0a', '#2a0800'], sternen: ['#1a1a5a', '#05051a'] };
+  const BADGE = { zylinder: '🎩', klee: '🍀', hai: '🦈', feuer: '🔥', dia: '💎', krone: '👑', einhorn: '🦄', rakete: '🚀', drachenherz: '🐉', superstar: '🌟' };
   let SH = { own: ['konfetti', 'klingeln', 'gruen', ''], eq: { fx: 'konfetti', sfx: 'klingeln', felt: 'gruen', badge: '' } };
 
   setTimeout(() => feltApply(), 0);
-  function feltApply() { let st = document.getElementById('czFelt'); if (!st) { st = document.createElement('style'); st.id = 'czFelt'; document.head.appendChild(st); } const f = FELT[SH.eq.felt] || FELT.gruen; st.textContent = `.cz{--felt:${f[0]};--felt2:${f[1]}}`; }
+  function feltApply() { let st = document.getElementById('czFelt'); if (!st) { st = document.createElement('style'); st.id = 'czFelt'; document.head.appendChild(st); } const f = FELT[SH.eq.felt] || FELT.gruen; const hi = FELT_HI[SH.eq.felt] || '#1a8a58', fx = FELT_FX[SH.eq.felt] || 'linear-gradient(transparent,transparent)'; st.textContent = `.cz{--felt:${f[0]};--felt2:${f[1]};--felt0:${hi};--feltx:${fx}}`; }
+  // Tische mit eigenem Glanzlicht und Muster (vorher war die Mitte bei allen Farben grün)
+  const FELT_HI = { gruen: '#1a8a58', blau: '#1f66a8', rot: '#a02a38', lila: '#7a3aa8', nacht: '#33334a', goldf: '#c8962a', eis: '#8ad4f0', lava: '#ff6a1a', sternen: '#3a3aa0' };
+  const FELT_FX = { sternen: 'radial-gradient(1.5px 1.5px at 20% 30%,#fff,transparent),radial-gradient(1px 1px at 70% 20%,#fff,transparent),radial-gradient(1.5px 1.5px at 40% 70%,#ffe9a8,transparent),radial-gradient(1px 1px at 85% 60%,#fff,transparent),radial-gradient(1px 1px at 10% 80%,#bfe8ff,transparent),radial-gradient(1.5px 1.5px at 60% 45%,#fff,transparent)',
+    eis: 'repeating-linear-gradient(60deg,rgba(255,255,255,.07) 0 2px,transparent 2px 26px),repeating-linear-gradient(-60deg,rgba(255,255,255,.05) 0 2px,transparent 2px 30px)',
+    lava: 'radial-gradient(30% 20% at 30% 70%,rgba(255,160,40,.35),transparent),radial-gradient(25% 18% at 75% 35%,rgba(255,90,20,.35),transparent)',
+    goldf: 'repeating-linear-gradient(45deg,rgba(255,240,180,.05) 0 3px,transparent 3px 14px)' };
   function shopHTML() {
-    return `<p class="cz-note">Kaufen geht nur mit Jetons, die dir wirklich gehören – Bankschulden werden abgezogen. Du hast <b>${fmtN(net())}</b>.</p>` + Object.entries(SHOP_ITEMS).map(([cat, C]) => `<div class="cz-sec">${C.t}</div><p class="cz-note">${C.d}</p>
+    const gm = (CZ && CZ.k) || 0, pay = () => gm + net();
+    return `<p class="cz-note">✨ Glanzmarken: <b>${fmtN(gm)}</b> · eigene Jetons: <b>${fmtN(net())}</b>. Beim Kaufen werden zuerst Glanzmarken benutzt, der Rest kommt aus deinen Jetons (Bankschulden zählen nicht).</p><p class="cz-note">📅 Jeden Montag startet das Casino neu: Deine Jetons werden 1:1 zu Glanzmarken, alle beginnen wieder mit 10.000.${CZ && CZ.wkEnd ? ` Nächster Neustart: ${new Date(CZ.wkEnd).toLocaleString('de-DE', { weekday: 'long', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} Uhr.` : ''}</p>` + Object.entries(SHOP_ITEMS).map(([cat, C]) => `<div class="cz-sec">${C.t}</div><p class="cz-note">${C.d}</p>
       <div class="cz-shop">${C.items.map(([k, ic, n, pr]) => { const own = SH.own.includes(k) || !pr, on = SH.eq[cat] === k;
-        return `<div class="cz-item ${on ? 'on' : ''}"><span class="ic">${ic}</span><b>${n}</b><small>${pr ? fmtN(pr) + ' Jetons' : 'gratis'}</small>
-          <div class="row">${on ? '<button class="cz-btn small" disabled>✓ Aktiv</button>' : own ? `<button class="cz-btn small" data-cz-eq="${cat}" data-k="${k}">Benutzen</button>` : `<button class="cz-btn small" data-cz-buy="${cat}" data-k="${k}" ${net() >= pr ? '' : 'disabled'}>Kaufen</button>`}${cat === 'fx' || cat === 'sfx' ? `<button class="cz-btn small dark" data-cz-try="${cat}" data-k="${k}">▶</button>` : ''}</div></div>`; }).join('')}</div>`).join('');
+        return `<div class="cz-item ${on ? 'on' : ''}"><span class="ic">${ic}</span><b>${n}</b><small>${pr ? fmtN(pr) + ' ✨/Jetons' : 'gratis'}</small>
+          <div class="row">${on ? '<button class="cz-btn small" disabled>✓ Aktiv</button>' : own ? `<button class="cz-btn small" data-cz-eq="${cat}" data-k="${k}">Benutzen</button>` : `<button class="cz-btn small" data-cz-buy="${cat}" data-k="${k}" ${pay() >= pr ? '' : 'disabled'}>Kaufen</button>`}${cat === 'fx' || cat === 'sfx' ? `<button class="cz-btn small dark" data-cz-try="${cat}" data-k="${k}">▶</button>` : ''}</div></div>`; }).join('')}</div>`).join('');
   }
   // Sounds aus dem Browser (keine Dateien nötig)
   function tone(f, t0, dur, type = 'square', vol = 0.07, f2) { const o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime + t0; o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0008, t + dur); o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + dur + 0.05); }
@@ -73,6 +80,10 @@
       else if (k === 'jackpot') { for (let i = 0; i < (big ? 4 : 2); i++) tone(600, i * 0.45, 0.42, 'sawtooth', 0.04, 1400); N.forEach((f, i) => tone(f * 2, 0.9 + i * 0.07, 0.4, 'triangle', 0.06)); }
       else if (k === 'applaus') { for (let i = 0; i < (big ? 60 : 35); i++) noise(Math.random() * (big ? 2.2 : 1.4), 0.08 + Math.random() * 0.08, 0.1); tone(784, 0, 0.3, 'triangle', 0.04); }
       else if (k === 'koenig') [[0, 392], [0.2, 523], [0.4, 659], [0.6, 784], [0.9, 1046]].forEach(([t, f], i) => { tone(f, t, i === 4 ? 1.1 : 0.25, 'sawtooth', 0.05); tone(f / 2, t, i === 4 ? 1.1 : 0.25, 'square', 0.03); tone(f * 1.25, t, i === 4 ? 1.1 : 0.25, 'triangle', 0.03); });
+      // Spieler-Idee (v31): neue Sounds
+      else if (k === 'harfe') N.concat(N.map(f => f * 2)).forEach((f, i) => tone(f, i * 0.06, 0.9, 'sine', 0.06));
+      else if (k === 'trommel') { for (let i = 0; i < (big ? 28 : 18); i++) noise(i * 0.045, 0.05, 0.05 + i * 0.004); noise((big ? 28 : 18) * 0.045, 0.8, 0.18); tone(110, (big ? 28 : 18) * 0.045, 0.5, 'sine', 0.12, 55); }
+      else if (k === 'orchester') [[0, [262, 330, 392]], [0.35, [294, 370, 440]], [0.7, [330, 415, 494]], [1.05, [392, 494, 587, 784]]].forEach(([t, ch], j) => ch.forEach(f => { tone(f, t, j === 3 ? 1.4 : 0.32, 'triangle', 0.035); tone(f / 2, t, j === 3 ? 1.4 : 0.32, 'sawtooth', 0.015); }));
       else [0, 0.12, 0.24].forEach((t, i) => tone(N[i + 2] * 1.5, t, 0.3, 'square', 0.05));
     } catch {}
   }
@@ -81,10 +92,13 @@
     const cv = document.createElement('canvas'); cv.className = 'cz-fx'; document.body.appendChild(cv);
     const DP = Math.min(2, devicePixelRatio || 1), W = cv.width = innerWidth * DP, H = cv.height = innerHeight * DP, g = cv.getContext('2d');
     const P = [], n = Math.round(90 * power), T0 = performance.now(), LIFE = 2400 + 600 * power;
-    const cols = k === 'gold' ? ['#ffd24a', '#ffe58a', '#d9a52c'] : k === 'diamant' ? ['#bff4ff', '#7fe3f5', '#ffffff', '#c8b0ff'] : k === 'blitz' ? ['#fff', '#cfe8ff'] : ['#ff5a7a', '#ffd24a', '#5ad06a', '#5ab4ff', '#c86aff', '#ff9a3a'];
+    const cols = k === 'gold' ? ['#ffd24a', '#ffe58a', '#d9a52c'] : k === 'diamant' ? ['#bff4ff', '#7fe3f5', '#ffffff', '#c8b0ff'] : k === 'blitz' ? ['#fff', '#cfe8ff'] : k === 'herzen' ? ['#ff4a7a', '#ff8ab0', '#ffc0d6', '#e0306a'] : k === 'sterne' ? ['#fff6c0', '#ffe58a', '#bfe8ff'] : k === 'drachenfeuer' ? ['#ff3a1a', '#ff8a1a', '#ffd24a', '#ffffff'] : ['#ff5a7a', '#ffd24a', '#5ad06a', '#5ab4ff', '#c86aff', '#ff9a3a'];
     const burst = (x, y, m, sp) => { for (let i = 0; i < m; i++) { const a = Math.random() * Math.PI * 2, v = (0.3 + Math.random()) * sp; P.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - sp * 0.3, r: (2 + Math.random() * 3) * DP, c: cols[i % cols.length], rot: Math.random() * 6, life: 1 }); } };
     if (k === 'feuerwerk') for (let i = 0; i < 3 + power * 2; i++) setTimeout(() => burst(W * (0.2 + Math.random() * 0.6), H * (0.15 + Math.random() * 0.35), 60, 7 * DP), i * 350);
     else if (k === 'regenbogen') burst(W / 2, H / 2, n * 2, 12 * DP);
+    // Spieler-Idee (v31): neue Effekte
+    else if (k === 'sterne') for (let i = 0; i < 8 + power * 6; i++) setTimeout(() => { const x = Math.random() * W * 0.7, y = Math.random() * H * 0.3; P.push({ x, y, vx: (6 + Math.random() * 4) * DP, vy: (3 + Math.random() * 2) * DP, r: 4 * DP, c: cols[i % cols.length], rot: 0, spin: 0.2, star: true, trail: [] }); }, i * 140);
+    else if (k === 'drachenfeuer') { for (let i = 0; i < 4 + power * 2; i++) setTimeout(() => { const y = H * (0.3 + Math.random() * 0.4); for (let j = 0; j < 40; j++) P.push({ x: -10, y: y + (Math.random() - 0.5) * 30 * DP, vx: (10 + Math.random() * 8) * DP, vy: (Math.random() - 0.5) * 3 * DP, r: (4 + Math.random() * 6) * DP, c: cols[j % cols.length], rot: 0, flame: true }); }, i * 300); }
     else if (k !== 'blitz') for (let i = 0; i < n; i++) P.push({ x: Math.random() * W, y: -Math.random() * H * 0.6, vx: (Math.random() - 0.5) * 2 * DP, vy: (2 + Math.random() * 3) * DP, r: (k === 'gold' ? 6 : k === 'diamant' ? 5 : 4) * DP * (0.7 + Math.random() * 0.6), c: cols[i % cols.length], rot: Math.random() * 6, spin: (Math.random() - 0.5) * 0.3, life: 1 });
     const bolts = [];
     (function frame(now) {
@@ -94,8 +108,11 @@
         for (const b of bolts) { const a = 1 - (now - b.t) / 400; if (a <= 0) continue; g.strokeStyle = `rgba(255,255,255,${a})`; g.shadowColor = '#9ad8ff'; g.shadowBlur = 20 * DP; g.lineWidth = 4 * DP; g.beginPath(); let x = b.x; g.moveTo(x, 0); b.seg.forEach((d, i) => { x += d; g.lineTo(x, (i + 1) / 9 * H * 0.8); }); g.stroke(); g.shadowBlur = 0; } }
       for (const q of P) { q.x += q.vx; q.y += q.vy; q.vy += (k === 'feuerwerk' || k === 'regenbogen' ? 0.12 : 0.04) * DP; q.vx *= 0.995; q.rot += q.spin || 0.1;
         g.save(); g.translate(q.x, q.y); g.rotate(q.rot); g.fillStyle = q.c; g.globalAlpha = Math.max(0, 1 - tt / LIFE);
-        if (k === 'gold') { g.beginPath(); g.ellipse(0, 0, q.r, q.r * Math.abs(Math.cos(q.rot)) + 1, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#b8862e'; g.fillRect(-q.r * 0.3, -1, q.r * 0.6, 2); }
-        else if (k === 'diamant') { g.beginPath(); g.moveTo(0, -q.r); g.lineTo(q.r * 0.7, 0); g.lineTo(0, q.r); g.lineTo(-q.r * 0.7, 0); g.closePath(); g.fill(); g.fillStyle = '#fff'; g.fillRect(-1, -q.r * 0.6, 2, 2); }
+        if (k === 'gold') { g.shadowColor = '#ffd24a'; g.shadowBlur = 10 * DP; g.beginPath(); g.ellipse(0, 0, q.r, q.r * Math.abs(Math.cos(q.rot)) + 1, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#b8862e'; g.fillRect(-q.r * 0.3, -1, q.r * 0.6, 2); }
+        else if (q.flame) { g.globalCompositeOperation = 'lighter'; g.shadowColor = q.c; g.shadowBlur = 14 * DP; g.beginPath(); g.arc(0, 0, q.r * Math.max(.2, 1 - tt / LIFE), 0, Math.PI * 2); g.fill(); q.r *= 0.995; }
+        else if (q.star) { g.shadowColor = q.c; g.shadowBlur = 16 * DP; g.beginPath(); for (let s2 = 0; s2 < 10; s2++) { const rr = s2 % 2 ? q.r * 0.45 : q.r * 1.4, aa = s2 * Math.PI / 5; g.lineTo(Math.cos(aa) * rr, Math.sin(aa) * rr); } g.closePath(); g.fill(); g.globalAlpha *= 0.5; g.fillRect(-q.vx * 6, -1 * DP, q.vx * 6, 2 * DP); }
+        else if (k === 'herzen') { const r = q.r * 1.2; g.shadowColor = q.c; g.shadowBlur = 8 * DP; g.beginPath(); g.moveTo(0, r * 0.35); g.bezierCurveTo(-r * 1.2, -r * 0.5, -r * 0.4, -r * 1.3, 0, -r * 0.45); g.bezierCurveTo(r * 0.4, -r * 1.3, r * 1.2, -r * 0.5, 0, r * 0.35); g.fill(); }
+        else if (k === 'diamant') { g.shadowColor = '#bff4ff'; g.shadowBlur = 10 * DP; g.beginPath(); g.moveTo(0, -q.r); g.lineTo(q.r * 0.7, 0); g.lineTo(0, q.r); g.lineTo(-q.r * 0.7, 0); g.closePath(); g.fill(); g.fillStyle = '#fff'; g.fillRect(-1, -q.r * 0.6, 2, 2); }
         else g.fillRect(-q.r, -q.r * 0.5, q.r * 2, q.r);
         g.restore(); }
       g.globalAlpha = 1;
@@ -125,8 +142,8 @@
     const podium = top.length ? `<div class="cz-podium">${pod.map((e, i) => e ? `<div class="cz-pod p${place[i]} ${e.me ? 'me' : ''}"><span class="cz-medal">${['🥈', '🥇', '🥉'][i]}</span><b>${e.b && BADGE[e.b] ? BADGE[e.b] + ' ' : ''}${admN(e.n, e.adm)}</b><em>${fmtN(e.c)}</em><div class="cz-step">${place[i]}.</div></div>` : `<div class="cz-pod p${place[i]} empty"><div class="cz-step">${place[i]}.</div></div>`).join('')}</div>` : '<p class="cz-note">Noch niemand auf der Liste.</p>';
     const rest = top.slice(3).map((e, i) => `<div class="cz-rrow ${e.me ? 'me' : ''}"><b>${i + 4}.</b><span>${e.b && BADGE[e.b] ? BADGE[e.b] + ' ' : ''}${admN(e.n, e.adm)}${e.me ? ' (du)' : ''}</span><em>${fmtN(e.c)}</em></div>`).join('');
     const mine = B.rank > top.length ? `<div class="cz-rrow me"><b>${B.rank}.</b><span>Du</span><em>${fmtN(B.mine || net())}</em></div>` : '';
-    set(el, `<div class="cz-tabs"><button class="cz-btn small ${boardTab === 'cur' ? '' : 'dark'}" data-cz-bt="cur">💰 Momentan</button><button class="cz-btn small ${boardTab === 'ever' ? '' : 'dark'}" data-cz-bt="ever">👑 Jemals am meisten</button></div>
-      <p class="cz-note">${boardTab === 'cur' ? 'Jetons, die du gerade hast – Bankschulden werden abgezogen. Zählt die letzten 30 Tage.' : 'Der höchste Jetonstand, den jemand je hatte (ohne Bankschulden).'}</p>
+    set(el, `<div class="cz-tabs"><button class="cz-btn small ${boardTab === 'cur' ? '' : 'dark'}" data-cz-bt="cur">📅 Diese Woche</button><button class="cz-btn small ${boardTab === 'ever' ? '' : 'dark'}" data-cz-bt="ever">👑 Allzeit</button></div>
+      <p class="cz-note">${boardTab === 'cur' ? 'Jetons dieser Woche (alle starten montags mit 10.000) – Bankschulden werden abgezogen. Nur wer diese Woche gespielt hat.' : 'Der höchste Jetonstand, den jemand je hatte (ohne Bankschulden) – über alle Wochen.'}</p>
       ${podium}<div class="cz-rlist">${rest}${mine}</div><p class="cz-note">${B.players || 0} Spieler · jedes Hub-Konto zählt einmal</p>${CZ && CZ.boardFrom ? `<p class="cz-note">🔰 Dein Konto erscheint ab ${new Date(CZ.boardFrom).toLocaleString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} Uhr in der Rangliste.</p>` : ''}`);
   }
 
@@ -289,7 +306,7 @@
   #stage[data-mode^="cz"]{padding:0;max-width:none;align-items:stretch;justify-content:flex-start}
   .cz-room{width:100%;box-sizing:border-box;border-radius:18px}
   .cz-room{position:relative;min-height:calc(100vh - 70px);padding:10px 10px 16px;background:radial-gradient(1000px 500px at 50% 0,#2c1424,#100a12 70%)}
-  .cz-felt{position:relative;margin:0 auto;max-width:1000px;border-radius:200px 200px 28px 28px/120px 120px 28px 28px;padding:22px 16px 18px;background:radial-gradient(120% 90% at 50% 30%,#1a8a58 0,var(--felt) 45%,var(--felt2) 100%);box-shadow:0 0 0 10px #3a2212,0 0 0 12px #c8973e,0 0 0 16px #2a170b,0 30px 60px rgba(0,0,0,.6),inset 0 0 80px rgba(0,0,0,.45)}
+  .cz-felt{position:relative;margin:0 auto;max-width:1000px;border-radius:200px 200px 28px 28px/120px 120px 28px 28px;padding:22px 16px 18px;background:var(--feltx,linear-gradient(transparent,transparent)),radial-gradient(120% 90% at 50% 30%,var(--felt0,#1a8a58) 0,var(--felt) 45%,var(--felt2) 100%);box-shadow:0 0 0 10px #3a2212,0 0 0 12px #c8973e,0 0 0 16px #2a170b,0 30px 60px rgba(0,0,0,.6),inset 0 0 80px rgba(0,0,0,.45)}
   .cz-felt::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:repeating-radial-gradient(circle at 30% 20%,rgba(255,255,255,.018) 0 1px,transparent 1px 3px)}
   .cz-felt .stamp{text-align:center;font-family:Bungee,Figtree,sans-serif;color:rgba(255,233,168,.32);font-size:clamp(14px,3vw,22px);letter-spacing:.08em;margin:6px 0;pointer-events:none}
   .cz-bar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center;margin-top:12px}
@@ -366,7 +383,7 @@
   .cz-paytable div{background:rgba(0,0,0,.3);border-radius:8px;padding:4px;text-align:center}
   /* Poker */
   .cz-pk{position:relative;max-width:1000px;margin:0 auto;aspect-ratio:1.9;min-height:420px}
-  .cz-pk .oval{position:absolute;inset:10% 8%;border-radius:999px;background:radial-gradient(120% 90% at 50% 30%,#1a8a58 0,var(--felt) 45%,var(--felt2) 100%);box-shadow:0 0 0 10px #3a2212,0 0 0 12px #c8973e,0 0 0 16px #2a170b,0 30px 60px rgba(0,0,0,.6),inset 0 0 80px rgba(0,0,0,.45)}
+  .cz-pk .oval{position:absolute;inset:10% 8%;border-radius:999px;background:var(--feltx,linear-gradient(transparent,transparent)),radial-gradient(120% 90% at 50% 30%,var(--felt0,#1a8a58) 0,var(--felt) 45%,var(--felt2) 100%);box-shadow:0 0 0 10px #3a2212,0 0 0 12px #c8973e,0 0 0 16px #2a170b,0 30px 60px rgba(0,0,0,.6),inset 0 0 80px rgba(0,0,0,.45)}
   .cz-pk .center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center}
   .cz-pk .pot{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;background:rgba(0,0,0,.45);font-weight:900;color:#ffe9a8;margin-top:8px}
   .cz-pseat{position:absolute;width:150px;transform:translate(-50%,-50%);text-align:center}

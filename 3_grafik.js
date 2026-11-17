@@ -303,6 +303,13 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 77, title: 'Spieler-Idee: Casino – Wochen-Neustart und Glanzmarken', date: '17.11.2026', items: [
+      'Jeden Montag um 0 Uhr startet das Casino neu: Deine eigenen Jetons (ohne Bankschulden) werden 1:1 zu Glanzmarken, danach beginnen alle wieder mit 10.000 Jetons ohne Schulden. Der erste Neustart ist am Montag, 23.11.',
+      'Glanzmarken gelten im Casino-Shop und werden beim Kaufen zuerst benutzt, der Rest kommt aus deinen Jetons.',
+      'Die Rangliste hat jetzt „Diese Woche“ und „Allzeit“ – dein Rekord bleibt über alle Wochen erhalten.',
+      'Neu im Shop: Herzregen, Sternschnuppen, Drachenfeuer, Harfe, Trommelwirbel, Orchester, die Tische Eiskristall, Lava und Sternenhimmel sowie die Abzeichen Einhorn, Rakete, Drachenherz und Superstar.',
+      'Verbessert: Jede Tischfarbe hat jetzt ihr eigenes Glanzlicht (vorher war die Mitte immer grün), Goldregen und Diamanten leuchten.',
+    ] },
     { id: 76, title: 'Spieler-Idee: Dungeon – volles Inventar', date: '17.11.2026', items: [
       'Ist dein Inventar voll, ersetzt bessere Beute (höhere Seltenheit oder Stufe) automatisch den schwächsten Gegenstand. Der alte wird verkauft, Schriftrollen bleiben.',
     ] },

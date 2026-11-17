@@ -531,8 +531,12 @@ const CZ_PRICES = {
   fx: { konfetti: 0, gold: 8000, feuerwerk: 20000, blitz: 35000, diamant: 60000, regenbogen: 100000 },
   sfx: { klingeln: 0, fanfare: 6000, glocken: 12000, jackpot: 25000, applaus: 40000, koenig: 80000 },
   felt: { gruen: 0, blau: 5000, rot: 5000, lila: 10000, nacht: 15000, goldf: 50000 },
-  badge: { '': 0, zylinder: 5000, klee: 10000, hai: 20000, feuer: 40000, dia: 80000, krone: 150000 },
+  badge: { '': 0, zylinder: 5000, klee: 10000, hai: 20000, feuer: 40000, dia: 80000, krone: 150000, einhorn: 30000, rakete: 60000, drachenherz: 250000, superstar: 400000 },
 };
+// Spieler-Idee (v31): neue Shop-Stücke, bezahlbar mit Glanzmarken aus dem Wochen-Neustart
+Object.assign(CZ_PRICES.fx, { herzen: 15000, sterne: 45000, drachenfeuer: 150000 });
+Object.assign(CZ_PRICES.sfx, { harfe: 10000, trommel: 30000, orchester: 120000 });
+Object.assign(CZ_PRICES.felt, { eis: 20000, lava: 30000, sternen: 80000 });
 const CZ_JOBS = { mine: 1400, teller: 900, putzen: 2200 }; // so schnell kann man frühestens fertig sein (ms)
 // Einsatzlimit wächst mit dem Alter des Kontos: Neue Konten so lange neu anlegen, bis eins Glück hat, lohnt sich so nicht.
 // Konten von vor dieser Regel (ohne created) gelten als alt.
@@ -545,6 +549,22 @@ const czSeated = new Map(); // Konto -> Raum, solange es an einem Tisch sitzt (n
 let czRelease = () => false; // vom Server gesetzt: gibt einen verwaisten Tischplatz frei
 const setCzRelease = fn => { czRelease = fn; };
 const czDay = () => new Date(Date.now() + 3600e3).toISOString().slice(0, 10);
+// Spieler-Idee (v31): Wöchentlicher Neustart. Jeden Montag (0 Uhr deutsche Zeit) werden die eigenen Jetons (ohne Bankschulden)
+// 1:1 in Glanzmarken umgewandelt, die nur im Casino-Shop gelten. Danach startet jeder wieder mit 10.000 Jetons ohne Schulden.
+// Die Allzeit-Rangliste (höchster Stand je) bleibt, die Wochen-Rangliste fängt neu an. Konten ohne Wochen-Kennung starten erst ab jetzt.
+const czWeek = () => { const d = new Date(Date.now() + 3600e3); d.setUTCDate(d.getUTCDate() - (d.getUTCDay() + 6) % 7); return d.toISOString().slice(0, 10); };
+const czWeekStart = wk => Date.parse(wk + 'T00:00:00Z') - 3600e3;
+function czWeekly(key, z) {
+  const wk = czWeek(); if (!z.wk) { z.wk = wk; markDirty(); return false; }
+  if (z.wk === wk) return false;
+  const own = Math.max(0, Math.floor((z.w || 0) - (z.d || 0)));
+  z.k = Math.min(1e13, (z.k || 0) + own); z.last = { wk: z.wk, n: own, seen: false };
+  z.w = CZ_START; z.d = 0; z.wk = wk; z.rs = Date.now(); markDirty();
+  if (czSeated.has(key)) try { czSetHook(key, CZ_START); } catch {}
+  return true;
+}
+const czWeeklyAll = () => { for (const [k, a] of Object.entries(accounts)) if (a && a.cz) czWeekly(k, a.cz); };
+setInterval(() => { try { czWeeklyAll(); } catch (e) { console.error('Casino-Wochenneustart:', e); } }, 15 * 60e3).unref();
 // Admin: Jetons eines Kontos einmalig auf einen festen Stand setzen (auch wenn es gerade am Tisch sitzt)
 const CZ_SET = [
   { id: 's-2026-11-13-maestro', k: 'maestro', w: 200000 },
@@ -553,7 +573,8 @@ const CZ_SET = [
 let czSetHook = () => {}; const setCzSetHook = fn => { czSetHook = fn; };
 function czAcc(key) {
   const a = accounts[key]; if (!a) return null;
-  if (!a.cz) { a.cz = { w: CZ_START, d: 0, m: CZ_START, own: [], eq: {}, day: '', help: 0, work: 0, t: Date.now() }; markDirty(); }
+  if (!a.cz) { a.cz = { w: CZ_START, d: 0, m: CZ_START, own: [], eq: {}, day: '', help: 0, work: 0, t: Date.now(), wk: czWeek(), k: 0 }; markDirty(); }
+  czWeekly(key, a.cz);
   for (const s of CZ_SET) if (s.k === key && !(a.gifts || []).includes(s.id)) {
     (a.gifts = a.gifts || []).push(s.id);
     for (const g of CZ_GIFTS) if (g.k === key && !a.gifts.includes(g.id)) a.gifts.push(g.id); // offene Geschenke verfallen
@@ -563,6 +584,7 @@ function czAcc(key) {
 }
 function czSync(key, w) { // vom Tisch: aktueller Stand des Platzes
   const z = czAcc(key); if (!z) return;
+  if (z.rs && Date.now() - z.rs < 5000) return; // gerade wöchentlich neu gestartet: alte Meldungen vom Tisch nicht übernehmen
   w = Math.max(0, Math.min(1e12, Math.floor(Number(w) || 0)));
   if (z.w !== w) { z.w = w; z.m = Math.max(z.m || 0, w - (z.d || 0)); z.t = Date.now(); markDirty(); }
 }
@@ -608,10 +630,12 @@ function czState(key, acc) {
     }
   }
   const L = czLimit(key), young = czAgeDays(acc) < CZ_BOARD_DAYS;
-  return { pops, lim: L.lim, limNext: L.next, limNextN: L.nextLim, boardFrom: young ? acc.created + CZ_BOARD_DAYS * 864e5 : 0, name: acc.name, w: z.w, d: z.d || 0, m: z.m || 0, bonus: z.day !== czDay(), help: z.w < 100 && now - (z.help || 0) > 3600e3, own: z.own || [], eq: z.eq || {}, work: z.work || 0, seated: czSeated.has(key), gift, why };
+  let week = null; if (z.last && !z.last.seen) { week = { n: z.last.n }; z.last.seen = true; markDirty(); }
+  return { k: z.k || 0, wk: z.wk, wkEnd: czWeekStart(z.wk) + 7 * 864e5, week, pops, lim: L.lim, limNext: L.next, limNextN: L.nextLim, boardFrom: young ? acc.created + CZ_BOARD_DAYS * 864e5 : 0, name: acc.name, w: z.w, d: z.d || 0, m: z.m || 0, bonus: z.day !== czDay(), help: z.w < 100 && now - (z.help || 0) > 3600e3, own: z.own || [], eq: z.eq || {}, work: z.work || 0, seated: czSeated.has(key), gift, why };
 }
 function czTop(key) {
-  const old = Date.now() - 30 * 864e5, all = Object.entries(accounts).filter(([, a]) => a.cz && czAgeDays(a) >= CZ_BOARD_DAYS);
+  czWeeklyAll();
+  const old = czWeekStart(czWeek()), all = Object.entries(accounts).filter(([, a]) => a.cz && czAgeDays(a) >= CZ_BOARD_DAYS);
   const live = all.filter(([, a]) => (a.cz.t || 0) > old).sort((a, b) => (b[1].cz.w - (b[1].cz.d || 0)) - (a[1].cz.w - (a[1].cz.d || 0)));
   const best = all.slice().sort((a, b) => (b[1].cz.m || 0) - (a[1].cz.m || 0));
   const pack = (list, f) => ({ top: list.slice(0, 50).map(([k, a]) => ({ n: a.name, c: f(a.cz), b: (a.cz.eq && a.cz.eq.badge) || '', me: k === key, adm: VS_ADMINS.includes(k) })), rank: key ? list.findIndex(([k]) => k === key) + 1 : 0, mine: key && accounts[key] && accounts[key].cz ? f(accounts[key].cz) : 0, players: list.length });
@@ -645,7 +669,7 @@ function czAction(action, key, acc, body) {
   if (action === 'cz_buy' || action === 'cz_eq') {
     const cat = String(body.cat || ''), k = String(body.k || ''), P = CZ_PRICES[cat]; if (!P || !(k in P)) return [400, { error: 'Gibt es nicht.' }];
     z.own = z.own || []; z.eq = z.eq || {};
-    if (action === 'cz_buy' && P[k] && !z.own.includes(k)) { if (z.w - (z.d || 0) < P[k]) return [409, { error: 'Dafür fehlen dir eigene Jetons (Schulden zählen nicht).' }]; z.w -= P[k]; z.own.push(k); }
+    if (action === 'cz_buy' && P[k] && !z.own.includes(k)) { const fromK = Math.min(z.k || 0, P[k]), rest = P[k] - fromK; if (z.w - (z.d || 0) < rest) return [409, { error: 'Dafür fehlen dir Glanzmarken oder eigene Jetons (Schulden zählen nicht).' }]; z.k = (z.k || 0) - fromK; z.w -= rest; z.own.push(k); }
     if (P[k] && !z.own.includes(k)) return [409, { error: 'Das hast du noch nicht gekauft.' }];
     z.eq[cat] = k; return ok();
   }
