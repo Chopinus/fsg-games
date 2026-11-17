@@ -572,7 +572,21 @@ function czWeekly(key, z) {
   if (czSeated.has(key)) try { czSetHook(key, CZ_START); } catch {}
   return true;
 }
-const czWeeklyAll = () => { for (const [k, a] of Object.entries(accounts)) if (a && a.cz) czWeekly(k, a.cz); };
+// Admin (17.11.2026): wer gerade pleite ist (unter 100 Jetons), startet einmalig neu mit 10.000 Jetons und ohne Schulden.
+// Gilt nur für Stände von vor diesem Zeitpunkt – wer danach erst pleite geht, bekommt nichts.
+const CZ_ZERO_ID = 'r-2026-11-17-null', CZ_ZERO_TS = 1794909763842;
+function czZero(key, a) {
+  const z = a.cz; if (!z || (a.gifts || []).includes(CZ_ZERO_ID) || (z.t || 0) > CZ_ZERO_TS || (z.w || 0) >= 100) return;
+  (a.gifts = a.gifts || []).push(CZ_ZERO_ID); z.w = CZ_START; z.d = 0; z.t = Date.now(); markDirty();
+  if (czSeated.has(key)) try { czSetHook(key, CZ_START); } catch {}
+}
+// Schulden abarbeiten durch Spielen: der Server zählt jede Minute, in der jemand aktiv ein anderes Spiel im Hub spielt (server.js)
+const CZ_PLAY_RATE = 400; // Schulden pro aktiver Spielminute
+function czPlayWork(key) {
+  const a = accounts[key]; if (!a || !a.cz) return 0; const z = czAcc(key); if (!(z.d > 0)) return 0;
+  const pay = Math.min(CZ_PLAY_RATE, z.d); z.d -= pay; z.work = (z.work || 0) + pay; z.pw = (z.pw || 0) + pay; markDirty(); return pay;
+}
+const czWeeklyAll = () => { for (const [k, a] of Object.entries(accounts)) if (a && a.cz) { czWeekly(k, a.cz); czZero(k, a); } };
 setInterval(() => { try { czWeeklyAll(); } catch (e) { console.error('Casino-Wochenneustart:', e); } }, 15 * 60e3).unref();
 // Admin: Jetons eines Kontos einmalig auf einen festen Stand setzen (auch wenn es gerade am Tisch sitzt)
 const CZ_SET = [
@@ -583,7 +597,7 @@ let czSetHook = () => {}; const setCzSetHook = fn => { czSetHook = fn; };
 function czAcc(key) {
   const a = accounts[key]; if (!a) return null;
   if (!a.cz) { a.cz = { w: CZ_START, d: 0, m: CZ_START, own: [], eq: {}, day: '', help: 0, work: 0, t: Date.now(), wk: czWeek(), k: 0, force: CZ_FORCE }; markDirty(); }
-  czWeekly(key, a.cz);
+  czWeekly(key, a.cz); czZero(key, a);
   for (const s of CZ_SET) if (s.k === key && !(a.gifts || []).includes(s.id)) {
     (a.gifts = a.gifts || []).push(s.id);
     for (const g of CZ_GIFTS) if (g.k === key && !a.gifts.includes(g.id)) a.gifts.push(g.id); // offene Geschenke verfallen
@@ -640,7 +654,7 @@ function czState(key, acc) {
   }
   const L = czLimit(key), young = czAgeDays(acc) < CZ_BOARD_DAYS;
   let week = null; if (z.last && !z.last.seen) { week = { n: z.last.n }; z.last.seen = true; markDirty(); }
-  return { k: z.k || 0, wk: z.wk, wkEnd: czWeekStart(z.wk) + 7 * 864e5, week, pops, lim: L.lim, limNext: L.next, limNextN: L.nextLim, boardFrom: young ? acc.created + CZ_BOARD_DAYS * 864e5 : 0, name: acc.name, w: z.w, d: z.d || 0, m: z.m || 0, bonus: z.day !== czDay(), help: z.w < 100 && now - (z.help || 0) > 3600e3, own: z.own || [], eq: z.eq || {}, work: z.work || 0, seated: czSeated.has(key), gift, why };
+  return { k: z.k || 0, wk: z.wk, wkEnd: czWeekStart(z.wk) + 7 * 864e5, week, pops, lim: L.lim, limNext: L.next, limNextN: L.nextLim, boardFrom: young ? acc.created + CZ_BOARD_DAYS * 864e5 : 0, name: acc.name, w: z.w, d: z.d || 0, m: z.m || 0, bonus: z.day !== czDay(), help: z.w < 100 && now - (z.help || 0) > 3600e3, own: z.own || [], eq: z.eq || {}, work: z.work || 0, pw: z.pw || 0, rate: CZ_PLAY_RATE, seated: czSeated.has(key), gift, why };
 }
 function czTop(key) {
   czWeeklyAll();
@@ -943,11 +957,11 @@ function board() {
   return boardCache;
 }
 
-load().finally(czOldLoad); vsLoad(); chatLoad(); wbLoad(); gLoad(); islLoad();
+load().finally(() => { czOldLoad(); try { czWeeklyAll(); } catch (e) { console.error(e); } }); vsLoad(); chatLoad(); wbLoad(); gLoad(); islLoad();
 // Render beendet den Dienst mit SIGTERM – vorher noch speichern
 process.on('SIGTERM', async () => { await flush(); await chatFlush(); await wbFlush(); await gFlush(); await islFlush(); await vsFlush(); process.exit(0); });
 process.on('SIGINT', async () => { await flush(); await chatFlush(); await wbFlush(); await gFlush(); await islFlush(); await vsFlush(); process.exit(0); });
 
 const isAdmin = k => VS_ADMINS.includes(String(k || '').toLowerCase());
 const adminNames = () => VS_ADMINS.map(k => accounts[k] && accounts[k].name).filter(Boolean);
-module.exports = { setCzSetHook, setPresence, setChatHook, friendKeys, areFriends, accName, keyOfName: n => keyOf(cleanName(n)), handle, flush, durable, tokenKey, czAcc, czSync, czSeated, setCzRelease, czMaxBet, isAdmin, adminNames };
+module.exports = { czPlayWork, setCzSetHook, setPresence, setChatHook, friendKeys, areFriends, accName, keyOfName: n => keyOf(cleanName(n)), handle, flush, durable, tokenKey, czAcc, czSync, czSeated, setCzRelease, czMaxBet, isAdmin, adminNames };

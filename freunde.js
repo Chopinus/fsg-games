@@ -142,6 +142,9 @@
     ws.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch { return; } if (m.t === 'hi') { const k = konto(); if (k) ws.send(JSON.stringify({ t: 'konto', name: k.name, token: k.token, where: S.where })); return; } if (m.t === 'err' && m.msg) { toast(m.msg); return; } msg(m); };
     ws.onclose = () => setTimeout(connect, 3000);
   }
+  // Aktivität melden (höchstens alle 20 s): wer wirklich spielt, arbeitet nebenbei seine Casino-Schulden ab
+  let actT = 0; const act = () => { const n = Date.now(); if (n - actT < 20000 || document.hidden) return; actT = n; send({ t: 'act' }); };
+  ['pointerdown', 'keydown', 'touchstart'].forEach(ev => addEventListener(ev, act, { passive: true, capture: true }));
   window.Freunde = {
     init(opts) { S.opts = opts || {}; S.where = S.opts.where || S.where; if (!document.getElementById('frw-css')) { const st = document.createElement('style'); st.id = 'frw-css'; st.textContent = css; document.head.appendChild(st); }
       if (!S.opts.send) connect(); render(); refresh(); clearInterval(S.pollT); S.pollT = setInterval(() => { if (!document.hidden) { refresh(); if (S.openP && S.chat) loadChat(); } }, 30000); },

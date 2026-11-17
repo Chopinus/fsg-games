@@ -46,6 +46,13 @@ if (konten && konten.setCzSetHook) konten.setCzSetHook((k, w) => { for (const r 
 
 // ---------- Freunde: Live-Status, Einladungen, Chat-Benachrichtigung ----------
 // Online = mindestens eine offene Verbindung mit diesem Konto; "where" = in welchem Spiel (Hub, Dungeon, Runde …)
+// Schulden im Casino abarbeiten durch Spielen: jede Minute, in der jemand in einem anderen Spiel aktiv ist (nicht Hub, nicht Casino)
+setInterval(() => {
+  if (!konten || !konten.czPlayWork) return;
+  const now = Date.now(), ks = new Set();
+  for (const c of clients) if (c.acc && c.where && !['Game Hub', 'Casino'].includes(c.where) && now - (c.act || 0) < 90e3) ks.add(c.acc);
+  for (const k of ks) { try { const pay = konten.czPlayWork(k); if (pay) sendToAcc(k, { t: 'cz_playwork', pay }); } catch (e) { console.error('Schulden abarbeiten:', e); } }
+}, 60e3).unref();
 function presenceOf(k) { let on = false, where = null; for (const c of clients) if (c.acc === k) { on = true; if (c.where && (!where || c.where !== 'Game Hub')) where = c.where; } return { on, where }; }
 function sendToAcc(k, m) { let n = 0; for (const c of clients) if (c.acc === k) { send(c, m); n++; } return n; }
 const frPingT = new Map();
@@ -53,6 +60,7 @@ function pingFriends(k) { if (!k || !konten || !konten.friendKeys) return; if (f
 if (konten && konten.setPresence) { konten.setPresence(presenceOf); konten.setChatHook((from, to, kind) => sendToAcc(to, { t: kind === 'req' ? 'fr_req' : kind === 'fr' ? 'fr_ping' : 'fr_msg', from: konten.accName(from) })); }
 const inviteT = new Map();
 function handleFriendMsg(c, m) {
+  if (m.t === 'act') { c.act = Date.now(); return true; } // Spieler ist aktiv (Tippen/Tasten) – zählt fürs Schulden-Abarbeiten
   if (m.t === 'where') { const w = clean(m.g, 24) || null; if (w !== c.where) { c.where = w; pingFriends(c.acc); } return true; }
   if (m.t === 'invite') {
     if (!c.acc) return send(c, { t: 'err', msg: 'Melde dich mit deinem Konto an, um Freunde einzuladen.' }), true;
