@@ -581,7 +581,7 @@ function czZero(key, a) {
   if (czSeated.has(key)) try { czSetHook(key, CZ_START); } catch {}
 }
 // Schulden abarbeiten durch Spielen: der Server zählt jede Minute, in der jemand aktiv ein anderes Spiel im Hub spielt (server.js)
-const CZ_PLAY_RATE = 400; // Schulden pro aktiver Spielminute
+const CZ_PLAY_RATE = 800; // Schulden pro aktiver Spielminute
 function czPlayWork(key) {
   const a = accounts[key]; if (!a || !a.cz) return 0; const z = czAcc(key); if (!(z.d > 0)) return 0;
   const pay = Math.min(CZ_PLAY_RATE, z.d); z.d -= pay; z.work = (z.work || 0) + pay; z.pw = (z.pw || 0) + pay; markDirty(); return pay;
