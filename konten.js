@@ -560,9 +560,12 @@ const czDay = () => new Date(Date.now() + 3600e3).toISOString().slice(0, 10);
 // Die Allzeit-Rangliste (höchster Stand je) bleibt, die Wochen-Rangliste fängt neu an. Konten ohne Wochen-Kennung starten erst ab jetzt.
 const czWeek = () => { const d = new Date(Date.now() + 3600e3); d.setUTCDate(d.getUTCDate() - (d.getUTCDay() + 6) % 7); return d.toISOString().slice(0, 10); };
 const czWeekStart = wk => Date.parse(wk + 'T00:00:00Z') - 3600e3;
+// Einmaliger Sofort-Neustart auf Wunsch des Admins (17.11.2026): wirkt wie ein Wochenwechsel, danach läuft alles normal montags weiter
+const CZ_FORCE = 'f-2026-11-17', CZ_FORCE_TS = 1794908873089;
 function czWeekly(key, z) {
-  const wk = czWeek(); if (!z.wk) { z.wk = wk; markDirty(); return false; }
-  if (z.wk === wk) return false;
+  const wk = czWeek(); if (!z.wk) { z.wk = wk; markDirty(); if (z.force === CZ_FORCE) return false; }
+  const forced = z.force !== CZ_FORCE; if (forced) z.force = CZ_FORCE;
+  if (z.wk === wk && !forced) return false;
   const own = Math.max(0, Math.floor((z.w || 0) - (z.d || 0)));
   z.k = Math.min(1e13, (z.k || 0) + own); z.last = { wk: z.wk, n: own, seen: false };
   z.w = CZ_START; z.d = 0; z.wk = wk; z.rs = Date.now(); markDirty();
@@ -579,7 +582,7 @@ const CZ_SET = [
 let czSetHook = () => {}; const setCzSetHook = fn => { czSetHook = fn; };
 function czAcc(key) {
   const a = accounts[key]; if (!a) return null;
-  if (!a.cz) { a.cz = { w: CZ_START, d: 0, m: CZ_START, own: [], eq: {}, day: '', help: 0, work: 0, t: Date.now(), wk: czWeek(), k: 0 }; markDirty(); }
+  if (!a.cz) { a.cz = { w: CZ_START, d: 0, m: CZ_START, own: [], eq: {}, day: '', help: 0, work: 0, t: Date.now(), wk: czWeek(), k: 0, force: CZ_FORCE }; markDirty(); }
   czWeekly(key, a.cz);
   for (const s of CZ_SET) if (s.k === key && !(a.gifts || []).includes(s.id)) {
     (a.gifts = a.gifts || []).push(s.id);
@@ -641,7 +644,7 @@ function czState(key, acc) {
 }
 function czTop(key) {
   czWeeklyAll();
-  const old = czWeekStart(czWeek()), all = Object.entries(accounts).filter(([, a]) => a.cz && czAgeDays(a) >= CZ_BOARD_DAYS);
+  const old = Math.max(czWeekStart(czWeek()), CZ_FORCE_TS), all = Object.entries(accounts).filter(([, a]) => a.cz && czAgeDays(a) >= CZ_BOARD_DAYS);
   const live = all.filter(([, a]) => (a.cz.t || 0) > old).sort((a, b) => (b[1].cz.w - (b[1].cz.d || 0)) - (a[1].cz.w - (a[1].cz.d || 0)));
   const best = all.slice().sort((a, b) => (b[1].cz.m || 0) - (a[1].cz.m || 0));
   const pack = (list, f) => ({ top: list.slice(0, 50).map(([k, a]) => ({ n: a.name, c: f(a.cz), b: (a.cz.eq && a.cz.eq.badge) || '', me: k === key, adm: VS_ADMINS.includes(k) })), rank: key ? list.findIndex(([k]) => k === key) + 1 : 0, mine: key && accounts[key] && accounts[key].cz ? f(accounts[key].cz) : 0, players: list.length });
