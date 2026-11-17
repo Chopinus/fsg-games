@@ -318,6 +318,8 @@ const RARITY = [
   { name: 'Legendär', color: '#ff8c1a', weight: 2, mult: 2.1, value: 20 },
 ];
 // Waffentypen: cd = Abklingzeit zwischen Angriffen (s), range/arc = Reichweite/Winkel im Nahkampf
+// Spieler-Idee (v35): Nahkampf gleicht das Risiko aus – +20 % Schaden und 20 % weniger erlittener Schaden mit Nahkampfwaffen
+const MELEE_BONUS = { dmg: 1.2, dr: .8 };
 const WEAPONS = {
   dagger: { name: 'Dolch', icon: 'dagger', kind: 'melee', dmg: 6, cd: .2, range: 15, arc: 1.3, crit: .28, knock: 40, speed: .06, hint: 'Schnell, geringer Schaden, hohe Crit-Chance' },
   sword: { name: 'Schwert', icon: 'sword', kind: 'melee', dmg: 11, cd: .38, range: 21, arc: 1.9, crit: .1, knock: 90, speed: 0, hint: 'Ausgewogen, mittlere Reichweite' },
@@ -528,8 +530,14 @@ const Profile = {
     while (d.xp >= this.xpNeed(d.level)) { d.xp -= this.xpNeed(d.level); d.level++; ups++; }
     return ups;
   },
-  // Gegenstand ins Inventar (bei vollem Inventar wird er zu Gold)
-  give(it) { const d = this.data; if (it.slot === 'art') { if (d.arts.length < ART_MAX) { d.arts.push(it); return true; } d.essence += artSalvage(it); return false; } const i = d.inv.indexOf(null); if (i < 0) { d.gold += Math.round(itemValue(it) * .4); return false; } d.inv[i] = it; return true; },
+  // Gegenstand ins Inventar (bei vollem Inventar ersetzt Besseres den schwächsten Gegenstand, sonst wird er zu Gold)
+  give(it) { const d = this.data; if (it.slot === 'art') { if (d.arts.length < ART_MAX) { d.arts.push(it); return true; } d.essence += artSalvage(it); return false; } const i = d.inv.indexOf(null);
+    if (i < 0) { // Spieler-Idee (v40): volles Inventar – bessere Beute (höhere Seltenheit oder Stufe) ersetzt den schwächsten Gegenstand, der wird verkauft
+      let j = -1; d.inv.forEach((x, k) => { if (x && x.slot !== 'spell' && (j < 0 || itemValue(x) < itemValue(d.inv[j]))) j = k; });
+      const w = j >= 0 ? d.inv[j] : null;
+      if (w && itemValue(it) > itemValue(w) && (it.rarity > w.rarity || (it.ilvl || 1) > (w.ilvl || 1))) { d.gold += Math.round(itemValue(w) * .4); d.inv[j] = it; return { swap: itemName(w) }; }
+      d.gold += Math.round(itemValue(it) * .4); return false; }
+    d.inv[i] = it; return true; },
   look() { const e = this.data.equip; return { hero: this.data.hero, helm: e.helm && e.helm.cls, chest: e.chest && e.chest.cls, pants: e.pants && e.pants.cls, boots: e.boots && e.boots.cls, skin: this.data.skin }; },
 };
 const INV_SIZE = 30, ART_MAX = 60;
@@ -816,9 +824,9 @@ const MINIBOSSES = [
 const ABILITIES = {
   ritter: { name: 'Schildstoß', cd: 7, desc: 'Stößt Gegner vor dir weg, betäubt sie kurz und halbiert 2,5 s lang den Schaden, den du nimmst.' },
   bogen: { name: 'Pfeilhagel', cd: 9, desc: 'Ein Pfeilregen geht über dem Zielgebiet nieder (10 Pfeile).' },
-  assassine: { name: 'Schattenschleier', cd: 10, desc: '3 s unsichtbar und schneller – der nächste Treffer ist garantiert kritisch (×2,5).' },
+  assassine: { name: 'Schattenschleier', cd: 10, desc: '3 s unsichtbar und schneller – der nächste Treffer ist garantiert kritisch (×2,5). Immer: Mit dem Dolch springst du zu Gegnern in der Nähe; jeder Kill setzt den Sprung zurück und macht dich kurz schneller (bis ×5).' },
   magier: { name: 'Meteor', cd: 11, desc: 'Ein Meteor schlägt im Zielgebiet ein und setzt alles in Brand.' },
-  berserker: { name: 'Raserei', cd: 14, desc: '6 s lang +60 % Angriffstempo und +8 % Lebensraub, aber du nimmst 15 % mehr Schaden.' },
+  berserker: { name: 'Raserei', cd: 14, desc: 'Brüllt eine Schockwelle (Flächenschaden), ist 2 s unaufhaltsam (kein Schaden) und hat 6 s lang +60 % Angriffstempo und +8 % Lebensraub.' },
 };
 
 /* ---------- Schreine im Dungeon (gelten für den ganzen Run) ---------- */
@@ -1409,6 +1417,7 @@ function killEnemy(e) {
   else splat(e.x, e.y, ['#5a1a22', '#3a2448'], 6, 4);
   burst(e.x, e.y, e.boss ? ['#ff4a3a', '#f4d03f', '#e8e2d0'] : ['#e8e2d0', '#5a5468', '#ff9a3c'], e.boss ? 60 : 14, e.boss ? 140 : 70, .7, 1, 40);
   sfx('die');
+  { const k = e.lastBy; if (k && k.st && k.st.hero === 'assassine' && k.st.W && k.st.W.kind === 'melee') { k.dashCd = 0; k.huntN = Math.min(5, (k.huntN || 0) + 1); k.huntT = 4; } }
   if (e.boss) return bossDefeated(e);
   const kb = e.lastBy; if (kb && kb.st && kb.st.aset.knochenkrone === 4) for (let i = 0; i < 3; i++) { const aa = rand(Math.PI * 2); Run.projs.push({ x: e.x, y: e.y - 3, vx: Math.cos(aa) * 150, vy: Math.sin(aa) * 150, r: 2, dmg: kb.st.dmg * .4, crit: false, team: 'hero', kind: 'bone', life: .9, knock: 40, col: '#e8e2d0', pierce: 0, hit: new Set([e]), by: kb }); }
   if (e.elite) eliteDeath(e);
@@ -1424,7 +1433,8 @@ function dropGold(x, y, amount) {
 }
 function hurtHero(h, dmg, srcX, srcY, from = null) {
   if (h.inv > 0 || h.downed || h.out || h.dodgeT > 0 || Run.ended) return;
-  if (h.guardT > 0) dmg *= .5; if (h.rageT > 0) dmg *= 1.15; if (Run.mod === 'glas') dmg *= 1.6;
+  if (h.unstopT > 0) return; // Raserei: unaufhaltsam
+  if (h.guardT > 0) dmg *= .5; if (h.st.W && h.st.W.kind === 'melee') dmg *= MELEE_BONUS.dr; if (Run.mod === 'glas') dmg *= 1.6;
   const red = dmg * 100 / (100 + h.st.def * 7); h.hp -= red; h.lastHit = Run.time;
   if (from && from.elite === 'vampir' && !from.dead) from.hp = Math.min(from.maxHp, from.hp + from.maxHp * .08);
   if (from && from.elite === 'frost') h.slowT = 1.5;
@@ -1448,12 +1458,18 @@ function heroAttack(h, aim) {
   if (h.atkCd > 0 || h.downed || h.out) return;
   const W = h.st.W, aoeM = 1 + (h.st.aoep || 0) / 100; h.atkCd = h.st.cd / (h.rageT > 0 ? 1.6 : 1); h.aim = aim; h.face = Math.cos(aim) >= 0 ? 1 : -1; h.swing = { t: 0, dur: Math.max(.12, Math.min(.3, W.cd * .7)) };
   if (W.kind === 'melee') {
+    // Spieler-Idee (v35): Assassinen springen mit dem Dolch zum anvisierten Gegner (2,5 s Abklingzeit, ein Kill setzt sie zurück)
+    if (h.st.hero === 'assassine' && !(h.dashCd > 0)) {
+      let tg = null, td = 1e9; for (const e of Run.enemies) { if (e.dead) continue; const d = Math.hypot(e.x - h.x, e.y - h.y); if (d > W.range + e.r && d < 80 && angDiff(aim, Math.atan2(e.y - h.y, e.x - h.x)) < .6 && d < td) { td = d; tg = e; } }
+      if (tg) { const a2 = Math.atan2(tg.y - h.y, tg.x - h.x), go = td - tg.r - W.range * .6, x0 = h.x, y0 = h.y; for (let i = 0; i < 8; i++) moveEnt(h, Math.cos(a2) * go / 8, Math.sin(a2) * go / 8);
+        h.dashCd = 2.5; h.inv = Math.max(h.inv || 0, .25); Run.fx.push({ type: 'slash', x: (x0 + h.x) / 2, y: (y0 + h.y) / 2 - 2, a: a2, arc: .3, range: Math.max(6, go / 2), t: 0, dur: .12, col: '#b45cff', heavy: false }); burst(x0, y0, ['#b45cff', '#3a2448'], 8, 50, .4); sfx('blink'); }
+    }
     sfx(W.aoe ? 'heavy' : 'swing');
     Run.fx.push({ type: 'slash', x: h.x, y: h.y - 2, a: aim, arc: W.arc * (W.aoe ? aoeM : 1), range: W.range + 4, t: 0, dur: .14, col: W.aoe ? '#ffd2a0' : '#ffffff', heavy: !!W.aoe });
     let hits = 0;
     for (const e of Run.enemies) {
       if (e.dead) continue; const d = Math.hypot(e.x - h.x, e.y - h.y);
-      if (d <= W.range + e.r && angDiff(aim, Math.atan2(e.y - h.y, e.x - h.x)) <= W.arc * (W.aoe ? aoeM : 1) / 2) { const r = rollHit(h, 1, e); hurtEnemy(e, r.dmg, r.crit, h.x, h.y, W.knock, h); hits++; }
+      if (d <= W.range + e.r && angDiff(aim, Math.atan2(e.y - h.y, e.x - h.x)) <= W.arc * (W.aoe ? aoeM : 1) / 2) { const r = rollHit(h, MELEE_BONUS.dmg, e); hurtEnemy(e, r.dmg, r.crit, h.x, h.y, W.knock, h); hits++; }
     }
     if (h.st.weapon.type === 'hammer') { // Schockwelle am Aufschlagpunkt
       const ix = h.x + Math.cos(aim) * W.range * .8, iy = h.y + Math.sin(aim) * W.range * .8;
@@ -2037,7 +2053,9 @@ function useAbility(h) {
   }
   if (id === 'assassine') { h.veilT = 3; h.ambush = true; h.ambushT = 6; burst(h.x, h.y, ['#b45cff', '#3a2448', '#000000'], 22, 70, .6); sfx('blink'); }
   if (id === 'magier') { const p = aimPoint(h, 100); Run.fx.push({ type: 'warn', x: p.x, y: p.y, r: 38, t: 0, dur: .8, meteor: true, dmg: P * 3.5, by: h }); sfx('magic'); }
-  if (id === 'berserker') { h.rageT = 6; sfx('roar'); shake(4); burst(h.x, h.y, ['#ff4a3a', '#9e2a22'], 24, 80, .6); }
+  if (id === 'berserker') { h.rageT = 6; h.unstopT = 2; sfx('roar'); shake(6); burst(h.x, h.y, ['#ff4a3a', '#9e2a22'], 24, 80, .6);
+    Run.fx.push({ type: 'ring', x: h.x, y: h.y, r: 2, max: 46, speed: 200, dmg: 0, team: 'none', col: '#ff6a3a', hit: new Set() });
+    for (const e of Run.enemies) if (!e.dead && Math.hypot(e.x - h.x, e.y - h.y) < 46 + e.r) hurtEnemy(e, P * 1.5, false, h.x, h.y, 160, h); }
   if (h.isPlayer) banner('', A.name + '!', .9, '#fff2a0');
 }
 /* ---------- Heiltränke ---------- */
@@ -2050,14 +2068,15 @@ function drinkPotion(h) {
 }
 // Laufende Effekte der Helden pro Bild aktualisieren
 function updateHeroExtras(h, dt) {
-  for (const k of ['abCd', 'guardT', 'veilT', 'rageT', 'slowT', 'potCd', 'abFlash']) if (h[k] > 0) h[k] -= dt;
+  for (const k of ['abCd', 'guardT', 'veilT', 'rageT', 'slowT', 'potCd', 'abFlash', 'dashCd', 'unstopT', 'huntT']) if (h[k] > 0) h[k] -= dt;
+  if (h.huntN && !(h.huntT > 0)) h.huntN = 0;
   if (h.ambushT > 0) { h.ambushT -= dt; if (h.ambushT <= 0) h.ambush = false; }
   if (h.potHeal && !h.downed) { const step = h.potHeal.left * Math.min(1, dt / h.potHeal.t); healHero(h, step, true); h.potHeal.left -= step; h.potHeal.t -= dt; if (h.potHeal.t <= 0 || h.potHeal.left <= .5) h.potHeal = null; }
   if (h.st.aset.wildwuchs === 4 && !h.downed && !h.out && Run.time - (h.lastHit || 0) > 3 && h.hp < h.st.maxHp) h.hp = Math.min(h.st.maxHp, h.hp + h.st.maxHp * .03 * dt);
   if (h.rageT > 0 && Math.random() < .5) Run.parts.push({ x: h.x + rand(-5, 5), y: h.y + rand(-8, 2), vx: 0, vy: -24, life: .4, max: .4, col: pick(['#ff4a3a', '#ff9a3c']), size: 1 });
 }
 // Lauftempo-Faktor (Verlangsamung, Schleier, Tagesregel)
-const heroSpeedMult = h => (h.slowT > 0 ? .55 : 1) * (h.veilT > 0 ? 1.3 : 1) * (Run.mod === 'hektik' ? 1.3 : 1);
+const heroSpeedMult = h => (h.slowT > 0 ? .55 : 1) * (h.veilT > 0 ? 1.3 : 1) * (Run.mod === 'hektik' ? 1.3 : 1) * (h.huntT > 0 ? 1 + .06 * (h.huntN || 0) : 1);
 // Sturmläufer (4 Teile): Ausweichrolle löst einen Kettenblitz aus
 function stormDodge(h) {
   if (h.st.aset.sturmlaeufer !== 4) return; let from = h; const hit = new Set(), pts = [{ x: h.x, y: h.y - 2 }];
@@ -2959,7 +2978,7 @@ const UI = {
           <div class="loot-line" style="color:#ffd25a">${HEROES[r.hero].icon} ${esc(HEROES[r.hero].name)}: +${r.xp} Helden-EP${r.heroUps ? ` · Held steigt auf Level ${r.heroLvl}!` : ''}</div>
           ${unlocksBetween(r.level - r.ups, r.level).map(u => `<div class="loot-line" style="color:#ff8c1a">🔓 Neu freigeschaltet: ${esc(u.name)}!</div>`).join('')}
           <div style="margin-top:8px">Beute:</div>
-          ${r.items.length ? r.items.map(x => x.it.slot === 'art' ? `<div class="loot-line" style="color:${STAR_COL[x.it.stars]}">✦ ${esc(x.it.name)} ${'★'.repeat(x.it.stars)} <span class="muted">(Artefakt ${esc(ART_SETS[x.it.set].name)}${x.ok ? '' : ', Tasche voll → Essenz'})</span></div>` : `<div class="loot-line" style="color:${RARITY[x.it.rarity].color}">◆ ${esc(itemName(x.it))} <span class="muted">(${RARITY[x.it.rarity].name}${x.ok ? '' : ', Inventar voll → verkauft'})</span></div>`).join('') : '<div class="loot-line muted">Keine Gegenstände gefunden.</div>'}
+          ${r.items.length ? r.items.map(x => x.it.slot === 'art' ? `<div class="loot-line" style="color:${STAR_COL[x.it.stars]}">✦ ${esc(x.it.name)} ${'★'.repeat(x.it.stars)} <span class="muted">(Artefakt ${esc(ART_SETS[x.it.set].name)}${x.ok ? '' : ', Tasche voll → Essenz'})</span></div>` : `<div class="loot-line" style="color:${RARITY[x.it.rarity].color}">◆ ${esc(itemName(x.it))} <span class="muted">(${RARITY[x.it.rarity].name}${x.ok ? (x.ok.swap ? `, ersetzt ${esc(x.ok.swap)} (verkauft)` : '') : ', Inventar voll → verkauft'})</span></div>`).join('') : '<div class="loot-line muted">Keine Gegenstände gefunden.</div>'}
         </div>
         <button class="btn gold big" id="bOk" style="margin-top:12px">Zurück zur Lobby</button>
       </div></div>`;
