@@ -1386,7 +1386,7 @@
   const ART_RCOL = ['', '', '', '#7fb2ff', '#c98aff', '#ffd23f'];
   function artCard(a, big) {
     const worn = artWorn(S, a.id), lk = a.lock || [];
-    return `<button class="rl-art ${artSelId === a.id ? 'on' : ''} ${big ? 'big' : ''}" data-artsel="${a.id}" style="--ac:${ART_RCOL[a.rar]}"><span class="ai">${ART_SLOTS.find(x => x.k === a.slot).i}</span><span class="ab"><b>${artName(a)} <em>${'★'.repeat(a.rar)}</em></b>
+    return `<button class="rl-afk ${artSelId === a.id ? 'on' : ''} ${big ? 'big' : ''}" data-artsel="${a.id}" style="--ac:${ART_RCOL[a.rar]}"><span class="ai">${ART_SLOTS.find(x => x.k === a.slot).i}</span><span class="ab"><b>${artName(a)} <em>${'★'.repeat(a.rar)}</em></b>
       <small class="am">${ART_STAT[a.main].n} ${artPct(a, a.main, ART_STAT[a.main].main[a.rar - 3])}</small>${a.subs.map((x, i) => `<small>${lk.includes(i) ? '🔒 ' : '· '}${ART_STAT[x.k].n} ${artPct(a, x.k, x.v)}</small>`).join('')}
       <small class="al">Stufe ${a.lv}${worn ? ` · trägt ${HERO_BY_ID[worn[0]].name}` : ''}</small></span></button>`;
   }
@@ -1431,14 +1431,16 @@
     else if (op === 'del') { if (ask('artdel', panel)) { const d = artDestroy(S, artSelId); if (d) { artSelId = null; SND.play('crit'); toast(`Artefakt zerstört: +${d} Artefaktsplitter`); afterChange(); } } }
     return true;
   }
-  // Spieler-Idee (v29): Unterklassen ab dem 2. Aufstieg
+  // Spieler-Idee (v29): Unterklassen ab dem 2. Aufstieg (gewählt: nur eine kleine Zeile, damit der Baum sichtbar bleibt)
+  let subEdit = null;
   function subBox(h) {
     if (!hired(S, h.tree) || !SUBS[h.id]) return '';
     if (!subOpen(S)) return (S.asc || 0) >= 1 ? `<p class="note rl-long">⚜ Ab dem ${SUB_ASC}. Aufstieg wählst du für jeden Helden eine Unterklasse.</p>` : '';
     const cur = subOf(S, h.id), pw = (S.asc || 0) >= 8;
+    if (cur && subEdit !== h.id) return `<div class="rl-subs mini" style="--hc:${h.color}"><b>⚜ ${esc(cur.n)}</b><small>${esc(cur.d)}${pw ? ' (+50 %)' : ''}</small><button class="btn ghost small" data-subedit="${h.id}">Wechseln</button></div>`;
     return `<div class="rl-subs" style="--hc:${h.color}"><div class="rl-subhd"><b>⚜ Unterklasse</b><small>${cur ? `Wechseln kostet ${crown}${SUB_SWITCH} Kronen` : 'Wähle einen Pfad – die erste Wahl ist kostenlos'}${pw ? ' · Meisterschaft: Boni +50 %' : ''}</small></div><div class="rl-subrow">${SUBS[h.id].map(x => {
       const on = cur && cur.id === x.id, can = !on && inCamp() && (!cur || S.crowns >= SUB_SWITCH);
-      return `<button class="rl-sub ${on ? 'on' : ''}" data-sub="${h.id}:${x.id}" ${can || on ? '' : 'disabled'}><b>${on ? '✓ ' : ''}${esc(x.n)}</b><small>${esc(x.d)}</small></button>`; }).join('')}</div></div>`;
+      return `<button class="rl-ucl ${on ? 'on' : ''}" data-sub="${h.id}:${x.id}" ${can || on ? '' : 'disabled'}><b>${on ? '✓ ' : ''}${esc(x.n)}</b><small>${esc(x.d)}</small></button>`; }).join('')}</div></div>`;
   }
   function testBuild(tree) {
     const inf = NODES.filter(n => n.tree === tree && n.kind === 'inf');
@@ -1775,7 +1777,8 @@
     const g = e.target.closest('[data-node]');
     if (g) { sel[tab] = g.dataset.node; panel(); return; }
     const sb = e.target.closest('[data-sub]');
-    if (sb) { const [hid, id] = sb.dataset.sub.split(':'); if (inCamp() && pickSub(S, hid, id)) { SND.play('forge'); toast(`${HERO_BY_ID[hid].name}: ${SUBS[hid].find(x => x.id === id).n}`, true); afterChange(); } return; }
+    const se = e.target.closest('[data-subedit]'); if (se) { subEdit = subEdit === se.dataset.subedit ? null : se.dataset.subedit; panel(); return; }
+    if (sb) { const [hid, id] = sb.dataset.sub.split(':'); if (inCamp() && pickSub(S, hid, id)) { subEdit = null; SND.play('forge'); toast(`${HERO_BY_ID[hid].name}: ${SUBS[hid].find(x => x.id === id).n}`, true); afterChange(); } return; }
     const tm = e.target.closest('[data-tmenu]');
     if (tm) { if (acct && acct.tester) testMenu(tm.dataset.tmenu); return; }
     const rf = e.target.closest('[data-rforge]');

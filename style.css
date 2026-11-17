@@ -1691,16 +1691,17 @@ html.rl-appmode,html.rl-appmode body{overflow:hidden;overscroll-behavior:none}
 .rl-subs{margin:0 0 10px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--hc) 10%,var(--surface));border:1px solid color-mix(in srgb,var(--hc) 40%,transparent)}
 .rl-subhd{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px}.rl-subhd small{color:var(--muted);font-size:12px}
 .rl-subrow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.rl-sub{display:flex;flex-direction:column;gap:3px;text-align:left;padding:9px 10px;border-radius:10px;border:2px solid transparent;background:var(--surface);color:var(--fg);font:inherit;cursor:pointer}
-.rl-sub small{color:var(--muted);font-size:12px;line-height:1.3}.rl-sub.on{border-color:var(--hc);background:color-mix(in srgb,var(--hc) 18%,var(--surface))}.rl-sub:disabled{opacity:.55;cursor:default}.rl-sub.on:disabled{opacity:1}
-@media (max-width:480px){.rl-subrow{grid-template-columns:1fr}}
+.rl-ucl{display:flex;flex-direction:column;gap:3px;text-align:left;padding:9px 10px;border-radius:10px;border:2px solid transparent;background:var(--surface);color:var(--fg);font:inherit;cursor:pointer}
+.rl-ucl small{color:var(--muted);font-size:12px;line-height:1.3}.rl-ucl.on{border-color:var(--hc);background:color-mix(in srgb,var(--hc) 18%,var(--surface))}.rl-ucl:disabled{opacity:.55;cursor:default}.rl-ucl.on:disabled{opacity:1}
+.rl-subs.mini{display:flex;align-items:center;gap:8px;padding:6px 10px;flex-wrap:wrap}.rl-subs.mini small{flex:1;min-width:0;color:var(--muted);font-size:12px}
+.rl-subs .rl-ucl{padding:7px 9px}.rl-subs .rl-ucl small{font-size:11.5px}
 /* Ritterlauf: Artefakte (Spieler-Idee v26) */
 .rl-artlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
-.rl-art{display:flex;gap:8px;align-items:flex-start;text-align:left;width:100%;padding:8px 10px;border-radius:10px;border:2px solid color-mix(in srgb,var(--ac) 35%,transparent);background:color-mix(in srgb,var(--ac) 8%,var(--surface));color:var(--fg);font:inherit;cursor:pointer}
-.rl-art.on{border-color:var(--ac);box-shadow:0 0 0 2px color-mix(in srgb,var(--ac) 30%,transparent)}
-.rl-art .ai,.rl-artslot .ai{font-size:22px;line-height:1;color:var(--ac,#8fe3ff);min-width:24px;text-align:center}
-.rl-art .ab{display:flex;flex-direction:column;gap:1px;min-width:0}.rl-art b em{font-style:normal;color:var(--ac);font-size:11px}
-.rl-art small{font-size:11.5px;color:var(--muted)}.rl-art small.am{color:var(--fg);font-weight:700}.rl-art small.al{opacity:.75}
+.rl-afk{display:flex;gap:8px;align-items:flex-start;text-align:left;width:100%;padding:8px 10px;border-radius:10px;border:2px solid color-mix(in srgb,var(--ac) 35%,transparent);background:color-mix(in srgb,var(--ac) 8%,var(--surface));color:var(--fg);font:inherit;cursor:pointer}
+.rl-afk.on{border-color:var(--ac);box-shadow:0 0 0 2px color-mix(in srgb,var(--ac) 30%,transparent)}
+.rl-afk .ai,.rl-artslot .ai{font-size:22px;line-height:1;color:var(--ac,#8fe3ff);min-width:24px;text-align:center}
+.rl-afk .ab{display:flex;flex-direction:column;gap:1px;min-width:0}.rl-afk b em{font-style:normal;color:var(--ac);font-size:11px}
+.rl-afk small{font-size:11.5px;color:var(--muted)}.rl-afk small.am{color:var(--fg);font-weight:700}.rl-afk small.al{opacity:.75}
 .rl-artslots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
 .rl-artslot{display:flex;flex-direction:column;gap:6px;align-items:center;justify-content:center;min-height:70px;padding:8px;border-radius:10px;border:1px dashed var(--line);color:var(--muted)}
 .rl-artslot.full{border:0;padding:0;align-items:stretch}

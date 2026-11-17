@@ -303,6 +303,11 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 70, title: 'Spieler-Idee: Heldenleiste wieder übersichtlich', date: '17.11.2026', items: [
+      'Die Heldenauswahl über dem Fertigkeitenbaum ist wieder eine schmale Leiste zum Wischen – mit vielen Helden war sie zuletzt fälschlich untereinander angeordnet und hat den Baum verdeckt.',
+      'Eine gewählte Unterklasse wird nur noch als kleine Zeile angezeigt; mit „Wechseln“ klappst du die Auswahl auf.',
+      'Auch die Ritterlauf-Kachel im Hub sieht wieder aus wie vorher.',
+    ] },
     { id: 69, title: 'Spieler-Idee: Artefakte', date: '15.11.2026', items: [
       'Ab dem 1. Aufstieg gibt es unter Abenteuer den neuen Reiter Artefakte mit der Artefakt-Prüfung: 8 Wellen samt Boss in 3 Minuten schaffen.',
       'Jeder Sieg kostet ein Prüfungssiegel (höchstens 6, alle 2 Stunden kommt eins nach) und bringt ein Artefakt: Krone, Ring oder Kelch mit ★★★ bis ★★★★★, einem Hauptwert und 2 bis 4 Nebenwerten.',
