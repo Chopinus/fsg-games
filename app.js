@@ -25,6 +25,8 @@ const GAMES = [
     art: '<svg width="96" height="56" viewBox="0 0 96 56" aria-hidden="true"><path d="M20 24h56l-6-16c-1-3-4-4-7-3l-9 3h-12l-9-3c-3-1-6 0-7 3z" fill="#30293f" stroke="#a99fbb" stroke-width="2"/><rect x="10" y="22" width="76" height="6" rx="3" fill="#a99fbb"/><circle cx="34" cy="40" r="9" fill="#15121c" stroke="#ffb547" stroke-width="3"/><circle cx="62" cy="40" r="9" fill="#15121c" stroke="#ffb547" stroke-width="3"/><path d="M43 40h10" stroke="#ffb547" stroke-width="3"/></svg>' },
   { key: 'kniffel', title: 'Kniffel', sub: '5 Würfel, 3 Würfe, 13 Felder · 1–6 Spieler',
     art: [[[0, 2, 4, 6, 8], -10], [[0, 2, 3, 5, 6, 8], 8], [[0, 4, 8], -2]].map(([pips, r]) => `<span class="die mini" style="transform:rotate(${r}deg)">${[...Array(9)].map((_, i) => `<i class="${pips.includes(i) ? 'on' : ''}"></i>`).join('')}</span>`).join('') },
+  { key: 'siedler', title: 'Inselsiedler', sub: 'Siedeln, handeln und bauen auf einer Sechseck-Insel · 2–4 Spieler',
+    art: '<svg width="96" height="56" viewBox="0 0 96 56" aria-hidden="true">' + [[30, 16, '#2f7d3a'], [52, 16, '#e5bf3c'], [19, 35, '#c4622d'], [41, 35, '#93c95a'], [63, 35, '#8b8f9e']].map(([x, y, c]) => `<polygon points="${[0, 1, 2, 3, 4, 5].map(i => { const a = Math.PI / 3 * i - Math.PI / 2; return (x + 12 * Math.cos(a)).toFixed(1) + ',' + (y + 12 * Math.sin(a)).toFixed(1); }).join(' ')}" fill="${c}" stroke="#f1e2bf" stroke-width="1.5"/>`).join('') + '<path d="M36 30v-5l5-4 5 4v5z" fill="#e5484d" stroke="#15121c" stroke-width="1.5"/><circle cx="52" cy="17" r="5" fill="#fbf5e8"/><text x="52" y="20" font-size="8" font-weight="800" text-anchor="middle" fill="#c8242a">8</text></svg>' },
   { key: 'party', title: 'Minispiel-Party', sub: 'Zufällige Minispiele à 1–2 Minuten, Punkte nach Platzierung · 2–12 Spieler',
     art: ['r', 'g', 'b', 'y'].map((c, i) => `<span class="s-${c}" style="width:28px;height:28px;border-radius:8px;display:inline-block;transform:rotate(${i * 9 - 12}deg)"></span>`).join('') },
 ];
@@ -319,6 +321,7 @@ function renderRoom() {
   else if (r.game === 'schach') renderChess(st, r.view);
   else if (r.game === 'vier') renderVier(st, r.view);
   else if (r.game === 'maedn') renderMaedn(st, r.view);
+  else if (r.game === 'siedler') { if (window.Siedler) Siedler.render(st, r.view); }
   else if (r.game === 'party') renderParty(st, r.view);
   else if (r.game === 'welt') { if (window.Welt) Welt.onRoom(r); else openWelt(null, () => { if (room && room.game === 'welt') Welt.onRoom(room); }); }
   else if (r.game === 'casino') { if (window.Casino) { Casino.closeLobby(); Casino.render(st, r.view); } else loadCasino(() => { if (room && room.game === 'casino') renderRoom(); }); }

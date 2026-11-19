@@ -18,6 +18,7 @@ const GAMES = {
   slf: require('./slf.js'),
   spion: require('./spion.js'),
   kniffel: require('./kniffel.js'),
+  siedler: require('./siedler.js'),
   casino: require('./casino.js'),
   welt: require('./welt_mp.js'),
 };
@@ -97,7 +98,7 @@ const IDLE_MS = 30 * 60 * 1000; // Räume ohne verbundene Spieler verschwinden n
 
 const STATIC = {
   '/': 'index.html', '/index.html': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css',
-  '/mini.js': 'mini.js', '/ritter.js': 'ritter.js', '/spiele2.js': 'spiele2.js', '/welt.js': 'welt.js', '/casino_ui.js': 'casino_ui.js', '/insel.js': 'insel.js', '/ideen.js': 'ideen.js', '/dungeon.html': 'dungeon.html', '/freunde.js': 'freunde.js', '/wortle_ui.js': 'wortle_ui.js',
+  '/mini.js': 'mini.js', '/ritter.js': 'ritter.js', '/spiele2.js': 'spiele2.js', '/welt.js': 'welt.js', '/casino_ui.js': 'casino_ui.js', '/insel.js': 'insel.js', '/ideen.js': 'ideen.js', '/dungeon.html': 'dungeon.html', '/freunde.js': 'freunde.js', '/wortle_ui.js': 'wortle_ui.js', '/siedler_ui.js': 'siedler_ui.js',
 };
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
 
