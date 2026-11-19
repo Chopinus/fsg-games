@@ -1977,6 +1977,26 @@
     }
     return c;
   }
+  // Spieler-Idee (v44): ab dem 7. Aufstieg einen ganzen Helden komplett maxen – erst alle normalen Fertigkeiten und
+  // Schlüssel (solange Schlüsselsockel frei sind) samt Siegelbaum, danach die Endlos-Fertigkeiten. Gleiche Kosten wie Einzelkäufe.
+  const FULLMAX_ASC = 7;
+  const fullMaxOpen = S => (S.asc || 0) >= FULLMAX_ASC;
+  function buyFullTree(S, tree) {
+    if (!fullMaxOpen(S)) return 0;
+    let c = 0;
+    for (const inf of [false, true]) {
+      while (c < 40000) {
+        let best = null, bv = Infinity;
+        for (const n of NODES) {
+          if (n.tree !== tree || (n.kind === 'inf') !== inf || !canBuy(S, n)) continue;
+          const k = nodeCost(S, n), v = k.g / Math.max(1, S.gold) + k.s / Math.max(1, S.souls);
+          if (v < bv) { bv = v; best = n; }
+        }
+        if (!best || !buy(S, best)) break; c++;
+      }
+    }
+    return c;
+  }
   // Seelenaltar: Gold opfern für einen dauerhaften Seelen-Multiplikator (bleibt bei Wiedergeburt und Aufstieg)
   const ALTAR_MAX = 25, ALTAR_STEP = 0.15;
   const altarCost = L => Math.ceil(25000 * Math.pow(3, L));
@@ -3162,7 +3182,7 @@
 
   const core = { RAR, RAR_COL, GEAR_SLOTS, TINTS, HERO_SETS, DECO_SLOTS, ITEMS, TROPHY_N, BSET_AT, itemOf, invN, invAdd, invUsed, invFree, equipGear, setDeco, chestRoll, chestCount, openChest, trophyRoll, bsetCount, bsetAdd, CHEST, TROPHY, TRIPS, TRIP_SHARE, onTrip, tripLeft, rateOf, noteRate, hoursReward, tripReward, startTrip, claimTrip, WB, WB_BOSS, wbScore, wbBarReward, wbBarSecs, wbGoalHours, wbReward, GACHA, G_FIVE, G_FOUR, CONS_H, consList, consApply, evtBanner, evtPeriod, starSock, gachaOpen, evtOpen, gemOpen, gemBossFirst, GIFT_PULLS, consOf, bannerOf, gachaPull, GEM_SRC, LOGIN, loginItem, loginToday, claimLogin, BOUNTY, bountiesOf, bountyDone, bountyClaim, ahnLike, AHN_MISSIONS, AHN_ABIL, AHN_MECH, AHN_BOONS, ahnRollBoons, ahnPickBoon, ahnBoonText, ahnApplyBoons, AHN_TRAIT, AHNE, AHN_TUNE, AHN_COUNT, ahnOpen, ahnBossesOf, ahnLevelFor, placeSigil, ahnClaim, unrebirth, transmute, bossRuneTier, resetPerks, buyLager, lagerCost, LAGER_MAX, runeCap, shardOf, mergeCost, ALTAR_MAX, altarCost, altarMul, buyAltar, kSlots, kFree, keyCap, addSock, removeSock, removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, splTrade, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
     SEASON, rankOf, RANKS, rankBonus, AREAS, areaOf, MISSIONS, extraSocks, XSOCK, sockOk, runeAmp, mastInfo, mastLevel, SKINS, WF_STAGE, WF, wfSpawn,
-    sigOn, sig2On, sig2Open, placeSigil2, SIG2_ASC, SIG2_ID, sigActCap, sigKeysUsed, keyNeed, eqOf, slotLim, SIG, SIG_FLAGS, newRun, step, stats, buy, available, blockReason, NODE, migrate, fresh,
+    sigOn, sig2On, sig2Open, buyFullTree, fullMaxOpen, FULLMAX_ASC, placeSigil2, SIG2_ASC, SIG2_ID, sigActCap, sigKeysUsed, keyNeed, eqOf, slotLim, SIG, SIG_FLAGS, newRun, step, stats, buy, available, blockReason, NODE, migrate, fresh,
     rebirth, ascend, crownsFor, buyCperk, cperkCost, cperk, CPERKS, levelComp, toggleComp, compCost, compMax, compSlots, COMPS, checkAch, ACH, claimWeekly, weekId, dayId, weekRules, RULE, WEEK_TIERS, statsFor, starsFor, toggleEquip, slotsOf, hired, classOpen, keysUsed, keyLimit, capOf, reqOf, feature, encode, decode, fmt, socket, unsocket, merge, canMerge, dismantle, buyRune, runeVal, addRune, arteClaim, artMake, artEquip, artReroll, artDestroy, artToggleLock, artBonus, artRefill, ARTE, TRAITS, SUBS, subOf, pickSub, subOpen, fieldSlots };
   if (typeof module !== 'undefined') { module.exports = core; return; }
   // ---------- Automatische Updates ----------

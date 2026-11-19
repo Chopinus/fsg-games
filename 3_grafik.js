@@ -303,6 +303,14 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 81, title: 'Spieler-Idee: Ganzen Helden komplett maxen', date: '19.11.2026', items: [
+      'Ab dem 7. Aufstieg gibt es oben im Heldenreiter neben ⏫ Max den Knopf 👑 Alles: Er kauft für diesen Helden alles, was Gold, Seelen und Sockel hergeben – auch Schlüssel (solange Schlüsselsockel frei sind) und den Siegelbaum, wenn ein Ahnensiegel gesetzt ist.',
+      'Zuerst werden alle normalen Fertigkeiten und Schlüssel gekauft, erst danach die Endlos-Fertigkeiten. Die Kosten sind genau dieselben wie bei Einzelkäufen. Zur Sicherheit muss man zweimal tippen.',
+    ] },
+    { id: 80, title: 'Fehler behoben: Runen ab Stufe XI waren grau', date: '19.11.2026', items: [
+      'Runen der Stufen XI bis XV wurden in den drei Hauptsockeln grau angezeigt, als würden sie nicht wirken. Sie haben aber immer voll gewirkt – jetzt werden sie auch normal farbig angezeigt.',
+      'Grau sind nur noch Runen in Zusatz-Sockeln, deren Stufe für diesen Sockel zu hoch ist.',
+    ] },
     { id: 79, title: 'Casino: Neustart schon heute', date: '17.11.2026', items: [
       'Der erste Casino-Neustart findet sofort statt statt erst am Montag: Deine eigenen Jetons (ohne Bankschulden) werden 1:1 zu Glanzmarken, danach startest du mit 10.000 Jetons ohne Schulden.',
       'Damit kannst du ab sofort im Shop einkaufen. Die Wochen-Rangliste beginnt neu, die Allzeit-Rangliste bleibt. Ab dann geht es wie geplant jeden Montag weiter.',
