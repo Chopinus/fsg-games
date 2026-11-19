@@ -208,7 +208,9 @@ const Sound = (() => {
   };
   return { init, sfx, setVol: v => { vol = v; if (master) master.gain.value = v; }, get vol() { return vol; } };
 })();
-const sfx = (n, ...a) => { try { Sound.sfx[n] && Sound.sfx[n](...a); } catch (e) {} };
+// Koop: Der Gastgeber schneidet Töne, Partikel-Stöße und Schadenszahlen mit und schickt sie den Gästen
+const CoopTap = { on: false, sfx: [], burst: [], num: [] };
+const sfx = (n, ...a) => { if (CoopTap.on && CoopTap.sfx.length < 10) CoopTap.sfx.push(a[0] !== undefined ? n + '|' + a[0] : n); try { Sound.sfx[n] && Sound.sfx[n](...a); } catch (e) {} };
 
 /* =====================================================================
    MODUL 3: PIXEL-SPRITES – alle Grafiken werden aus Zeichen-Rastern erzeugt
@@ -626,7 +628,7 @@ class MockSocialService extends SocialService {
   resetReady() { this.party.members.forEach(m => m.ready = m.id !== 'me'); this.emit('party', this.party); }
 }
 // Im Game Hub: echte Freunde (Online-Status, Chat, Einladungen) über freunde.js vom Hub-Server
-const FR_READY = IN_HUB ? new Promise(res => { const s = document.createElement('script'); s.src = '/freunde.js?v=3'; s.onload = () => res(!!window.Freunde); s.onerror = () => res(false); document.head.appendChild(s); }) : Promise.resolve(false);
+const FR_READY = IN_HUB ? new Promise(res => { const s = document.createElement('script'); s.src = '/freunde.js?v=4'; s.onload = () => res(!!window.Freunde); s.onerror = () => res(false); document.head.appendChild(s); }) : Promise.resolve(false);
 class HubSocialService extends MockSocialService {
   async connect(me) {
     this.me = me; this.friends = []; this.hub = true;
@@ -635,16 +637,24 @@ class HubSocialService extends MockSocialService {
     this.emit('party', this.party);
     const ok = await FR_READY; if (!ok) return;
     Freunde.init({ where: 'Dungeon', pos: 'bl', games: () => ['Dungeon'],
-      onAccept: inv => this.emit('toast', inv.game === 'Dungeon' ? 'Du bist der Dungeon-Party von ' + inv.from + ' beigetreten – du kämpfst im Run von ' + inv.from + ' als Begleiter mit.' : inv.from + ' wartet im Game Hub: ' + inv.game) });
+      onAccept: inv => { if (inv.game === 'Dungeon') Coop.join(inv.from); else this.emit('toast', inv.from + ' wartet im Game Hub: ' + inv.game); } });
     Freunde.on('change', () => { this.sync(); this.emit('friends', this.friends); });
+    Freunde.on('dg', m => Coop.onMsg(m.from, m.d)); // Koop-Spieldaten
+    // Spieler-Idee v47: Wer annimmt, spielt wirklich mit (eigene Figur) – kein Bot mehr. Bis seine Daten da sind, steht er als „tritt bei“ in der Party.
     Freunde.on('answer', m => { if (m.game !== 'Dungeon') return; const f = this.friends.find(x => x.id === m.from); if (f) f.pending = false;
-      if (m.ok && this.party.members.length < 4 && !this.party.members.some(x => x.id === m.from)) {
-        const cls = Object.keys(ARMOR_CLASS), wps = Object.keys(WEAPONS);
-        this.party.members.push({ id: m.from, name: m.from, level: Profile.data.level, ready: true, look: { helm: pick([null, ...cls]), chest: pick(cls), pants: pick(cls), boots: pick(cls), skin: rint(0, 3) }, weapon: pick(wps) });
-        this.emit('toast', m.from + ' ist deiner Party beigetreten!'); this.emit('party', this.party); }
+      if (m.ok && Coop.role !== 'guest' && this.party.members.length < 4 && !this.party.members.some(x => x.id === m.from)) {
+        this.party.members.push({ id: m.from, name: m.from, level: Profile.data.level, ready: false, remote: true, online: false, addedAt: Date.now(), look: {}, weapon: 'sword' });
+        this.emit('toast', m.from + ' tritt deiner Party bei …'); this.emit('party', this.party); }
       this.emit('friends', this.friends); });
+    clearInterval(this._pulse); this._pulse = setInterval(() => Coop.hostPulse(), 1000);
     this.sync(); this.emit('friends', this.friends);
+    // Einladung im Game Hub angenommen → Seite wurde mit #koop=Name geöffnet
+    const km = /[#&]koop=([^&]+)/.exec(location.hash);
+    if (km) { try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} let n = ''; try { n = decodeURIComponent(km[1]); } catch (e) {} if (n) Coop.join(n.slice(0, 20)); }
   }
+  async kick(id) { const m = this.party.members.find(x => x.id === id); if (m && m.remote) Coop.send(id, { k: 'kick' }); return super.kick(id); }
+  async leave() { const to = Coop.remotes().map(m => m.id); if (to.length) Coop.send(to, { k: 'bye' }); return super.leave(); }
+  resetReady() { this.party.members.forEach(m => m.ready = m.id !== 'me' && (!m.remote || !!m.online)); this.emit('party', this.party); }
   sync() { if (!window.Freunde) return; const old = new Map((this.friends || []).map(f => [f.id, f]));
     this.friends = Freunde.list().map(f => ({ id: f.name, name: f.name, level: '', status: f.online ? 'online' : 'offline', where: f.where || '', pending: old.has(f.name) && old.get(f.name).pending, look: {}, weapon: 'sword' })); }
   async getFriends() { await FR_READY; this.sync(); return this.friends; }
@@ -652,12 +662,394 @@ class HubSocialService extends MockSocialService {
     const f = this.friends.find(x => x.id === id);
     if (!f || this.party.members.length >= 4 || this.party.members.some(m => m.id === id)) return { ok: false, msg: 'Party ist voll.' };
     if (f.status !== 'online') return { ok: false, msg: f.name + ' ist offline.' };
-    f.pending = true; Freunde.invite(f.name, 'Dungeon'); this.emit('friends', this.friends);
+    f.pending = true; (this.invitedAt = this.invitedAt || {})[f.name] = Date.now(); Freunde.invite(f.name, 'Dungeon'); this.emit('friends', this.friends);
     setTimeout(() => { if (f.pending) { f.pending = false; this.emit('friends', this.friends); } }, 40000);
     return { ok: true };
   }
 }
 const Social = IN_HUB ? new HubSocialService() : new MockSocialService();
+
+/* =====================================================================
+   MODUL 7b: KOOP (Spieler-Idee v47) – echte Mitspieler statt KI-Begleiter
+   Der Gastgeber rechnet das ganze Spiel (Gegner, Schaden, Beute). Gäste laufen selbst
+   (ihre Position prüft der Gastgeber auf Tempo und Wände) und schicken Angriff, Fähigkeit,
+   Zauber, Tränke und Interaktionen. Der Gastgeber schickt ~12 Schnappschüsse pro Sekunde
+   (Figuren, Gegner, Geschosse, Effekte, Raum und Karte); der Gast gleicht sie weich an.
+   Übertragung: Hub-Verbindung aus freunde.js – der Server reicht nur zwischen Freunden weiter.
+   ===================================================================== */
+const COOP_HZ = 12, COOP_IN_HZ = 15;
+const r1 = v => Math.round(v * 10) / 10, r2 = v => Math.round(v * 100) / 100;
+const FX_KEYS = ['type', 'x', 'y', 'r', 'max', 'speed', 't', 'dur', 'col', 'arc', 'range', 'a', 'heavy', 'crit', 'thick', 'elite', 'meteor', 'root', 'rock', 'fire', 'lava', 'rar', 'n', 'pts', 'it', 'team'];
+const Coop = {
+  role: null,               // 'host' (Gastgeber im Run) | 'guest' (spielt bei einem Freund mit) | null
+  host: null, gotLobby: false, hostRun: false, lobby: [], lastRx: 0, joinT: 0, iv: null, q: {}, inT: 0, rid: -1, roomMismatch: 0, hidx: [], ents: new Map(),
+  snapT: 0, roomSeq: 0, nid: 0, objSig: '', mapSig: '', blSig: '', msgSent: null, pulseN: 0,
+  send(to, d) { return !!(window.Freunde && Freunde.dg && Freunde.dg(to, d)); },
+  remotes() { return Social.party && Social.hub ? Social.party.members.filter(m => m.remote) : []; },
+  liveNames() { return this.remotes().filter(m => m.online).map(m => m.id).slice(0, 3); },
+  live() { return this.role === 'host' && Run.active && !Run.ended && Run.heroes.some(h => h.remote && !h.bot); },
+  onMsg(from, d) { if (!d || typeof d.k !== 'string' || typeof from !== 'string') return; if (this.role === 'guest') this.guestMsg(from, d); else this.hostMsg(from, d); },
+
+  /* ---------- Gastgeber ---------- */
+  hostPulse() { // jede Sekunde: Verbindungen prüfen, Gäste in der Lobby auf dem Laufenden halten
+    if (this.role === 'guest' || !Social.party) return;
+    const now = Date.now(), P = Social.party; let ch = false;
+    for (const m of this.remotes()) {
+      if (!m.lastRx && now - (m.addedAt || 0) > 30000) { P.members.splice(P.members.indexOf(m), 1); toast(m.name + ' ist nicht beigetreten.'); ch = true; continue; }
+      const on = !!m.lastRx && now - m.lastRx < 8000;
+      if (m.online !== on) { m.online = on; if (!Run.active) m.ready = on; ch = true; }
+    }
+    if (ch) Social.emit('party', P);
+    if ((!Run.active || Run.ended) && this.pulseN++ % 2 === 0) { const to = this.liveNames(); if (to.length) this.send(to, this.lobbyMsg()); }
+  },
+  lobbyMsg() { return { k: 'lobby', run: Run.active && !Run.ended, party: Social.party.members.map(m => ({ n: m.id === 'me' ? Profile.data.name : m.name, l: m.level, look: m.look || {}, r: !!m.ready, h: m.id === 'me' ? 1 : 0 })) }; },
+  hostMsg(from, d) {
+    const P = Social.party; if (!P || !Social.hub) return;
+    let m = P.members.find(x => x.id === from && x.remote); const now = Date.now();
+    if (d.k === 'hello') {
+      if (!m) { // nur wer gerade eingeladen wurde, darf beitreten
+        const inv = (Social.invitedAt || {})[from];
+        if (!inv || now - inv > 180e3) return; // (die Zusage kann noch unterwegs sein – der Gast fragt jede Sekunde erneut)
+        if (P.members.length >= 4) { this.send(from, { k: 'nope', msg: 'Die Party ist schon voll.' }); return; }
+        m = { id: from, name: from, remote: true, level: 1, look: {}, weapon: 'sword', ready: false, addedAt: now }; P.members.push(m);
+      }
+      const first = !m.lastRx; this.applyMe(m, d.me || {}); m.lastRx = now; m.online = true; if (!Run.active || Run.ended) m.ready = true;
+      if (first) toast(m.name + ' ist deiner Party beigetreten – und spielt selbst!');
+      Social.emit('party', P); Social.emit('friends', Social.friends);
+      this.send(from, this.lobbyMsg());
+      if (this.role === 'host' && Run.active && !Run.ended && Run.heroes.some(h => h.id === from)) this.sendStart([from]); // nach Verbindungsabbruch wieder einsteigen
+      return;
+    }
+    if (!m) return;
+    m.lastRx = now; if (!m.online) { m.online = true; if (!Run.active) m.ready = true; Social.emit('party', P); }
+    if (d.k === 'in') { const h = Run.active && !Run.ended && Run.heroes.find(x => x.id === from && x.remote); if (h) this.applyInput(h, d); return; }
+    if (d.k === 'sync') { if (this.role === 'host' && Run.active && !Run.ended && Run.heroes.some(x => x.id === from)) this.sendStart([from]); return; }
+    if (d.k === 'bye') {
+      if (Run.active && !Run.ended) { m.online = false; m.lastRx = 1; } else P.members.splice(P.members.indexOf(m), 1);
+      toast(m.name + ' hat die Party verlassen.'); Social.emit('party', P); Social.emit('friends', Social.friends);
+    }
+  },
+  // Daten des Gasts übernehmen – alles prüfen, damit kaputte Werte das Spiel nicht stören
+  applyMe(m, me) {
+    const s = (v, n) => String(v ?? '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, n), int = (v, a, b, d) => clamp(Math.floor(+v) || d, a, b);
+    const cls = k => (typeof k === 'string' && ARMOR_CLASS[k] ? k : null), L = me.look && typeof me.look === 'object' ? me.look : {};
+    m.name = s(me.name, 14) || m.id; m.level = int(me.level, 1, 99, 1);
+    m.look = { hero: HEROES[L.hero] ? L.hero : 'ritter', helm: cls(L.helm), chest: cls(L.chest), pants: cls(L.pants), boots: cls(L.boots), skin: int(L.skin, 0, 3, 0) };
+    m.weapon = WEAPONS[me.weapon] ? me.weapon : 'sword'; m.pots = int(me.pots, 0, POTION_MAX + 3, 0);
+    m.hero = HEROES[me.hero] ? me.hero : 'ritter'; m.heroLvl = int(me.heroLvl, 1, HERO_MAX, 1);
+    m.hotbar = [0, 1, 2, 3].map(i => { const it = Array.isArray(me.hotbar) && me.hotbar[i]; return it && typeof it === 'object' && it.slot === 'spell' && SPELLS[it.spell] && RARITY[it.rarity] ? it : null; });
+    m.gear = null; m.arts = null;
+    const g = me.gear;
+    if (g && typeof g === 'object') try {
+      const ok = (it, slot) => !it || (typeof it === 'object' && it.slot === slot && RARITY[it.rarity] && (slot === 'weapon' ? !!WEAPONS[it.type] : slot === 'jewel' ? true : !!ARMOR_CLASS[it.cls]));
+      const eq = {}; for (const k of ['weapon', 'helm', 'chest', 'pants', 'boots', 'jewel']) { if (!ok(g[k], k)) throw new Error('Gegenstand'); eq[k] = g[k] || null; }
+      if (!eq.weapon) throw new Error('Waffe');
+      const fine = st => [st.maxHp, st.dmg, st.moveSpeed, st.cd, st.def, st.mana].every(Number.isFinite) && st.maxHp > 0 && st.cd > 0;
+      let arts = me.arts && typeof me.arts === 'object' && !Array.isArray(me.arts) ? me.arts : null, st = null;
+      if (arts) try { st = heroStats(eq, m.level, m.hero, m.heroLvl, arts); if (!fine(st)) throw 0; } catch (e) { arts = null; st = null; }
+      if (!st) st = heroStats(eq, m.level, m.hero, m.heroLvl, null);
+      if (!fine(st)) throw new Error('Werte');
+      itemIcon(eq.weapon); m.gear = eq; m.arts = arts; m.weapon = eq.weapon.type;
+    } catch (e) { m.gear = null; m.arts = null; } // dann bekommt er passende Ausrüstung zu seinem Level
+  },
+  heroInfo(h) { return { id: h.id === 'me' ? (Freunde.me() || Profile.data.name) : h.id, n: h.baseName || h.name, l: h.level, look: h.look || {}, w: h.equip.weapon, hero: h.st.hero, hl: h.st.heroLvl, ms: r1(h.st.moveSpeed), cd: r2(h.st.cd), cdr: h.st.cdr || 0, mana: Math.round(h.st.mana) }; },
+  sendStart(to) {
+    this.send(to, { k: 'start', run: { d: Run.dungeonId, diff: Run.diff || 0, mod: Run.mod || null, daily: !!Run.daily, stage: Run.stage, party: Run.party }, heroes: Run.heroes.map(h => this.heroInfo(h)) });
+    if (Run.room) this.send(to, this.roomMsg());
+  },
+  onStart() {
+    if (this.role === 'guest' || !this.remotes().length) { this.role = null; CoopTap.on = false; return; }
+    this.role = 'host'; CoopTap.on = true; CoopTap.sfx.length = CoopTap.burst.length = CoopTap.num.length = 0;
+    this.snapT = 0; this.blSig = ''; this.msgSent = null;
+    if (!Run.room._cid) Run.room._cid = ++this.roomSeq;
+    const to = this.liveNames(); if (to.length) this.sendStart(to);
+  },
+  onRoom() {
+    if (this.role !== 'host' || !Run.room) return;
+    Run.room._cid = ++this.roomSeq;
+    for (const h of Run.heroes) if (h.remote) { h.tp = (h.tp || 0) + 1; if (h.rin) h.rin.q = {}; } // Gäste übernehmen die neue Startposition
+    const to = this.liveNames(); if (to.length) this.send(to, this.roomMsg());
+  },
+  objsOut(objs) { return JSON.parse(JSON.stringify(objs, (k, v) => k === 'last' ? undefined : k === 'lit' ? (v === Infinity ? 999 : r1(v)) : v)); },
+  objSigOf(r) { return JSON.stringify(r.objs, (k, v) => ['t', 'last', 'slide', 'openT', 'end'].includes(k) ? undefined : k === 'lit' ? (v > 0 ? 1 : 0) : v) + '|' + !!r.cleared + !!r.solved + r.trial; },
+  mapOut() { return { st: Run.stage, l: Run.dungeon.list.map(r => [r.gx, r.gy, r.type, (r.known ? 1 : 0) | (r.visited ? 2 : 0) | (r.cleared ? 4 : 0) | (r.trial === 'done' ? 8 : 0), Object.keys(r.doors).filter(k => r.doors[k]).join('')]) }; },
+  roomMsg() {
+    const r = Run.room, skip = new Set(['bg', 'decals', 'doors', 'theme', 'pal', 'sparkles', 'waves', '_cid', 'objs']), room = {};
+    for (const [k, v] of Object.entries(r)) if (!skip.has(k) && typeof v !== 'function') room[k] = v;
+    room.objs = this.objsOut(r.objs); room.dr = Object.keys(r.doors).filter(k => r.doors[k]).join('');
+    this.objSig = this.objSigOf(r); const map = this.mapOut(); this.mapSig = JSON.stringify(map);
+    return { k: 'room', id: r._cid, room, map };
+  },
+  fxOut(f) { const o = {}; for (const k of FX_KEYS) if (f[k] !== undefined && typeof f[k] !== 'function') o[k] = typeof f[k] === 'number' ? r2(f[k]) : f[k]; if (o.pts) o.pts = o.pts.map(q => ({ x: r1(q.x), y: r1(q.y) })); return o; },
+  snap() {
+    const r = Run.room, s = { k: 's', ri: r._cid, t: r2(Run.time), g: Math.round(Run.gold), lk: Run.locked ? 1 : 0, le: Run.lockExcept || 0 };
+    if (Run.shake > .5) s.sh = r1(Run.shake); if (Run.fade > 0) s.fd = r2(Run.fade);
+    s.h = Run.heroes.map(h => [r1(h.x), r1(h.y), r2(h.aim), (h.moving ? 1 : 0) | (h.downed ? 2 : 0) | (h.out ? 4 : 0) | (h.dodgeT > 0 ? 8 : 0) | (h.inv > 0 ? 16 : 0) | (h.hurtFlash > 0 ? 32 : 0) | (h.guardT > 0 ? 64 : 0) | (h.veilT > 0 ? 128 : 0) | (h.slowT > 0 ? 256 : 0) | (h.face < 0 ? 512 : 0) | (h.bot ? 1024 : 0),
+      Math.max(0, Math.ceil(h.hp)), Math.round(h.st.maxHp), Math.round(h.mana), r1(h.bleed), r2(h.revive), h.swing ? [r2(h.swing.t), r2(h.swing.dur)] : 0, h.tp || 0, r2(heroSpeedMult(h) * (h.swing && h.st.W.aoe ? .6 : 1)), r1(h.st.moveSpeed)]);
+    s.c = {}; Run.heroes.forEach((h, i) => { if (!h.remote) return; const k = h.kbo || { x: 0, y: 0 };
+      s.c[i] = [r2(Math.max(0, h.atkCd)), r2(Math.max(0, h.abCd || 0)), r2(Math.max(0, h.potCd || 0)), h.spellCd.map(v => r1(Math.max(0, v))), h.pots || 0, r1(k.x), r1(k.y), r2(Math.max(0, h.abFlash || 0))]; k.x = k.y = 0; });
+    s.e = Run.enemies.filter(e => !e.dead).map(e => { if (!e.nid) e.nid = ++this.nid; return [e.nid, e.type, r1(e.x), r1(e.y), Math.max(0, Math.ceil(e.hp)), Math.round(e.maxHp), (e.flash > 0 ? 1 : 0) | (e.frozen > 0 ? 2 : 0) | (e.burn > 0 ? 4 : 0) | (e.boss ? 8 : 0) | (e.mini ? 16 : 0) | (e.face < 0 ? 32 : 0), e.state, r2(Math.max(0, e.spawnT || 0)), e.elite || 0, e.phase || 0, r2(e.scale || 1), e.r, r2(e.atkA || e.chA || 0), r2(e.t || 0)]; });
+    s.p = Run.projs.map(p => [r1(p.x), r1(p.y), Math.round(p.vx), Math.round(p.vy), p.kind, p.r, p.col, r2(p.life)]);
+    s.co = Run.coins.map(c => [r1(c.x), r1(c.y), r1(c.z)]);
+    const fx = Run.fx.filter(f => !f._s); if (fx.length) s.fx = fx.map(f => { f._s = 1; return this.fxOut(f); });
+    if (CoopTap.num.length) s.n = CoopTap.num.splice(0);
+    if (CoopTap.burst.length) s.b = CoopTap.burst.splice(0);
+    if (CoopTap.sfx.length) s.sf = [...new Set(CoopTap.sfx.splice(0))];
+    if (Run.msg && Run.msg !== this.msgSent) { this.msgSent = Run.msg; s.m = [Run.msg.text, Run.msg.sub, Run.msg.dur, Run.msg.col, r2(Run.msg.t)]; }
+    const os = this.objSigOf(r); if (os !== this.objSig) { this.objSig = os; s.o = { objs: this.objsOut(r.objs), cl: !!r.cleared, so: !!r.solved, tr: r.trial || null }; }
+    const mo = this.mapOut(), ms = JSON.stringify(mo); if (ms !== this.mapSig) { this.mapSig = ms; s.map = mo; }
+    const bl = Run.blessings.join(','); if (bl !== this.blSig) { this.blSig = bl; s.bl = Run.blessings.slice(); }
+    return s;
+  },
+  hostTick(dt) {
+    if (this.role !== 'host' || !Run.active || !Run.room) return;
+    const now = Date.now();
+    for (const h of Run.heroes) if (h.remote) { // Verbindung weg → KI übernimmt (sichtbar als „(KI)“), kommt er zurück, steuert er wieder selbst
+      const m = this.remotes().find(x => x.id === h.id), on = !!m && now - (m.lastRx || 0) < 4000;
+      if (on === !!h.bot) { h.bot = !on; h.name = h.baseName + (h.bot ? ' (KI)' : ''); h.rin = null; h.tp = (h.tp || 0) + 1; if (h.bot) banner('', h.baseName + ' hat die Verbindung verloren – die KI übernimmt', 2, '#ff8a7a'); }
+    }
+    if (Run.ended) return;
+    this.snapT -= dt; if (this.snapT > 0) return; this.snapT += 1 / COOP_HZ; if (this.snapT < 0) this.snapT = 0;
+    const to = this.liveNames();
+    if (!to.length) { CoopTap.sfx.length = CoopTap.burst.length = CoopTap.num.length = 0; for (const f of Run.fx) f._s = 1; return; }
+    const s = this.snap(); let len = JSON.stringify(s).length; // höchstens 16 KB pro Nachricht (Server-Grenze)
+    if (len > 14500) { delete s.b; delete s.n; if (s.fx) s.fx = s.fx.filter(f => f.type !== 'itempop'); s.p = s.p.slice(0, 80); len = JSON.stringify(s).length; }
+    if (len > 14500) { s.p = s.p.slice(0, 25); s.e = s.e.slice(0, 30); delete s.fx; delete s.o; this.objSig = ''; }
+    this.send(to, s);
+  },
+  // Eingaben eines Gasts: Position (mit Tempo- und Wandprüfung), Blickrichtung, Aktionen
+  applyInput(h, d) {
+    const I = h.rin || (h.rin = { q: {}, at: 0, aim: h.aim }), now = performance.now(), q = d.q && typeof d.q === 'object' ? d.q : {};
+    if (Number.isFinite(+d.a)) I.aim = +d.a; I.mv = !!d.mv; I.atk = !!d.at; I.hold = !!d.ho;
+    for (const k of ['dg', 'at', 'ab', 'po', 'it']) if (q[k]) I.q[k] = 1;
+    if (Array.isArray(q.sp)) for (const i of q.sp.slice(0, 4)) if (i >= 0 && i < 4) (I.q.sp = I.q.sp || []).push(i | 0);
+    const el = clamp((now - (I.at || now)) / 1000, .02, .5); I.at = now;
+    if (h.bot || h.downed || h.out || d.tp !== (h.tp || 0) || !Number.isFinite(+d.x) || !Number.isFinite(+d.y)) return;
+    let dx = d.x - h.x, dy = d.y - h.y; const dist = Math.hypot(dx, dy), max = h.st.moveSpeed * heroSpeedMult(h) * 1.5 * el + 40;
+    if (dist > max) { dx *= max / dist; dy *= max / dist; }
+    const n = Math.max(1, Math.ceil(Math.hypot(dx, dy) / 4)); for (let i = 0; i < n; i++) moveEnt(h, dx / n, dy / n);
+  },
+  onEnd(kind, gold, lost) {
+    if (this.role !== 'host') return;
+    for (const h of Run.heroes) if (h.remote) { const m = this.remotes().find(x => x.id === h.id); if (m) m.pots = h.pots; }
+    for (const n of this.liveNames()) { const h = Run.heroes.find(x => x.id === n);
+      this.send(n, { k: 'end', kind, gold, lost, xp: Run.xp, stage: Run.stage, kills: Run.kills, rooms: Run.roomsSeen, total: Run.dungeon.list.length, time: r1((performance.now() - Run.startTime) / 1000), found: Run.found.length, pots: h ? h.pots : null }); }
+    CoopTap.on = false; setTimeout(() => { if (this.role === 'host' && Run.ended) this.role = null; }, 2000);
+  },
+
+  /* ---------- Gast ---------- */
+  join(host) {
+    if (!Social.hub || !host) return;
+    if (!window.Freunde || !Freunde.loggedIn()) { toast('Melde dich im Game Hub mit deinem Konto an, um mitzuspielen.'); return; }
+    if (host === Freunde.me()) return;
+    if (Run.active && !Run.coopGuest) { toast('Du bist gerade in einem Run. Beende ihn zuerst und lass dich dann noch einmal einladen.'); return; }
+    if (this.role === 'guest' && this.host !== host) this.send(this.host, { k: 'bye' });
+    if (Run.coopGuest) { Run.active = false; Run.coopGuest = false; Run.room = null; Run.heroes = []; Touch.update(); }
+    if (this.remotes().length) Social.leave(); // eigene Party auflösen
+    this.role = 'guest'; this.host = host; this.gotLobby = false; this.hostRun = false; this.lobby = []; this.joinT = this.lastRx = Date.now();
+    clearInterval(this.iv); this.iv = setInterval(() => this.guestPulse(), 1000);
+    this.sendHello(); UI.show('coopWait');
+  },
+  sendHello() {
+    const d = Profile.data, me = { name: d.name, level: d.level, look: Profile.look(), weapon: d.equip.weapon ? d.equip.weapon.type : 'sword', hero: d.hero, heroLvl: Profile.hero().lvl, gear: d.equip, arts: d.artEq, hotbar: d.hotbar, pots: d.potions }, msg = { k: 'hello', me };
+    if (JSON.stringify(msg).length > 14000) delete me.arts; if (JSON.stringify(msg).length > 14000) delete me.gear;
+    this.send(this.host, msg);
+  },
+  guestPulse() {
+    if (this.role !== 'guest') { clearInterval(this.iv); return; }
+    const now = Date.now();
+    if (!this.gotLobby) { if (now - this.joinT > 16000) return this.leave(this.host + ' ist gerade nicht im Dungeon. Er muss dich aus dem Dungeon heraus einladen.', false); this.sendHello(); return; }
+    if (now - this.lastRx > 9000) return this.leave('Die Verbindung zu ' + this.host + ' ist abgebrochen.', false);
+    if (!Run.coopGuest) this.send(this.host, { k: 'ping' });
+    else if (this.roomMismatch && now - this.roomMismatch > 1500) { this.roomMismatch = now; this.send(this.host, { k: 'sync' }); }
+  },
+  leave(msg, tell = true) {
+    if (this.role !== 'guest') return;
+    if (tell) this.send(this.host, { k: 'bye' });
+    this.role = null; clearInterval(this.iv); this.gotLobby = false;
+    if (Run.coopGuest) { Run.active = false; Run.coopGuest = false; Run.room = null; Run.heroes = []; Touch.update(); }
+    const ps = document.getElementById('pauseScr'); if (ps) ps.remove(); Run.paused = false;
+    if (msg) toast(msg);
+    UI.show('lobby');
+  },
+  guestMsg(from, d) {
+    if (from !== this.host) return;
+    this.lastRx = Date.now();
+    if (d.k === 'lobby') { this.gotLobby = true; this.hostRun = !!d.run; this.lobby = Array.isArray(d.party) ? d.party.slice(0, 4) : []; if (!Run.active && UI.cur && UI.cur[0] === 'coopWait') UI.refresh(); return; }
+    if (d.k === 'nope' || d.k === 'kick' || d.k === 'bye') return this.leave(d.k === 'nope' ? String(d.msg || 'Beitreten nicht möglich.').slice(0, 120) : d.k === 'kick' ? 'Du wurdest aus der Party entfernt.' : this.host + ' hat die Party aufgelöst.', false);
+    if (d.k === 'start') return this.gStart(d);
+    if (!Run.coopGuest || !Run.active) return;
+    if (d.k === 'room') return this.gRoom(d);
+    if (d.k === 's') return this.gSnap(d);
+    if (d.k === 'end') return this.gEnd(d);
+  },
+  gHero(x, isMe) {
+    const w = x.w && typeof x.w === 'object' && WEAPONS[x.w.type] && RARITY[x.w.rarity] ? x.w : makeWeapon('sword', 0), W = WEAPONS[w.type], hero = HEROES[x.hero] ? x.hero : 'ritter', n = String(x.n || '?').slice(0, 20);
+    return { kind: 'hero', id: x.id, name: n, baseName: n, isPlayer: isMe, level: x.l || 1, look: x.look && typeof x.look === 'object' ? x.look : {}, equip: { weapon: w },
+      st: { maxHp: 100, mana: x.mana || 50, hero, heroLvl: x.hl || 1, moveSpeed: x.ms || 72, cd: x.cd || W.cd, cdr: x.cdr || 0, W, weapon: w, aset: {} },
+      x: VW / 2, y: VH / 2, r: 5, hp: 100, mana: 0, aim: 0, face: 1, atkCd: 0, swing: null, inv: 0, dodgeT: 0, dodgeCd: 0, dvx: 0, dvy: 0, downed: false, bleed: 0, revive: 0, out: false,
+      spellCd: [0, 0, 0, 0], hotbar: isMe ? Profile.data.hotbar : [], anim: 0, moving: false, kb: { x: 0, y: 0 }, hurtFlash: 0, tp: -1, spd: 1, nx: null, ny: null };
+  },
+  gStart(d) {
+    const me = Freunde.me(), R = d.run || {}, hs = (Array.isArray(d.heroes) ? d.heroes : []).slice(0, 4).map(x => this.gHero(x, x.id === me));
+    if (!hs.some(h => h.isPlayer)) return;
+    this.runTok = (this.runTok || 0) + 1; Sound.init(); hideTip(); const ps = document.getElementById('pauseScr'); if (ps) ps.remove();
+    Object.assign(Run, { active: true, paused: false, ended: false, coopGuest: true, time: 0, gold: 0, found: [], xp: 0, kills: 0, roomsSeen: 0, parts: [], nums: [], fx: [], projs: [], coins: [], enemies: [], dying: [], motes: [], blessings: [],
+      msg: null, boss: null, mini: null, hurtFlash: 0, shake: 0, fade: 0, hitstop: 0, locked: false, lockExcept: null, room: null, hotFlash: null,
+      dungeonId: DUNGEON_BY[R.d] ? R.d : 'krypta', diff: DIFFS[R.diff] ? R.diff : 0, mod: DAILY_MODS[R.mod] ? R.mod : null, stage: R.stage || 1, party: R.party || hs.length, startTime: performance.now(), dungeon: { list: [] } });
+    Run.daily = R.daily && Run.mod ? { key: '' } : null;
+    this.hidx = hs; Run.heroes = hs.slice().sort((a, b) => (b.isPlayer ? 1 : 0) - (a.isPlayer ? 1 : 0));
+    this.q = {}; this.inT = 0; this.rid = -1; this.roomMismatch = Date.now(); this.ents = new Map();
+    UI.hide(); Touch.update();
+  },
+  objsIn(objs) { const a = Array.isArray(objs) ? objs : []; for (const o of a) { if (o.lit === 999) o.lit = Infinity; if (o.type === 'chest' && o.open && o.openT === undefined) o.openT = 1; } return a; },
+  gRoom(d) {
+    const r = d.room; if (!r || !Array.isArray(r.grid) || r.grid.length !== RH) return;
+    r.theme = THEMES[r.themeIdx || 0] || THEMES[0]; r.objs = this.objsIn(r.objs); r.torches = Array.isArray(r.torches) ? r.torches : []; r.seed = r.seed || 1;
+    r.doors = { n: null, s: null, w: null, e: null }; for (const c of String(r.dr || '')) if (c in r.doors) r.doors[c] = true;
+    this.rid = d.id; this.roomMismatch = 0; this.ents = new Map();
+    Run.room = r; renderRoomBg(r); Run.roomsSeen++;
+    Run.enemies = []; Run.projs = []; Run.fx = []; Run.coins = []; Run.dying = [];
+    Run.motes = Array.from({ length: 28 }, () => ({ x: rand(VW), y: rand(VH), vx: rand(-4, 4), vy: rand(-3, 1), p: rand(10) }));
+    if (d.map) this.gMap(d.map);
+    const p = player(); if (p) p.tp = -1; // bis der Gastgeber die neue Position schickt
+  },
+  gMap(m) {
+    const cur = Run.room, K = (x, y) => x + ',' + y, by = new Map();
+    const list = (Array.isArray(m.l) ? m.l : []).map(([gx, gy, type, f, dr]) => { const r = cur && cur.gx === gx && cur.gy === gy && cur.type === type ? cur : { gx, gy, type };
+      r.known = !!(f & 1); r.visited = !!(f & 2); r.cleared = !!(f & 4); if (f & 8) r.trial = 'done'; r._dr = String(dr || ''); by.set(K(gx, gy), r); return r; });
+    for (const r of list) { r.doors = r.doors || {}; for (const k of ['n', 's', 'w', 'e']) r.doors[k] = r._dr.includes(k) ? by.get(K(r.gx + DIRS[k][0], r.gy + DIRS[k][1])) || true : null; }
+    Run.dungeon = { list }; if (m.st) Run.stage = m.st;
+  },
+  gSnap(s) {
+    if (!Run.room) return;
+    if (s.ri !== this.rid) { if (!this.roomMismatch) this.roomMismatch = Date.now(); return; }
+    this.roomMismatch = 0;
+    if (Math.abs(Run.time - s.t) > .3) Run.time = s.t;
+    Run.gold = s.g || 0; Run.locked = !!s.lk; Run.lockExcept = s.le || null; if (s.sh) Run.shake = Math.max(Run.shake, s.sh); if (s.fd) Run.fade = Math.max(Run.fade, s.fd);
+    (s.h || []).forEach((a, i) => { const h = this.hidx[i]; if (!h || !Array.isArray(a)) return;
+      const [x, y, aim, f, hp, mhp, mana, bleed, rev, sw, tp, spd, ms] = a, wasHp = h.hp;
+      h.st.maxHp = mhp || 1; h.hp = hp; h.mana = mana; h.bleed = bleed; h.revive = rev; h.downed = !!(f & 2); h.out = !!(f & 4);
+      h.inv = f & 16 ? .15 : 0; if (f & 32) h.hurtFlash = .2; h.guardT = f & 64 ? 1 : 0; h.veilT = f & 128 ? 1 : 0; h.slowT = f & 256 ? 1 : 0;
+      h.swing = sw ? { t: sw[0], dur: sw[1] } : null; h.spd = spd || 1; if (ms) h.st.moveSpeed = ms; h.name = h.baseName + (f & 1024 ? ' (KI)' : '');
+      if (h.isPlayer) {
+        if (hp < wasHp - .5 && !h.downed) { Run.hurtFlash = .35; sfx('hurt'); shake(5); }
+        const c = s.c && s.c[i]; if (Array.isArray(c)) { h.atkCd = c[0]; h.abCd = c[1]; h.potCd = c[2]; if (Array.isArray(c[3])) h.spellCd = c[3].slice(0, 4); Profile.data.potions = c[4] | 0; h.kb.x += c[5] || 0; h.kb.y += c[6] || 0; h.abFlash = Math.max(h.abFlash || 0, c[7] || 0); }
+        if (tp !== h.tp || h.downed || h.out || Math.hypot(x - h.x, y - h.y) > 90) { h.x = x; h.y = y; h.tp = tp; }
+      } else {
+        h.aim = aim; h.face = f & 512 ? -1 : 1; h.moving = !!(f & 1); h.dodgeT = f & 8 ? .1 : 0;
+        if (h.nx === null || Math.hypot(x - h.x, y - h.y) > 50) { h.x = x; h.y = y; } h.nx = x; h.ny = y;
+      }
+    });
+    const seen = new Set(), E = this.ents, out = [], BD = BOSSES[DUNGEON_BY[Run.dungeonId].boss];
+    for (const a of s.e || []) {
+      const [id, type, x, y, hp, mhp, f, state, spT, elite, phase, sc, r, atkA, t] = a, boss = !!(f & 8), D = boss ? BD : ENEMIES[type]; if (!D) continue;
+      let e = E.get(id); if (!e) { e = { kind: 'enemy', nid: id, type, D, x, y, anim: rand(10), kb: { x: 0, y: 0 }, wob: 0 }; E.set(id, e); }
+      seen.add(id); e.nx = x; e.ny = y; if (Math.hypot(x - e.x, y - e.y) > 60) { e.x = x; e.y = y; }
+      Object.assign(e, { hp, maxHp: mhp || 1, flash: f & 1 ? .1 : 0, frozen: f & 2 ? 1 : 0, burn: f & 4 ? 1 : 0, boss, face: f & 32 ? -1 : 1, state, spawnT: spT, elite: ELITES[elite] ? elite : undefined, phase, scale: sc, r, atkA, chA: atkA, t });
+      e.mini = f & 16 ? MINIBOSSES[Run.room.themeIdx || 0] : undefined; out.push(e);
+    }
+    for (const [id, e] of E) if (!seen.has(id)) { E.delete(id); Run.dying.push({ e, t: 0 }); } // Sterbe-Animation
+    Run.enemies = out; Run.boss = out.find(e => e.boss) || null; Run.mini = out.find(e => e.mini) || null;
+    Run.projs = (s.p || []).map(([x, y, vx, vy, kind, r, col, life]) => ({ x, y, vx, vy, kind, r, col, life }));
+    Run.coins = (s.co || []).map(([x, y, z]) => ({ x, y, z }));
+    for (const f of s.fx || []) if (f && typeof f.type === 'string') { if (f.type === 'itempop' && !(f.it && RARITY[f.it.rarity])) continue; Run.fx.push(f); }
+    for (const [x, y, txt, col, big] of s.n || []) Run.nums.push({ x, y, txt: String(txt), col, t: 0, big: !!big });
+    for (const b of s.b || []) burst(...b);
+    for (const n of s.sf || []) { const [k, a] = String(n).split('|'); if (k !== 'hurt') sfx(k, a === undefined ? undefined : +a); }
+    if (Array.isArray(s.m)) Run.msg = { text: s.m[0] || '', sub: s.m[1] || '', dur: s.m[2] || 2, col: s.m[3] || '#ffd25a', t: s.m[4] || 0 };
+    if (s.o) { Run.room.objs = this.objsIn(s.o.objs); Run.room.cleared = !!s.o.cl; Run.room.solved = !!s.o.so; Run.room.trial = s.o.tr || undefined; }
+    if (s.map) this.gMap(s.map);
+    if (Array.isArray(s.bl)) Run.blessings = s.bl.filter(k => SHRINES[k]);
+  },
+  guestUpdate(dt) {
+    Run.time += dt; Run.shake = Math.max(0, Run.shake - dt * 18); Run.fade = Math.max(0, Run.fade - dt * 2.2); Run.hurtFlash = Math.max(0, (Run.hurtFlash || 0) - dt);
+    for (const d of Run.dying) d.t += dt; Run.dying = Run.dying.filter(d => d.t < .5);
+    for (const m of Run.motes || []) { m.x = (m.x + m.vx * dt + VW) % VW; m.y = (m.y + m.vy * dt + VH) % VH; m.p += dt; }
+    if (Run.hotFlash) { Run.hotFlash.t -= dt; if (Run.hotFlash.t <= 0) Run.hotFlash = null; }
+    if (Run.msg) { Run.msg.t += dt; if (Run.msg.t > Run.msg.dur) Run.msg = null; }
+    const r = Run.room;
+    for (const o of r.objs) { if (o.type === 'chest' && o.open && (o.openT || 0) < 1) o.openT = (o.openT || 0) + dt * 3; if (o.type === 'jet') { o.t = (o.t || 0) + dt; o.end = o.end || jetEnd(o); } if (o.type === 'brazier' && o.lit > 0 && o.lit !== Infinity) o.lit = Math.max(0, o.lit - dt); if (o.slide > 0) o.slide -= dt; }
+    for (const t of r.torches) if (Math.random() < dt * 2.5) Run.parts.push({ x: t.x + rand(-1, 1), y: t.y - 6, vx: rand(-4, 4), vy: rand(-22, -12), life: rand(.5, 1), max: 1, col: pick(['#ffd25a', '#ff9a3c']), size: 1 });
+    for (const sp of r.sparkles || []) if (Math.random() < dt * .8) Run.parts.push({ x: sp[0] + rand(-5, 5), y: sp[1] + rand(-3, 3), vx: 0, vy: -6, life: .5, max: .5, col: pick(['#ffffff', '#fff2a0']), size: 1 });
+    for (const f of Run.fx) { f.t = (f.t || 0) + dt; if (f.type === 'ring') { f.r += (f.speed || 0) * dt; if (f.r >= f.max) f.dead = true; } else if (f.t >= (f.dur || .5)) f.dead = true; }
+    Run.fx = Run.fx.filter(f => !f.dead);
+    for (const p of Run.parts) { p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += (p.grav || 0) * dt; p.vx *= .96; p.vy *= .96; }
+    Run.parts = Run.parts.filter(p => p.life > 0); if (Run.parts.length > 900) Run.parts.splice(0, Run.parts.length - 900);
+    for (const n of Run.nums) { n.t += dt; n.y -= dt * 22; } Run.nums = Run.nums.filter(n => n.t < .9);
+    for (const p of Run.projs) { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; if ((p.kind === 'fireball' || p.kind === 'orb') && Math.random() < .5) Run.parts.push({ x: p.x, y: p.y, vx: rand(-10, 10), vy: rand(-10, 10), life: .25, max: .25, col: p.kind === 'orb' ? '#6fd6ff' : pick(['#ff7a2a', '#f4d03f']), size: 1 }); }
+    const k = Math.min(1, dt * 14); // weich zur Position aus dem letzten Schnappschuss gleiten
+    for (const e of Run.enemies) { e.anim += dt; if (e.spawnT > 0) e.spawnT -= dt; if (e.nx != null) { e.x += (e.nx - e.x) * k; e.y += (e.ny - e.y) * k; } }
+    for (const h of Run.heroes) {
+      h.hpGhost = h.hpGhost === undefined ? h.hp : h.hpGhost > h.hp ? Math.max(h.hp, h.hpGhost - h.st.maxHp * .5 * dt) : h.hp; h.hurtFlash -= dt;
+      if (h.swing) { h.swing.t += dt; if (h.swing.t > h.swing.dur) h.swing = null; }
+      if (!h.isPlayer) { if (h.nx != null) { h.x += (h.nx - h.x) * k; h.y += (h.ny - h.y) * k; } if (h.moving) h.anim += dt * 8; if (h.dodgeT > 0) h.dodgeT -= dt; }
+    }
+    if (!Run.ended) this.gPlayer(dt);
+  },
+  // Eigene Figur: läuft sofort (ohne Verzögerung), Aktionen gehen an den Gastgeber
+  gPlayer(dt) {
+    const h = player(), q = this.q; if (!h) return;
+    for (const key of ['atkCd', 'abCd', 'potCd', 'dodgeCd', 'dodgeT', 'abFlash']) if (h[key] > 0) h[key] -= dt; for (let i = 0; i < 4; i++) if (h.spellCd[i] > 0) h.spellCd[i] -= dt;
+    let mx = Input.move.x, my = Input.move.y; const ml = Math.hypot(mx, my); if (ml > 1) { mx /= ml; my /= ml; }
+    const active = !Run.paused && !h.downed && !h.out && h.tp >= 0;
+    if (Input.touch && Input.stick.on && Math.hypot(Input.stick.dx, Input.stick.dy) > .3) { /* Zielrichtung vom Angriffs-Joystick */ }
+    else if (Input.touch) { let best = null, bd = 150; for (const e of Run.enemies) { const d = Math.hypot(e.x - h.x, e.y - h.y); if (d < bd) { bd = d; best = e; } } if (best) h.aim = Math.atan2(best.y - h.y, best.x - h.x); else if (ml > .2) h.aim = Math.atan2(my, mx); }
+    else h.aim = Math.atan2(Input.aimY - h.y, Input.aimX - h.x);
+    h.face = Math.cos(h.aim) >= 0 ? 1 : -1;
+    if (active && Input.dodge && !(h.dodgeCd > 0)) { const a = ml > .2 ? Math.atan2(my, mx) : h.aim; h.dodgeT = .2; h.dodgeCd = .85; h.dvx = Math.cos(a) * 210; h.dvy = Math.sin(a) * 210; sfx('dodge'); q.dg = 1; }
+    Input.dodge = false;
+    if (active) {
+      if (h.dodgeT > 0) { moveEnt(h, h.dvx * dt, h.dvy * dt); h.moving = true; }
+      else { const sp = h.st.moveSpeed * (h.spd || 1); h.moving = ml > .1; if (h.moving) h.anim += dt * 8; moveEnt(h, mx * sp * dt, my * sp * dt); }
+      moveEnt(h, h.kb.x * dt, h.kb.y * dt);
+    } else h.moving = false;
+    h.kb.x *= Math.pow(.002, dt); h.kb.y *= Math.pow(.002, dt);
+    let atk = !!Input.attack; const S = Input.stick;
+    if (S.on) { S.t += dt; if (Math.hypot(S.dx, S.dy) > .3) h.aim = Math.atan2(S.dy, S.dx); else if (S.t > .35) atk = true; }
+    if (Input.release) { if (Input.release.dir !== null) h.aim = Input.release.dir; q.at = 1; Input.release = null; }
+    for (let i = 0; i < 4; i++) if (Input.spells[i]) { if (h.hotbar[i]) (q.sp = q.sp || []).push(i); Input.spells[i] = false; }
+    if (Input.ability) { if (isUnlocked('ability')) q.ab = 1; else banner('', 'Helden-Fähigkeit ab Konto-Level ' + UNLOCKS.ability.lvl, 1.4, '#ff8a7a'); Input.ability = false; }
+    if (Input.potion) { q.po = 1; Input.potion = false; }
+    if (Input.interactPressed) { q.it = 1; Input.interactPressed = false; }
+    this.inT -= dt; if (this.inT > 0) return; this.inT = 1 / COOP_IN_HZ;
+    this.send(this.host, { k: 'in', x: r1(h.x), y: r1(h.y), a: r2(h.aim), mv: h.moving ? 1 : 0, at: atk && active ? 1 : 0, ho: Input.interact ? 1 : 0, tp: h.tp, q }); this.q = {};
+  },
+  gEnd(d) {
+    if (Run.ended) return; Run.ended = true;
+    const P = Profile.data, kind = ['victory', 'death', 'abort'].includes(d.kind) ? d.kind : 'abort', num0 = (v, a, b) => clamp(Math.floor(+v) || 0, a, b);
+    const gold = num0(d.gold, 0, 1e7), xp = num0(d.xp, 0, 1e6), stage = num0(d.stage, 1, 999);
+    P.gold += gold; P.runs++; if (kind === 'victory') P.wins++;
+    const best = P.bestStage || 0, record = stage > best; if (record) P.bestStage = stage;
+    if (d.pots !== null && d.pots !== undefined) P.potions = num0(d.pots, 0, POTION_MAX + 3);
+    const ups = Profile.addXp(xp), heroUps = Profile.addHeroXp(xp);
+    // Beute: Die Truhen gehören dem Gastgeber – der Gast bekommt eigene Fundstücke (etwa eins pro zwei Funden des Gastgebers)
+    const n = Math.min(4, Math.ceil(num0(d.found, 0, 99) / 2)), diff = Run.diff || 0, items = [];
+    for (let i = 0; i < n; i++) items.push(randomItem(Math.min(3, rollRarity(.3 + DIFFS[diff].loot)), gearTier(diff, stage), .2));
+    const kept = items.map(it => ({ it, ok: Profile.give(it) }));
+    Profile.save(); Social.updateMe(meInfo());
+    const res = { kind, gold, lost: num0(d.lost, 0, 1e7), xp, level: P.level, ups, heroUps, hero: P.hero, heroLvl: Profile.hero().lvl, stage, record: record && best > 0, best: P.bestStage, dailyMsg: '',
+      dungeon: DUNGEON_BY[Run.dungeonId].name, diff: DIFFS[Run.diff].n, daily: !!Run.daily, items: kept, kills: num0(d.kills, 0, 1e6), rooms: num0(d.rooms, 0, 999), total: num0(d.total, 0, 999), time: +d.time || 0, coop: this.host };
+    if (kind === 'death') banner('Gefallen…', 'Die Hälfte des Golds aus diesem Run ist verloren', 3, '#ff5a4a');
+    if (kind === 'victory') banner('Geschafft!', 'Mit Beute entkommen', 2, '#ffd25a');
+    const tok = this.runTok; setTimeout(() => { if (!Run.coopGuest || tok !== this.runTok) return; Run.active = false; Run.coopGuest = false; Run.room = null; Touch.update(); const ps = document.getElementById('pauseScr'); if (ps) ps.remove(); Run.paused = false; if (ups) sfx('levelup'); UI.results(res); }, 1300);
+  },
+};
+// Koop-Gastgeber: Figur eines echten Freundes nach seinen Eingaben steuern (Laufen übernimmt der Gast selbst)
+function updateRemote(h, dt) {
+  const I = h.rin; if (!I) return; if (h.downed || h.out) { I.q = {}; return; }
+  h.aim = I.aim; h.face = Math.cos(h.aim) >= 0 ? 1 : -1; h.moving = I.mv; if (h.moving) h.anim += dt * 8;
+  const q = I.q; I.q = {}; const x0 = h.x, y0 = h.y;
+  if (q.dg && h.dodgeCd <= 0) { h.dodgeT = .2; h.dodgeCd = .85; stormDodge(h); }
+  if (q.at) h.atkQ = .35;
+  if (h.atkQ > 0) { h.atkQ -= dt; if (h.atkCd <= 0) { heroAttack(h, h.aim); h.atkQ = 0; } }
+  if (I.atk) heroAttack(h, h.aim);
+  for (const i of q.sp || []) castSpell(h, i);
+  if (q.ab) useAbility(h);
+  if (q.po) drinkPotion(h);
+  if (q.it) interact(h);
+  if (Math.hypot(h.x - x0, h.y - y0) > 3) h.tp = (h.tp || 0) + 1; // Sprung (Dolchsprung, Schattenschritt): Gast übernimmt die neue Position
+}
 
 /* =====================================================================
    MODUL 4b: INHALTE – Dungeons & Schwierigkeit, Artefakte (Sets, Haupt- und
@@ -1332,12 +1724,13 @@ function freeSpot(minDistFromHeroes = 50) {
 
 /* ---------- Effekte ---------- */
 function burst(x, y, col, n = 8, sp = 60, life = .5, size = 1, grav = 0) {
+  if (CoopTap.on && CoopTap.burst.length < 24) CoopTap.burst.push([Math.round(x), Math.round(y), col, Math.min(n, 20), sp, life, size, grav]);
   for (let i = 0; i < n; i++) { const a = rand(Math.PI * 2), s = rand(sp * .3, sp); Run.parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: rand(life * .5, life), max: life, col: Array.isArray(col) ? pick(col) : col, size, grav }); }
 }
 // Dauerhafte Bodenflecken im Raum (Blut, Schleim, Brandspuren, Knochen)
 function decal(fn) { const r = Run.room; if (!r) return; if (!r.decals) { r.decals = document.createElement('canvas'); r.decals.width = VW; r.decals.height = VH; } const c = r.decals.getContext('2d'); c.save(); fn(c); c.restore(); }
 function splat(x, y, cols, n = 8, rad = 6) { decal(c => { for (let i = 0; i < n; i++) { const a = rand(Math.PI * 2), d = rand(rad); c.fillStyle = pick(cols); c.globalAlpha = rand(.35, .7); c.fillRect(Math.round(x + Math.cos(a) * d), Math.round(y + Math.sin(a) * d * .6), rint(1, 2), 1); } }); }
-function num(x, y, txt, col = '#fff', big = false) { Run.nums.push({ x, y, txt: String(txt), col, t: 0, big }); }
+function num(x, y, txt, col = '#fff', big = false) { if (CoopTap.on && CoopTap.num.length < 30) CoopTap.num.push([Math.round(x), Math.round(y), String(txt), col, big ? 1 : 0]); Run.nums.push({ x, y, txt: String(txt), col, t: 0, big }); }
 function shake(n) { if (Profile.data.settings.shake) Run.shake = Math.max(Run.shake, n); }
 function banner(text, sub = '', dur = 2.4, col = '#ffd25a') { Run.msg = { text, sub, t: 0, dur, col }; }
 
@@ -1345,17 +1738,21 @@ function banner(text, sub = '', dur = 2.4, col = '#ffd25a') { Run.msg = { text, 
 function makeHero(m, isPlayer) {
   let equip, level = m.level;
   if (isPlayer) equip = Profile.data.equip;
+  else if (m.gear) equip = m.gear; // Koop: echte Ausrüstung des Freundes (vom Gastgeber geprüft)
   else { // Mitspieler bekommen passende Ausrüstung zu ihrem Level
     const rr = () => clamp(Math.floor(level / 5) + (Math.random() < .3 ? 1 : 0), 0, 3), tl = gearTier(Run.diff || 0, 2);
-    equip = { weapon: makeWeapon(m.weapon, rr(), tl), helm: m.look.helm ? makeArmor('helm', m.look.helm, rr(), tl) : null, chest: makeArmor('chest', m.look.chest, rr(), tl), pants: makeArmor('pants', m.look.pants, rr(), tl), boots: makeArmor('boots', m.look.boots, rr(), tl), jewel: null };
+    const L = m.look || {}, ac = k => (k && ARMOR_CLASS[k] ? k : Object.keys(ARMOR_CLASS)[0]); // Koop: fehlende Teile im Aussehen nicht abstürzen lassen
+    equip = { weapon: makeWeapon(WEAPONS[m.weapon] ? m.weapon : 'sword', rr(), tl), helm: L.helm && ARMOR_CLASS[L.helm] ? makeArmor('helm', L.helm, rr(), tl) : null, chest: makeArmor('chest', ac(L.chest), rr(), tl), pants: makeArmor('pants', ac(L.pants), rr(), tl), boots: makeArmor('boots', ac(L.boots), rr(), tl), jewel: null };
   }
   let heroId, heroLvl;
   if (isPlayer) { heroId = Profile.data.hero; heroLvl = Profile.hero().lvl; }
+  else if (m.gear) { heroId = m.hero; heroLvl = m.heroLvl; }
   else { const wt = equip.weapon.type; heroId = Object.keys(HEROES).filter(k => HEROES[k].unlock <= level && heroFits(k, wt)).pop() || 'ritter'; heroLvl = clamp(Math.ceil(level / 2), 1, HERO_MAX); }
-  const st = heroStats(equip, level, heroId, heroLvl, isPlayer ? Profile.data.artEq : null);
+  const st = heroStats(equip, level, heroId, heroLvl, isPlayer ? Profile.data.artEq : m.gear ? m.arts : null);
   if (Run.mod === 'glas') st.dmg *= 1.6;
-  return { kind: 'hero', id: m.id, name: m.name, isPlayer, level, look: m.look, equip, st, x: VW / 2, y: VH / 2, r: 5, hp: st.maxHp, mana: st.mana, aim: 0, face: 1, atkCd: 0,
-    swing: null, inv: 0, dodgeT: 0, dodgeCd: 0, dvx: 0, dvy: 0, downed: false, bleed: 0, revive: 0, out: false, spellCd: [0, 0, 0, 0], hotbar: isPlayer ? Profile.data.hotbar : [], anim: 0, moving: false,
+  const remote = !isPlayer && !!m.remote, bot = remote && !m.online; // Koop: Freund steuert selbst; nur ohne Verbindung übernimmt die KI
+  return { kind: 'hero', id: m.id, name: m.name + (bot ? ' (KI)' : ''), baseName: m.name, remote, bot, tp: 0, pots: remote ? m.pots || 0 : 0, isPlayer, level, look: m.look, equip, st, x: VW / 2, y: VH / 2, r: 5, hp: st.maxHp, mana: st.mana, aim: 0, face: 1, atkCd: 0,
+    swing: null, inv: 0, dodgeT: 0, dodgeCd: 0, dvx: 0, dvy: 0, downed: false, bleed: 0, revive: 0, out: false, spellCd: [0, 0, 0, 0], hotbar: isPlayer ? Profile.data.hotbar : remote ? (m.hotbar || []) : [], anim: 0, moving: false,
     regen: 0, pushT: 0, ai: { t: 0, ox: rand(-14, 14), oy: rand(-10, 10) }, kb: { x: 0, y: 0 }, hurtFlash: 0 };
 }
 function healHero(h, n, quiet = false) { if (h.downed || h.out) return; if (!quiet) n *= 1 + (h.st.healp || 0) / 100; const a = Math.min(n, h.st.maxHp - h.hp); h.hp += a; if (a > 0 && !quiet) num(h.x, h.y - 12, '+' + Math.round(a), '#5fd068'); }
@@ -1439,7 +1836,7 @@ function hurtHero(h, dmg, srcX, srcY, from = null) {
   if (from && from.elite === 'vampir' && !from.dead) from.hp = Math.min(from.maxHp, from.hp + from.maxHp * .08);
   if (from && from.elite === 'frost') h.slowT = 1.5;
   if (from && h.st.thorns && !from.dead) hurtEnemy(from, dmg * h.st.thorns, false, h.x, h.y, 20); // Dornen
-  h.inv = h.isPlayer ? .6 : .45; h.hurtFlash = .2;
+  h.inv = h.isPlayer || h.remote ? .6 : .45; h.hurtFlash = .2;
   const a = Math.atan2(h.y - srcY, h.x - srcX); h.kb.x += Math.cos(a) * 90; h.kb.y += Math.sin(a) * 90;
   num(h.x, h.y - 12, Math.round(red), '#ff5a4a'); burst(h.x, h.y, ['#9e2a22', '#ff4a3a'], 6, 50, .4); splat(h.x, h.y + 3, ['#6a1418', '#8a1e22'], 3, 5);
   if (h.isPlayer) Run.hurtFlash = .35;
@@ -1575,7 +1972,7 @@ function updateCompanion(h, dt) {
   const downed = Run.heroes.find(o => o !== h && o.downed && !o.out);
   let best = null, bd = 1e9; for (const e of Run.enemies) { if (e.dead) continue; const d = Math.hypot(e.x - h.x, e.y - h.y); if (d < bd) { bd = d; best = e; } }
   // Der nächste Mitspieler kümmert sich ums Wiederbeleben, die anderen kämpfen weiter
-  const reviver = downed && Run.heroes.filter(o => !o.isPlayer && !o.downed && !o.out).sort((x, y) => Math.hypot(x.x - downed.x, x.y - downed.y) - Math.hypot(y.x - downed.x, y.y - downed.y))[0];
+  const reviver = downed && Run.heroes.filter(o => !o.isPlayer && (!o.remote || o.bot) && !o.downed && !o.out).sort((x, y) => Math.hypot(x.x - downed.x, x.y - downed.y) - Math.hypot(y.x - downed.x, y.y - downed.y))[0];
   if (downed && (reviver === h || !best)) { tx = downed.x + 8; ty = downed.y; want = 'revive'; }
   else if (best) {
     target = best; const W = h.st.W, a = Math.atan2(best.y - h.y, best.x - h.x);
@@ -1806,7 +2203,7 @@ function interact(h) {
     if (o.type === 'chest' && !o.open && near(o, 22)) return openChest(o);
     if (o.type === 'shrine' && !o.used && near(o, 24)) return useShrine(o);
     if (o.type === 'relic' && r.trial === 'idle' && near(o, 26)) return startTrial(r);
-    if (o.type === 'ware' && !o.sold && near(o, 20)) return buyWare(o);
+    if (o.type === 'ware' && !o.sold && near(o, 20)) return buyWare(o, h);
     if (o.type === 'lever' && near(o)) {
       if (o.reset) { r.objs.forEach(b => { if (b.type === 'block') { b.tx = b.ox; b.ty = b.oy; } }); sfx('lever'); o.on = !o.on; banner('', 'Blöcke zurückgesetzt', 1.2); return; }
       if (r.solved || o.on) return; o.on = true; sfx('lever'); r.seq.push(o.sym);
@@ -1867,7 +2264,11 @@ function takeScroll(o) {
   banner('Zauber-Schriftrolle!', itemName(it), 2.8, '#c070ff');
 }
 function updateTraps(dt) {
-  const r = Run.room, p = player(); if (p.downed || p.out) return;
+  const r = Run.room;
+  for (const o of r.objs) if (o.type === 'jet') { o.t += dt; o.end = o.end || jetEnd(o); }
+  for (const p of Run.heroes) if ((p.isPlayer || (p.remote && !p.bot)) && !p.downed && !p.out) trapsFor(p, r);
+}
+function trapsFor(p, r) {
   for (const o of r.objs) if (o.type === 'gold' && !o.taken && Math.hypot(o.tx * T + 8 - p.x, o.ty * T + 8 - p.y) < 12) { o.taken = true; Run.gold += o.amount; sfx('coin'); num(p.x, p.y - 12, '+' + o.amount, '#ffd25a'); if (o.big) burst(o.tx * T + 8, o.ty * T + 10, ['#ffd25a', '#fff2a0'], 14, 50, .6, 1, 60); }
   if (r.type !== 'trap') return;
   for (const o of r.objs) {
@@ -1876,9 +2277,9 @@ function updateTraps(dt) {
       if (st === 2 && p.x > o.tx * T + 2 && p.x < o.tx * T + 14 && p.y + 3 > o.ty * T + 2 && p.y + 3 < o.ty * T + 14) hurtHero(p, 9 * scaleMult().dmg, p.x, p.y + 4);
     }
     if (o.type === 'jet') {
-      o.t += dt; const ph = jetPhase(o); o.end = o.end || jetEnd(o);
-      if (ph === 1 && Math.random() < .3) burst(o.tx * T + 8 + o.dir * 7, o.ty * T + 8, ['#ff9a3c', '#f4d03f'], 1, 20, .3);
-      if (ph === 2) { if (Math.random() < .8) Run.parts.push({ x: rand(Math.min(o.tx * T + 8, o.end), Math.max(o.tx * T + 8, o.end)), y: o.ty * T + 8 + rand(-4, 4), vx: o.dir * 40, vy: rand(-20, -5), life: .35, max: .35, col: pick(['#ff7a2a', '#f4d03f', '#9e2a22']), size: 2 });
+      const ph = jetPhase(o);
+      if (ph === 1 && Math.random() < .3 && p.isPlayer) burst(o.tx * T + 8 + o.dir * 7, o.ty * T + 8, ['#ff9a3c', '#f4d03f'], 1, 20, .3);
+      if (ph === 2) { if (Math.random() < .8 && p.isPlayer) Run.parts.push({ x: rand(Math.min(o.tx * T + 8, o.end), Math.max(o.tx * T + 8, o.end)), y: o.ty * T + 8 + rand(-4, 4), vx: o.dir * 40, vy: rand(-20, -5), life: .35, max: .35, col: pick(['#ff7a2a', '#f4d03f', '#9e2a22']), size: 2 });
         const x0 = Math.min(o.tx * T + 8, o.end), x1 = Math.max(o.tx * T + 8, o.end);
         if (p.y > o.ty * T + 1 && p.y < o.ty * T + 15 && p.x > x0 && p.x < x1) hurtHero(p, 11 * scaleMult().dmg, p.x - o.dir * 10, p.y); }
     }
@@ -1906,14 +2307,17 @@ function enterRoom(room, fromDir) {
     banner('Rätselraum', hint, 3.5, '#6fd6ff'); }
   else if (room.type === 'trap') banner('Fallenraum', 'Achte auf Stacheln und Feuer!', 2, '#ff9a3c');
   else banner(T2[room.type], room.type === 'start' ? 'Finde den Thronsaal' : room.type === 'shrine' ? (room.objs[0] && !room.objs[0].used ? 'Berühre den Schrein für einen Segen – oder einen Pakt' : '') : room.type === 'merchant' ? 'Gib dein Gold aus, bevor du es verlierst!' : room.type === 'ancient' ? (room.trial === 'idle' ? 'Optional: Berühre das Relikt – ' + (room.trialMode === 'mini' ? 'Mini-Boss' : 'Gegnerwellen') + ' für ein Artefakt' : '') : '', 1.8, '#e8e2d0');
+  Coop.onRoom(); // Koop: neuen Raum an die Gäste schicken
 }
-function checkDoors() {
-  const p = player(); if (p.downed || Run.fade > 0) return;
+function checkDoors() { for (const p of Run.heroes) if ((p.isPlayer || (p.remote && !p.bot)) && checkDoor(p)) return; }
+function checkDoor(p) {
+  if (p.downed || p.out || Run.fade > 0) return false;
   // Schwellen liegen innerhalb der Türöffnung (die Wand daneben lässt einen gar nicht so weit)
   let dir = null; if (p.y < 8) dir = 'n'; else if (p.y > VH - 10) dir = 's'; else if (p.x < 9) dir = 'w'; else if (p.x > VW - 9) dir = 'e';
-  if (!dir || !Run.room.doors[dir] || doorLocked(dir)) return;
+  if (!dir || !Run.room.doors[dir] || doorLocked(dir)) return false;
   const next = Run.room.doors[dir]; Run.fade = .35; sfx('door');
   setTimeout(() => { if (Run.active) enterRoom(next, OPP[dir]); }, 160);
+  return true;
 }
 
 /* ---------- Start / Ende ---------- */
@@ -1935,6 +2339,7 @@ function startRun(opts = {}) {
   enterRoom(Run.dungeon.start, null);
   const DN = DUNGEON_BY[Run.dungeonId];
   banner(dl ? 'Tägliche Herausforderung' : DN.name, dl ? DAILY_MODS[dl.mod].name + ': ' + DAILY_MODS[dl.mod].desc : 'Stufe ' + DIFFS[Run.diff].n + ' · Stage 1', 3.2, '#ffd25a');
+  Coop.onStart(); // Koop: Gäste steigen ein
 }
 // Nächste Stage: neuer, größerer Dungeon mit neuem Thema – Beute und Gold bleiben erhalten
 function nextStage() {
@@ -1968,6 +2373,7 @@ function endRun(kind) {
   const lvlBefore = d.level, ups = Profile.addXp(Run.xp), heroUps = Profile.addHeroXp(Run.xp);
   const kept = Run.found.map(it => ({ it, ok: Profile.give(it) }));
   Profile.save(); Social.updateMe(meInfo());
+  Coop.onEnd(kind, gold, lost); // Koop: Gäste bekommen ihre Belohnung
   const res = { kind, gold, lost, xp: Run.xp, level: d.level, ups, heroUps, hero: d.hero, heroLvl: Profile.hero().lvl, stage: Run.stage, record: record && best > 0, best: d.bestStage, dailyMsg, dungeon: DUNGEON_BY[Run.dungeonId].name, diff: DIFFS[Run.diff].n, daily: !!Run.daily, items: kept, kills: Run.kills, rooms: Run.roomsSeen, total: Run.dungeon.list.length, time: (performance.now() - Run.startTime) / 1000 };
   setTimeout(() => { Run.active = false; Touch.update(); if (ups) sfx('levelup'); UI.results(res); }, kind === 'victory' ? 900 : 1600);
   if (kind === 'death') { sfx('down'); banner('Gefallen…', 'Die Hälfte des Golds aus diesem Run ist verloren', 3, '#ff5a4a'); }
@@ -1994,9 +2400,10 @@ function updateRun(dt) {
     h.atkCd -= dt; h.inv -= dt; h.dodgeT -= dt; h.dodgeCd -= dt; h.hurtFlash -= dt; for (let i = 0; i < 4; i++) h.spellCd[i] -= dt;
     if (h.swing) { h.swing.t += dt; if (h.swing.t > h.swing.dur) h.swing = null; }
     if (!h.downed && !h.out) { h.mana = Math.min(h.st.mana, h.mana + h.st.manaRegen * dt); if (h.regen > 0) { h.regen -= dt; h.hp = Math.min(h.st.maxHp, h.hp + h.st.maxHp * .03 * dt); } }
-    moveEnt(h, h.kb.x * dt, h.kb.y * dt); h.kb.x *= Math.pow(.002, dt); h.kb.y *= Math.pow(.002, dt);
+    if (h.remote && !h.bot) { const k = h.kbo || (h.kbo = { x: 0, y: 0 }); k.x += h.kb.x; k.y += h.kb.y; h.kb.x = h.kb.y = 0; } // Koop: Rückstoß rechnet der Gast selbst
+    else { moveEnt(h, h.kb.x * dt, h.kb.y * dt); h.kb.x *= Math.pow(.002, dt); h.kb.y *= Math.pow(.002, dt); }
     if (h.downed && !h.out) { // Wiederbeleben durch Mitspieler in der Nähe
-      h.bleed -= dt; const helper = Run.heroes.find(o => o !== h && !o.downed && !o.out && Math.hypot(o.x - h.x, o.y - h.y) < 18 && (!o.isPlayer || Input.interact));
+      h.bleed -= dt; const helper = Run.heroes.find(o => o !== h && !o.downed && !o.out && Math.hypot(o.x - h.x, o.y - h.y) < 18 && (o.isPlayer ? Input.interact : o.remote && !o.bot ? !!(o.rin && o.rin.hold) : true));
       if (helper) { h.revive += dt; if (h.revive >= 2.5) { h.downed = false; h.hp = h.st.maxHp * .4; h.inv = 1.5; sfx('revive'); burst(h.x, h.y, ['#5fd068', '#ffffff'], 20, 60, .8, 1, -40); banner('', h.name + ' ist wieder auf den Beinen!', 1.6, '#8fe05a'); } }
       else h.revive = Math.max(0, h.revive - dt * .5);
       if (h.bleed <= 0) { if (h.isPlayer) return endRun('death'); h.out = true; banner('', h.name + ' ist verblutet (kommt im nächsten Raum zurück)', 2, '#ff6a5a'); }
@@ -2005,7 +2412,7 @@ function updateRun(dt) {
   updatePlayer(p, dt);
   for (const h of Run.heroes) updateHeroExtras(h, dt);
   if (Run.mimicLock && !Run.enemies.some(e => e.type === 'mimic')) { Run.mimicLock = false; Run.locked = false; }
-  for (const h of Run.heroes) if (!h.isPlayer) updateCompanion(h, dt);
+  for (const h of Run.heroes) if (!h.isPlayer) { if (h.remote && !h.bot) updateRemote(h, dt); else updateCompanion(h, dt); }
   if (Input.interactPressed && !p.downed) interact(p); Input.interactPressed = false;
   for (const e of Run.enemies) if (!e.dead) updateEnemy(e, dt);
   Run.enemies = Run.enemies.filter(e => !e.dead); separate();
@@ -2041,6 +2448,7 @@ function aimPoint(h, dist) { // Zielpunkt in Blickrichtung, an Wänden gestoppt
 }
 function useAbility(h) {
   if (h.isPlayer && !isUnlocked('ability')) { banner('', 'Helden-Fähigkeit ab Konto-Level ' + UNLOCKS.ability.lvl, 1.4, '#ff8a7a'); return; }
+  if (h.remote && h.level < UNLOCKS.ability.lvl) return;
   if (h.downed || h.out || (h.abCd || 0) > 0) { if (h.isPlayer && (h.abCd || 0) > 0) sfx('wrong'); return; }
   const id = h.st.hero, A = ABILITIES[id], P = abilityPower(h); h.abCd = A.cd * (1 - Math.min(40, h.st.cdr || 0) / 100); h.abFlash = .3;
   if (id === 'ritter') { // Schildstoß
@@ -2061,9 +2469,9 @@ function useAbility(h) {
 /* ---------- Heiltränke ---------- */
 function drinkPotion(h) {
   const d = Profile.data; if (h.downed || h.out || (h.potCd || 0) > 0) return;
-  if (d.potions <= 0) { num(h.x, h.y - 16, 'Keine Tränke', '#ff8a7a'); sfx('wrong'); return; }
+  if ((h.remote ? h.pots || 0 : d.potions) <= 0) { num(h.x, h.y - 16, 'Keine Tränke', '#ff8a7a'); sfx('wrong'); return; }
   if (h.hp >= h.st.maxHp) { num(h.x, h.y - 16, 'Volle Leben', '#b8ffbe'); return; }
-  d.potions--; Profile.save(); h.potCd = 1.5; h.potHeal = { left: h.st.maxHp * .4 * (1 + (h.st.healp || 0) / 100), t: 1.2 };
+  if (h.remote) h.pots--; else { d.potions--; Profile.save(); } // Koop: Gäste trinken ihre eigenen Tränke h.potCd = 1.5; h.potHeal = { left: h.st.maxHp * .4 * (1 + (h.st.healp || 0) / 100), t: 1.2 };
   sfx('heal'); burst(h.x, h.y - 4, ['#ff4a6a', '#ffb0c0', '#ffffff'], 14, 40, .7, 1, -30);
 }
 // Laufende Effekte der Helden pro Bild aktualisieren
@@ -2183,10 +2591,11 @@ function useShrine(o) {
   Run.fx.push({ type: 'ring', x: o.tx * T + 8, y: o.ty * T + 8, r: 4, max: 90, speed: 160, dmg: 0, team: 'none', col: S.col, hit: new Set() });
   banner(S.name, S.desc, 3, S.col);
 }
-function buyWare(o) {
+function buyWare(o, h) {
   if (o.sold) return; if (Run.gold < o.price) { sfx('wrong'); banner('', 'Nicht genug Gold (' + fmt(o.price) + ' nötig)', 1.6, '#ff8a7a'); return; }
   Run.gold -= o.price; o.sold = true; sfx('coin'); setTimeout(() => sfx('chest', 1), 120);
-  if (o.it.slot === 'potion') { Profile.data.potions = Math.min(POTION_MAX + 3, Profile.data.potions + 1); Profile.save(); banner('', 'Heiltrank gekauft (' + Profile.data.potions + ')', 1.6, '#ff8ab0'); }
+  if (o.it.slot === 'potion' && h && h.remote) { h.pots = Math.min(POTION_MAX + 3, (h.pots || 0) + 1); banner('', h.baseName + ' kauft einen Heiltrank (' + h.pots + ')', 1.6, '#ff8ab0'); }
+  else if (o.it.slot === 'potion') { Profile.data.potions = Math.min(POTION_MAX + 3, Profile.data.potions + 1); Profile.save(); banner('', 'Heiltrank gekauft (' + Profile.data.potions + ')', 1.6, '#ff8ab0'); }
   else giveLoot(o.it, o.tx * T + 8, o.ty * T);
 }
 
@@ -2701,7 +3110,7 @@ const UI = {
           <div class="s muted" style="text-align:center">${allReady ? 'Alle sind bereit!' : 'Start erst möglich, wenn alle bereit sind.'} ${P.members.length === 1 ? 'Du kannst auch allein losziehen.' : 'Im Koop könnt ihr euch gegenseitig wiederbeleben.'}</div>
         </div>
         <div class="panel col" style="flex:1;min-width:260px"><h3>Freundesliste</h3><div class="col" id="flist"></div>
-          <div class="s muted">${Social.hub ? (window.Freunde && Freunde.loggedIn() ? 'Deine Freunde aus dem Game Hub. Eingeladene Freunde kämpfen in deinem Run als KI-Begleiter mit – gemeinsames Spielen in Echtzeit kommt in einer späteren Version. Chatten und Freunde hinzufügen: 👥 unten links.' : 'Melde dich im Game Hub mit deinem Konto an, um deine Freunde hier zu sehen.') : 'Hinweis: Freunde sind im Prototyp simuliert.'}</div></div>
+          <div class="s muted">${Social.hub ? (window.Freunde && Freunde.loggedIn() ? 'Deine Freunde aus dem Game Hub. Eingeladene Freunde spielen in Echtzeit mit ihrer eigenen Figur und Ausrüstung in deinem Run mit. Verliert jemand die Verbindung, übernimmt so lange die KI (KI). Chatten und Freunde hinzufügen: 👥 unten links.' : 'Melde dich im Game Hub mit deinem Konto an, um deine Freunde hier zu sehen.') : 'Hinweis: Freunde sind im Prototyp simuliert.'}</div></div>
       </div>
       <div class="row" style="margin-top:12px"><button class="btn" id="bBack">← Zurück</button></div></div>`;
     const ps = document.getElementById('pslots'); this._partyBack = runMode ? (this.sel && this.sel.daily ? 'daily' : 'dungeons') : 'lobby';
@@ -2709,7 +3118,7 @@ const UI = {
       const m = P.members[i], el = document.createElement('div'); el.className = 'pslot';
       if (m) {
         const c = document.createElement('canvas'); c.width = 16; c.height = 16; c.getContext('2d').drawImage(heroSprite(m.look || {}, 0), 0, 0);
-        el.innerHTML = `${m.id === P.leader ? '<span class="crown" title="Party-Leader">👑</span>' : ''}<div style="font-size:10px">${esc(m.name)}</div><div class="s muted">Level ${m.level} · ${WEAPONS[m.weapon] ? WEAPONS[m.weapon].name : ''}</div><span class="rdy ${m.ready ? 'ok' : 'no'}">${m.ready ? 'BEREIT' : 'NICHT BEREIT'}</span>`;
+        el.innerHTML = `${m.id === P.leader ? '<span class="crown" title="Party-Leader">👑</span>' : ''}<div style="font-size:10px">${esc(m.name)}</div><div class="s muted">Level ${m.level} · ${WEAPONS[m.weapon] ? WEAPONS[m.weapon].name : ''}</div>${m.remote ? `<div class="s" style="color:${m.online ? '#8fe05a' : '#ff8a7a'}">${m.online ? '🎮 spielt selbst' : m.lastRx ? '⚠ Verbindung weg' : '… tritt bei'}</div>` : ''}<span class="rdy ${m.ready ? 'ok' : 'no'}">${m.ready ? 'BEREIT' : 'NICHT BEREIT'}</span>`;
         el.insertBefore(c, el.children[m.id === P.leader ? 1 : 0]);
         if (leader && m.id !== 'me') { const b = document.createElement('button'); b.className = 'btn small red'; b.textContent = 'Entfernen'; b.onclick = () => { sfx('click'); Social.kick(m.id); }; el.appendChild(b); }
       } else el.innerHTML = '<div class="s muted" style="margin:auto;text-align:center">Freier Platz<br><br>Lade einen Freund ein</div>';
@@ -2964,13 +3373,28 @@ const UI = {
     let sure = false; document.getElementById('bReset').onclick = e => { if (!sure) { sure = true; e.target.textContent = 'Wirklich? Nochmal tippen'; return; } localStorage.removeItem(SAVE_KEY); Profile.load(); Social.updateMe(meInfo()); this.show('lobby'); };
     document.getElementById('bBack').onclick = () => { sfx('click'); this.show('lobby'); };
   },
+  // Koop-Gast: Warten auf den Start des Gastgebers
+  coopWait() {
+    const L = Coop.lobby || [], host = esc(Coop.host || '');
+    uiRoot.innerHTML = `<div class="screen">${this.topbar('Koop bei ' + host)}
+      <div class="panel col" style="width:min(640px,100%);align-items:center">
+        <h3>${Coop.gotLobby ? '🤝 Du bist in der Party von ' + host : 'Verbinde mit ' + host + ' …'}</h3>
+        <div class="row" id="cwList" style="justify-content:center"></div>
+        <div class="s muted" style="text-align:center;line-height:1.8;max-width:520px">${Coop.gotLobby ? (Coop.hostRun ? host + ' ist gerade noch in einem Run – beim nächsten Run bist du dabei.' : 'Warte, bis ' + host + ' den Run startet.') + ' Du steuerst deine eigene Figur mit deiner Ausrüstung, deinen Zaubern und Tränken. Am Ende bekommst du Erfahrung, Gold und eigene Beute.' : 'Einen Moment …'}</div>
+        <button class="btn red" id="bCoopLeave">Party verlassen</button>
+      </div></div>`;
+    const cl = document.getElementById('cwList');
+    L.forEach(m => { const el = document.createElement('div'); el.className = 'pslot'; const c = document.createElement('canvas'); c.width = c.height = 16; try { c.getContext('2d').drawImage(heroSprite(m.look || {}, 0), 0, 0); } catch (e) {} el.appendChild(c);
+      el.insertAdjacentHTML('beforeend', `<div style="font-size:10px">${esc(m.n || '?')}</div><div class="s muted">Level ${Math.floor(+m.l) || 1}</div>${m.h ? '<span class="rdy ok">👑 GASTGEBER</span>' : `<span class="rdy ${m.r ? 'ok' : 'no'}">${m.r ? 'BEREIT' : 'WARTET'}</span>`}`); cl.appendChild(el); });
+    document.getElementById('bCoopLeave').onclick = () => { sfx('click'); Coop.leave(''); };
+  },
   results(r) {
     const win = r.kind === 'victory', mm = Math.floor(r.time / 60), ss = Math.floor(r.time % 60);
     uiRoot.innerHTML = `<div class="screen" style="justify-content:center;background:rgba(0,0,0,.7)">
       <div class="panel col" style="width:min(560px,100%);align-items:center">
         <h2 style="font-size:22px;color:${win ? '#ffd25a' : '#ff5a4a'}">${win ? 'Mit Beute entkommen!' : r.kind === 'abort' ? 'Run abgebrochen' : 'Du bist gefallen'}</h2>
         <div class="s" style="width:100%">
-          <div class="loot-line" style="color:#ffb02e">${r.daily ? '📅 Tägliche Herausforderung · ' : ''}${esc(r.dungeon)} · Stufe ${r.diff}</div>${r.dailyMsg ? `<div class="loot-line" style="color:#fff27a">🎁 ${esc(r.dailyMsg)}</div>` : ''}
+          ${r.coop ? `<div class="loot-line" style="color:#9ad0ff">🤝 Koop-Run bei ${esc(r.coop)} – die Truhen gehören dem Gastgeber, du bekommst eigene Fundstücke.</div>` : ''}<div class="loot-line" style="color:#ffb02e">${r.daily ? '📅 Tägliche Herausforderung · ' : ''}${esc(r.dungeon)} · Stufe ${r.diff}</div>${r.dailyMsg ? `<div class="loot-line" style="color:#fff27a">🎁 ${esc(r.dailyMsg)}</div>` : ''}
           <div class="loot-line" style="color:#ffd25a">Erreichte Stage: ${r.stage}${r.record ? ' · NEUER REKORD!' : ` · Rekord: ${r.best}`}</div>
           <div class="loot-line">Räume erkundet: ${r.rooms} · Gegner besiegt: ${r.kills} · Zeit: ${mm}:${String(ss).padStart(2, '0')}</div>
           <div class="loot-line gold">Gold: +${fmt(r.gold)}${r.lost ? ` <span style="color:#ff6a5a">(−${fmt(r.lost)} verloren)</span>` : ''}</div>
@@ -2980,9 +3404,9 @@ const UI = {
           <div style="margin-top:8px">Beute:</div>
           ${r.items.length ? r.items.map(x => x.it.slot === 'art' ? `<div class="loot-line" style="color:${STAR_COL[x.it.stars]}">✦ ${esc(x.it.name)} ${'★'.repeat(x.it.stars)} <span class="muted">(Artefakt ${esc(ART_SETS[x.it.set].name)}${x.ok ? '' : ', Tasche voll → Essenz'})</span></div>` : `<div class="loot-line" style="color:${RARITY[x.it.rarity].color}">◆ ${esc(itemName(x.it))} <span class="muted">(${RARITY[x.it.rarity].name}${x.ok ? (x.ok.swap ? `, ersetzt ${esc(x.ok.swap)} (verkauft)` : '') : ', Inventar voll → verkauft'})</span></div>`).join('') : '<div class="loot-line muted">Keine Gegenstände gefunden.</div>'}
         </div>
-        <button class="btn gold big" id="bOk" style="margin-top:12px">Zurück zur Lobby</button>
+        <button class="btn gold big" id="bOk" style="margin-top:12px">${r.coop ? 'Zurück zur Party' : 'Zurück zur Lobby'}</button>
       </div></div>`;
-    document.getElementById('bOk').onclick = () => { sfx('click'); Social.resetReady(); this.show('lobby'); };
+    document.getElementById('bOk').onclick = () => { sfx('click'); if (Coop.role === 'guest') { this.show('coopWait'); return; } Social.resetReady(); this.show('lobby'); };
     this.fit();
   },
   pause() {
@@ -2990,10 +3414,10 @@ const UI = {
     el.innerHTML = `<div class="panel col" style="width:min(420px,100%)"><h2>Pause</h2>
       <button class="btn big gold" id="pRes">Weiter</button>
       <div class="s muted" style="line-height:1.8">WASD laufen · Maus zielen · Klick angreifen · Leertaste ausweichen · E interagieren (gedrückt halten zum Wiederbeleben) · 1–4 Zauber · Q Fähigkeit · R Heiltrank</div>
-      <button class="btn red" id="pQuit">Run aufgeben (50 % Gold verloren)</button></div>`;
+      <button class="btn red" id="pQuit">${Run.coopGuest ? 'Koop-Run verlassen (keine Belohnung)' : 'Run aufgeben (50 % Gold verloren)'}</button>${Run.coopGuest || Coop.live() ? '<div class="s muted">Koop: Das Spiel läuft im Hintergrund weiter.</div>' : ''}</div>`;
     uiRoot.appendChild(el); this.fit();
     document.getElementById('pRes').onclick = () => { sfx('click'); togglePause(false); };
-    document.getElementById('pQuit').onclick = () => { sfx('click'); togglePause(false); endRun('abort'); };
+    document.getElementById('pQuit').onclick = () => { sfx('click'); togglePause(false); if (Run.coopGuest) Coop.leave('Du hast den Koop-Run verlassen.'); else endRun('abort'); };
   },
 };
 // Einen passiven Bonus gegen einen neuen (anderen) tauschen
@@ -3046,7 +3470,7 @@ let lastTouchEnd = 0;
 document.addEventListener('touchend', e => { const now = Date.now(); if ((Run.active || e.target.closest('#touch')) && now - lastTouchEnd < 400) e.preventDefault(); lastTouchEnd = now; }, { passive: false });
 document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
 ['gesturestart', 'gesturechange', 'gestureend', 'dblclick'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive: false }));
-addEventListener('blur', () => { Input.keys.clear(); updateMoveFromKeys(); Input.attack = false; Input.interact = false; if (Run.active) togglePause(true); });
+addEventListener('blur', () => { Input.keys.clear(); updateMoveFromKeys(); Input.attack = false; Input.interact = false; if (Run.active && !Run.coopGuest && !Coop.live()) togglePause(true); });
 
 /* ---------- Touch-Steuerung (iPad/Handy): Joystick links, Knöpfe rechts ---------- */
 const Touch = {
@@ -3108,7 +3532,11 @@ let last = performance.now();
 function frame(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now;
   try {
-    if (Run.active && Run.room) { if (!Run.paused) updateRun(dt); renderRun(); Touch.tick(); }
+    if (Run.active && Run.room) {
+      if (Run.coopGuest) Coop.guestUpdate(dt); // Koop-Gast: Welt kommt vom Gastgeber
+      else if (!Run.paused || Coop.live()) updateRun(dt); // Koop-Gastgeber: Pause hält die Welt nicht an
+      if (Coop.role === 'host') Coop.hostTick(dt);
+      renderRun(); Touch.tick(); }
     else renderLobby(now / 1000);
     if (window.Freunde && Social.hub) Freunde.setHidden(Run.active && !Run.paused); // 👥 im Run ausblenden
   } catch (err) { console.error(err); }
@@ -3122,10 +3550,12 @@ Social.on('party', () => { if (!Run.active && UI.cur && (UI.cur[0] === 'party' |
 Social.on('friends', () => { if (!Run.active && UI.cur && UI.cur[0] === 'party') UI.refresh(); });
 UI.show('lobby');
 requestAnimationFrame(frame);
+// Koop-Gastgeber im Hintergrund-Tab: Der Browser hält requestAnimationFrame an – die Welt läuft für die Gäste trotzdem weiter
+setInterval(() => { if (!document.hidden || !Coop.live() || !Run.room) return; try { updateRun(.05); updateRun(.05); Coop.hostTick(.1); } catch (err) { console.error(err); } }, 100);
 // Schrift laden, damit Canvas-Texte die Pixel-Schrift nutzen
 if (document.fonts && document.fonts.load) document.fonts.load('12px "Press Start 2P"').catch(() => {});
 // Für Tests/Debugging von außen erreichbar
-window.DG = { Run, Profile, Social, UI, startRun, enterRoom, Input };
+window.DG = { Run, Profile, Social, UI, startRun, enterRoom, endRun, Input, Coop };
 
 </script>
 </body>

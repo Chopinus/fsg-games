@@ -247,7 +247,7 @@ function acceptInvite(inv) {
   if (!nick() && konto) $('#nick').value = konto.name.slice(0, 16);
   if (inv.room) { send({ t: 'join', room: inv.room }); return; }
   const g = inv.game;
-  if (g === 'Dungeon') location.href = '/dungeon.html';
+  if (g === 'Dungeon') location.href = '/dungeon.html#koop=' + encodeURIComponent(inv.from); // Koop: im Run des Einladenden mitspielen
   else if (g === 'Inselreich') { if (needNick()) openInsel(null); }
   else if (g === 'Würfelwelt') openWelt(null);
   else if (g === 'Ritterlauf') openRitter(null);

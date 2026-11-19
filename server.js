@@ -73,7 +73,28 @@ function handleFriendMsg(c, m) {
   }
   if (m.t === 'invite_answer') { if (!c.acc) return true; const tk = konten.keyOfName(String(m.to || '').slice(0, 20)); if (!konten.areFriends(c.acc, tk)) return true;
     sendToAcc(tk, { t: 'invite_answer', from: konten.accName(c.acc), ok: !!m.ok, game: clean(m.game, 24) }); return true; }
+  if (m.t === 'dg') { relayDungeon(c, m); return true; }
   return false;
+}
+// Dungeon-Koop (Spieler-Idee v47): Der Gastgeber rechnet das Spiel, Gäste schicken Eingaben, der Gastgeber Schnappschüsse.
+// Der Server reicht nur weiter – nur zwischen angemeldeten, befreundeten Konten, nur an offene Dungeon-Seiten,
+// höchstens 16 KB pro Nachricht (siehe maxPayload) und höchstens ~30 Nachrichten pro Sekunde und Verbindung.
+const DG_RATE = 30, DG_BURST = 60, DG_MAX = 16 * 1024;
+function relayDungeon(c, m) {
+  if (!c.acc || !konten || !konten.areFriends) return;
+  const now = Date.now(); // Ratenbremse (Token-Eimer): füllt sich mit 30/s, maximal 60 auf Vorrat
+  c.dgTok = Math.min(DG_BURST, (c.dgTok ?? DG_BURST) + (now - (c.dgT || now)) / 1000 * DG_RATE); c.dgT = now;
+  if (c.dgTok < 1) return; c.dgTok -= 1;
+  if (!m.d || typeof m.d !== 'object' || Array.isArray(m.d)) return;
+  let body; try { body = JSON.stringify(m.d); } catch { return; }
+  if (body.length > DG_MAX) return;
+  const to = (Array.isArray(m.to) ? m.to : [m.to]).slice(0, 3); if (!to.length) return;
+  const from = konten.accName(c.acc), done = new Set();
+  for (const n of to) {
+    const tk = konten.keyOfName(String(n || '').slice(0, 20)); if (!tk || tk === c.acc || done.has(tk) || !konten.areFriends(c.acc, tk)) continue; done.add(tk);
+    const msg = '{"t":"dg","from":' + JSON.stringify(from) + ',"d":' + body + '}';
+    for (const x of clients) if (x.acc === tk && x.where === 'Dungeon' && x.ws.readyState === 1) x.ws.send(msg);
+  }
 }
 const MOVED_HOST = MOVED.replace(/^https?:\/\//i, '');
 if (MOVED) console.log(`Umzugs-Modus: alle Seiten zeigen den Hinweis auf ${MOVED}`);

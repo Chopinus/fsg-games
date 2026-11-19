@@ -132,6 +132,7 @@
     if (m.t === 'invite') { showInvite(m); return true; }
     if (m.t === 'invite_sent') { toast('Einladung an ' + m.to + ' gesendet'); return true; }
     if (m.t === 'invite_answer') { toast(m.ok ? '✅ ' + m.from + ' hat angenommen!' : m.from + ' kann gerade nicht'); emit('answer', m); return true; }
+    if (m.t === 'dg') { emit('dg', m); return true; } // Dungeon-Koop: Spieldaten von einem Freund
     return false;
   }
   // Eigene Verbindung (für Spielseiten außerhalb des Hubs, z. B. Dungeon)
@@ -151,6 +152,9 @@
     msg, refresh, toast,
     list: () => S.view ? S.view.friends : [],
     invite: (name, game, room) => send({ t: 'invite', to: name, game, room: room || null }),
+    // Dungeon-Koop: Spieldaten an einen oder mehrere Freunde (Namen) schicken; true, wenn die Verbindung offen ist
+    dg(to, d) { const open = S.opts && S.opts.send ? true : !!(S.ws && S.ws.readyState === 1); if (open) send({ t: 'dg', to, d }); return open; },
+    me: () => (konto() || {}).name || null,
     setWhere(w) { if (w === S.where) return; S.where = w; send({ t: 'where', g: w }); },
     setHidden(v) { if (S.hidden === !!v) return; S.hidden = !!v; if (S.hidden) S.openP = false; render(); },
     on(ev, fn) { (S.handlers[ev] = S.handlers[ev] || []).push(fn); },
