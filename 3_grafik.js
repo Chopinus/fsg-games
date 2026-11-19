@@ -303,6 +303,19 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 84, title: 'Spieler-Idee: Dungeon – echter Koop statt Bot', date: '19.11.2026', items: [
+      'Eingeladene Freunde spielen im Dungeon jetzt selbst mit ihrer eigenen Figur, Ausrüstung, Zaubern und Tränken im Run des Gastgebers mit, statt als Bot hinterherzulaufen.',
+      'Jeder Mitspieler bekommt Erfahrung, Gold und eigene Fundstücke in seinen eigenen Spielstand.',
+      'Bricht die Verbindung ab, übernimmt kurz die KI (sichtbar als „(KI)“), bis der Freund wieder da ist. Wichtig: Der Gastgeber sollte beim Einladen schon im Dungeon sein.',
+    ] },
+    { id: 83, title: 'Fehler behoben: Casino wieder spielbar', date: '19.11.2026', items: [
+      'Seit dem 17.11. kamen Einsätze und Spielzüge im Casino (und in anderen Mehrspieler-Spielen) teilweise nicht beim Server an. Das ist behoben – Setzen, Geben und Spielen funktioniert wieder.',
+    ] },
+    { id: 82, title: 'Spieler-Idee: Neues Spiel „Inselsiedler“', date: '19.11.2026', items: [
+      'Neu im Game Hub: Siedlungen, Straßen und Städte auf einer zufälligen Sechseck-Insel bauen – für 2–4 Spieler, alle weiteren schauen zu.',
+      'Rohstoffe erwürfeln, mit Bank, Häfen und Mitspielern handeln, Entwicklungskarten ausspielen und den Räuber versetzen.',
+      'Längste Handelsstraße und größte Wache bringen je 2 Bonuspunkte – wer zuerst 10 Punkte hat, gewinnt.',
+    ] },
     { id: 81, title: 'Spieler-Idee: Ganzen Helden komplett maxen', date: '19.11.2026', items: [
       'Ab dem 7. Aufstieg gibt es oben im Heldenreiter neben ⏫ Max den Knopf 👑 Alles: Er kauft für diesen Helden alles, was Gold, Seelen und Sockel hergeben – auch Schlüssel (solange Schlüsselsockel frei sind) und den Siegelbaum, wenn ein Ahnensiegel gesetzt ist.',
       'Zuerst werden alle normalen Fertigkeiten und Schlüssel gekauft, erst danach die Endlos-Fertigkeiten. Die Kosten sind genau dieselben wie bei Einzelkäufen. Zur Sicherheit muss man zweimal tippen.',
