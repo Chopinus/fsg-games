@@ -60,7 +60,8 @@ function pingFriends(k) { if (!k || !konten || !konten.friendKeys) return; if (f
 if (konten && konten.setPresence) { konten.setPresence(presenceOf); konten.setChatHook((from, to, kind) => sendToAcc(to, { t: kind === 'req' ? 'fr_req' : kind === 'fr' ? 'fr_ping' : 'fr_msg', from: konten.accName(from) })); }
 const inviteT = new Map();
 function handleFriendMsg(c, m) {
-  if (m.t === 'act') { c.act = Date.now(); return true; } // Spieler ist aktiv (Tippen/Tasten) – zählt fürs Schulden-Abarbeiten
+  if (m.t === 'alive') { c.act = Date.now(); return true; } // Spieler ist aktiv (Tippen/Tasten) – zählt fürs Schulden-Abarbeiten
+  if (m.t === 'act') c.act = Date.now(); // Spielzug = auch aktiv (Nachricht läuft danach normal weiter)
   if (m.t === 'where') { const w = clean(m.g, 24) || null; if (w !== c.where) { c.where = w; pingFriends(c.acc); } return true; }
   if (m.t === 'invite') {
     if (!c.acc) return send(c, { t: 'err', msg: 'Melde dich mit deinem Konto an, um Freunde einzuladen.' }), true;

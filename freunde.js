@@ -143,7 +143,7 @@
     ws.onclose = () => setTimeout(connect, 3000);
   }
   // Aktivität melden (höchstens alle 20 s): wer wirklich spielt, arbeitet nebenbei seine Casino-Schulden ab
-  let actT = 0; const act = () => { const n = Date.now(); if (n - actT < 20000 || document.hidden) return; actT = n; send({ t: 'act' }); };
+  let actT = 0; const act = () => { const n = Date.now(); if (n - actT < 20000 || document.hidden) return; actT = n; send({ t: 'alive' }); };
   ['pointerdown', 'keydown', 'touchstart'].forEach(ev => addEventListener(ev, act, { passive: true, capture: true }));
   window.Freunde = {
     init(opts) { S.opts = opts || {}; S.where = S.opts.where || S.where; if (!document.getElementById('frw-css')) { const st = document.createElement('style'); st.id = 'frw-css'; st.textContent = css; document.head.appendChild(st); }

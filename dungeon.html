@@ -626,7 +626,7 @@ class MockSocialService extends SocialService {
   resetReady() { this.party.members.forEach(m => m.ready = m.id !== 'me'); this.emit('party', this.party); }
 }
 // Im Game Hub: echte Freunde (Online-Status, Chat, Einladungen) über freunde.js vom Hub-Server
-const FR_READY = IN_HUB ? new Promise(res => { const s = document.createElement('script'); s.src = '/freunde.js?v=2'; s.onload = () => res(!!window.Freunde); s.onerror = () => res(false); document.head.appendChild(s); }) : Promise.resolve(false);
+const FR_READY = IN_HUB ? new Promise(res => { const s = document.createElement('script'); s.src = '/freunde.js?v=3'; s.onload = () => res(!!window.Freunde); s.onerror = () => res(false); document.head.appendChild(s); }) : Promise.resolve(false);
 class HubSocialService extends MockSocialService {
   async connect(me) {
     this.me = me; this.friends = []; this.hub = true;
