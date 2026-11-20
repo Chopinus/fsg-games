@@ -48,6 +48,25 @@
   blk(34, 'bstamm', 'Birkenstamm', [8, 39, 8], { hard: 1.1, axe: true });
   blk(35, 'bblatt', 'Birkenblätter', 40, { op: false, alpha: true, hard: 0.2 });
   blk(36, 'moos', 'Moosstein', 41, { hard: 1.5, pick: 1 });
+  // Spieler-Idee (v49): mehr Baublöcke – neue Stofffarben, Holzarten, Buntglas, Marmor, Basalt, Bücherregal und mehr
+  blk(37, 'stoffgr', 'Stoff grün', 88, { hard: 0.6 });
+  blk(38, 'stoffo', 'Stoff orange', 89, { hard: 0.6 });
+  blk(39, 'stoffl', 'Stoff lila', 90, { hard: 0.6 });
+  blk(40, 'stoffs', 'Stoff schwarz', 91, { hard: 0.6 });
+  blk(41, 'stoffp', 'Stoff rosa', 92, { hard: 0.6 });
+  blk(42, 'stofft', 'Stoff türkis', 93, { hard: 0.6 });
+  blk(43, 'fbretter', 'Fichtenbretter', 94, { hard: 1, axe: true });
+  blk(44, 'bbretter', 'Birkenbretter', 95, { hard: 1, axe: true });
+  blk(45, 'glasr', 'Buntglas rot', 96, { op: false, alpha: true, hard: 0.4 });
+  blk(46, 'glasb', 'Buntglas blau', 97, { op: false, alpha: true, hard: 0.4 });
+  blk(47, 'marmor', 'Marmor', 98, { hard: 1.5, pick: 1 });
+  blk(48, 'marmorz', 'Marmorziegel', 99, { hard: 1.6, pick: 1 });
+  blk(49, 'buecher', 'Bücherregal', [14, 100, 14], { hard: 1, axe: true });
+  blk(50, 'eisenblk', 'Eisenblock', 101, { hard: 2.5, pick: 2 });
+  blk(51, 'laterne', 'Laterne', 102, { glow: true, hard: 0.6 });
+  blk(52, 'heu', 'Heuballen', [103, 104, 103], { hard: 0.4 });
+  blk(53, 'terrakotta', 'Terrakotta', 105, { hard: 1.2, pick: 1 });
+  blk(54, 'basalt', 'Basalt', [107, 106, 107], { hard: 1.6, pick: 1 });
   const INV_IDS = BL.filter(b => b && b.inv).map(b => b.id);
   // Gegenstände, die keine Blöcke sind: Werkzeuge, Essen, Rohstoffe
   const ITEMS = {
@@ -74,6 +93,15 @@
     { out: ['leucht', 2], in: [['kohlestk', 2], ['barren', 1]] }, { out: ['stoffw', 1], in: [['blatt', 3]] }, { out: ['stoffw', 2], in: [['schleim', 1], ['blatt', 1]] },
     { out: ['stoffr', 1], in: [['stoffw', 1], ['blumer', 1]] }, { out: ['stoffg', 1], in: [['stoffw', 1], ['blumeg', 1]] },
     { out: ['stoffb', 1], in: [['stoffw', 1], ['blumeb', 1]] }, { out: ['eis', 1], in: [['schnee', 4]] },
+    { out: ['stoffgr', 1], in: [['stoffw', 1], ['kaktus', 1]] }, { out: ['stoffs', 1], in: [['stoffw', 1], ['kohlestk', 1]] },
+    { out: ['stoffo', 2], in: [['stoffr', 1], ['stoffg', 1]] }, { out: ['stoffl', 2], in: [['stoffr', 1], ['stoffb', 1]] },
+    { out: ['stoffp', 2], in: [['stoffr', 1], ['stoffw', 1]] }, { out: ['stofft', 2], in: [['stoffb', 1], ['stoffgr', 1]] },
+    { out: ['fbretter', 4], in: [['fstamm', 1]] }, { out: ['bbretter', 4], in: [['bstamm', 1]] },
+    { out: ['glasr', 4], in: [['glas', 4], ['blumer', 1]] }, { out: ['glasb', 4], in: [['glas', 4], ['blumeb', 1]] },
+    { out: ['marmor', 2], in: [['pflaster', 2], ['schnee', 2]] }, { out: ['marmorz', 4], in: [['marmor', 4]] },
+    { out: ['buecher', 1], in: [['bretter', 6], ['feder', 1]] }, { out: ['eisenblk', 1], in: [['barren', 4]] },
+    { out: ['laterne', 1], in: [['glas', 1], ['fackel', 1]] }, { out: ['heu', 1], in: [['blatt', 6]] },
+    { out: ['terrakotta', 4], in: [['erde', 4], ['sand', 1], ['kohlestk', 1]] }, { out: ['basalt', 4], in: [['pflaster', 4], ['kohlestk', 1]] },
   ];
 
   /* ================= Zufall und Rauschen ================= */
@@ -330,6 +358,23 @@
     fill(48, (x, y) => { const d = Math.hypot(x - 7.5, y - 7.5); return d < 7.5 ? [255, 244, 190, 255] : [0, 0, 0, 0]; });
     fill(49, (x, y, r) => { const d = Math.hypot(x - 7.5, y - 7.5); return d < 7 ? [216 + r * 20, 220 + r * 20, 236, 255] : [0, 0, 0, 0]; });
     fill(50, () => [255, 255, 255, 255]);
+    // Spieler-Idee (v49): neue Baublöcke
+    fill(88, wool(78, 156, 62)); fill(89, wool(232, 128, 40)); fill(90, wool(136, 64, 180)); fill(91, wool(36, 36, 40)); fill(92, wool(238, 150, 186)); fill(93, wool(46, 168, 170));
+    const planks = (cr, cg, cb) => (x, y, r) => { const seam = y % 4 === 3 || (x === ((y >> 2) % 2 ? 4 : 11) && y % 4 !== 3); const v = (r - 0.5) * 18 + (seam ? -36 : 0); return [cr + v, cg + v, cb + v * 0.7]; };
+    fill(94, planks(110, 78, 46)); fill(95, planks(222, 200, 150));
+    const stained = (cr, cg, cb) => (x, y) => { const edge = x === 0 || y === 0 || x === 15 || y === 15, streak = (x - y === 3 || x - y === 4) && x > 4 && x < 13; return edge ? [cr * 0.7, cg * 0.7, cb * 0.7, 235] : streak ? [Math.min(255, cr + 80), Math.min(255, cg + 80), Math.min(255, cb + 80), 170] : [cr, cg, cb, 110]; };
+    fill(96, stained(210, 50, 50)); fill(97, stained(50, 90, 220));
+    fill(98, (x, y, r) => { const vein = Math.abs(Math.sin(x * 0.7 + y * 0.35 + R(98, x >> 2, y >> 2, 1) * 3)) < 0.12 ? -46 : 0, v = (r - 0.5) * 10 + vein; return [236 + v, 236 + v, 240 + v]; });
+    fill(99, (x, y, r) => { const e = y % 8 === 7 || ((x + (y >> 3) * 4) % 8 === 7), v = (r - 0.5) * 10 + (e ? -40 : 0); return [232 + v, 230 + v, 236 + v]; });
+    const BOOK = [[150, 40, 40], [40, 80, 150], [50, 120, 60], [170, 130, 40], [100, 50, 120]];
+    fill(100, (x, y, r) => { if (y === 0 || y === 7 || y === 8 || y === 15) return [150 + (r - 0.5) * 16, 110, 66]; if (x === 0 || x === 15) return [120, 86, 50]; const c = BOOK[Math.floor(R(100, x >> 1, y >> 3, 2) * BOOK.length)], v = (x % 2 ? -14 : 0) + (r - 0.5) * 12; return [c[0] + v, c[1] + v, c[2] + v]; });
+    fill(101, (x, y, r) => { const e = x === 0 || y === 0 || x === 15 || y === 15, hi = x + y < 10 && !e ? 20 : 0, v = (r - 0.5) * 10 + hi + (e ? -40 : 0); return [212 + v, 214 + v, 220 + v]; });
+    fill(102, (x, y, r) => { const frame = x < 2 || x > 13 || y < 2 || y > 13 || x === 7 || x === 8; if (frame) return [56 + r * 16, 52 + r * 16, 48]; const d = Math.hypot(x - 7.5, y - 7.5); return [255, 214 - d * 6, 120 - d * 8]; });
+    fill(103, (x, y, r) => { const v = (r - 0.5) * 40, ring = Math.sin(Math.hypot(x - 7.5, y - 7.5) * 1.6) * 10; return [214 + v * 0.5 + ring, 180 + v * 0.5 + ring, 70 + v * 0.3]; });
+    fill(104, (x, y, r) => { const band = y === 4 || y === 11 ? -70 : 0, v = (r - 0.5) * 40 + (x % 3 === 0 ? -14 : 0) + band; return [214 + v * 0.6, 180 + v * 0.6, 70 + v * 0.3 + (band ? 10 : 0)]; });
+    fill(105, (x, y, r) => { const v = (r - 0.5) * 16; return [176 + v, 98 + v * 0.8, 70 + v * 0.6]; });
+    fill(106, (x, y, r) => { const col = x % 4 === 0 ? -20 : 0, v = (r - 0.5) * 18 + col; return [62 + v, 62 + v, 70 + v]; });
+    fill(107, (x, y, r) => { const d = Math.hypot(x - 7.5, y - 7.5), ring = Math.floor(d) % 3 === 0 ? -14 : 0, v = (r - 0.5) * 16 + ring; return [70 + v, 70 + v, 78 + v]; });
     g.putImageData(img, 0, 0);
     return c;
   }
@@ -879,7 +924,7 @@
       const t = AC.currentTime, len = kind === 'break' ? 0.18 : kind === 'hurt' ? 0.2 : 0.08, buf = AC.createBuffer(1, Math.floor(AC.sampleRate * len), AC.sampleRate), ch = buf.getChannelData(0);
       for (let i = 0; i < ch.length; i++) ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / ch.length, 2);
       const src = AC.createBufferSource(); src.buffer = buf; const f = AC.createBiquadFilter(); f.type = 'lowpass';
-      const b = id != null ? BL[id] : null; f.frequency.value = kind === 'hurt' ? 500 : b && (b.key === 'glas' || b.key === 'eis') ? 4000 : b && (b.key.includes('stein') || b.key === 'pflaster' || b.key.includes('erz') || b.key === 'kohle' || b.key === 'eisen' || b.key === 'ziegel') ? 1600 : b && (b.key === 'blatt' || b.key === 'fnadel' || b.cross) ? 2500 : 900;
+      const b = id != null ? BL[id] : null; f.frequency.value = kind === 'hurt' ? 500 : b && (b.key.startsWith('glas') || b.key === 'eis' || b.key === 'laterne') ? 4000 : b && (b.key.includes('stein') || b.key === 'pflaster' || b.key.includes('erz') || b.key === 'kohle' || b.key === 'eisen' || b.key === 'ziegel') ? 1600 : b && (b.key === 'blatt' || b.key === 'fnadel' || b.cross) ? 2500 : 900;
       const g = AC.createGain(); g.gain.value = kind === 'hit' ? 0.12 : 0.25; src.connect(f); f.connect(g); g.connect(AC.destination); src.start(t);
     } catch {}
   }
