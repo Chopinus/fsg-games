@@ -29,6 +29,20 @@ const GAMES = [
     art: '<svg width="96" height="56" viewBox="0 0 96 56" aria-hidden="true">' + [[30, 16, '#2f7d3a'], [52, 16, '#e5bf3c'], [19, 35, '#c4622d'], [41, 35, '#93c95a'], [63, 35, '#8b8f9e']].map(([x, y, c]) => `<polygon points="${[0, 1, 2, 3, 4, 5].map(i => { const a = Math.PI / 3 * i - Math.PI / 2; return (x + 12 * Math.cos(a)).toFixed(1) + ',' + (y + 12 * Math.sin(a)).toFixed(1); }).join(' ')}" fill="${c}" stroke="#f1e2bf" stroke-width="1.5"/>`).join('') + '<path d="M36 30v-5l5-4 5 4v5z" fill="#e5484d" stroke="#15121c" stroke-width="1.5"/><circle cx="52" cy="17" r="5" fill="#fbf5e8"/><text x="52" y="20" font-size="8" font-weight="800" text-anchor="middle" fill="#c8242a">8</text></svg>' },
   { key: 'party', title: 'Minispiel-Party', sub: 'Zufällige Minispiele à 1–2 Minuten, Punkte nach Platzierung · 2–12 Spieler',
     art: ['r', 'g', 'b', 'y'].map((c, i) => `<span class="s-${c}" style="width:28px;height:28px;border-radius:8px;display:inline-block;transform:rotate(${i * 9 - 12}deg)"></span>`).join('') },
+  { key: 'quiz', title: 'Quiz-Duell', sub: 'Alle bekommen dieselbe Frage – wer schneller richtig liegt, holt mehr Punkte · 1–12 Spieler', neu: 1,
+    art: '<span class="qz-art"><i style="--c:#e5484d">▲</i><i style="--c:#3b7ad6">◆</i><i style="--c:#f2be1a">●</i><i style="--c:#27a06a">■</i></span>' },
+  { key: 'werwolf', title: 'Werwolf', sub: 'Nachts jagen die Werwölfe, tagsüber stimmt das Dorf ab · 4–12 Spieler', neu: 1,
+    art: '<span class="ww2-art"><b>🌕</b><i>🐺</i></span>' },
+  { key: 'agenten', title: 'Wortagenten', sub: 'Zwei Teams, ein Hinweiswort – findet eure Agenten · 4–12 Spieler', neu: 1,
+    art: '<span class="ag-art">' + ['r', 'b', 'n', 'r', 'x', 'b'].map(c => `<i class="ag-${c}"></i>`).join('') + '</span>' },
+  { key: 'schiffe', title: 'Schiffe versenken', sub: 'Der Klassiker zu zweit oder gegen Admiral Bot', neu: 1,
+    art: '<span class="sv-art"><i></i><i></i><i class="hit"></i><i></i><i class="miss"></i><i></i></span>' },
+  { key: 'lichtrad', title: 'Lichtrad', sub: 'Fahre eine Lichtspur – wer in eine Spur crasht, ist raus · 2–8 Spieler oder mit Bots', neu: 1,
+    art: '<svg width="96" height="56" viewBox="0 0 96 56" aria-hidden="true"><path d="M6 46H40V14H70V40H90" fill="none" stroke="#22e3ff" stroke-width="4" stroke-linecap="round" style="filter:drop-shadow(0 0 4px #22e3ff)"/><path d="M90 8H56V30H20V52" fill="none" stroke="#ff3fa4" stroke-width="4" stroke-linecap="round" style="filter:drop-shadow(0 0 4px #ff3fa4)"/></svg>' },
+  { key: 'arena', title: 'Kugel-Arena', sub: 'Sammle Lichtpunkte, wachse und schnapp dir kleinere Kugeln · .io-Spiel für alle', neu: 1,
+    art: '<span class="ka-art"><i style="--s:40px;--c:#22e3ff;left:8px;top:10px"></i><i style="--s:22px;--c:#ff3fa4;left:56px;top:6px"></i><i style="--s:14px;--c:#ffd23f;left:62px;top:34px"></i><i style="--s:6px;--c:#3dff8a;left:40px;top:44px"></i><i style="--s:6px;--c:#a46bff;left:84px;top:22px"></i></span>' },
+  { key: 'turnier', title: 'Vier-gewinnt-Turnier', sub: 'K.-o.-Turnier mit Turnierbaum – wer wird Champion? · 3–12 Spieler', neu: 1,
+    art: '<span class="tu-art">🏆</span>' },
 ];
 const gameOf = k => GAMES.find(g => g.key === k) || (k === 'casino' ? { title: 'Casino' } : k === 'welt' ? { title: 'Würfelwelt' } : { title: k });
 
@@ -59,6 +73,7 @@ function onMsg(m) {
   } else if (m.t === 'closed') { const wasWelt = room && room.game === 'welt'; room = null; roomId = null; store.set('fsg.room', null); render(); if (wasWelt && window.Welt && Welt.inMP()) Welt.roomGone(); }
   else if (m.t === 'err') toast(m.msg);
   else if (m.t === 'rchat') rcOnMsg(m);
+  else if (m.t === 'hub_xp') window.dispatchEvent(new CustomEvent('fsg-hubxp', { detail: m }));
   else if (m.t === 'cast') { if (m.d && m.d.g === 'welt') { if (window.Welt) Welt.net(m.d); } else if (window.Spiele2) Spiele2.cast(m.d); }
 }
 
@@ -68,6 +83,10 @@ function onMsg(m) {
 const SHOW_ADMIN_BADGE = false;
 const admHTML = (name, adm) => (adm && SHOW_ADMIN_BADGE ? `<span class="adm-name">${esc(name)}</span><sup class="adm-tag" title="Admin">A</sup>` : esc(name));
 window.admHTML = admHTML;
+// Hub-Level: Name in der freigeschalteten Farbe und kleines Level-Schild
+const hbHTML = (name, hb, adm) => { if (!hb) return admHTML(name, adm); const c = hb.nc || ''; const cls = ['gold', 'fire', 'rainbow', 'galaxy'].includes(c) ? ` nc-${c}` : ''; const st = c && !cls ? ` style="color:${c}"` : '';
+  return `<span class="hbn${cls}"${st}>${admHTML(name, adm)}</span><span class="hblv" title="Hub-Level ${hb.lv}">${hb.lv}</span>`; };
+window.hbHTML = hbHTML;
 let FSG_ADMINS = []; // Anzeigenamen der Admin-Konten (Ritterlauf zeigt Kontonamen)
 fetch('/api/status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(r => r.json()).then(j => { FSG_ADMINS = (j && j.admins) || []; renderAcct(); admScan(); }).catch(() => {});
 // Namen in Spielen ohne eigene Admin-Kennung (Ritterlauf, Brettspiel-Runden) nachträglich schmücken
@@ -107,6 +126,7 @@ setInterval(() => {
 
 /* ---------- Hub ---------- */
 function renderTiles() {
+  if (window.HubUI) { HubUI.renderTiles(); return; }
   $('#tiles').innerHTML = `<div class="tile wide solo-tile"><div class="art"><span class="rl-art"></span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b>Ritterlauf <span class="pill">Solo</span></b><span class="sub">Deine Heldengruppe kämpft sich von allein durch Gegnerwellen. Sechs Klassen, Fertigkeitenbäume, Runen, Wiedergeburt und Aufstieg – und eine Bestenliste mit deinen Freunden.</span></div>
       <button class="btn small" data-solo="1">Spielen</button></div>
     <div class="tile wide solo-tile ww-tile"><div class="art"><span class="ww-art"></span></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b>Würfelwelt <span class="pill">Solo</span></b><span class="sub">Eine unendliche Welt aus Würfeln: Wälder, Wüsten, Schneeberge und Höhlen. Abbauen, bauen, entdecken – im Kreativ- oder Überlebensmodus.</span></div>
@@ -134,7 +154,7 @@ function renderRooms() {
     const pill = r.status === 'lobby' ? '<span class="pill wait">Wartet</span>' : r.status === 'playing' ? '<span class="pill play">Läuft</span>' : '<span class="pill end">Beendet</span>';
     const mine = r.id === roomId;
     return `<div class="roomrow"><div style="min-width:0"><div class="name">${esc(r.name)}</div>
-      <div class="meta"><span class="chip">${esc(g.title)}</span>${pill}${r.players.map(p => `<span class="chip">${admHTML(p.name, p.adm)}${p.host ? ' ★' : ''}</span>`).join('')}</div></div>
+      <div class="meta"><span class="chip">${esc(g.title)}</span>${pill}${r.players.map(p => `<span class="chip">${hbHTML(p.name, p.hb, p.adm)}${p.host ? ' ★' : ''}</span>`).join('')}</div></div>
       <button class="btn small" data-join="${r.id}" ${r.full && !mine ? 'disabled' : ''}>${mine ? 'Zurück zur Runde' : r.full ? 'Voll' : r.status === 'lobby' ? 'Beitreten' : 'Einsteigen'}</button></div>`;
   }).join('');
 }
@@ -332,7 +352,7 @@ function lobbyHTML() {
   const r = room, n = r.players.length, need = r.min;
   const canPriv = r.game !== 'casino' && r.game !== 'welt';
   return `<h2>Warten auf Mitspieler</h2>
-    <div class="seats">${r.players.map(p => `<span class="chip ${p.online ? '' : 'off'}">${admHTML(p.name, p.adm)}${p.id === r.host ? ' ★' : ''}${p.id === r.me ? ' (du)' : ''}${isHost() && p.id !== r.me ? `<button class="kick" data-kick="${esc(p.id)}" title="${esc(p.name)} aus der Lobby entfernen" aria-label="Entfernen">✕</button>` : ''}</span>`).join('')}</div>
+    <div class="seats">${r.players.map(p => `<span class="chip ${p.online ? '' : 'off'}">${hbHTML(p.name, p.hb, p.adm)}${p.id === r.host ? ' ★' : ''}${p.id === r.me ? ' (du)' : ''}${isHost() && p.id !== r.me ? `<button class="kick" data-kick="${esc(p.id)}" title="${esc(p.name)} aus der Lobby entfernen" aria-label="Entfernen">✕</button>` : ''}</span>`).join('')}</div>
     ${r.priv && r.code ? `<p class="note">🔒 Private Lobby – nur mit Code oder Einladung. Code:</p><div class="shareurl lobbycode">${esc(r.code)}</div>
     <p class="note">Freunde tippen im Hub bei „Offene Runden“ auf <b>Mit Code beitreten</b> und geben den Code ein – oder du lädst sie über 👥 ein.${r.seats < 12 ? ` Es spielen bis zu ${r.seats}, alle weiteren schauen zu.` : ''}</p>`
     : `<p class="note">Freunde öffnen</p><div class="shareurl">${esc(location.host)}</div>
@@ -341,7 +361,7 @@ function lobbyHTML() {
     ${isHost() ? `<div class="row" style="justify-content:center"><button class="btn" data-room="start" ${n < need ? 'disabled' : ''}>${n < need ? `Noch ${need - n} Spieler nötig` : 'Spiel starten'}</button>
       <button class="btn ghost" data-room="close">Runde auflösen</button></div>`
       : `<p class="status">${esc(nameOf(r.host))} startet das Spiel.</p>`}
-    ${r.game === 'schach' ? chessSoloHTML() : ''}`;
+    ${r.game === 'schach' ? chessSoloHTML() : ''}${window.LobbyExtra && LobbyExtra[r.game] ? LobbyExtra[r.game]() : ''}`;
 }
 // Schach allein: gegen den Bot (5 Stufen) oder das Rätsel des Tages
 const CH_LV = ['Anfänger', 'Leicht', 'Mittel', 'Schwer', 'Meister'];
@@ -366,7 +386,7 @@ $('#room').addEventListener('click', e => {
   if (a === 'hub') send({ t: 'hub' });
   else if (a === 'leave') send({ t: 'leave' });
   else if (a === 'close') send({ t: 'close' });
-  else if (a === 'start') send({ t: 'start' });
+  else if (a === 'start') send({ t: 'start', ...(window.LobbyOpt && LobbyOpt[room.game] ? LobbyOpt[room.game]() : {}) });
 });
 $('#room').addEventListener('click', e => {
   const b = e.target.closest('[data-chbot],[data-chpuz]'); if (!b || b.disabled || !isHost()) return;

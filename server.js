@@ -21,6 +21,13 @@ const GAMES = {
   siedler: require('./siedler.js'),
   casino: require('./casino.js'),
   welt: require('./welt_mp.js'),
+  quiz: require('./quiz.js'),
+  werwolf: require('./werwolf.js'),
+  agenten: require('./agenten.js'),
+  schiffe: require('./schiffe.js'),
+  lichtrad: require('./lichtrad.js'),
+  arena: require('./arena.js'),
+  turnier: require('./turnier.js'),
 };
 // Umzug: Ist auf diesem Render-Dienst die Umgebungsvariable MOVED_TO gesetzt (z. B. https://onegame.onrender.com),
 // zeigt jede Seite nur noch den Umzugs-Hinweis. Spielstände werden dann hier weder geladen noch gespeichert,
@@ -119,7 +126,7 @@ const IDLE_MS = 30 * 60 * 1000; // Räume ohne verbundene Spieler verschwinden n
 
 const STATIC = {
   '/': 'index.html', '/index.html': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css',
-  '/mini.js': 'mini.js', '/ritter.js': 'ritter.js', '/spiele2.js': 'spiele2.js', '/welt.js': 'welt.js', '/casino_ui.js': 'casino_ui.js', '/insel.js': 'insel.js', '/ideen.js': 'ideen.js', '/dungeon.html': 'dungeon.html', '/freunde.js': 'freunde.js', '/wortle_ui.js': 'wortle_ui.js', '/siedler_ui.js': 'siedler_ui.js',
+  '/mini.js': 'mini.js', '/ritter.js': 'ritter.js', '/spiele2.js': 'spiele2.js', '/welt.js': 'welt.js', '/casino_ui.js': 'casino_ui.js', '/insel.js': 'insel.js', '/ideen.js': 'ideen.js', '/dungeon.html': 'dungeon.html', '/freunde.js': 'freunde.js', '/wortle_ui.js': 'wortle_ui.js', '/siedler_ui.js': 'siedler_ui.js', '/spiele3.js': 'spiele3.js', '/spiele4.js': 'spiele4.js', '/raetsel_ui.js': 'raetsel_ui.js', '/turmwacht.js': 'turmwacht.js', '/hub_ui.js': 'hub_ui.js',
 };
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
 
@@ -325,7 +332,7 @@ function summary(r) {
   const G = GAMES[r.game];
   return {
     id: r.id, game: r.game, name: r.name, status: r.status,
-    players: r.players.map(p => ({ name: p.name, host: p.id === r.host, adm: isAdm(p.id) })),
+    players: r.players.map(p => ({ name: p.name, host: p.id === r.host, adm: isAdm(p.id), hb: badgeOf(p.id) })),
     seats: G.seats, full: r.players.length >= ROOM_CAP,
   };
 }
@@ -341,9 +348,26 @@ function broadcastRooms() {
     for (const c of clients) send(c, { t: 'rooms', rooms: list });
   }, 80);
 }
+// Hub-Level: Wenn eine Runde endet, bekommt jeder Mitspieler mit Konto EP (Sieger mehr). Nur Runden ab 20 Sekunden.
+function winnersOf(r, G) {
+  try { if (G.winners) return G.winners(r) || []; const s = r.state || {};
+    if (s.result && s.result.winner && s[s.result.winner]) return [s[s.result.winner]];
+    if (typeof s.winner === 'string') return [s.winner]; } catch (e) { console.error(e); }
+  return [];
+}
+function hubRoundEnd(r, G) {
+  if (!konten || !konten.hubEvent || ['casino', 'welt'].includes(r.game) || !r.t0 || Date.now() - r.t0 < 20000) return;
+  const win = new Set(winnersOf(r, G));
+  for (const p of r.players) { const k = ACC_OF.get(p.id); if (!k) continue;
+    const g = konten.hubEvent(k, 'play', 1) + konten.hubEvent(k, 'play:' + r.game, 1) + (win.has(p.id) ? konten.hubEvent(k, 'win', 1) + konten.hubEvent(k, 'win:' + r.game, 1) : 0);
+    if (g) for (const c of clients) if (c.pid === p.id) send(c, { t: 'hub_xp', g, win: win.has(p.id) }); }
+}
+const badgeOf = pid => { const k = ACC_OF.get(pid); return k && konten && konten.hubBadge ? konten.hubBadge(k) : null; };
 function pushRoom(r) {
   r.updated = Date.now();
   const G = GAMES[r.game];
+  if (r.status === 'ended' && r._st !== 'ended') hubRoundEnd(r, G);
+  r._st = r.status;
   for (const c of clients) {
     if (c.room !== r.id) continue;
     let view = null;
@@ -353,7 +377,7 @@ function pushRoom(r) {
       room: {
         id: r.id, game: r.game, name: r.name, host: r.host, status: r.status, me: c.pid, priv: !!r.private, code: r.code || null,
         min: G.min, seats: G.seats,
-        players: r.players.map(p => ({ id: p.id, name: p.name, online: online(r, p.id), adm: isAdm(p.id) })),
+        players: r.players.map(p => ({ id: p.id, name: p.name, online: online(r, p.id), adm: isAdm(p.id), hb: badgeOf(p.id) })),
         view,
       },
     });
@@ -483,7 +507,7 @@ function handle(c, m) {
   if (m.t === 'start') {
     if (r.host !== c.pid) return;
     if (r.players.length < G.min && !(G.solo && G.solo(r, m))) return send(c, { t: 'err', msg: `Es braucht mindestens ${G.min} Spieler.` });
-    G.start(r, m);
+    G.start(r, m); r.t0 = Date.now(); r._st = r.status;
     pushRoom(r);
     return;
   }

@@ -3,6 +3,8 @@
 // Ohne diese Variablen landet alles nur in einer lokalen Datei, die beim Neustart von Render verloren geht.
 const crypto = require('crypto');
 const WORTLE = require('./wortle.js');
+const HUB = require('./hublevel.js'); // Hub-Level und Wochen-Aufgaben
+const RX = require('./raetsel.js'); // Tagesrätsel
 const fs = require('fs');
 const path = require('path');
 
@@ -923,7 +925,22 @@ async function handle(action, body, ip) {
   }
   if (['wd_state', 'wd_guess', 'wd_free', 'wd_free_guess'].includes(action)) { // Wörtle: tägliches Worträtsel mit Rangliste (wortle.js)
     if (!acc || !(acc.tokens || []).includes(sha256(String(body.token || '')))) return [401, { error: 'Melde dich im Game Hub an, um bei Wörtle mitzuspielen.' }];
-    return WORTLE.action(action, key, acc, body, accounts, markDirty, isTester);
+    const wasWin = !!(acc.wd && acc.wd.win && acc.wd.d === new Date(Date.now() + 3600e3).toISOString().slice(0, 10)), res = WORTLE.action(action, key, acc, body, accounts, markDirty, isTester);
+    if (action === 'wd_guess' && !wasWin && res[1] && res[1].win) HUB.event(acc, 'wortle', 1, markDirty);
+    return res;
+  }
+  if (['hub_state', 'hub_color', 'rx_state', 'rx_start', 'rx_submit', 'td_submit', 'td_top'].includes(action)) { // Hub-Level, Tagesrätsel, Turmwacht
+    if (action === 'td_top') return [200, { top: tdTop() }];
+    if (!acc || !(acc.tokens || []).includes(sha256(String(body.token || '')))) return [401, { error: 'Melde dich im Game Hub an, um mitzumachen.' }];
+    if (action === 'hub_state') { const st = HUB.state(acc); markDirty(); return [200, st]; }
+    if (action === 'hub_color') { const e = HUB.setColor(acc, String(body.c || '')); if (e) return [400, { error: e }]; markDirty(); return [200, HUB.state(acc)]; }
+    if (action === 'td_submit') { // Turmwacht (läuft im Browser): beste Welle merken, Hub-EP
+      const w = Math.max(0, Math.min(300, Number(body.wave) | 0)), sc = Math.max(0, Math.min(1e9, Number(body.score) | 0));
+      const T = acc.td = acc.td || { best: 0, plays: 0, sc: 0 }; T.plays++; if (w > T.best || (w === T.best && sc > T.sc)) { T.best = w; T.sc = sc; T.at = Date.now(); } tdC = null; markDirty();
+      if (w >= 3) { HUB.event(acc, 'td', 1, markDirty); HUB.event(acc, 'tdwave', w, markDirty); }
+      return [200, { best: T.best, top: tdTop(), hub: HUB.state(acc) }];
+    }
+    return RX.action(action, key, acc, body, accounts, markDirty, isTester, kind => { HUB.event(acc, 'raetsel', 1, markDirty); HUB.event(acc, 'raetsel:' + kind, 1, markDirty); });
   }
   if (['friends', 'friend_add', 'friend_answer', 'friend_remove', 'chat', 'chat_send', 'profile'].includes(action)) {
     if (!acc || !(acc.tokens || []).includes(sha256(String(body.token || '')))) return [401, { error: 'Bitte melde dich neu an.' }];
@@ -964,4 +981,9 @@ process.on('SIGINT', async () => { await flush(); await chatFlush(); await wbFlu
 
 const isAdmin = k => VS_ADMINS.includes(String(k || '').toLowerCase());
 const adminNames = () => VS_ADMINS.map(k => accounts[k] && accounts[k].name).filter(Boolean);
-module.exports = { czPlayWork, setCzSetHook, setPresence, setChatHook, friendKeys, areFriends, accName, keyOfName: n => keyOf(cleanName(n)), handle, flush, durable, tokenKey, czAcc, czSync, czSeated, setCzRelease, czMaxBet, isAdmin, adminNames };
+let tdC = null;
+function tdTop() { if (tdC) return tdC; const L = []; for (const [k, a] of Object.entries(accounts)) if (a && a.td && a.td.best && !isTester(k)) L.push({ name: a.name, w: a.td.best, sc: a.td.sc || 0 }); L.sort((a, b) => b.w - a.w || b.sc - a.sc); return (tdC = L.slice(0, 15)); }
+// Für server.js: Runde beendet → EP; Level und Namensfarbe für die Anzeige
+const hubEvent = (k, ev, n) => { const a = accounts[k]; return a ? HUB.event(a, ev, n, markDirty) : 0; };
+const hubBadge = k => { const a = accounts[k]; if (!a) return null; const L = HUB.lvOf((a.hub && a.hub.xp) || 0); return { lv: L.lv, nc: HUB.colorOf(a) }; };
+module.exports = { hubEvent, hubBadge, czPlayWork, setCzSetHook, setPresence, setChatHook, friendKeys, areFriends, accName, keyOfName: n => keyOf(cleanName(n)), handle, flush, durable, tokenKey, czAcc, czSync, czSeated, setCzRelease, czMaxBet, isAdmin, adminNames };
