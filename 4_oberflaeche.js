@@ -57,7 +57,7 @@
     if (conflict && !keep) { if (inCamp()) resolveConflict(conflict); return {}; }
     if (!acct || cloudBusy || (!cloudDirty && !force)) return {};
     cloudBusy = true; cloudDirty = false;
-    const r = await api('save', { name: acct.name, token: acct.token, data: S, base: acct.updated || 0, force: !!keep }, keepalive);
+    const r = await api('save', { name: acct.name, token: acct.token, data: packSave(S), base: acct.updated || 0, force: !!keep }, keepalive);
     cloudBusy = false;
     if (r.reset) { acct.updated = r.updated; acct.tester = false; setAcct(acct); seasonReset(); cloudDirty = true; setTimeout(() => cloudSave(true, false, true), 300); return r; }
     if (r.conflict) { resolveConflict({ data: r.data, updated: r.updated }); return r; }
@@ -1053,6 +1053,7 @@
     if (R.mode === 'bounty') R.bountyReward = bountyClaim(S, R);
     if (R.mode === 'arte') R.arteReward = arteClaim(S, R);
     if (R.mode === 'wboss') { R.victory = true; wbFinish(R); }
+    if (R.mode === 'endlos') { const t = Math.floor(R.time), b = S.endBest; R.endRec = !b || t > b.t; R.endPrev = b ? b.t : 0; if (R.endRec) S.endBest = { t, k: R.kills, lvl: R.stage }; }
     noteRate(S, R);
     if (R.mode === 'normal' && areaMax(S) > areaBefore) res.area = zoneName(10 * areaMax(S) + 1);
     SND.play(R.victory ? 'victory' : 'defeat');
@@ -1065,6 +1066,8 @@
     const items = [], add = (ic, text, col = '#ffe2a8', cls = '') => items.push(`<li class="${cls}" style="--ic:${col}"><span class="ri">${ic}</span><span>${text}</span></li>`);
     let title = '', sub = '', special = '', again = '', againLabel = 'Nochmal';
     if (R.mode === 'normal') { title = win ? `Stufengrenze ${capOf(S)} erreicht!` : R.wf ? 'Verschlungen' : 'Gefallen'; sub = win ? 'Weitere Stufen gibt es mit der nächsten Wiedergeburt.' : `auf Stufe ${R.stage} · ${esc(zoneName(R.stage))}`; again = 'normal'; againLabel = 'Neuer Feldzug'; }
+    if (R.mode === 'endlos') { title = R.endRec ? 'Neuer Ansturm-Rekord!' : 'Der Ansturm hat dich überrannt'; sub = `${mins}:${String(secs).padStart(2, '0')} durchgehalten · bis Stufe ${R.stage}`; again = 'endlos'; againLabel = 'Nochmal';
+      if (R.endRec) add('♾️', `Neuer Rekord: <b>${mins}:${String(secs).padStart(2, '0')}</b>${R.endPrev ? ` (vorher ${Math.floor(R.endPrev / 60)}:${String(R.endPrev % 60).padStart(2, '0')})` : ''}`, '#ff8a5a', 'hot'); }
     if (R.mode === 'tower') { title = 'Der Turm ist vorbei'; sub = `Etage ${R.stage} erreicht`; again = 'tower'; }
     if (R.mode === 'weekly') { title = 'Herausforderung vorbei'; sub = `Stufe ${R.stage} · Bestes Ergebnis heute: Stufe ${(S.daily || {}).best || R.stage}`; again = 'weekly'; }
     if (R.mode === 'exp') { const m = MISSION[R.mission]; title = win ? `Expedition geschafft: ${m.name}` : `Expedition gescheitert: ${m.name}`; sub = win ? `${R.waves} Wellen überstanden` : esc(R.failNote || `Gefallen auf Stufe ${R.stage}`); again = 'exp'; againLabel = 'Nochmal'; }
@@ -1400,7 +1403,7 @@
       <div class="rl-fbar"><span class="note">Schwierigkeit:</span>${ARTE.name.map((n, i) => `<button data-artd="${i}" class="${d === i ? 'on' : ''}">${n} · Stufe ${artStage(S, i)}</button>`).join('')}</div>
       <p class="note">Chancen: ${['3', '4', '5'].map((r, i) => `${'★'.repeat(+r)} ${Math.round(ARTE.rar[d][i] * 100)} %`).join(' · ')}</p>
       <div class="row"><button class="btn gold" data-m2="arterun" ${S.arteK > 0 && inCamp() ? '' : 'disabled'}>Prüfung starten</button></div>
-      <h3 class="rl-h3">Ausrüstung</h3><div class="rl-fbar chips">${hs.map(h => `<button data-arth="${h.id}" class="${artHero === h.id ? 'on' : ''}" style="--rc:${h.color}">${h.name}</button>`).join('')}</div>
+      <h3 class="rl-h3">Ausrüstung</h3><div class="rl-fbar chips">${hs.map(h => { const n = Object.values((S.artEq || {})[h.id] || {}).filter(id => artById(S, id)).length; return `<button data-arth="${h.id}" class="${artHero === h.id ? 'on' : ''}" style="--rc:${h.color}" title="${n} von ${ART_SLOTS.length} Artefakten angelegt">${h.name} <small>♛${n}/${ART_SLOTS.length}</small></button>`; }).join('')}</div>
       <div class="rl-artslots">${ART_SLOTS.map(sl => { const a = eq[sl.k] && artById(S, eq[sl.k]); return a ? `<div class="rl-artslot full">${artCard(a)}<button class="btn ghost small" data-arta="off:${sl.k}">Ablegen</button></div>` : `<div class="rl-artslot"><span class="ai">${sl.i}</span><small>${sl.n}: leer</small></div>`; }).join('')}</div>`;
     if (sel) {
       const lk = sel.lock || [], c = artRerollCost(sel), worn = artWorn(S, sel.id);
@@ -1411,9 +1414,12 @@
         <button class="btn small" data-arta="roll" ${(S.artDust || 0) >= c && inCamp() ? '' : 'disabled'}>Nebenwerte neu würfeln (✧ ${c})</button>
         <button class="btn ghost small ${confirm === 'artdel' ? 'danger' : ''}" data-arta="del" ${inCamp() ? '' : 'disabled'}>${confirm === 'artdel' ? 'Wirklich zerstören?' : `Zerstören +✧ ${ARTE.dust[sel.rar]}`}</button></div></div>`;
     }
-    const list = (S.arts || []).filter(a => artFilt === 'all' || a.slot === artFilt).sort((a, b) => b.rar - a.rar || b.lv - a.lv || b.id - a.id);
+    // Spieler-Idee (v48): angelegte Artefakte verschwinden wie Runen aus dem Lager – sie stehen beim Helden unter Ausrüstung.
+    const wornN = (S.arts || []).filter(a => artWorn(S, a.id)).length;
+    const list = (S.arts || []).filter(a => !artWorn(S, a.id) && (artFilt === 'all' || a.slot === artFilt)).sort((a, b) => b.rar - a.rar || b.lv - a.lv || b.id - a.id);
     html += `<h3 class="rl-h3">Lager (${(S.arts || []).length}/${ARTE.cap})</h3><div class="rl-fbar"><button data-artf="all" class="${artFilt === 'all' ? 'on' : ''}">Alle</button>${ART_SLOTS.map(sl => `<button data-artf="${sl.k}" class="${artFilt === sl.k ? 'on' : ''}">${sl.i} ${sl.n}</button>`).join('')}</div>
-      <div class="rl-artlist">${list.map(a => artCard(a)).join('') || '<p class="note">Noch keine Artefakte. Schaffe die Prüfung, um dein erstes zu bekommen.</p>'}</div>`;
+      ${wornN ? `<p class="note">${wornN} angelegte${wornN === 1 ? 's Artefakt ist' : ' Artefakte sind'} hier ausgeblendet – du findest sie oben unter Ausrüstung beim jeweiligen Helden.</p>` : ''}
+      <div class="rl-artlist">${list.map(a => artCard(a)).join('') || `<p class="note">${(S.arts || []).length ? 'Keine freien Artefakte – alle sind angelegt.' : 'Noch keine Artefakte. Schaffe die Prüfung, um dein erstes zu bekommen.'}</p>`}</div>`;
     return html;
   }
   function artClick(e) {
@@ -1464,6 +1470,7 @@
         if (run.victory && r) return `<div class="rl-dead win"><b>Mission geschafft: ${esc(m.name)}</b><span>+${r.spl} Heldensplitter${r.rune ? ` · Rune: ${RUNE[r.rune.t].name} ${ROMAN[r.rune.tier]}` : r.runeDust ? ` · +${r.runeDust} Runensplitter (Lager voll)` : ''}</span><span class="note">Splitter: ${S.exp.spl}</span></div>`;
         return `<div class="rl-dead"><b>Mission gescheitert: ${esc(m.name)}</b><span>${esc(run.failNote || `Gefallen auf Stufe ${run.stage}`)}</span><span class="note">Versuch es mit stärkeren Helden oder einer leichteren Mission.</span></div>`;
       }
+      if (run.mode === 'endlos') return `<div class="rl-dead"><b>Endloser Ansturm: ${Math.floor(run.time / 60)}:${String(Math.floor(run.time % 60)).padStart(2, '0')} durchgehalten</b><span>${extra}</span><span class="note">Rekord: ${S.endBest ? `${Math.floor(S.endBest.t / 60)}:${String(S.endBest.t % 60).padStart(2, '0')}` : '–'}</span></div>`;
       if (run.mode === 'tower') return `<div class="rl-dead tower"><b>Turm: Etage ${run.stage} erreicht</b><span>${extra}</span><span class="note">Dein Turm-Rekord (${S.towerBest}) gibt allen Helden bis zum nächsten Aufstieg +${S.towerBest * 3} % Schaden und Leben.</span></div>`;
       if (run.victory) return `<div class="rl-dead win"><b>Stufengrenze ${capOf(S)} erreicht!</b><span>${extra}</span><span class="note">Weitere Stufen schaltest du mit der nächsten Wiedergeburt frei.</span></div>`;
       return `<div class="rl-dead"><b>Lauf vorbei auf Stufe ${run.stage}</b><span>${extra}</span><span class="note">Verbessere deine Helden und starte dann den nächsten Lauf.</span></div>`;
@@ -1942,7 +1949,7 @@
     try {
       if (f.id === 'rlCreate') {
         if ($('#rlCPw').value !== $('#rlCPw2').value) { toast('Die Passwörter sind unterschiedlich.'); return; }
-        const r = await api('create', { name: val('#rlCName'), pass: $('#rlCPw').value, data: S });
+        const r = await api('create', { name: val('#rlCName'), pass: $('#rlCPw').value, data: packSave(S) });
         if (r.error) { toast(r.error); return; }
         setAcct({ name: r.name, token: r.token, updated: r.updated, tester: !!r.tester }); cloudMsg = `Gespeichert um ${timeStr(r.updated)}`; cloudDirty = false;
         if (r.reset) { adopt(fresh()); S.seenIntro = true; S.season = SEASON; run = null; save(); refresh(); toast(`Spielstand „${r.name}“ angelegt. Fortschritt aus einem Test-Spielstand wird nicht übernommen.`, true); }

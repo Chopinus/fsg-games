@@ -173,9 +173,9 @@
     },
   };
   /* ---------- Anschlagbrett: alle Spielarten als Plakate ---------- */
-  const boardOpenIds = () => ['weekly', 'login', 'deko', ...((S.bestEver || 0) > 150 || chestCount(S) ? ['truhen'] : []), ...(feature(S, 'turm') ? ['tower'] : []), ...(ahnOpen(S) ? ['ahn'] : []), ...(expOpen(S) ? ['exp'] : []), ...(gachaOpen(S) ? ['ruf', 'kopf'] : [])];
+  const boardOpenIds = () => ['weekly', 'login', 'deko', ...((S.bestEver || 0) > 150 || chestCount(S) ? ['truhen'] : []), ...(feature(S, 'turm') ? ['tower'] : []), ...(endOpen(S) ? ['endlos'] : []), ...(ahnOpen(S) ? ['ahn'] : []), ...(expOpen(S) ? ['exp'] : []), ...(gachaOpen(S) ? ['ruf', 'kopf'] : [])];
   const boardNew = () => { if (!Array.isArray(S.knownBoard)) S.knownBoard = boardOpenIds(); return boardOpenIds().filter(id => !S.knownBoard.includes(id)); };
-  const POSTER_ID = { 'Artefakt-Prüfung': 'arte', 'Tages-Herausforderung': 'weekly', Turm: 'tower', Ahnenprüfung: 'ahn', Expedition: 'exp', Sternenruf: 'ruf', Kopfgeldjagd: 'kopf', 'Täglicher Lohn': 'login', 'Lager einrichten': 'deko', 'Albtraum-Truhen': 'truhen' };
+  const POSTER_ID = { 'Artefakt-Prüfung': 'arte', 'Tages-Herausforderung': 'weekly', Turm: 'tower', 'Endloser Ansturm': 'endlos', Ahnenprüfung: 'ahn', Expedition: 'exp', Sternenruf: 'ruf', Kopfgeldjagd: 'kopf', 'Täglicher Lohn': 'login', 'Lager einrichten': 'deko', 'Albtraum-Truhen': 'truhen' };
   function poster(o) {
     const lock = o.lock ? `<span class="rl-pstamp">${esc(o.lock)}</span>` : '', fresh = !o.lock && o.isNew;
     return `<article class="rl-poster ${o.lock ? 'locked' : ''}" style="--pc:${o.col};--rot:${o.rot}deg">${fresh ? '<i class="rl-reddot rl-pdot" aria-label="neu"></i>' : ''}
@@ -203,6 +203,9 @@
       { title: 'Turm', art: ['turm1', 'turm2'], icon: '🏰', col: '#c9a6ff', rot: -1, desc: 'Etage für Etage nach oben, nur Elite-Gegner. Jede Rekord-Etage gibt allen Helden +3 % Schaden und Leben, bis zum nächsten Aufstieg.',
         info: tOpen ? [`Rekord: <b>Etage ${S.towerBest}</b>`, `Bonus bis zum Aufstieg: <b>+${S.towerBest * 3} %</b>`, `Nächste Rune bei Etage ${5 * Math.floor(S.towerBest / 5) + 5}`] : [],
         lock: tOpen ? '' : 'Ab der 8. Wiedergeburt', acts: '<button class="btn" data-m="go" data-go="tower">Turm betreten</button>' },
+      { title: 'Endloser Ansturm', art: ['feld2', 'turm1'], icon: '♾️', col: '#ff8a5a', rot: 1.5, desc: 'Keine Wellen, keine Pause: Ständig rücken Gegner nach, oft drei auf einmal. Regelmäßig kommen Großangriffe, jeder dritte mit Boss, und die Gegner werden immer stärker. Ab Minute 15 kommt Erschöpfung dazu. Wie lange hältst du durch?',
+        info: endOpen(S) ? [`Start: <b>Stufe ${endStart(S)}</b> (60 % deiner Rekordstufe)`, S.endBest ? `Rekord: <b>${Math.floor(S.endBest.t / 60)}:${String(S.endBest.t % 60).padStart(2, '0')}</b> · ${S.endBest.k} Gegner · bis Stufe ${S.endBest.lvl}` : 'Rekord: <b>noch keiner</b>', 'Beute: halbes Gold der besiegten Gegner'] : [],
+        lock: endOpen(S) ? '' : 'Ab der 1. Wiedergeburt', acts: '<button class="btn" data-m="go" data-go="endlos">Ansturm starten</button>' },
       { title: 'Ahnenprüfung', art: ['ahnen1', 'ahnen2'], icon: '✦', col: '#ffd27a', rot: 2, desc: '10 Missionen voller Bosse mit je 3 Phasen. Am Ende wartet der Urahn mit einem Ahnensiegel.',
         info: aOpen ? [`Nächste Mission: <b>${S.ahn.m + 1}/10 · ${esc(AHN_MISSIONS[S.ahn.m].name)}</b>`, `Freie Siegel: <b>${S.ahn.sig}</b> · erhalten: ${S.ahn.got}`] : [],
         lock: aOpen ? '' : 'Ab der 6. Wiedergeburt', acts: `<button class="btn" data-m="go" data-go="ahn">Mission ${S.ahn.m + 1} starten</button><button class="btn ghost small" data-m="go" data-go="ahnmap">Zur Karte</button>` },
@@ -240,6 +243,7 @@
     if (go === 'normal') startRun();
     else if (go === 'weekly') startRun('weekly');
     else if (go === 'tower' && feature(S, 'turm')) startRun('tower');
+    else if (go === 'endlos' && endOpen(S)) startRun('endlos');
     else if (go === 'area') showAreas(true);
     else if (go === 'ahn' && ahnOpen(S)) { startRun('ahnen'); save(); }
     else if (go === 'ahnmap') toTab('ahnen');
@@ -257,7 +261,7 @@
     else if (go === 'bountyrun') { $('#soloCanvas').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
     else if (go === 'wboss') showWboss();
     else if (go.startsWith('hero:')) toTab(go.slice(5));
-    if (['normal', 'weekly', 'tower', 'ahn'].includes(go) || (go === 'exp' && run && !run.dead)) $('#soloCanvas').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (['normal', 'weekly', 'tower', 'endlos', 'ahn'].includes(go) || (go === 'exp' && run && !run.dead)) $('#soloCanvas').scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   /* ---------- Fenster: Willkommen und Neuigkeiten ---------- */
@@ -303,6 +307,24 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 88, title: 'Fehler behoben: Spielstand ungültig', date: '20.11.2026', items: [
+      'Sehr große Spielstände (viele Runen) konnten nicht mehr online gespeichert werden – es kam nur „Der Spielstand ist ungültig“.',
+      'Runen werden jetzt platzsparend gespeichert, dadurch ist der Spielstand nur noch etwa halb so groß. Speichern klappt wieder, auch mit hunderten Runen.',
+    ] },
+    { id: 87, title: 'Spieler-Idee: Würfelwelt – 18 neue Blöcke', date: '20.11.2026', items: [
+      'Neue Stofffarben: Grün, Orange, Lila, Schwarz, Rosa und Türkis.',
+      'Fichten- und Birkenbretter, rotes und blaues Buntglas, Marmor und Marmorziegel, Basalt, Terrakotta, Heuballen, Eisenblock, Bücherregal und eine leuchtende Laterne.',
+      'Im Kreativmodus sofort im Inventar, im Überlebensmodus mit neuen Rezepten herstellbar.',
+    ] },
+    { id: 86, title: 'Spieler-Idee: Angelegte Artefakte ausgeblendet', date: '20.11.2026', items: [
+      'Wie bei den Runen verschwinden angelegte Artefakte jetzt aus dem Lager. Du findest sie oben unter Ausrüstung beim jeweiligen Helden.',
+      'An jedem Helden-Knopf steht, wie viele Artefakte er trägt (z. B. ♛2/3).',
+    ] },
+    { id: 85, title: 'Spieler-Idee: Endloser Ansturm', date: '20.11.2026', items: [
+      'Neu am Anschlagbrett (ab der 1. Wiedergeburt): Ein echter Endlos-Modus ohne Wellen. Ständig rücken Gegner nach, oft drei auf einmal – kein Stillstand.',
+      'Alle 45 Sekunden kommt ein Großangriff, jeder dritte mit Boss. Alle 12 Sekunden steigt die Gegnerstufe, alle 30 Sekunden bekommen neue Gegner zusätzlich +25 % Leben und Schaden.',
+      'Start bei 60 % deiner aktuellen Rekordstufe. Ab Minute 15 setzt Erschöpfung ein (keine Heilung, Helden verlieren Leben). Beute: halbes Gold der besiegten Gegner. Dazu ein eigener Rekord für die längste Zeit.',
+    ] },
     { id: 84, title: 'Spieler-Idee: Dungeon – echter Koop statt Bot', date: '19.11.2026', items: [
       'Eingeladene Freunde spielen im Dungeon jetzt selbst mit ihrer eigenen Figur, Ausrüstung, Zaubern und Tränken im Run des Gastgebers mit, statt als Bot hinterherzulaufen.',
       'Jeder Mitspieler bekommt Erfahrung, Gold und eigene Fundstücke in seinen eigenen Spielstand.',
@@ -6446,10 +6468,11 @@
       ctx.font = '15px "Bungee","Arial Black",sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = '#fff';
       ctx.fillText(tower ? `Turm · Etage ${R.stage}` : R.mode === 'wboss' ? 'Wochenboss' : `Stufe ${R.stage}`, 12, 22);
       ctx.font = '12px "Figtree",sans-serif';
-      const bossNow = R.mode === 'exp' || R.mode === 'wboss' || R.mode === 'arte' ? R.enemies.some(e => e.boss) : tower || (R.rules && R.rules.includes('boss')) ? R.stage % 5 === 0 : R.stage % 10 === 0;
+      const bossNow = R.mode === 'exp' || R.mode === 'wboss' || R.mode === 'arte' || R.mode === 'endlos' ? R.enemies.some(e => e.boss) : tower || (R.rules && R.rules.includes('boss')) ? R.stage % 5 === 0 : R.stage % 10 === 0;
       ctx.fillStyle = bossNow ? '#c9a6ff' : 'rgba(255,255,255,.8)';
-      ctx.fillText(R.wf || R.wfKilled ? 'Der Weltenfresser' : bossNow ? `Boss: ${bossNameOf(R, stage)}` : tower ? `Rekord ${S.towerBest}` : areaOf(R) ? areaOf(R).name : `${zoneName(R.stage)} · Grenze ${st.cap === Infinity ? '∞' : st.cap}`, tower ? 170 : 106, 21);
+      ctx.fillText(R.wf || R.wfKilled ? 'Der Weltenfresser' : bossNow ? `Boss: ${bossNameOf(R, stage)}` : tower ? `Rekord ${S.towerBest}` : areaOf(R) ? areaOf(R).name : R.mode === 'endlos' ? `${zoneName(R.stage)} · Endloser Ansturm` : `${zoneName(R.stage)} · Grenze ${st.cap === Infinity ? '∞' : st.cap}`, tower ? 170 : 106, 21);
       ctx.textAlign = 'right'; ctx.fillStyle = '#ffcf4a'; if (R.mode === 'normal') ctx.fillText(`+${fmt(R.gold)} Gold`, W - 12, 21);
+      if (R.mode === 'endlos') { ctx.fillStyle = '#ff9a6a'; ctx.fillText(`${Math.floor(R.time / 60)}:${String(Math.floor(R.time % 60)).padStart(2, '0')} · ${R.kills} besiegt`, W - 12, 21); }
       if (R.mode === 'weekly') { ctx.fillStyle = '#ffd23f'; ctx.fillText('Tages-Herausforderung', W - 12, 21); }
       if (R.mode === 'wboss') { ctx.fillStyle = '#ffb4b4'; ctx.fillText(`Leiste ${wbScore(R) + 1} · ${wbScore(R)} geschafft`, W - 12, 21); }
       if (R.mode === 'arte') { ctx.fillStyle = R.time > ARTE.time - 30 ? '#ff8a7a' : '#8fe3ff'; ctx.fillText(`Artefakt-Prüfung: Welle ${Math.min(ARTE.waves, R.waves + 1)}/${ARTE.waves} · ${Math.max(0, Math.ceil(ARTE.time - R.time))} s`, W - 12, 21); }

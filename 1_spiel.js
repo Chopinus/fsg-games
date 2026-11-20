@@ -1805,6 +1805,23 @@
       runes: [], sockets: Object.fromEntries(HEROES.map(h => [h.id, [null, null, null, null, null, null]])), dust: 0, runeSeq: 1, towerBest: 0,
       season: SEASON, asc: 0, ascBest: 0, rankGot: 0, mast: {}, skin: {}, wf: 0, crowns: 0, cperks: {}, ach: {}, tot: { kills: 0, souls: 0 }, weekly: { week: '', best: 0, claimed: 0 }, comps: {}, compActive: [], gem: 0, gacha: gFix(), cons: {}, inv: {}, gear: {}, camp: {}, chest: {}, pity: { tro: 0, leg: 0 }, gBoss: 0, login: { day: '', n: 0 }, bounty: { day: '', done: [] }, seenIntro: false, area: 0, tempo: 0, bench: [], altar: 0, seenField: false, exp: { spl: 0, done: 0, target: 'a', pieces: {} }, ahn: ahnFix() };
   }
+  // Spieler-Idee (v53): Runen platzsparend speichern, damit große Spielstände unter die Server-Grenze passen.
+  // Statt [{id,t,tier}, …] wird für den Server { "glueck.14": [3834, 6578], … } geschickt; migrate() liest beide Formen.
+  function packSave(S) {
+    const o = { ...S }, g = {};
+    for (const r of S.runes || []) (g[r.t + '.' + r.tier] = g[r.t + '.' + r.tier] || []).push(r.id);
+    o.rz = g; o.runes = [];
+    return o;
+  }
+  function unpackRunes(rz) {
+    const out = [];
+    if (!rz || typeof rz !== 'object') return out;
+    for (const [k, ids] of Object.entries(rz)) {
+      const i = k.lastIndexOf('.'), t = k.slice(0, i), tier = Number(k.slice(i + 1));
+      if (Array.isArray(ids)) for (const id of ids) out.push({ id, t, tier });
+    }
+    return out;
+  }
   function migrate(d) {
     if (!d || typeof d !== 'object') return fresh();
     if (!d.v || d.v < 2) { const f = fresh(); f.reset = true; return f; } // allererste Version: anderes System
@@ -1816,7 +1833,8 @@
     for (const k of ['gold', 'souls', 'best', 'bestEver', 'runs', 'stars', 'rebirths', 'dust', 'runeSeq', 'towerBest']) out[k] = Math.max(0, Math.floor(Number(out[k]) || 0));
     out.runeSeq = Math.max(1, out.runeSeq);
     out.bestEver = Math.max(out.bestEver, out.best);
-    for (const r of Array.isArray(d.runes) ? d.runes : []) if (r && RUNE[r.t] && r.tier >= 1) out.runes.push({ id: Math.floor(r.id) || out.runeSeq++, t: r.t, tier: Math.min(RUNE_MAX, Math.floor(r.tier)) });
+    delete out.rz;
+    for (const r of (Array.isArray(d.runes) && d.runes.length ? d.runes : unpackRunes(d.rz))) if (r && RUNE[r.t] && r.tier >= 1) out.runes.push({ id: Math.floor(r.id) || out.runeSeq++, t: r.t, tier: Math.min(RUNE_MAX, Math.floor(r.tier)) });
     out.runeSeq = Math.max(out.runeSeq, ...out.runes.map(r => r.id + 1));
     const ids = new Set(out.runes.map(r => r.id)), used = new Set();
     for (const h of HEROES) {
@@ -1892,6 +1910,7 @@
       const subs = (Array.isArray(a.subs) ? a.subs : []).filter(x => x && ART_STAT[x.k] && x.k !== a.main && Number(x.v) > 0).slice(0, a.rar - 1).map(x => ({ k: x.k, v: Math.min(ART_STAT[x.k].sub[1], Number(x.v)) }));
       out.arts.push({ id: Math.floor(a.id) || 0, slot: a.slot, rar: a.rar, lv: Math.max(10, Math.floor(Number(a.lv) || 10)), main: a.main, subs, lock: (Array.isArray(a.lock) ? a.lock : []).filter(i => Number.isInteger(i) && i >= 0 && i < subs.length).slice(0, Math.max(0, subs.length - 1)), fav: !!a.fav });
     }
+    out.endBest = d.endBest && typeof d.endBest === 'object' ? { t: Math.max(0, Math.floor(Number(d.endBest.t) || 0)), k: Math.max(0, Math.floor(Number(d.endBest.k) || 0)), lvl: Math.max(0, Math.floor(Number(d.endBest.lvl) || 0)) } : null;
     out.artSeq = Math.max(Math.floor(Number(d.artSeq) || 0), ...out.arts.map(a => a.id), 0);
     out.artEq = {}; if (d.artEq && typeof d.artEq === 'object') for (const [hid, e] of Object.entries(d.artEq)) if (HERO_BY_ID[hid] && e && typeof e === 'object') for (const sl of ART_SLOTS) { const a = out.arts.find(x => x.id === e[sl.k] && x.slot === sl.k); if (a) (out.artEq[hid] = out.artEq[hid] || {})[sl.k] = a.id; }
     out.artDust = Math.max(0, Math.floor(Number(d.artDust) || 0));
@@ -2665,7 +2684,7 @@
     if (rules.includes('trio')) order = order.slice(0, 3);
     const pos = {}; order.forEach((k, i) => (pos[k] = 152 - i * 25));
     const h = {}; for (const k of order) h[k] = { hp: st[k].hp, alive: true, atkT: 0.3 + Math.random() * 0.4, wolfT: 0.5, swing: 0, hurtT: 0, revived: false, shield: 0 };
-    const run = { mode: tower ? 'tower' : weekly ? 'weekly' : exp ? 'exp' : mode === 'ahnen' ? 'ahnen' : mode === 'bounty' ? 'bounty' : mode === 'wboss' ? 'wboss' : mode === 'arte' ? 'arte' : 'normal', stage: tower || weekly ? 1 : st.startStage, startStage: tower || weekly ? 1 : st.startStage, rules, losses: 0,
+    const run = { mode: tower ? 'tower' : weekly ? 'weekly' : exp ? 'exp' : mode === 'ahnen' ? 'ahnen' : mode === 'bounty' ? 'bounty' : mode === 'wboss' ? 'wboss' : mode === 'arte' ? 'arte' : mode === 'endlos' ? 'endlos' : 'normal', stage: tower || weekly ? 1 : st.startStage, startStage: tower || weekly ? 1 : st.startStage, rules, losses: 0,
       mission: exp ? (MISSION[S.exp.mission] ? S.exp.mission : 'streif') : null, waves: 0, bossKills: 0, minions: [], turretT: 1, extraTurretT: 0, songT: 0, songMul: 0, roarT: 0,
       hard: hardMul(S, false), diff: ascDiff(S), speed: rules.includes('speed') ? 1.5 : 1, hpMul: rules.includes('giant') ? 2 : 1, eliteChance: rules.includes('elite') ? 0.4 : 0.12, noheal: rules.includes('noheal'),
       dragonT: 2, compRevive: false, bannerT: 0, kills: 0, gold: 0, souls: 0, runes: [], phoenixUsed: false, miracleUsed: false,
@@ -2692,8 +2711,49 @@
       run.swT = 0; run.swCd = 0; }
     if (run.mode === 'wboss') { run.stage = run.startStage = WB.lvl; run.wb = { bars: 0, bk: Math.max(0, Math.floor(S.wbBk || 0)) % WB_BOSS.length }; }
     if (run.mode === 'arte') { run.arteD = S.arteSel || 0; run.stage = run.startStage = artStage(S, run.arteD); run.floats.push({ x: 300, y: 100, text: `Artefakt-Prüfung: ${ARTE.waves} Wellen in ${ARTE.time / 60} Minuten`, color: '#8fe3ff', size: 14, t: 2.6 }); }
+    if (run.mode === 'endlos') { run.stage = run.startStage = endStart(S); run.endl = { spawnT: 2, bigT: ENDLOS.bigEvery, big: 0, diff0: run.diff || 1, gcap: Math.max(1, S.best || 1) }; run.floats.push({ x: 300, y: 100, text: 'Endloser Ansturm: Die Gegner hören nie auf!', color: '#ff8a5a', size: 14, t: 2.6 }); }
     spawnWave(run);
     return run;
+  }
+  // Spieler-Idee (v28): Endloser Ansturm – keine Wellen, ständig rücken Gegner nach (auch drei auf einmal),
+  // regelmäßig Großangriffe, jeder dritte mit Boss. Alle 12 Sekunden steigt die Gegnerstufe, alle 30 s zusätzlich +25 % Stärke.
+  // Belohnung: halbes Gold der besiegten Gegner (keine Seelen, Runen oder Trophäen) und ein eigener Rekord.
+  const ENDLOS = { start: 0.6, lvlEvery: 12, lvlPct: 0.1, mulEvery: 30, mul: 1.25, tired: 900, bigEvery: 45, bossEvery: 3, maxAlive: 14, gold: 0.5 };
+  const endOpen = S => (S.rebirths || 0) >= 1 || (S.asc || 0) >= 1;
+  const endStart = S => Math.max(1, Math.floor((S.best || 1) * ENDLOS.start));
+  function endSpawn(run, n, boss) {
+    const lvl = run.stage, last = run.enemies.reduce((m, e) => Math.max(m, e.x), 0), base = Math.max(530, last + 40), fresh = [];
+    for (let i = 0; i < n; i++) { const e = makeEnemy(lvl, 0, false, false, run, rangedCount(lvl) > 0 && Math.random() < 0.25); e.x = base + i * 38; fresh.push(e); }
+    if (boss) { const b = makeEnemy(lvl, 0, true, false, run); b.x = base + n * 38 + 20; fresh.push(b); run.bannerT = 2.2; }
+    // Gold nie über dem Niveau der eigenen Rekordstufe, damit der Ansturm normale Läufe nicht entwertet
+    const gl = Math.min(lvl, (run.endl && run.endl.gcap) || lvl);
+    if (gl < lvl) for (const e of fresh) e.gold = grow(gl, ...TUNE.gold) * (e.boss ? 10 : e.elite ? 4 : 1);
+    const keep = run.enemies; run.enemies = fresh; giveTraits(run, lvl); run.enemies = keep.concat(fresh);
+  }
+  function endStep(run, st, c, dt) {
+    const E = run.endl; if (!E) return;
+    // Erschöpfung ab Minute 15: keine Heilung mehr und alle Helden verlieren immer schneller Leben, damit jeder Ansturm ein Ende hat
+    if (run.time > ENDLOS.tired) {
+      const m = (run.time - ENDLOS.tired) / 60, pct = Math.min(2, 0.01 * (1 + m) * (1 + m));
+      if (!E.tiredMsg) { E.tiredMsg = true; run.tired = true; run.noheal = true; run.floats.push({ x: 240, y: 70, text: 'Erschöpfung: keine Heilung mehr!', color: '#ff5a5a', size: 18, t: 2.4 }); }
+      for (const k of run.order) { const h = run.h[k]; if (!h.alive) continue; h.hp -= st[k].hp * pct * dt;
+        if (h.hp <= 0) { h.hp = 0; h.alive = false; h.shield = 0; h.deadAt = run.time; h.deadScroll = run.scroll; run.losses++; c.float(k, `${HERO_BY_ID[k].name} erschöpft`, '#ff8a8a', 13); } }
+    }
+    run.stage = Math.max(run.stage, run.startStage + Math.max(Math.floor(run.time / ENDLOS.lvlEvery), Math.floor(run.startStage * ENDLOS.lvlPct * run.time / 60)));
+    // zusätzlich alle 30 s +25 % Leben und Schaden für neue Gegner, damit auch sehr starke Truppen irgendwann fallen
+    run.diff = E.diff0 * Math.pow(ENDLOS.mul, Math.floor(run.time / ENDLOS.mulEvery));
+    E.spawnT -= dt; E.bigT -= dt;
+    if (E.bigT <= 0) {
+      E.bigT += ENDLOS.bigEvery; E.big++;
+      const boss = E.big % ENDLOS.bossEvery === 0;
+      endSpawn(run, Math.max(0, Math.min(5 + Math.min(7, E.big), ENDLOS.maxAlive + 8 - run.enemies.length)), boss);
+      run.floats.push({ x: 300, y: 80, text: boss ? 'Großangriff mit Boss!' : `Großangriff ${E.big}!`, color: '#ff8a5a', size: 18, t: 2 });
+      return;
+    }
+    if (E.spawnT <= 0 || !run.enemies.length) {
+      E.spawnT = Math.max(0.9, 3 - run.time / 150);
+      if (run.enemies.length < ENDLOS.maxAlive) endSpawn(run, Math.random() < Math.min(0.6, 0.15 + run.time / 600) ? 3 : Math.random() < 0.5 ? 2 : 1);
+    }
   }
   const SKIP_PARTS = 6, SKIP_STEP = 20;
   let SKIP_SOULS = Number((typeof process !== 'undefined' && process.env && process.env.SKIP) || 0.35);
@@ -2702,6 +2762,7 @@
     run.brother = false; for (const k of run.order || []) if (run.h[k]) run.h[k].protUsed = false;
     if (ahnLike(run)) return ahnSpawn(run);
     if (run.mode === 'wboss') return wbSpawn(run);
+    if (run.mode === 'endlos') { run.enemies = []; return endSpawn(run, 3); }
     run.enemies = [];
     if (run.mode === 'tower') {
       const s = towerStage(run.stage), boss = run.stage % 5 === 0;
@@ -2834,7 +2895,7 @@
     run.time += dt; run.bannerT -= dt; run.buffT -= dt; run.hautT -= dt; run.racheT -= dt; run.packT -= dt; run.songT -= dt; run.roarT -= dt; run.extraTurretT -= dt; run.shake = Math.max(0, run.shake - dt);
     for (const k of run.order) {
       const h = run.h[k]; if (!h.alive) continue;
-      if (st[k].regen) h.hp = Math.min(st[k].hp, h.hp + st[k].hp * st[k].regen * dt * (run.curseT > 0 ? 0.4 : 1) * (run.rotOn ? 0.5 : 1));
+      if (st[k].regen && !run.tired) h.hp = Math.min(st[k].hp, h.hp + st[k].hp * st[k].regen * dt * (run.curseT > 0 ? 0.4 : 1) * (run.rotOn ? 0.5 : 1));
       h.swing = Math.max(0, h.swing - dt * 4); h.hurtT -= dt;
       if (h.invT > 0) h.invT -= dt; if (h.protT > 0) h.protT -= dt;
       if (h.stunT > 0 && !ahnLike(run)) h.stunT -= dt;
@@ -2992,6 +3053,7 @@
       }
     }
     if (ahnLike(run)) ahnStep(S, st, run, c, dt);
+    if (run.mode === 'endlos') endStep(run, st, c, dt);
     if (run.mode === 'wboss') { wbBars(run, c); if (run.time >= WB.maxT) { run.victory = true; run.dead = true; return 'dead'; } }
     // Besiegte Gegner
     const g = st.g;
@@ -3005,8 +3067,8 @@
       sfx(e.boss ? 'boss' : 'kill');
       if (st.n && run.h.n && run.h.n.alive && run.minions.length < st.n.minionMax && Math.random() < st.n.raise) { run.minions.push({ t: st.n.minionDur * (st.n.minionLong ? 2 : 1), atkT: 0.6, swing: 0 }); c.efloat(e, 'Erhebe dich!', '#6be0b8', 12); }
       c.burst(e.x, 200, e.boss ? '#c9a6ff' : '#ffffff', e.boss ? 24 : 8);
-      if (run.mode === 'normal') {
-        let gold = e.gold * g.gold * (e.boss || e.elite ? g.eliteGold : 1);
+      if (run.mode === 'normal' || run.mode === 'endlos') {
+        let gold = e.gold * g.gold * (e.boss || e.elite ? g.eliteGold : 1) * (run.mode === 'endlos' ? ENDLOS.gold : 1);
         if (Math.random() < g.chest) { gold *= 10; c.efloat(e, 'Truhe!', '#ffd23f', 16); }
         gold = Math.max(1, Math.round(gold));
         S.gold = Math.min(GOLD_MAX, S.gold + gold); run.gold += gold; sfx('coin');
@@ -3022,7 +3084,7 @@
       if (e.boss) souls = roundSouls((1 + Math.floor(run.stage / 20)) * g.soulMul) + st.soulBonus;
       else if (e.elite) { const n = procs(g.eliteSoul); if (n) souls = n * Math.max(1, roundSouls(altarMul(S))); }
       if (run.mode === 'tower') souls = e.boss ? 1 : 0;
-      if (run.mode === 'weekly' || run.mode === 'exp' || run.mode === 'arte' || ahnLike(run) || run.mode === 'wboss') souls = 0;
+      if (run.mode === 'weekly' || run.mode === 'exp' || run.mode === 'arte' || ahnLike(run) || run.mode === 'wboss' || run.mode === 'endlos') souls = 0;
       if (souls) { sfx('soul'); S.tot.souls += souls; S.souls += souls; run.souls += souls; run.floats.push({ x: e.x, y: 95, text: `+${souls} Seele${souls > 1 ? 'n' : ''}`, color: '#c9a6ff', size: 16, t: 1 }); }
       if (feature(S, 'runen') && run.mode === 'normal' && (e.boss || (e.elite && Math.random() < 0.03))) {
         // Spieler-Idee (v39): Bosse lassen je nach Stufe mehrere Runen fallen
@@ -3039,7 +3101,7 @@
     run.corpses = (run.corpses || []).filter(c => (c.t += dt) < 0.5);
     for (const e of run.enemies) if (e.hp <= 0 && run.corpses.length < 14) { e.dying = true; run.corpses.push({ e, t: 0 }); }
     run.enemies = run.enemies.filter(e => e.hp > 0);
-    if (!run.enemies.length) {
+    if (!run.enemies.length && run.mode !== 'endlos') {
       if (run.mode === 'tower') {
         if (run.stage > S.towerBest) {
           S.towerBest = run.stage;
