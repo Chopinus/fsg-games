@@ -9,6 +9,15 @@
   .hx-hero h1{font-family:var(--display);font-weight:400;font-size:clamp(40px,9vw,72px);line-height:.92;margin:0;background:linear-gradient(90deg,#fff,#ffd27a 40%,#ff8fd0 70%,#9fe9ff);-webkit-background-clip:text;background-clip:text;color:transparent;background-size:200% 100%;animation:hxshine 8s linear infinite}
   @keyframes hxshine{to{background-position:-200% 0}}
   .hx-hero p{margin:8px 0 0;color:#d9cfe9;max-width:56ch}
+  .hx-hero{padding-bottom:26px}
+  .hx-idea{position:absolute;right:14px;bottom:14px;width:58px;height:58px;border-radius:50%;border:2px solid rgba(255,214,102,.75);background:radial-gradient(circle at 35% 30%,#fff3c4,#ffd166 45%,#e8a21a);box-shadow:0 0 0 0 rgba(255,209,102,.55),0 8px 22px rgba(0,0,0,.35);cursor:pointer;display:grid;place-items:center;animation:hxidea 2.8s ease-in-out infinite;transition:transform .15s}
+  .hx-idea span{font-size:28px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.25))}
+  .hx-idea:hover{transform:scale(1.08) rotate(-6deg)}.hx-idea:active{transform:scale(.95)}
+  .hx-idea::after{content:"Ideen";position:absolute;bottom:-18px;font:800 11px var(--body);color:#ffe7a6;letter-spacing:.04em}
+  @keyframes hxidea{0%,100%{box-shadow:0 0 0 0 rgba(255,209,102,.5),0 8px 22px rgba(0,0,0,.35)}50%{box-shadow:0 0 0 10px rgba(255,209,102,0),0 8px 22px rgba(0,0,0,.35)}}
+  @media (max-width:520px){.hx-idea{width:50px;height:50px;right:12px;bottom:16px}.hx-idea span{font-size:24px}.hx-hero p{padding-right:44px}}
+  .hx-t .pill.t-brett{background:#3b6fd6;color:#fff}.hx-t .pill.t-party{background:#d63b8f;color:#fff}.hx-t .pill.t-action{background:#e0602a;color:#fff}.hx-t .pill.t-taeglich{background:#27a06a;color:#fff}.hx-t .pill.t-welten{background:#7a5ad6;color:#fff}
+  .hx-sec{cursor:pointer}
   .hx-stats{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
   .hx-stats span{font-size:13px;font-weight:800;padding:5px 11px;border-radius:99px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12)}
   .hx-stats .live::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#3dff8a;margin-right:6px;box-shadow:0 0 8px #3dff8a;animation:pulse 1.6s infinite}
@@ -88,7 +97,16 @@
   const konto2 = () => { try { const k = JSON.parse(localStorage.getItem('fsg.konto') || 'null'); return k && k.name && k.token ? k : null; } catch { return null; } };
   async function call(a, body) { const k = konto2(); if (!k) return { error: 'login' }; try { const r = await fetch('/api/' + a, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: k.name, token: k.token, ...(body || {}) }) }); return await r.json(); } catch { return { error: 'net' }; } }
 
-  const CATS = [['top', '⭐ Neu & beliebt'], ['freunde', '👥 Mit Freunden'], ['party', '🎉 Party'], ['taeglich', '🧩 Täglich'], ['solo', '🌍 Solo & Welten'], ['alle', '📚 Alle']];
+  // Jedes Spiel gehört genau zu einer Kategorie (und trägt genau dieses eine Schild)
+  const CATS = [['alle', '📚 Alle'], ['brett', '🎲 Brett & Karten'], ['party', '🎉 Party & Raten'], ['action', '⚡ Action & Glück'], ['taeglich', '🧩 Täglich'], ['welten', '🌍 Welten & Solo']];
+  const TAG = { brett: 'Brett & Karten', party: 'Party', action: 'Action', taeglich: 'Täglich', welten: 'Solo' };
+  const CAT_OF = {
+    uno: 'brett', schach: 'brett', vier: 'brett', maedn: 'brett', kniffel: 'brett', siedler: 'brett', schiffe: 'brett', turnier: 'brett',
+    quiz: 'party', werwolf: 'party', agenten: 'party', maler: 'party', slf: 'party', spion: 'party', party: 'party',
+    lichtrad: 'action', arena: 'action', casino: 'action',
+    wortle: 'taeglich', sudoku: 'taeglich', nono: 'taeglich', verb: 'taeglich', mathe: 'taeglich',
+    ritter: 'welten', turmwacht: 'welten', dungeon: 'welten', insel: 'welten', welt: 'welten',
+  };
   const G = k => (typeof GAMES !== 'undefined' ? GAMES.find(g => g.key === k) : null);
   // Kacheln: k = Schlüssel, cats = Kategorien, act = Attribut für den Klick
   function catalog() {
@@ -96,7 +114,8 @@
     const L = [
       { k: 'ritter', t: 'Ritterlauf', s: 'Deine Heldengruppe kämpft sich durch Gegnerwellen. Klassen, Runen, Wiedergeburt und Bestenliste.', art: '<span class="rl-art"></span>', act: 'data-solo="1"', btn: 'Spielen', pill: 'Solo', g: 'linear-gradient(135deg,#5a2c12,#2a1608)', cats: ['solo', 'top'], big: 1 },
       { k: 'turmwacht', t: 'Turmwacht', s: 'Tower Defense: Baue Bogen-, Kanonen-, Frost- und Blitztürme und verteidige die Burg. Wie weit kommst du?', art: '<span class="tw-art"><span>🏰</span><span>🏹</span></span>', act: 'data-tw-open="1"', btn: 'Spielen', neu: 1, pill: 'Solo', g: 'linear-gradient(135deg,#2f6f2a,#14361a)', cats: ['solo', 'top'] },
-      { k: 'raetsel', t: 'Tagesrätsel', s: 'Sudoku, Nonogramm, Verbindungen und Mathe-Blitz – jeden Tag neu, mit Rangliste.', art: '<span class="rx-art">' + ['5', '', '3', '', '7', '', '1', '', '9'].map((x, i) => `<i class="${i % 2 ? 'f' : ''}">${x}</i>`).join('') + '</span>', act: 'data-rx-open=""', btn: 'Rätseln', neu: 1, day: 1, g: 'linear-gradient(135deg,#3a2f7a,#1d1840)', cats: ['taeglich', 'top'] },
+      { k: 'sudoku', t: 'Tages-Sudoku', s: 'Jeden Tag ein neues Sudoku – wer löst es heute am schnellsten?', art: '<span class="rx-art">' + ['5', '', '3', '', '7', '', '1', '', '9'].map((x, i) => `<i class="${i % 2 ? 'f' : ''}">${x}</i>`).join('') + '</span>', act: 'data-rx-open="sudoku"', btn: 'Rätseln', g: 'linear-gradient(135deg,#3a2f7a,#1d1840)' },
+      { k: 'nono', t: 'Nonogramm', s: 'Male nach Zahlen: Aus den Hinweisen am Rand entsteht jeden Tag ein neues Pixelbild.', art: '<span class="rx-art">' + [1, 0, 1, 1, 1, 1, 0, 1, 0].map(f => `<i class="${f ? 'f' : ''}"></i>`).join('') + '</span>', act: 'data-rx-open="nono"', btn: 'Rätseln', g: 'linear-gradient(135deg,#7a3a2f,#2e1410)' },
       { k: 'wortle', t: 'Wörtle', s: 'Jeden Tag ein neues Wort mit 5 Buchstaben – 6 Versuche. Plus freies Spiel.', art: '<span class="wd-art">🟩</span>', act: 'data-wd-open="1"', btn: 'Spielen', day: 1, g: 'linear-gradient(135deg,#1f6a3a,#0f2e1c)', cats: ['taeglich'] },
       { k: 'mathe', t: 'Mathe-Blitz', s: '60 Sekunden Kopfrechnen gegen die Uhr – wer schafft heute die meisten?', art: '<span style="font:400 40px var(--display);color:#ffd23f;text-shadow:0 0 18px rgba(255,210,63,.6)">7×8</span>', act: 'data-rx-open="mathe"', btn: 'Los', day: 1, neu: 1, g: 'linear-gradient(135deg,#6a3a00,#2a1600)', cats: ['taeglich'] },
       { k: 'verb', t: 'Verbindungen', s: '16 Wörter, 4 geheime Gruppen. Finde die Gemeinsamkeiten!', art: '<span class="rx-art" style="grid-template-columns:repeat(4,20px)">' + ['#f9df6d', '#a0c35a', '#b0c4ef', '#ba81c5'].map(c => `<i style="background:${c}"></i>`.repeat(2)).join('') + '</span>', act: 'data-rx-open="verb"', btn: 'Los', day: 1, neu: 1, g: 'linear-gradient(135deg,#5a3d8a,#241840)', cats: ['taeglich'] },
@@ -113,14 +132,14 @@
       { k: 'casino', t: 'Casino Aurum', s: 'Blackjack, Roulette, Poker, Pferderennen, Automat und Glücksrad – nur mit Spieljetons.', art: '<span class="cz-art"></span>', act: 'data-casino="1"', btn: 'Spielen', pill: 'Spielgeld', g: 'linear-gradient(135deg,#5a0f1f,#1f0610)', cats: ['solo', 'freunde'] },
       ...['uno', 'schach', 'vier', 'maedn', 'kniffel', 'siedler'].map(k => ({ ...room(k), g: 'linear-gradient(135deg,#2e2742,#1e1a2c)', cats: ['freunde'] })),
       ...['party', 'maler', 'slf', 'spion'].map(k => ({ ...room(k), g: 'linear-gradient(135deg,#3a2342,#1e1a2c)', cats: ['party', 'freunde'] })),
-      { k: 'ideen', t: 'Ideen & Vorschläge', s: 'Schlag vor, was besser werden soll, und stimm über die Ideen der anderen ab.', art: '<span class="vz-art">💡</span>', act: 'data-vz-open="1"', btn: 'Ideen ansehen', g: 'linear-gradient(135deg,#4a3a12,#1e1808)', cats: ['alle'] },
     ];
-    return L.filter(x => x && x.t);
+    return L.filter(x => x && x.t && CAT_OF[x.k]).map(x => ({ ...x, c: CAT_OF[x.k] }));
   }
-  let cat = 'top', term = '';
-  try { cat = localStorage.getItem('fsg.hubcat') || 'top'; } catch {}
+  let cat = 'alle', term = '';
+  try { cat = localStorage.getItem('fsg.hubcat2') || 'alle'; } catch {}
+  if (!CATS.some(c => c[0] === cat)) cat = 'alle';
   function tileHTML(x, i) {
-    const pills = `${x.neu ? '<span class="pill new">Neu</span>' : ''}${x.day ? '<span class="pill day">Täglich</span>' : ''}${x.pill ? `<span class="pill">${esc2(x.pill)}</span>` : ''}`;
+    const pills = `<span class="pill t-${x.c}">${TAG[x.c]}</span>`;
     return `<div class="hx-t ${x.big && cat !== 'alle' ? 'big' : ''}" data-hxt="${x.k}" style="--g:${x.g};animation-delay:${Math.min(i, 14) * 0.035}s"><div class="art">${x.art}</div>
       <div class="bd"><b>${esc2(x.t)} ${pills}</b><span class="sub">${esc2(x.s)}</span><button class="btn small go" ${x.act}>${esc2(x.btn)}</button></div></div>`;
   }
@@ -128,9 +147,12 @@
     const el = q('#tiles'); if (!el) return; el.classList.add('hx');
     let L = catalog();
     const t = term.trim().toLowerCase();
-    if (t) L = L.filter(x => (x.t + ' ' + x.s).toLowerCase().includes(t));
-    else if (cat !== 'alle') L = L.filter(x => x.cats.includes(cat));
-    el.innerHTML = L.length ? L.map(tileHTML).join('') : '<div class="empty hx-empty">Nichts gefunden. Probier ein anderes Wort.</div>';
+    if (t) L = L.filter(x => (x.t + ' ' + x.s + ' ' + TAG[x.c]).toLowerCase().includes(t));
+    else if (cat !== 'alle') L = L.filter(x => x.c === cat);
+    let html;
+    if (!t && cat === 'alle') { let i = 0; html = CATS.slice(1).map(([c, n]) => { const g = L.filter(x => x.c === c); return g.length ? `<h3 class="hx-sec" data-hxc="${c}">${n}</h3>` + g.map(x => tileHTML(x, i++)).join('') : ''; }).join(''); }
+    else html = L.map(tileHTML).join('');
+    el.innerHTML = L.length ? html : '<div class="empty hx-empty">Nichts gefunden. Probier ein anderes Wort.</div>';
     document.querySelectorAll('.hx-cats button').forEach(b => b.classList.toggle('on', !t && b.dataset.hxc === cat));
   }
   // Ganze Kachel anklickbar (nicht nur der Knopf)
@@ -149,7 +171,7 @@
   function build() {
     const brand = q('#hub .brand'); if (brand && !q('.hx-hero')) {
       brand.outerHTML = `<header class="hx-hero"><h1>Game·Hub</h1><p>Über 25 Spiele für dich und deine Freunde – jeder auf seinem eigenen Gerät. Starte eine Runde, löse die Tagesrätsel oder steig in offene Runden ein.</p>
-        <div class="hx-stats"><span class="live">Live</span><span data-hxrooms style="cursor:pointer">0 offene Runden</span><span>🧩 Neue Rätsel jeden Tag</span></div></header><div data-hxlv></div>`;
+        <div class="hx-stats"><span class="live">Live</span><span data-hxrooms style="cursor:pointer">0 offene Runden</span><span>🧩 Neue Rätsel jeden Tag</span></div><button class="hx-idea" data-vz-open="1" title="Ideen & Vorschläge" aria-label="Ideen und Vorschläge"><span>💡</span></button></header><div data-hxlv></div>`;
     }
     const sec = q('#tiles') && q('#tiles').closest('section');
     if (sec && !q('.hx-bar')) {
@@ -157,7 +179,7 @@
       const bar = document.createElement('div'); bar.className = 'hx-bar';
       bar.innerHTML = `<div class="hx-cats">${CATS.map(([k, n]) => `<button data-hxc="${k}">${n}</button>`).join('')}</div><input class="hx-search" type="search" placeholder="🔍 Spiel suchen …" autocomplete="off">`;
       sec.insertBefore(bar, q('#tiles'));
-      bar.addEventListener('click', e => { const b = e.target.closest('[data-hxc]'); if (!b) return; cat = b.dataset.hxc; term = ''; bar.querySelector('input').value = ''; try { localStorage.setItem('fsg.hubcat', cat); } catch {} renderTiles(); });
+      bar.addEventListener('click', e => { const b = e.target.closest('[data-hxc]'); if (!b) return; cat = b.dataset.hxc; term = ''; bar.querySelector('input').value = ''; try { localStorage.setItem('fsg.hubcat2', cat); } catch {} renderTiles(); });
       bar.querySelector('input').addEventListener('input', e => { term = e.target.value; renderTiles(); });
       bar.querySelector('input').addEventListener('keydown', e => e.stopPropagation());
     }
@@ -199,6 +221,7 @@
     });
   }
   document.addEventListener('click', e => {
+    const sh = e.target.closest('.hx-sec[data-hxc]'); if (sh) { const b = q(`.hx-cats [data-hxc="${sh.dataset.hxc}"]`); if (b) b.click(); }
     if (e.target.closest('[data-hxquests]')) panel();
     if (e.target.closest('[data-hxrooms]')) { const r = q('#rooms'); if (r) r.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     if (e.target.closest('[data-hxacct]')) { const b = q('[data-acct="open"]'); if (b) { b.click(); b.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }
