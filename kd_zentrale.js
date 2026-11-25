@@ -185,7 +185,7 @@
   function tabDecks(s) {
     return `<div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" data-kdzed="new">➕ Neues Deck</button><span class="note">Regeln: genau ${K.DECK_SIZE} Karten, mindestens ${K.MIN_CRE} Kreaturen, jede Karte höchstens 3× (episch 2×, legendär 1×). Themen darfst du frei mischen.</span></div>
       ${s.decks.length ? `<div class="kd-decks">${s.decks.map((d, i) => { const th = K.mainTheme(d.cards), n = Object.values(d.cards).reduce((a, b) => a + b, 0), bo = K.bonusesOf(d.cards); return `<button class="kd-dk ${d.err ? '' : 'mine'}" data-kdzed="${i}" style="${cv(th)};animation-delay:${i * 0.05}s"><span class="e">${fc(th).e}</span><b>${esc(d.n)}</b><small>${n}/${K.DECK_SIZE} Karten${bo.length ? ' · Bonus ' + bo.map(b => fc(b).e).join('') : ''}</small><small>${d.err ? '⚠️ ' + esc(d.err) : '✅ spielbereit'}</small></button>`; }).join('')}</div>` : '<p class="note center">Noch keine eigenen Decks. Starte mit einem leeren Deck oder einer Kopie eines Grunddecks.</p>'}
-      <h3>🃏 Grunddecks als Vorlage</h3><div class="kd-decks">${Object.keys(K.DECKS).map(f => `<button class="kd-dk" data-kdzcopy="${f}" style="${cv(f)}"><span class="e">${fc(f).e}</span><b>Grunddeck ${fc(f).n}</b><small>Als eigenes Deck kopieren und anpassen</small></button>`).join('')}</div>`;
+      <h3>🃏 Grunddecks als Vorlage</h3><div class="kd-decks">${Object.keys(K.DECKS).map(f => `<button class="kd-dk" data-kdzcopy="${f}" style="${cv(f)}"><span class="e">${fc(f).e}</span><b>Grunddeck ${fc(f).n}</b><small>Übernimmt alle Karten daraus, die du schon besitzt</small></button>`).join('')}</div>`;
   }
   const deckN = cards => Object.values(cards).reduce((a, b) => a + b, 0);
   function tabEdit(s) {
@@ -265,7 +265,7 @@
     if (g('data-kdzmiss')) { Z.miss = !Z.miss; render(); return; }
     if ((b = g('data-kdzcard'))) { showCard(b.dataset.kdzcard); return; }
     if ((b = g('data-kdzed'))) { const i = b.dataset.kdzed; if (i === 'new') Z.ed = { i: -1, n: 'Mein Deck', cards: {} }; else { const d = Z.st.decks[Number(i)]; Z.ed = { i: Number(i), n: d.n, cards: { ...d.cards } }; } render(); return; }
-    if ((b = g('data-kdzcopy'))) { const f = b.dataset.kdzcopy; Z.ed = { i: -1, n: 'Mein ' + fc(f).n + '-Deck', cards: { ...K.DECKS[f] } }; Z.edTh = f; render(); return; }
+    if ((b = g('data-kdzcopy'))) { const f = b.dataset.kdzcopy; const cards = {}; for (const [id, k] of Object.entries(K.DECKS[f])) { const m = Math.min(k, Z.st.c[id] || 0); if (m) cards[id] = m; } Z.ed = { i: -1, n: 'Mein ' + fc(f).n + '-Deck', cards }; Z.edTh = f; render(); return; }
     if (g('data-kdzback')) { if (Z.ed && Z.ed.dirty && !confirm('Änderungen verwerfen?')) return; Z.ed = null; render(); return; }
     if ((b = g('data-kdzeth'))) { Z.edTh = b.dataset.kdzeth; Z.keepScroll = true; render(); return; }
     if ((b = g('data-kdzadd'))) {

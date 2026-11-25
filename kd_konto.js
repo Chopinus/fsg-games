@@ -15,10 +15,15 @@ const QUESTS = [
 ];
 const Q_REWARD = 60, FIRST_WIN = 60;
 
+// Startsammlung: je 1× jede gewöhnliche Karte aus den Grunddecks (35 Karten) – der Rest kommt aus Packs
+const STARTER = {}; for (const d of Object.values(DECKS)) for (const id of Object.keys(d)) if (C[id].r === 'g') STARTER[id] = 1;
+const OLD_STARTER = {}; for (const d of Object.values(DECKS)) for (const [id, n] of Object.entries(d)) OLD_STARTER[id] = (OLD_STARTER[id] || 0) + n;
 function init(acc) {
-  if (!acc.kd) {
-    const c = {}; for (const d of Object.values(DECKS)) for (const [id, n] of Object.entries(d)) c[id] = (c[id] || 0) + n;
-    acc.kd = { c, f: 300, st: 0, pe: 0, pl: 0, free: 0, decks: [], lad: 0, packs: 0, d: '', dq: [], dbw: 0, dpw: 0, dfw: false };
+  if (!acc.kd) acc.kd = { v: 2, c: { ...STARTER }, f: 300, st: 0, pe: 0, pl: 0, free: 0, decks: [], lad: 0, packs: 0, d: '', dq: [], dbw: 0, dpw: 0, dfw: false };
+  if (acc.kd.v !== 2) { // alte, zu große Startsammlung verkleinern – gezogene Karten bleiben
+    const c = {}; for (const [id, n] of Object.entries(acc.kd.c)) { const k = Math.max(0, n - (OLD_STARTER[id] || 0)); if (k) c[id] = k; }
+    for (const id of Object.keys(STARTER)) c[id] = (c[id] || 0) + 1;
+    acc.kd.c = c; acc.kd.v = 2;
   }
   const k = acc.kd, d = day();
   if (k.d !== d) { // neuer Tag: neue Aufgaben
