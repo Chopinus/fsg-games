@@ -21,7 +21,7 @@ const START_DECK = DECKS.abent, START_NAME = 'Abenteuer-Startdeck'; // jeder bes
 const WELCOME = 8; // Willkommens-Packs: zusammen 40 Karten aus allen Themen, genug für ein erstes Deck
 const OLD_STARTER = {}; for (const [f, d] of Object.entries(DECKS)) if (f !== 'abent') for (const [id, n] of Object.entries(d)) OLD_STARTER[id] = (OLD_STARTER[id] || 0) + n;
 function init(acc) {
-  if (!acc.kd) acc.kd = { v: 4, c: { ...START_DECK }, welcome: 0, f: 300, st: 0, pe: 0, pl: 0, free: 0, decks: [{ n: START_NAME, cards: { ...START_DECK } }], lad: 0, packs: 0, d: '', dq: [], dbw: 0, dpw: 0, dfw: false };
+  if (!acc.kd) acc.kd = { v: 5, c: { ...START_DECK }, welcome: 0, f: 300, st: 0, pe: 0, pl: 0, free: 0, decks: [{ n: START_NAME, cards: { ...START_DECK } }], lad: 0, packs: 0, d: '', dq: [], dbw: 0, dpw: 0, dfw: false };
   if (!acc.kd.v || acc.kd.v === 1) { // alte, zu große Startsammlung verkleinern – gezogene Karten bleiben
     const c = {}; for (const [id, n] of Object.entries(acc.kd.c)) { const k = Math.max(0, n - (OLD_STARTER[id] || 0)); if (k) c[id] = k; }
     for (const id of Object.keys(STARTER)) c[id] = (c[id] || 0) + 1;
@@ -35,6 +35,12 @@ function init(acc) {
     const k = acc.kd; for (const [id, n] of Object.entries(START_DECK)) k.c[id] = Math.max(k.c[id] || 0, n);
     if (!k.decks.some(d => d.n === START_NAME)) k.decks.unshift({ n: START_NAME, cards: { ...START_DECK } });
     k.free = (k.free || 0) + (k.welcome || 0); k.welcome = 0; k.v = 4;
+  }
+  if (acc.kd.v === 4) { // einmalig: alle Karten außer dem Abenteuer-Thema aus allen Sammlungen und Decks entfernen
+    const k = acc.kd, keep = id => C[id] && C[id].f === 'abent';
+    for (const id of Object.keys(k.c)) if (!keep(id)) delete k.c[id];
+    for (const d of k.decks) for (const id of Object.keys(d.cards)) if (!keep(id)) delete d.cards[id];
+    k.v = 5;
   }
   const k = acc.kd, d = day();
   if (k.d !== d) { // neuer Tag: neue Aufgaben
