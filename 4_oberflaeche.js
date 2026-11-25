@@ -1797,7 +1797,7 @@
     const sb = e.target.closest('[data-sub]');
     const rt = e.target.closest('[data-rt]');
     if (rt) { const v = rt.dataset.rt; S.rauto = S.rauto || { on: false, t: [], max: 1 };
-      if (v === 'all') { if (inCamp()) { const n = mergeAll(S); if (n) { SND.play('forge'); toast(`${n}× verschmolzen`, true); achCheck(); afterChange(); } else toast('Gerade lässt sich nichts verschmelzen (3 gleiche Runen und genug Splitter nötig).'); } return; }
+      if (v === 'all') { if (inCamp()) { const n = mergeAll(S); if (n) { SND.play('forge'); toast(`${n}× verschmolzen`, true); achCheck(); afterChange(); } else toast('Gerade lässt sich nichts verschmelzen (3 gleiche freie Runen und genug Splitter nötig – eingesetzte Runen bleiben in ihren Sockeln).'); } return; }
       if (v === 'dust') { if (inCamp()) { const n = buyDust(S); if (n) { SND.play('buy'); toast(`+${fmt(n)} Runensplitter`); afterChange(); } } return; }
       if (v === 'on') S.rauto.on = !S.rauto.on;
       else if (v.startsWith('t:')) { const t = v.slice(2); S.rauto.t = S.rauto.t.includes(t) ? S.rauto.t.filter(x => x !== t) : [...S.rauto.t, t]; }

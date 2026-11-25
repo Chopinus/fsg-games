@@ -2133,11 +2133,17 @@
     S.sockets[hid][slot] = runeId; return true;
   }
   function unsocket(S, hid, slot) { S.sockets[hid][slot] = null; }
-  function canMerge(S, r) { return feature(S, 'schmiede') && S.runes.filter(x => x.t === r.t && x.tier === r.tier).length >= 3 && r.tier < RUNE_MAX && S.dust >= mergeCost(r.tier); }
-  function merge(S, r) {
-    if (!canMerge(S, r)) return null;
+  // Spieler-Idee (v55): Welche Runen dürfen in eine Verschmelzung? Eingesetzte Runen nie, wenn freeOnly
+  // („Alles verschmelzen“), und auch sonst keine, deren Sockel die neue, höhere Stufe nicht tragen kann.
+  function mergePool(S, r, freeOnly) {
+    const where = {}; for (const [hid, arr] of Object.entries(S.sockets || {})) (arr || []).forEach((x, i) => { if (x) where[x] = [hid, i]; });
+    return S.runes.filter(x => x.t === r.t && x.tier === r.tier && (!where[x.id] || (!freeOnly && sockOk(S, where[x.id][1], { tier: r.tier + 1 }, where[x.id][0]))));
+  }
+  function canMerge(S, r, freeOnly) { if (!feature(S, 'schmiede') || r.tier >= RUNE_MAX || S.dust < mergeCost(r.tier)) return false; const pool = mergePool(S, r, freeOnly); return pool.length >= 3 && pool.includes(r); }
+  function merge(S, r, freeOnly) {
+    if (!canMerge(S, r, freeOnly)) return null;
     const used = socketed(S);
-    const same = S.runes.filter(x => x.t === r.t && x.tier === r.tier).sort((a, b) => (used.has(a.id) ? 1 : 0) - (used.has(b.id) ? 1 : 0) || (a.id === r.id ? -1 : 0)).slice(0, 3);
+    const same = mergePool(S, r, freeOnly).sort((a, b) => (used.has(a.id) ? 1 : 0) - (used.has(b.id) ? 1 : 0) || (a.id === r.id ? -1 : 0)).slice(0, 3);
     const keepSlot = Object.entries(S.sockets).flatMap(([hid, arr]) => arr.map((x, i) => (same.some(s => s.id === x) ? [hid, i] : null))).filter(Boolean)[0];
     S.runes = S.runes.filter(x => !same.includes(x));
     for (const h of HEROES) S.sockets[h.id] = S.sockets[h.id].map(x => (same.some(s => s.id === x) ? null : x));
@@ -2161,11 +2167,12 @@
     const A = S.rauto; if (A && A.on && A.t && A.t.includes(t) && tier <= (A.max || 1)) { const d = shardOf(tier); S.dust += d; return { auto: true, d }; }
     return addRune(S, t, tier);
   }
-  // Alle möglichen Verschmelzungen auf einmal (von unten nach oben, damit neue Runen gleich weiter verschmelzen)
+  // Alle möglichen Verschmelzungen auf einmal (von unten nach oben, damit neue Runen gleich weiter verschmelzen).
+  // Nur freie Runen – eingesetzte Runen (z. B. im Runengolem) bleiben unangetastet in ihrem Sockel.
   function mergeAll(S) {
     let n = 0;
     for (let tier = 1; tier < RUNE_MAX; tier++) for (const R of RUNES) {
-      let guard = 0; while (guard++ < 5000) { const r = S.runes.find(x => x.t === R.id && x.tier === tier); if (!r || !canMerge(S, r) || !merge(S, r)) break; n++; }
+      let guard = 0; while (guard++ < 5000) { const used = socketed(S), r = S.runes.find(x => x.t === R.id && x.tier === tier && !used.has(x.id)); if (!r || !canMerge(S, r, true) || !merge(S, r, true)) break; n++; }
     }
     return n;
   }

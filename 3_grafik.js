@@ -307,6 +307,10 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 90, title: 'Spieler-Idee: „Alles verschmelzen“ schont eingesetzte Runen', date: '25.11.2026', items: [
+      '„Alles verschmelzen“ nimmt nur noch freie Runen. Runen, die im Runengolem oder bei einem anderen Helden eingesetzt sind, bleiben in ihrem Sockel und verschwinden nicht mehr.',
+      'Auch beim einzelnen Verschmelzen werden keine eingesetzten Runen mehr verbraucht, deren Sockel die neue, höhere Stufe gar nicht tragen könnte (Zusatz-Sockel mit Höchststufe).',
+    ] },
     { id: 89, title: 'Spieler-Idee: Lichtrad – Steuerkreuz in WASD-Form', date: '25.11.2026', items: [
       'Die Pfeil-Knöpfe auf Handy und Tablet liegen nicht mehr in einer Reihe, sondern wie die WASD-Tasten: ▲ oben, darunter ◀ ▼ ▶.',
       'Am Computer steuerst du weiterhin mit Pfeiltasten oder W A S D.',
