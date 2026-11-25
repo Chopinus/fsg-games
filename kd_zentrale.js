@@ -23,6 +23,9 @@
   #kdz .big2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
   #kdz .bigb{border:0;border-radius:18px;padding:18px;text-align:left;color:#fff;cursor:pointer;display:flex;flex-direction:column;gap:4px;font:inherit;transition:transform .15s;box-shadow:0 10px 24px rgba(0,0,0,.4)}
   #kdz .bigb:hover{transform:translateY(-3px)} #kdz .bigb b{font-size:19px} #kdz .bigb .e{font-size:36px}
+  #kdz .kdz-wel{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:linear-gradient(135deg,rgba(255,210,63,.22),rgba(180,92,255,.22));border-color:#ffd23f;animation:kdzwel 2s ease-in-out infinite}
+  #kdz .kdz-wel .e{font-size:42px;animation:kdpkw .9s ease-in-out infinite}#kdz .kdz-wel b{font-size:18px}
+  @keyframes kdzwel{50%{box-shadow:0 0 24px rgba(255,210,63,.45)}}
   #kdz .q{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.07)} #kdz .q:last-child{border:0}
   #kdz .q .bar{flex:1;height:8px;border-radius:4px;background:#2a2340;overflow:hidden;max-width:160px} #kdz .q .bar i{display:block;height:100%;background:linear-gradient(90deg,#3dff8a,#22c4a0)}
   #kdz .q.done{opacity:.6} #kdz .q .t{flex:2;min-width:0}
@@ -128,9 +131,10 @@
     if (Z.tab === 'leiter') return tabLadder(s);
     return '';
   }
+  const welcomeBox = s => s && s.welcome > 0 ? `<div class="box kdz-wel"><span class="e">🎁</span><div style="flex:1;min-width:180px"><b>Willkommens-Packs: noch ${s.welcome}</b><div class="note" style="color:#f0e8ff">Zufällige Karten aus allen fünf Themen – genug für dein erstes eigenes Deck. Danach baut dir ✨ „Automatisch bauen“ ein Startdeck.</div></div><button class="btn" data-kdzpack="start">Öffnen</button></div>` : '';
   function tabPlay(s) {
     const tot = Object.values(C).filter(c => !c.tok).length, own = s ? Object.keys(s.c).filter(id => C[id] && !C[id].tok && s.c[id] > 0).length : 0;
-    return `<div class="big2">
+    return `${welcomeBox(s)}<div class="big2">
       <button class="bigb" data-kdzgo="friends" style="background:linear-gradient(135deg,#6a3fd6,#2a1a6a)"><span class="e">👥</span><b>Gegen Freunde</b><span>Runde erstellen und Freunde einladen</span></button>
       <button class="bigb" data-kdzgo="0" style="background:linear-gradient(135deg,#1f6a8a,#0b2a3a)"><span class="e">🤖</span><b>Übungs-Bot</b><span>Locker üben, gibt etwas Funken</span></button>
       <button class="bigb" data-kdzt="leiter" style="background:linear-gradient(135deg,#a8790a,#3a2a00)"><span class="e">🏆</span><b>Bot-Leiter</b><span>${s ? `Stufe ${s.lad}/${LADDER.length} geschafft` : '10 Gegner, immer stärker'}</span></button></div>
@@ -142,6 +146,7 @@
       <div class="box"><h3>🎨 Themen-Boni</h3><p class="note" style="margin:4px 0">Ab ${K.BONUS_MIN} Karten eines Themas im Deck. Du kannst Themen frei mischen – mit 10/10/10 hast du sogar drei Boni.</p>${Object.entries(B).map(([f, b]) => `<div>${fc(f).e} <b>${b[0]}</b> – ${b[1]}</div>`).join('')}</div>`;
   }
   function tabPacks(s) {
+    if (s.welcome > 0) return welcomeBox(s) + '<p class="note center">Öffne zuerst deine Willkommens-Packs – danach kannst du hier mit Funken neue Packs kaufen.</p>';
     const can = s.free > 0 || s.f >= PACK.cost;
     const pk = (th, i) => { const f = fc(th === 'mix' ? null : th); return `<button class="kdz-pack" data-kdzpack="${th}" style="${th === 'mix' ? '--c1:#b45cff;--c2:#1f3a8a' : cv(th)};animation:kdzoom .4s ${i * 0.05}s both" ${can ? '' : 'disabled'}><span class="e">${th === 'mix' ? '💎' : f.e}</span><b>${th === 'mix' ? 'Kristallpack' : f.n + '-Pack'}</b><span class="note" style="position:relative;color:#eee;font-size:12px">${th === 'mix' ? 'alle Themen' : 'nur ' + f.n + '-Karten'}</span><span class="pr ${s.free ? 'free' : ''}">${s.free ? 'Gratis' : PACK.cost + ' 🪙'}</span></button>`; };
     return `<div class="box"><div class="pity"><span>📦 ${PACK.size} Karten pro Pack, mindestens eine seltene</span><span>💜 Epische Karte garantiert in spätestens <b>${PACK.pityE - s.pe}</b> Packs</span><span>🧡 Legendäre Karte garantiert in spätestens <b>${PACK.pityL - s.pl}</b> Packs</span></div>
@@ -183,9 +188,22 @@
     });
   }
   function tabDecks(s) {
-    return `<div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" data-kdzed="new">➕ Neues Deck</button><span class="note">Regeln: genau ${K.DECK_SIZE} Karten, mindestens ${K.MIN_CRE} Kreaturen, jede Karte höchstens 3× (episch 2×, legendär 1×). Themen darfst du frei mischen.</span></div>
+    return `<div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" data-kdzed="new">➕ Neues Deck</button><button class="btn ghost" data-kdzauto="1">✨ Automatisch bauen</button><span class="note">Regeln: genau ${K.DECK_SIZE} Karten, mindestens ${K.MIN_CRE} Kreaturen, jede Karte höchstens 3× (episch 2×, legendär 1×). Themen darfst du frei mischen.</span></div>
       ${s.decks.length ? `<div class="kd-decks">${s.decks.map((d, i) => { const th = K.mainTheme(d.cards), n = Object.values(d.cards).reduce((a, b) => a + b, 0), bo = K.bonusesOf(d.cards); return `<button class="kd-dk ${d.err ? '' : 'mine'}" data-kdzed="${i}" style="${cv(th)};animation-delay:${i * 0.05}s"><span class="e">${fc(th).e}</span><b>${esc(d.n)}</b><small>${n}/${K.DECK_SIZE} Karten${bo.length ? ' · Bonus ' + bo.map(b => fc(b).e).join('') : ''}</small><small>${d.err ? '⚠️ ' + esc(d.err) : '✅ spielbereit'}</small></button>`; }).join('')}</div>` : '<p class="note center">Noch keine eigenen Decks. Starte mit einem leeren Deck oder einer Kopie eines Grunddecks.</p>'}
       <h3>🃏 Grunddecks als Vorlage</h3><div class="kd-decks">${Object.keys(K.DECKS).map(f => `<button class="kd-dk" data-kdzcopy="${f}" style="${cv(f)}"><span class="e">${fc(f).e}</span><b>Grunddeck ${fc(f).n}</b><small>Übernimmt alle Karten daraus, die du schon besitzt</small></button>`).join('')}</div>`;
+  }
+  // Baut aus der Sammlung ein spielbares Deck: stärkstes Thema bevorzugt (für den Themen-Bonus), genug Kreaturen, nicht zu teuer
+  function autoDeck(own) {
+    const th = {}; for (const [id, n] of Object.entries(own)) if (C[id] && n > 0) th[C[id].f] = (th[C[id].f] || 0) + Math.min(n, RAR[C[id].r].max);
+    const rank = Object.keys(th).sort((a, b) => th[b] - th[a]), w = f => [6, 4, 2][rank.indexOf(f)] || 0;
+    const rv = { g: 0, s: 1, e: 2, l: 3 };
+    const score = id => w(C[id].f) + rv[C[id].r] * 1.5 + (C[id].c <= 4 ? 1 : 0);
+    const cards = {}; let n = 0, cre = 0, big = 0;
+    const add = (id, lim) => { const mx = Math.min(RAR[C[id].r].max, own[id] || 0); while ((cards[id] || 0) < mx && n < lim && !(C[id].c >= 6 && big >= 4)) { cards[id] = (cards[id] || 0) + 1; n++; if (C[id].t === 'k') cre++; if (C[id].c >= 6) big++; } };
+    const ids = Object.keys(own).filter(id => C[id] && !C[id].tok && own[id] > 0).sort((a, b) => score(b) - score(a) || C[a].c - C[b].c);
+    for (const id of ids.filter(id => C[id].t === 'k')) if (cre < 17) add(id, Math.min(K.DECK_SIZE, n + 17 - cre));
+    for (const id of ids) add(id, K.DECK_SIZE);
+    return cards;
   }
   const deckN = cards => Object.values(cards).reduce((a, b) => a + b, 0);
   function tabEdit(s) {
@@ -210,9 +228,9 @@
   // Pack öffnen mit Animation
   async function openPack(th) {
     if (Z.busy) return; Z.busy = true;
-    const f = th === 'mix' ? { col: '#b45cff', col2: '#1f3a8a', e: '💎', n: 'Kristall' } : fc(th);
+    const f = th === 'mix' ? { col: '#b45cff', col2: '#1f3a8a', e: '💎', n: 'Kristall' } : th === 'start' ? { col: '#ffb020', col2: '#7a2a8a', e: '🎁', n: 'Willkommens' } : fc(th);
     const o = document.createElement('div'); o.id = 'kdpk'; o.style.cssText = `--c1:${f.col};--c2:${f.col2}`;
-    o.innerHTML = `<div class="rays"></div><div class="kdz-pack pk" style="--c1:${f.col};--c2:${f.col2}"><span class="e">${f.e}</span><b>${th === 'mix' ? 'Kristallpack' : f.n + '-Pack'}</b></div><div class="msg">Wird geöffnet …</div>`;
+    o.innerHTML = `<div class="rays"></div><div class="kdz-pack pk" style="--c1:${f.col};--c2:${f.col2}"><span class="e">${f.e}</span><b>${th === 'mix' ? 'Kristallpack' : th === 'start' ? 'Willkommens-Pack' : f.n + '-Pack'}</b></div><div class="msg">Wird geöffnet …</div>`;
     document.body.appendChild(o);
     const [r] = await Promise.all([call('kd_pack', { th }), new Promise(res => setTimeout(res, 1100))]);
     Z.busy = false;
@@ -233,12 +251,15 @@
       if (c.up && c.lv >= 4) setTimeout(() => window.KDfx && KDfx.burst(at, '⭐', '#ffd23f'), 500);
       if (row.querySelectorAll('.kdf:not(.open)').length === 0) setTimeout(done, 700);
     };
-    const done = () => { const can = r.state.free > 0 || r.state.f >= PACK.cost; acts.innerHTML = `${can ? `<button class="btn" data-pk="again">🎁 Noch ein Pack (${r.state.free ? 'Gratis' : PACK.cost + ' 🪙'})</button>` : ''}<button class="btn ghost" data-pk="close">Fertig</button>`; };
+    const done = () => {
+      if (r.welcome) { acts.innerHTML = r.state.welcome > 0 ? `<button class="btn" data-pk="again">🎁 Nächstes Willkommens-Pack (${r.state.welcome} übrig)</button><button class="btn ghost" data-pk="close">Später</button>` : '<button class="btn" data-pk="auto">✨ Startdeck automatisch bauen</button><button class="btn ghost" data-pk="close">Fertig</button>'; return; }
+      const can = r.state.free > 0 || r.state.f >= PACK.cost; acts.innerHTML = `${can ? `<button class="btn" data-pk="again">🎁 Noch ein Pack (${r.state.free ? 'Gratis' : PACK.cost + ' 🪙'})</button>` : ''}<button class="btn ghost" data-pk="close">Fertig</button>`; };
     o.addEventListener('click', e => {
       const k = e.target.closest('.kdf'); if (k) { if (k.classList.contains('open')) { const c = r.cards[Number(k.dataset.i)]; showCard(c.id); } else flip(k); return; }
       const b = e.target.closest('[data-pk]'); if (!b) return;
       if (b.dataset.pk === 'all') row.querySelectorAll('.kdf:not(.open)').forEach((el, i) => setTimeout(() => flip(el), i * 220));
       else if (b.dataset.pk === 'again') { o.remove(); openPack(th); }
+      else if (b.dataset.pk === 'auto') { o.remove(); Z.tab = 'decks'; Z.ed = { i: -1, n: 'Mein Startdeck', cards: autoDeck(Z.st.c), dirty: true }; render(); toast('✨ Startdeck gebaut – passe es an und speichere es!'); }
       else o.remove();
     });
     setState(r.state, true);
@@ -265,6 +286,7 @@
     if (g('data-kdzmiss')) { Z.miss = !Z.miss; render(); return; }
     if ((b = g('data-kdzcard'))) { showCard(b.dataset.kdzcard); return; }
     if ((b = g('data-kdzed'))) { const i = b.dataset.kdzed; if (i === 'new') Z.ed = { i: -1, n: 'Mein Deck', cards: {} }; else { const d = Z.st.decks[Number(i)]; Z.ed = { i: Number(i), n: d.n, cards: { ...d.cards } }; } render(); return; }
+    if (g('data-kdzauto')) { const cards = autoDeck(Z.st.c); Z.ed = { i: -1, n: 'Automatisches Deck', cards, dirty: true }; render(); if (deckN(cards) < K.DECK_SIZE) toast('Für ein volles Deck fehlen dir noch Karten – öffne ein paar Packs.'); return; }
     if ((b = g('data-kdzcopy'))) { const f = b.dataset.kdzcopy; const cards = {}; for (const [id, k] of Object.entries(K.DECKS[f])) { const m = Math.min(k, Z.st.c[id] || 0); if (m) cards[id] = m; } Z.ed = { i: -1, n: 'Mein ' + fc(f).n + '-Deck', cards }; Z.edTh = f; render(); return; }
     if (g('data-kdzback')) { if (Z.ed && Z.ed.dirty && !confirm('Änderungen verwerfen?')) return; Z.ed = null; render(); return; }
     if ((b = g('data-kdzeth'))) { Z.edTh = b.dataset.kdzeth; Z.keepScroll = true; render(); return; }

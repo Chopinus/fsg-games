@@ -17,13 +17,18 @@ const Q_REWARD = 60, FIRST_WIN = 60;
 
 // Startsammlung: je 1× jede gewöhnliche Karte aus den Grunddecks (35 Karten) – der Rest kommt aus Packs
 const STARTER = {}; for (const d of Object.values(DECKS)) for (const id of Object.keys(d)) if (C[id].r === 'g') STARTER[id] = 1;
+const WELCOME = 8; // Willkommens-Packs: zusammen 40 Karten aus allen Themen, genug für ein erstes Deck
 const OLD_STARTER = {}; for (const d of Object.values(DECKS)) for (const [id, n] of Object.entries(d)) OLD_STARTER[id] = (OLD_STARTER[id] || 0) + n;
 function init(acc) {
-  if (!acc.kd) acc.kd = { v: 2, c: { ...STARTER }, f: 300, st: 0, pe: 0, pl: 0, free: 0, decks: [], lad: 0, packs: 0, d: '', dq: [], dbw: 0, dpw: 0, dfw: false };
-  if (acc.kd.v !== 2) { // alte, zu große Startsammlung verkleinern – gezogene Karten bleiben
+  if (!acc.kd) acc.kd = { v: 3, c: {}, welcome: WELCOME, f: 300, st: 0, pe: 0, pl: 0, free: 0, decks: [], lad: 0, packs: 0, d: '', dq: [], dbw: 0, dpw: 0, dfw: false };
+  if (!acc.kd.v || acc.kd.v === 1) { // alte, zu große Startsammlung verkleinern – gezogene Karten bleiben
     const c = {}; for (const [id, n] of Object.entries(acc.kd.c)) { const k = Math.max(0, n - (OLD_STARTER[id] || 0)); if (k) c[id] = k; }
     for (const id of Object.keys(STARTER)) c[id] = (c[id] || 0) + 1;
     acc.kd.c = c; acc.kd.v = 2;
+  }
+  if (acc.kd.v === 2) { // Start mit Willkommens-Packs statt fester Karten (wer noch kein Pack geöffnet hat, bekommt sie)
+    if (!acc.kd.packs) { acc.kd.c = {}; acc.kd.welcome = WELCOME; }
+    acc.kd.v = 3;
   }
   const k = acc.kd, d = day();
   if (k.d !== d) { // neuer Tag: neue Aufgaben
@@ -38,18 +43,38 @@ const levels = acc => { const k = init(acc), out = {}; for (const [id, n] of Obj
 const deckList = acc => init(acc).decks.map(d => ({ n: d.n, cards: d.cards, err: K.checkDeck(d.cards, acc.kd.c) }));
 function state(acc) {
   const k = init(acc);
-  return { c: k.c, f: k.f, st: k.st, pe: k.pe, pl: k.pl, free: k.free, lad: k.lad, packs: k.packs, decks: deckList(acc), dq: k.dq, dfw: k.dfw };
+  return { c: k.c, welcome: k.welcome || 0, f: k.f, st: k.st, pe: k.pe, pl: k.pl, free: k.free, lad: k.lad, packs: k.packs, decks: deckList(acc), dq: k.dq, dfw: k.dfw };
 }
 function rollRarity() { const o = PACK.odds, t = o.g + o.s + o.e + o.l; let x = Math.random() * t; for (const r of ['l', 'e', 's', 'g']) { if (x < o[r]) return r; x -= o[r]; } return 'g'; }
-function pickCard(th, r, own, taken) {
-  const themes = th === 'mix' ? Object.keys(F) : [th];
+function pickCard(th, r, own, taken, cre) {
+  const themes = th === 'mix' || th === 'start' ? Object.keys(F) : [th];
   let list = themes.flatMap(f => (POOL[f] && POOL[f][r]) || []);
+  if (cre) list = list.filter(id => C[id].t === 'k');
   const fresh = list.filter(id => !taken.has(id)); if (fresh.length) list = fresh; // keine doppelte Karte im selben Pack
   const unseen = list.filter(id => !own[id]); if (unseen.length && Math.random() < 0.5) list = unseen; // fehlende Karten etwas bevorzugen
   return list[Math.floor(Math.random() * list.length)];
 }
+function addCards(k, th, rs, creSlots) {
+  const taken = new Set();
+  return rs.map((r, i) => {
+    const id = pickCard(th, r, k.c, taken, i < creSlots); taken.add(id); const before = k.c[id] || 0, cap = RAR[r].lv[4];
+    let dust = 0;
+    if (before >= cap) { dust = RAR[r].dust; k.st += dust; } else k.c[id] = before + 1;
+    const n = k.c[id] || 0;
+    return { id, r, isNew: before === 0, n, lv: K.levelOf(id, n), up: K.levelOf(id, n) > K.levelOf(id, before), dust };
+  });
+}
+function welcomePack(acc, k) { // 4 gewöhnliche + 1 seltene/epische, davon mindestens 3 Kreaturen
+  if (!(k.welcome > 0)) return [400, { error: 'Du hast alle Willkommens-Packs schon geöffnet.' }];
+  k.welcome--;
+  const rs = ['g', 'g', 'g', 'g', Math.random() < 0.2 ? 'e' : 's'];
+  const cards = addCards(k, 'start', rs, 3);
+  const order = { g: 0, s: 1, e: 2, l: 3 }; cards.sort((a, b) => order[a.r] - order[b.r]);
+  return [200, { cards, pity: null, free: true, welcome: true, state: state(acc) }];
+}
 function openPack(acc, th) {
   const k = init(acc);
+  if (th === 'start') return welcomePack(acc, k);
   if (th !== 'mix' && !F[th]) return [400, { error: 'Unbekanntes Pack.' }];
   const free = k.free > 0;
   if (!free && k.f < PACK.cost) return [400, { error: `Dafür brauchst du ${PACK.cost} Funken.` }];
@@ -62,14 +87,7 @@ function openPack(acc, th) {
   k.pl = rs.includes('l') ? 0 : k.pl + 1;
   const order = { g: 0, s: 1, e: 2, l: 3 };
   rs.sort((a, b) => order[a] - order[b]); // die besten zum Schluss aufdecken
-  const taken = new Set();
-  const cards = rs.map(r => {
-    const id = pickCard(th, r, k.c, taken); taken.add(id); const before = k.c[id] || 0, cap = RAR[r].lv[4];
-    let dust = 0;
-    if (before >= cap) { dust = RAR[r].dust; k.st += dust; } else k.c[id] = before + 1;
-    const n = k.c[id] || 0;
-    return { id, r, isNew: before === 0, n, lv: K.levelOf(id, n), up: K.levelOf(id, n) > K.levelOf(id, before), dust };
-  });
+  const cards = addCards(k, th, rs, 0);
   k.packs++;
   return [200, { cards, pity: forceL ? 'l' : forceE ? 'e' : null, free, state: state(acc) }];
 }
