@@ -307,6 +307,10 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 89, title: 'Spieler-Idee: Lichtrad – Steuerkreuz in WASD-Form', date: '25.11.2026', items: [
+      'Die Pfeil-Knöpfe auf Handy und Tablet liegen nicht mehr in einer Reihe, sondern wie die WASD-Tasten: ▲ oben, darunter ◀ ▼ ▶.',
+      'Am Computer steuerst du weiterhin mit Pfeiltasten oder W A S D.',
+    ] },
     { id: 88, title: 'Fehler behoben: Spielstand ungültig', date: '20.11.2026', items: [
       'Sehr große Spielstände (viele Runen) konnten nicht mehr online gespeichert werden – es kam nur „Der Spielstand ist ungültig“.',
       'Runen werden jetzt platzsparend gespeichert, dadurch ist der Spielstand nur noch etwa halb so groß. Speichern klappt wieder, auch mit hunderten Runen.',
