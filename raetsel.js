@@ -41,21 +41,22 @@ function clues(bits) { const rows = [], cols = []; const run = a => { const o = 
   for (let r = 0; r < 10; r++) rows.push(run(bits.slice(r * 10, r * 10 + 10))); for (let c = 0; c < 10; c++) cols.push(run([...Array(10)].map((_, r) => bits[r * 10 + c]))); return { rows, cols }; }
 function nono(d) { return memo('n' + d, () => { const [name, s] = PICS[((d % PICS.length) + PICS.length) % PICS.length]; const bits = [...s].map(ch => (ch === '#' ? 1 : 0)); return { name, bits, ...clues(bits) }; }); }
 /* ---------- Verbindungen: 16 Wörter, 4 Gruppen ---------- */
+// Spieler-Idee (v59): Jedes Wort darf nur in genau eine Gruppe passen (keine Doppeldeutigkeiten wie König/Dame in Schach und Karten).
 const VERB = [
-  [['Planeten', 'Mars Venus Jupiter Saturn'], ['Schokoriegel', 'Twix Bounty Snickers Lion'], ['Römische Götter', 'Minerva Neptun Merkur Amor'], ['___zeit', 'Mahl Hoch Frei Schlaf']],
-  [['Obst', 'Apfel Birne Kiwi Mango'], ['Smartphone-Marken', 'Apple Samsung Xiaomi Nokia'], ['Farben', 'Lila Türkis Beige Ocker'], ['Kann man schälen', 'Kartoffel Ei Orange Zwiebel']],
-  [['Hunderassen', 'Mops Pudel Dackel Boxer'], ['Sportarten mit Ball', 'Tennis Rugby Golf Handball'], ['Gibt es beim Boxen', 'Ring Runde Gong Handschuh'], ['___ball', 'Feder Schnee Fuß Basket']],
-  [['Musikinstrumente', 'Geige Harfe Tuba Flöte'], ['Wochentage', 'Montag Freitag Samstag Sonntag'], ['Schach', 'Turm Läufer Bauer Dame'], ['Im Kartenspiel', 'König Bube Ass Joker']],
+  [['Ritter', 'Burg Schwert Rüstung Lanze'], ['Schokoriegel', 'Twix Bounty Snickers Lion'], ['Römische Götter', 'Minerva Neptun Merkur Amor'], ['___zeit', 'Mahl Hoch Frei Schlaf']],
+  [['Obst', 'Apfel Birne Kiwi Mango'], ['Smartphone-Marken', 'Apple Samsung Xiaomi Nokia'], ['Farben', 'Lila Türkis Beige Ocker'], ['___salat', 'Kartoffel Ei Nudel Wurst']],
+  [['Hunderassen', 'Mops Pudel Dackel Beagle'], ['Sportarten mit Ball', 'Tennis Rugby Golf Handball'], ['Gibt es beim Boxen', 'Ring Runde Gong Handschuh'], ['___mann', 'Schnee Weihnachts Feuerwehr Sand']],
+  [['Musikinstrumente', 'Geige Harfe Tuba Flöte'], ['Wochentage', 'Montag Freitag Samstag Sonntag'], ['Schach', 'Turm Läufer Bauer Springer'], ['Im Kartenspiel', 'Bube Ass Joker Pik']],
   [['Wetter', 'Regen Hagel Nebel Sturm'], ['Bäume', 'Eiche Birke Linde Tanne'], ['Hauptstädte', 'Rom Oslo Wien Bern'], ['Märchen-Figuren', 'Hexe Zwerg Riese Fee']],
   [['Fortbewegung', 'Fahrrad Roller Skateboard Inliner'], ['Im Klassenzimmer', 'Tafel Kreide Pult Beamer'], ['Getränke', 'Saft Tee Kakao Limo'], ['Zahlen auf Englisch', 'One Two Ten Six']],
   [['Gewürze', 'Pfeffer Salz Zimt Curry'], ['Superhelden', 'Batman Superman Hulk Thor'], ['Edelsteine', 'Rubin Saphir Opal Smaragd'], ['Körperteile', 'Knie Ellbogen Schulter Ferse']],
-  [['Meerestiere', 'Hai Wal Qualle Robbe'], ['Kontinente', 'Afrika Asien Europa Amerika'], ['Pizzasorten', 'Margherita Hawaii Salami Funghi'], ['Sternzeichen', 'Löwe Widder Stier Fische']],
-  [['Gemüse', 'Gurke Lauch Spinat Kohl'], ['Werkzeuge', 'Hammer Säge Zange Feile'], ['Tänze', 'Walzer Tango Salsa Samba'], ['Haben Zähne', 'Kamm Reißverschluss Zahnrad Rechen']],
+  [['Meerestiere', 'Hai Wal Qualle Robbe'], ['Kontinente', 'Afrika Asien Europa Amerika'], ['Pizzasorten', 'Margherita Hawaii Salami Funghi'], ['Sternzeichen', 'Löwe Widder Stier Zwillinge']],
+  [['Gemüse', 'Gurke Lauch Spinat Kohl'], ['Werkzeuge', 'Hammer Schraubenzieher Zange Feile'], ['Tänze', 'Walzer Tango Salsa Samba'], ['Haben Zähne', 'Kamm Reißverschluss Zahnrad Krokodil']],
   [['Fächer in der Schule', 'Mathe Bio Chemie Kunst'], ['Spielkonsolen', 'Switch Xbox PlayStation GameBoy'], ['Vögel', 'Amsel Meise Spatz Specht'], ['Kann man drücken', 'Daumen Knopf Schulbank Taste']],
-  [['Insekten', 'Ameise Biene Käfer Mücke'], ['Länder in Europa', 'Polen Irland Malta Ungarn'], ['Süßigkeiten', 'Lolli Kaugummi Lakritz Bonbon'], ['Haben Flügel', 'Flugzeug Engel Windmühle Drache']],
+  [['Nagetiere', 'Maus Hamster Ratte Biber'], ['Länder in Europa', 'Polen Irland Malta Ungarn'], ['Süßigkeiten', 'Lolli Kaugummi Lakritz Bonbon'], ['Haben Flügel', 'Flugzeug Engel Windmühle Drache']],
   [['Monate', 'März April Juni Juli'], ['Berufe', 'Bäcker Maurer Pilot Richter'], ['Kleidung', 'Pulli Rock Schal Mütze'], ['___stein', 'Edel Grab Kiesel Back']],
   [['Im Wald', 'Moos Pilz Farn Zapfen'], ['Bundesländer', 'Bayern Hessen Sachsen Bremen'], ['Brotsorten', 'Brezel Baguette Toast Ciabatta'], ['Haben Tasten', 'Klavier Tastatur Telefon Fernbedienung']],
-  [['Reptilien', 'Echse Schlange Gecko Leguan'], ['Am Strand', 'Sand Muschel Welle Düne'], ['Schreibgeräte', 'Füller Bleistift Kuli Marker'], ['Kann man schlagen', 'Sahne Alarm Rad Wurzeln']],
+  [['Reptilien', 'Echse Schlange Gecko Leguan'], ['Am Strand', 'Sand Muschel Liegestuhl Düne'], ['Schreibgeräte', 'Füller Bleistift Kuli Marker'], ['Kann man schlagen', 'Sahne Alarm Rad Wurzeln']],
   [['Nudelsorten', 'Penne Spaghetti Fusilli Lasagne'], ['Weltraum', 'Komet Galaxie Meteor Nebula'], ['Märchen', 'Rapunzel Aschenputtel Rotkäppchen Schneewittchen'], ['Wörter mit Doppel-O', 'Boot Moor Zoo Moos']],
   [['Pferd', 'Fohlen Stute Hengst Pony'], ['Im Badezimmer', 'Seife Dusche Handtuch Spiegel'], ['Sportgeräte', 'Reck Barren Bock Ringe'], ['Nach „Haus“', 'Tür Aufgabe Schuh Meister']],
 ];

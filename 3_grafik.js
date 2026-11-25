@@ -307,6 +307,10 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 92, title: 'Spieler-Idee: Verbindungen ohne doppeldeutige Wörter', date: '25.11.2026', items: [
+      'Im Tagesrätsel „Verbindungen“ passten König und Dame sowohl zu Schach als auch zum Kartenspiel. Jetzt: Schach = Turm, Läufer, Bauer, Springer; Kartenspiel = Bube, Ass, Joker, Pik.',
+      'Alle Rätsel wurden auf ähnliche Fälle geprüft und angepasst, z. B. Planeten/Römische Götter/Mars, Tennis und Golf bei „___ball“, Boxer beim Boxen, Orange als Obst und Farbe, Säge mit Zähnen, Fische als Sternzeichen, Insekten mit Flügeln.',
+    ] },
     { id: 91, title: 'Spieler-Idee: Meisterschaft bis Stufe 50 mit Meilensteinen', date: '25.11.2026', items: [
       'Die Meisterschaft geht jetzt bis Stufe 50 statt 10. Bereits gesammelte Erfahrung zählt sofort – wer viel gespielt hat, steigt direkt mehrere Stufen auf.',
       'Ab Stufe 10 wächst der Bedarf nur noch gleichmäßig. Jede Stufe über 10 gibt +1 % Schaden und Leben (bis 10 weiterhin +2 %).',
