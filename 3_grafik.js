@@ -307,6 +307,11 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 93, title: 'Spieler-Idee: Fehler behoben – nur 3 Fähigkeiten nach dem 2. Siegel', date: '25.11.2026', items: [
+      'Wer die Fähigkeiten eines Helden schon vor „Siegelgedächtnis“ und „Ahnenhand“ gekauft hatte, bekam die neuen Plätze nicht belegt – z. B. hatte der Nekromant dann nur 3 statt 5 Fähigkeiten.',
+      'Neue Plätze (2. Siegel, Königshand, Ritter-Platz) werden jetzt beim Kauf sofort mit gekauften Fähigkeiten gefüllt.',
+      'Hat ein Held noch leere Plätze, erscheint beim Helden der Knopf „⚡ Leere Plätze füllen“.',
+    ] },
     { id: 92, title: 'Spieler-Idee: Verbindungen ohne doppeldeutige Wörter', date: '25.11.2026', items: [
       'Im Tagesrätsel „Verbindungen“ passten König und Dame sowohl zu Schach als auch zum Kartenspiel. Jetzt: Schach = Turm, Läufer, Bauer, Springer; Kartenspiel = Bube, Ass, Joker, Pik.',
       'Alle Rätsel wurden auf ähnliche Fälle geprüft und angepasst, z. B. Planeten/Römische Götter/Mars, Tennis und Golf bei „___ball“, Boxer beim Boxen, Orange als Obst und Farbe, Säge mit Zähnen, Fische als Sternzeichen, Insekten mit Flügeln.',

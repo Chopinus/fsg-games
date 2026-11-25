@@ -1152,7 +1152,7 @@
   const sig2Open = S => (S.asc || 0) >= SIG2_ASC;
   function placeSigil2(S, hid) {
     if (!HERO_BY_ID[hid] || S.ahn.place[hid] !== 1 || S.ahn.sig <= 0 || !sig2Open(S)) return false;
-    S.ahn.sig--; S.ahn.place[hid] = 2; return true;
+    S.ahn.sig--; S.ahn.place[hid] = 2; fillSlots(S, HERO_BY_ID[hid].tree); return true;
   }
   function ahnInit(S, run) {
     S.ahn.lvl = ahnLevelFor(S);
@@ -1992,7 +1992,19 @@
     const c = nodeCost(S, n);
     S.gold -= c.g; S.souls -= c.s; S.nodes[n.id] = rank(S, n.id) + 1;
     if (n.active && S.nodes[n.id] === 1 && eqOf(S, n.tree, n.sig).length < slotLim(S, n.tree, n.sig)) S.equip.push(n.id);
+    if (n.sig2 && /^sg2_.*_(siegelhand|hand)$/.test(n.id)) fillSlots(S, n.tree);
     return true;
+  }
+  // Spieler-Idee (v57): Neue Fähigkeiten-Plätze (2. Siegel: Siegelgedächtnis/Ahnenhand, Königshand, Ritter-Platz) wurden
+  // nicht belegt, wenn man die Fähigkeiten schon vorher gekauft hatte – man sah dann nur 3 statt 5 Fähigkeiten.
+  // fillSlots legt gekaufte, nicht ausgerüstete Fähigkeiten in freie Plätze.
+  function fillSlots(S, tree) {
+    let n = 0;
+    for (const t of tree ? [tree] : HEROES.map(h => h.tree)) {
+      if (!HERO[t] || !hired(S, t)) continue;
+      for (const nd of NODES) if (nd.tree === t && nd.active && rank(S, nd.id) > 0 && !S.equip.includes(nd.id) && (!nd.sig || sigOn(S, t)) && eqOf(S, t, nd.sig).length < slotLim(S, t, nd.sig)) { S.equip.push(nd.id); n++; }
+    }
+    return n;
   }
   // Spieler-Ideen (v37, v41): mehrere Stufen auf einmal kaufen und ganzen Helden maximal verbessern
   function buyN(S, n, k) { let c = 0; while (c < k && c < 100000 && buy(S, n)) c++; return c; }
@@ -2068,7 +2080,7 @@
   const perkCost = (S, p) => p.cost(perk(S, p.id));
   function buyPerk(S, p) {
     if (perk(S, p.id) >= p.max || S.stars < perkCost(S, p)) return false;
-    S.stars -= perkCost(S, p); S.perks[p.id] = perk(S, p.id) + 1; if (p.id === 'p_feld') S.bench = []; return true;
+    S.stars -= perkCost(S, p); S.perks[p.id] = perk(S, p.id) + 1; if (p.id === 'p_feld') S.bench = []; if (p.id === 'p_platz') fillSlots(S, 'ritter'); return true;
   }
   function keepHires(S) { return perk(S, 'p_freunde') || cperk(S, 'k_veteran') ? HEROES.filter(h => h.hire && rank(S, h.hire)).map(h => h.hire) : []; }
   function rebirth(S, force) {
@@ -2098,7 +2110,7 @@
   const cperkCost = (S, p) => p.cost(cperk(S, p.id));
   function buyCperk(S, p) {
     if (cperk(S, p.id) >= p.max || S.crowns < cperkCost(S, p)) return false;
-    S.crowns -= cperkCost(S, p); S.cperks[p.id] = cperk(S, p.id) + 1; if (p.id === 'k_feld') S.bench = []; return true;
+    S.crowns -= cperkCost(S, p); S.cperks[p.id] = cperk(S, p.id) + 1; if (p.id === 'k_feld') S.bench = []; if (p.id === 'k_hand') fillSlots(S); return true;
   }
   function levelComp(S, id) {
     const l = S.comps[id] || 0; if (!l || l >= compMax(S)) return false;
@@ -3266,7 +3278,7 @@
   const core = { RAR, RAR_COL, GEAR_SLOTS, TINTS, HERO_SETS, DECO_SLOTS, ITEMS, TROPHY_N, BSET_AT, itemOf, invN, invAdd, invUsed, invFree, equipGear, setDeco, chestRoll, chestCount, openChest, trophyRoll, bsetCount, bsetAdd, CHEST, TROPHY, TRIPS, TRIP_SHARE, onTrip, tripLeft, rateOf, noteRate, hoursReward, tripReward, startTrip, claimTrip, WB, WB_BOSS, wbScore, wbBarReward, wbBarSecs, wbGoalHours, wbReward, GACHA, G_FIVE, G_FOUR, CONS_H, consList, consApply, evtBanner, evtPeriod, starSock, gachaOpen, evtOpen, gemOpen, gemBossFirst, GIFT_PULLS, consOf, bannerOf, gachaPull, GEM_SRC, LOGIN, loginItem, loginToday, claimLogin, BOUNTY, bountiesOf, bountyDone, bountyClaim, ahnLike, AHN_MISSIONS, AHN_ABIL, AHN_MECH, AHN_BOONS, ahnRollBoons, ahnPickBoon, ahnBoonText, ahnApplyBoons, AHN_TRAIT, AHNE, AHN_TUNE, AHN_COUNT, ahnOpen, ahnBossesOf, ahnLevelFor, placeSigil, ahnClaim, unrebirth, transmute, bossRuneTier, resetPerks, buyLager, lagerCost, LAGER_MAX, runeCap, shardOf, mergeCost, ALTAR_MAX, altarCost, altarMul, buyAltar, kSlots, kFree, keyCap, addSock, removeSock, removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, splTrade, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
     SEASON, rankOf, RANKS, rankBonus, AREAS, areaOf, MISSIONS, extraSocks, XSOCK, sockOk, runeAmp, mastInfo, mastLevel, mastPct, MAST_MS, SKINS, WF_STAGE, WF, wfSpawn,
     sigOn, sig2On, sig2Open, buyFullTree, fullMaxOpen, FULLMAX_ASC, placeSigil2, SIG2_ASC, SIG2_ID, sigActCap, sigKeysUsed, keyNeed, eqOf, slotLim, SIG, SIG_FLAGS, newRun, step, stats, buy, available, blockReason, NODE, migrate, fresh,
-    rebirth, ascend, crownsFor, buyCperk, cperkCost, cperk, CPERKS, levelComp, toggleComp, compCost, compMax, compSlots, COMPS, checkAch, ACH, claimWeekly, weekId, dayId, weekRules, RULE, WEEK_TIERS, statsFor, starsFor, toggleEquip, slotsOf, hired, classOpen, keysUsed, keyLimit, capOf, reqOf, feature, encode, decode, fmt, socket, unsocket, merge, canMerge, dismantle, buyRune, runeVal, addRune, arteClaim, artMake, artEquip, artReroll, artDestroy, artToggleLock, artBonus, artRefill, ARTE, TRAITS, SUBS, subOf, pickSub, subOpen, fieldSlots };
+    fillSlots, rebirth, ascend, crownsFor, buyCperk, cperkCost, cperk, CPERKS, levelComp, toggleComp, compCost, compMax, compSlots, COMPS, checkAch, ACH, claimWeekly, weekId, dayId, weekRules, RULE, WEEK_TIERS, statsFor, starsFor, toggleEquip, slotsOf, hired, classOpen, keysUsed, keyLimit, capOf, reqOf, feature, encode, decode, fmt, socket, unsocket, merge, canMerge, dismantle, buyRune, runeVal, addRune, arteClaim, artMake, artEquip, artReroll, artDestroy, artToggleLock, artBonus, artRefill, ARTE, TRAITS, SUBS, subOf, pickSub, subOpen, fieldSlots };
   if (typeof module !== 'undefined') { module.exports = core; return; }
   // ---------- Automatische Updates ----------
   // Prüft alle 2 Minuten (und beim Zurückkehren in den Tab), ob auf dem Server eine neue ritter.js liegt.
