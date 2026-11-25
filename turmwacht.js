@@ -162,11 +162,15 @@
   const value = t => Math.round(t.spent * 0.7);
   function hud() {
     if (!page) return; const e = page.querySelector('[data-twhud]'); if (!e) return;
-    e.innerHTML = `<span>❤️ ${G.lives}</span><span>🪙 ${G.gold}</span><span>🌊 Welle ${G.wave}</span><span>⭐ ${G.score}</span>`;
+    const eh = `<span>❤️ ${G.lives}</span><span>🪙 ${G.gold}</span><span>🌊 Welle ${G.wave}</span><span>⭐ ${G.score}</span>`; if (e._h !== eh) { e.innerHTML = eh; e._h = eh; }
     page.querySelectorAll('[data-twb]').forEach(b => { b.classList.toggle('on', b.dataset.twb === sel && !pick); b.disabled = G.gold < TW[b.dataset.twb].c; });
     const s = page.querySelector('[data-twsel]');
-    s.innerHTML = pick ? `<b>${TW[pick.k].i} ${TW[pick.k].n} · Stufe ${pick.lv + 1}</b><span class="note">${TW[pick.k].d}</span><span style="flex:1"></span>${pick.lv < 3 ? `<button class="btn small" data-tw="up" ${G.gold < upCost(pick) ? 'disabled' : ''}>⬆ Verbessern (${upCost(pick)} 🪙)</button>` : '<span class="note">Maximal</span>'}<button class="btn ghost small" data-tw="sell">Verkaufen (+${value(pick)})</button><button class="btn ghost small" data-tw="desel">✕</button>`
-      : `<button class="btn small" data-tw="wave" ${G.run || G.over ? 'disabled' : ''}>▶ ${G.wave ? 'Nächste Welle' : 'Erste Welle starten'}</button><button class="btn ghost small" data-tw="speed">⏩ ${G.speed}×</button><button class="btn ghost small ${auto ? '' : ''}" data-tw="auto">${auto ? '🔁 Auto an' : '🔁 Auto aus'}</button><span class="note">Turm wählen, dann aufs Gras tippen.</span>`;
+    // Spieler-Idee (v58): Nur neu aufbauen, wenn sich etwas geändert hat. Vorher wurde die Leiste mehrmals pro Sekunde
+    // ersetzt – drückte man genau dann auf „Welle starten“, kam der Klick nicht an. Der Wellen-Knopf ist jetzt immer da.
+    const waveBtn = `<button class="btn small" data-tw="wave" ${G.run || G.over ? 'disabled' : ''}>▶ ${G.wave ? 'Nächste Welle' : 'Erste Welle starten'}</button>`;
+    const sh = pick ? `${waveBtn}<b>${TW[pick.k].i} ${TW[pick.k].n} · Stufe ${pick.lv + 1}</b><span class="note">${TW[pick.k].d}</span><span style="flex:1"></span>${pick.lv < 3 ? `<button class="btn small" data-tw="up" ${G.gold < upCost(pick) ? 'disabled' : ''}>⬆ Verbessern (${upCost(pick)} 🪙)</button>` : '<span class="note">Maximal</span>'}<button class="btn ghost small" data-tw="sell">Verkaufen (+${value(pick)})</button><button class="btn ghost small" data-tw="desel">✕</button>`
+      : `${waveBtn}<button class="btn ghost small" data-tw="speed">⏩ ${G.speed}×</button><button class="btn ghost small ${auto ? '' : ''}" data-tw="auto">${auto ? '🔁 Auto an' : '🔁 Auto aus'}</button><span class="note">Turm wählen, dann aufs Gras tippen. Leertaste = Welle starten.</span>`;
+    if (s._h !== sh) { s.innerHTML = sh; s._h = sh; }
   }
   async function gameOver() {
     hud(); const box = page.querySelector('.tw-cv');
