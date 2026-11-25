@@ -929,10 +929,11 @@ async function handle(action, body, ip) {
     if (action === 'wd_guess' && !wasWin && res[1] && res[1].win) HUB.event(acc, 'wortle', 1, markDirty);
     return res;
   }
-  if (['hub_state', 'hub_color', 'rx_state', 'rx_start', 'rx_submit', 'td_submit', 'td_top'].includes(action)) { // Hub-Level, Tagesrätsel, Turmwacht
+  if (['hub_state', 'hub_color', 'hub_favs', 'rx_state', 'rx_start', 'rx_submit', 'td_submit', 'td_top'].includes(action)) { // Hub-Level, Tagesrätsel, Turmwacht
     if (action === 'td_top') return [200, { top: tdTop() }];
     if (!acc || !(acc.tokens || []).includes(sha256(String(body.token || '')))) return [401, { error: 'Melde dich im Game Hub an, um mitzumachen.' }];
-    if (action === 'hub_state') { const st = HUB.state(acc); markDirty(); return [200, st]; }
+    if (action === 'hub_state') { const st = HUB.state(acc); markDirty(); return [200, { ...st, favs: acc.favs || null }]; }
+    if (action === 'hub_favs') { const f = Array.isArray(body.favs) ? [...new Set(body.favs.map(x => String(x).replace(/[^a-z0-9_]/gi, '').slice(0, 20)).filter(Boolean))].slice(0, 40) : []; acc.favs = f; markDirty(); return [200, { favs: f }]; } // Lieblingsspiele im Hub
     if (action === 'hub_color') { const e = HUB.setColor(acc, String(body.c || '')); if (e) return [400, { error: e }]; markDirty(); return [200, HUB.state(acc)]; }
     if (action === 'td_submit') { // Turmwacht (läuft im Browser): beste Welle merken, Hub-EP
       const w = Math.max(0, Math.min(300, Number(body.wave) | 0)), sc = Math.max(0, Math.min(1e9, Number(body.score) | 0));

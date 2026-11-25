@@ -28,6 +28,7 @@ const GAMES = {
   lichtrad: require('./lichtrad.js'),
   arena: require('./arena.js'),
   turnier: require('./turnier.js'),
+  duell: require('./duell.js'),
 };
 // Umzug: Ist auf diesem Render-Dienst die Umgebungsvariable MOVED_TO gesetzt (z. B. https://onegame.onrender.com),
 // zeigt jede Seite nur noch den Umzugs-Hinweis. Spielstände werden dann hier weder geladen noch gespeichert,
@@ -126,7 +127,7 @@ const IDLE_MS = 30 * 60 * 1000; // Räume ohne verbundene Spieler verschwinden n
 
 const STATIC = {
   '/': 'index.html', '/index.html': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css',
-  '/mini.js': 'mini.js', '/ritter.js': 'ritter.js', '/spiele2.js': 'spiele2.js', '/welt.js': 'welt.js', '/casino_ui.js': 'casino_ui.js', '/insel.js': 'insel.js', '/ideen.js': 'ideen.js', '/dungeon.html': 'dungeon.html', '/freunde.js': 'freunde.js', '/wortle_ui.js': 'wortle_ui.js', '/siedler_ui.js': 'siedler_ui.js', '/spiele3.js': 'spiele3.js', '/spiele4.js': 'spiele4.js', '/raetsel_ui.js': 'raetsel_ui.js', '/turmwacht.js': 'turmwacht.js', '/hub_ui.js': 'hub_ui.js',
+  '/mini.js': 'mini.js', '/ritter.js': 'ritter.js', '/spiele2.js': 'spiele2.js', '/welt.js': 'welt.js', '/casino_ui.js': 'casino_ui.js', '/insel.js': 'insel.js', '/ideen.js': 'ideen.js', '/dungeon.html': 'dungeon.html', '/freunde.js': 'freunde.js', '/wortle_ui.js': 'wortle_ui.js', '/siedler_ui.js': 'siedler_ui.js', '/spiele3.js': 'spiele3.js', '/spiele4.js': 'spiele4.js', '/raetsel_ui.js': 'raetsel_ui.js', '/turmwacht.js': 'turmwacht.js', '/hub_ui.js': 'hub_ui.js', '/spiele5.js': 'spiele5.js', '/duell_karten.js': 'duell_karten.js',
 };
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
 
@@ -439,6 +440,7 @@ function handle(c, m) {
     if (c.room && rooms.get(c.room)) pushRoom(rooms.get(c.room)); broadcastRooms(); // Admin-Schild sofort zeigen
     return;
   }
+  if (typeof m.t === 'string' && m.t.startsWith('achat')) { allChat(c, m); return; } // All-Chat im Hub
   if (typeof m.t === 'string' && m.t.startsWith('i_')) { ISL.handle(c, m); return; } // Inselreich
   if (m.t === 'name') {
     c.name = clean(m.name);
@@ -532,6 +534,33 @@ function handle(c, m) {
     if (typeof err === 'string') send(c, { t: 'err', msg: err });
     pushRoom(r);
   }
+}
+
+// ---------- All-Chat: ein gemeinsamer Chat für alle im Game Hub ----------
+// Schreiben nur mit angemeldetem Konto (Name = Kontoname, nicht fälschbar). Die letzten 60 Nachrichten bleiben im Speicher.
+const ALLCHAT = [], ACH_MUTE = new Map(); let achId = 0;
+const achPub = ({ k, ...x }) => x; // Kontoschlüssel bleibt auf dem Server
+function allChat(c, m) {
+  if (m.t === 'achat_get') return send(c, { t: 'achat', full: 1, list: ALLCHAT.map(achPub), adm: !!(konten && konten.isAdmin && konten.isAdmin(c.acc)) });
+  const adm = !!(konten && konten.isAdmin && konten.isAdmin(c.acc));
+  if (m.t === 'achat_del') { // Admin: Nachricht löschen (und auf Wunsch den Schreiber 1 Stunde stummschalten)
+    if (!adm) return;
+    const i = ALLCHAT.findIndex(x => x.mid === Number(m.mid)); if (i < 0) return;
+    const [x] = ALLCHAT.splice(i, 1); if (m.mute && x.k) ACH_MUTE.set(x.k, Date.now() + 3600e3);
+    const msg = JSON.stringify({ t: 'achat', del: x.mid }); for (const y of clients) if (y.ws.readyState === 1) y.ws.send(msg);
+    return;
+  }
+  if (m.t !== 'achat') return;
+  if (!c.acc) return send(c, { t: 'err', msg: 'Melde dich mit deinem Konto an, um im All-Chat zu schreiben.' });
+  if ((ACH_MUTE.get(c.acc) || 0) > Date.now()) return send(c, { t: 'err', msg: 'Du kannst gerade nicht im All-Chat schreiben.' });
+  const text = clean(m.m, 200); if (!text) return;
+  const now = Date.now(); c.achT = (c.achT || []).filter(t => now - t < 15000);
+  if (c.achT.length >= 4) return send(c, { t: 'err', msg: 'Nicht so schnell – warte kurz mit der nächsten Nachricht.' });
+  if (c.achLast === text && now - (c.achLastT || 0) < 30000) return send(c, { t: 'err', msg: 'Diese Nachricht hast du gerade schon geschickt.' });
+  c.achT.push(now); c.achLast = text; c.achLastT = now;
+  const e = { mid: ++achId, k: c.acc, n: (konten.accName && konten.accName(c.acc)) || c.name || 'Gast', m: text, adm, hb: konten.hubBadge ? konten.hubBadge(c.acc) : null, w: c.where || '', ts: now };
+  ALLCHAT.push(e); if (ALLCHAT.length > 60) ALLCHAT.shift();
+  const msg = JSON.stringify({ t: 'achat', list: [achPub(e)] }); for (const y of clients) if (y.ws.readyState === 1) y.ws.send(msg);
 }
 
 const ISL = require('./insel_srv.js')(send, konten); // Inselreich: offene Welt für alle

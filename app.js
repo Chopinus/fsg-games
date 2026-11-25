@@ -41,6 +41,8 @@ const GAMES = [
     art: '<svg width="96" height="56" viewBox="0 0 96 56" aria-hidden="true"><path d="M6 46H40V14H70V40H90" fill="none" stroke="#22e3ff" stroke-width="4" stroke-linecap="round" style="filter:drop-shadow(0 0 4px #22e3ff)"/><path d="M90 8H56V30H20V52" fill="none" stroke="#ff3fa4" stroke-width="4" stroke-linecap="round" style="filter:drop-shadow(0 0 4px #ff3fa4)"/></svg>' },
   { key: 'arena', title: 'Kugel-Arena', sub: 'Sammle Lichtpunkte, wachse und schnapp dir kleinere Kugeln · .io-Spiel für alle', neu: 1,
     art: '<span class="ka-art"><i style="--s:40px;--c:#22e3ff;left:8px;top:10px"></i><i style="--s:22px;--c:#ff3fa4;left:56px;top:6px"></i><i style="--s:14px;--c:#ffd23f;left:62px;top:34px"></i><i style="--s:6px;--c:#3dff8a;left:40px;top:44px"></i><i style="--s:6px;--c:#a46bff;left:84px;top:22px"></i></span>' },
+  { key: 'duell', title: 'Kristallduell', sub: 'Sammelkarten-Duell: Kreaturen beschwören, Zauber wirken, angreifen und blocken · zu zweit oder gegen den Bot', neu: 1,
+    art: '<span class="kd-art"><i>🐉</i><i>🐋</i><i>🧛</i></span>' },
   { key: 'turnier', title: 'Vier-gewinnt-Turnier', sub: 'K.-o.-Turnier mit Turnierbaum – wer wird Champion? · 3–12 Spieler', neu: 1,
     art: '<span class="tu-art">🏆</span>' },
 ];
@@ -64,7 +66,7 @@ function act(a) { send({ t: 'act', a }); }
 function onMsg(m) {
   if (window.Freunde && Freunde.msg(m)) return; // Freunde: Status, Chat-Hinweise, Einladungen
   if (typeof m.t === 'string' && m.t.startsWith('i_')) { if (window.Insel) Insel.net(m); return; } // Inselreich
-  if (m.t === 'hi') { pid = m.pid; if (konto) send({ t: 'konto', name: konto.name, token: konto.token, where: hubWhere() }); if (window.Insel && Insel.isOpen()) Insel.rejoin(); }
+  if (m.t === 'hi') { pid = m.pid; if (konto) send({ t: 'konto', name: konto.name, token: konto.token, where: hubWhere() }); send({ t: 'achat_get' }); if (window.Insel && Insel.isOpen()) Insel.rejoin(); }
   else if (m.t === 'rooms') { rooms = m.rooms; if (!room) renderRooms(); if (window.Casino && Casino.isLobby()) Casino.refreshLobby(); }
   else if (m.t === 'room') {
     room = m.room; roomId = room.id; store.set('fsg.room', roomId);
@@ -73,6 +75,7 @@ function onMsg(m) {
   } else if (m.t === 'closed') { const wasWelt = room && room.game === 'welt'; room = null; roomId = null; store.set('fsg.room', null); render(); if (wasWelt && window.Welt && Welt.inMP()) Welt.roomGone(); }
   else if (m.t === 'err') toast(m.msg);
   else if (m.t === 'rchat') rcOnMsg(m);
+  else if (m.t === 'achat') { if (window.HubUI && HubUI.chat) HubUI.chat(m); }
   else if (m.t === 'hub_xp') window.dispatchEvent(new CustomEvent('fsg-hubxp', { detail: m }));
   else if (m.t === 'cast') { if (m.d && m.d.g === 'welt') { if (window.Welt) Welt.net(m.d); } else if (window.Spiele2) Spiele2.cast(m.d); }
 }

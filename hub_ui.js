@@ -90,6 +90,44 @@
   .hbn.nc-rainbow{background:linear-gradient(90deg,#ff4d4d,#ffb347,#ffe14d,#4dff88,#4dc3ff,#b04dff,#ff4d4d);background-size:200%;-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:800;animation:hxshine 4s linear infinite}
   .hbn.nc-galaxy{background:linear-gradient(90deg,#7a3dff,#22e3ff,#ff3fa4,#7a3dff);background-size:200%;-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:800;animation:hxshine 5s linear infinite}
   .hblv{display:inline-block;margin-left:5px;font:800 10px var(--body);padding:1px 5px;border-radius:6px;background:#3a2f5a;color:#ffd27a;vertical-align:1px}
+  /* Favoriten */
+  .hx-fav{position:absolute;top:8px;right:8px;z-index:2;width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(10,8,20,.45);color:rgba(255,255,255,.75);font-size:20px;line-height:1;display:grid;place-items:center;cursor:pointer;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);transition:transform .15s,background .2s,color .2s}
+  .hx-fav:hover{transform:scale(1.12)}
+  .hx-fav.on{color:#ffd23f;background:rgba(60,40,0,.6);border-color:#ffd23f;text-shadow:0 0 10px rgba(255,210,63,.9)}
+  .hx-fav.pop{animation:hxfavpop .5s cubic-bezier(.3,1.6,.5,1)}
+  @keyframes hxfavpop{0%{transform:scale(1)}35%{transform:scale(1.6) rotate(-15deg)}100%{transform:scale(1)}}
+  .hx-t.isfav{border-color:#a8862a;box-shadow:0 0 0 1px rgba(255,210,63,.25)}
+  .hx-sec.fav{color:#ffd23f;cursor:default}.hx-sec.fav::after{background:linear-gradient(90deg,#a8862a,transparent)}
+  .hx-favhint{grid-column:1/-1;margin:2px 0 -4px;color:var(--muted);font-size:13px}
+  .hx-spark{position:fixed;pointer-events:none;z-index:90;color:#ffd23f;font-size:16px;animation:hxspark .7s ease-out forwards}
+  @keyframes hxspark{to{transform:translate(var(--dx),var(--dy)) scale(.3);opacity:0}}
+  /* All-Chat */
+  #achat{position:fixed;left:calc(env(safe-area-inset-left,0px) + 12px);bottom:calc(env(safe-area-inset-bottom,0px) + 12px);z-index:19;font-family:var(--body)}
+  #achat .ac-btn{position:relative;display:flex;align-items:center;gap:8px;height:52px;padding:0 18px 0 14px;border-radius:99px;border:1px solid #5a4d7a;background:linear-gradient(135deg,#2c2245,#1d1830);color:#fff;font:800 15px var(--body);box-shadow:0 8px 22px rgba(0,0,0,.5);cursor:pointer;transition:transform .15s}
+  #achat .ac-btn:hover{transform:translateY(-2px)} #achat .ac-btn span.e{font-size:22px}
+  #achat .ac-btn.ping{animation:acping .6s}
+  @keyframes acping{30%{transform:scale(1.08)}}
+  #achat .ac-badge{position:absolute;top:-5px;right:-5px;min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:#ff3fa4;color:#fff;font-size:12px;line-height:22px;text-align:center;box-shadow:0 0 12px rgba(255,63,164,.7)}
+  #achat .ac-panel{width:min(380px,calc(100vw - 24px));height:min(480px,calc(100vh - 120px));display:flex;flex-direction:column;background:#1b1628;border:1px solid #4a3f66;border-radius:18px;box-shadow:0 18px 50px rgba(0,0,0,.6);overflow:hidden;animation:acin .25s cubic-bezier(.2,1.2,.4,1) both;transform-origin:bottom left}
+  @keyframes acin{from{transform:scale(.7);opacity:0}to{transform:none;opacity:1}}
+  #achat .ac-head{display:flex;align-items:center;gap:8px;padding:10px 10px 10px 14px;background:linear-gradient(90deg,#3a2470,#1f6a8a);color:#fff}
+  #achat .ac-head b{flex:1;font-size:16px} #achat .ac-head small{opacity:.8;font-weight:600}
+  #achat .ac-head button{border:0;background:rgba(255,255,255,.15);color:#fff;width:34px;height:34px;border-radius:50%;font-size:16px;cursor:pointer}
+  #achat .ac-list{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px;overscroll-behavior:contain}
+  #achat .ac-m{display:flex;flex-direction:column;gap:2px;max-width:88%;animation:acmsg .3s ease-out both}
+  @keyframes acmsg{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+  #achat .ac-m .h{font-size:12.5px;color:#b9aed0;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  #achat .ac-m .h time{opacity:.6;font-size:11px}
+  #achat .ac-m .t{background:#2a2340;border:1px solid #3d3452;border-radius:4px 14px 14px 14px;padding:7px 11px;font-size:15px;line-height:1.35;word-break:break-word;color:#f4ede1}
+  #achat .ac-m.me{align-self:flex-end;align-items:flex-end} #achat .ac-m.me .t{background:linear-gradient(135deg,#6a3fd6,#3a6ad6);border-color:transparent;border-radius:14px 4px 14px 14px;color:#fff}
+  #achat .ac-m .wh{font-size:10.5px;padding:0 6px;border-radius:6px;background:#2f6a5a;color:#c9ffe9}
+  #achat .ac-m .del{border:0;background:none;color:#ff6b6b;cursor:pointer;font-size:12px;padding:0 2px}
+  #achat .ac-form{display:flex;gap:6px;padding:8px;border-top:1px solid #3d3452;background:#211b31}
+  #achat .ac-form input{flex:1;min-width:0;font-size:16px;padding:9px 12px;border-radius:12px;border:1px solid #4a3f66;background:#151121;color:#fff}
+  #achat .ac-form button{border:0;border-radius:12px;padding:0 14px;background:#ffb547;color:#2a1a00;font-weight:800;font-size:15px;cursor:pointer}
+  #achat .ac-login{padding:12px;text-align:center;color:#b9aed0;font-size:14px;border-top:1px solid #3d3452}
+  #achat .ac-empty{margin:auto;color:#8f84a8;text-align:center;font-size:14px}
+  @media (max-width:520px){#achat .ac-btn{padding:0 14px 0 12px;height:48px}#achat .ac-btn .l{display:none}}
   `;
   const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
   const q = s => document.querySelector(s);
@@ -101,7 +139,7 @@
   const CATS = [['alle', '📚 Alle'], ['brett', '🎲 Brett & Karten'], ['party', '🎉 Party & Raten'], ['action', '⚡ Action & Glück'], ['taeglich', '🧩 Täglich'], ['welten', '🌍 Welten & Solo']];
   const TAG = { brett: 'Brett & Karten', party: 'Party', action: 'Action', taeglich: 'Täglich', welten: 'Solo' };
   const CAT_OF = {
-    uno: 'brett', schach: 'brett', vier: 'brett', maedn: 'brett', kniffel: 'brett', siedler: 'brett', schiffe: 'brett', turnier: 'brett',
+    uno: 'brett', schach: 'brett', vier: 'brett', maedn: 'brett', kniffel: 'brett', siedler: 'brett', schiffe: 'brett', turnier: 'brett', duell: 'brett',
     quiz: 'party', werwolf: 'party', agenten: 'party', maler: 'party', slf: 'party', spion: 'party', party: 'party',
     lichtrad: 'action', arena: 'action', casino: 'action',
     wortle: 'taeglich', sudoku: 'taeglich', nono: 'taeglich', verb: 'taeglich', mathe: 'taeglich',
@@ -126,6 +164,7 @@
       { ...room('agenten'), g: 'linear-gradient(135deg,#6a2030,#1f3a6a)', cats: ['freunde', 'party'] },
       { ...room('schiffe'), g: 'linear-gradient(180deg,#0f3d6e,#08223f)', cats: ['freunde', 'top'] },
       { ...room('turnier'), g: 'linear-gradient(135deg,#6a4a00,#2a1d00)', cats: ['freunde', 'party'] },
+      { ...room('duell'), g: 'radial-gradient(circle at 50% 40%,#3a1f6a,#0d0a18)', cats: ['freunde'], big: 1 },
       { k: 'dungeon', t: 'Dungeon', s: 'Pixel-Dungeon-Crawler mit Helden, Artefakten und Bossen – auch im Koop. Testversion v0.1.', art: '<span class="dg-art"></span>', act: 'data-dungeon="1"', btn: 'Spielen', pill: 'v0.1 Test', g: 'linear-gradient(135deg,#2a1a3a,#0d0814)', cats: ['solo'] },
       { k: 'insel', t: 'Inselreich', s: 'Offene Pixelwelt für alle: Inseln erkunden, bauen, segeln und gemeinsam spielen.', art: '<span class="is-art"></span>', act: 'data-insel="1"', btn: 'Spielen', pill: 'Welt', g: 'linear-gradient(135deg,#0f5a7a,#082a3a)', cats: ['solo'] },
       { k: 'welt', t: 'Würfelwelt', s: 'Unendliche Würfelwelt – abbauen, bauen, entdecken. Kreativ- oder Überlebensmodus.', art: '<span class="ww-art"></span>', act: 'data-welt="1"', btn: 'Spielen', pill: 'Welt', g: 'linear-gradient(135deg,#3a6a2a,#1a2e12)', cats: ['solo'] },
@@ -135,12 +174,14 @@
     ];
     return L.filter(x => x && x.t && CAT_OF[x.k]).map(x => ({ ...x, c: CAT_OF[x.k] }));
   }
-  let cat = 'alle', term = '';
+  let cat = 'alle', term = '', FAV = [];
+  try { FAV = JSON.parse(localStorage.getItem('fsg.favs') || '[]'); if (!Array.isArray(FAV)) FAV = []; } catch { FAV = []; }
   try { cat = localStorage.getItem('fsg.hubcat2') || 'alle'; } catch {}
   if (!CATS.some(c => c[0] === cat)) cat = 'alle';
   function tileHTML(x, i) {
     const pills = `<span class="pill t-${x.c}">${TAG[x.c]}</span>`;
-    return `<div class="hx-t ${x.big && cat !== 'alle' ? 'big' : ''}" data-hxt="${x.k}" style="--g:${x.g};animation-delay:${Math.min(i, 14) * 0.035}s"><div class="art">${x.art}</div>
+    const fv = FAV.includes(x.k);
+    return `<div class="hx-t ${x.big && cat !== 'alle' ? 'big' : ''} ${fv ? 'isfav' : ''}" data-hxt="${x.k}" style="--g:${x.g};animation-delay:${Math.min(i, 14) * 0.035}s"><div class="art">${x.art}<button class="hx-fav ${fv ? 'on' : ''}" data-hxfav="${x.k}" title="${fv ? 'Aus den Favoriten nehmen' : 'Als Favorit oben anheften'}" aria-label="Favorit">${fv ? '★' : '☆'}</button></div>
       <div class="bd"><b>${esc2(x.t)} ${pills}</b><span class="sub">${esc2(x.s)}</span><button class="btn small go" ${x.act}>${esc2(x.btn)}</button></div></div>`;
   }
   function renderTiles() {
@@ -150,8 +191,12 @@
     if (t) L = L.filter(x => (x.t + ' ' + x.s + ' ' + TAG[x.c]).toLowerCase().includes(t));
     else if (cat !== 'alle') L = L.filter(x => x.c === cat);
     let html;
-    if (!t && cat === 'alle') { let i = 0; html = CATS.slice(1).map(([c, n]) => { const g = L.filter(x => x.c === c); return g.length ? `<h3 class="hx-sec" data-hxc="${c}">${n}</h3>` + g.map(x => tileHTML(x, i++)).join('') : ''; }).join(''); }
-    else html = L.map(tileHTML).join('');
+    const favs = FAV.map(k => L.find(x => x.k === k)).filter(Boolean); // Favoriten in der Reihenfolge, in der sie angeheftet wurden
+    if (!t && cat === 'alle') {
+      let i = 0; const rest = L.filter(x => !FAV.includes(x.k));
+      html = (favs.length ? '<h3 class="hx-sec fav">⭐ Favoriten</h3>' + favs.map(x => tileHTML(x, i++)).join('') : '<p class="hx-favhint">Tipp: Mit ☆ an einem Spiel heftest du es als Favorit ganz oben an.</p>')
+        + CATS.slice(1).map(([c, n]) => { const g = rest.filter(x => x.c === c); return g.length ? `<h3 class="hx-sec" data-hxc="${c}">${n}</h3>` + g.map(x => tileHTML(x, i++)).join('') : ''; }).join('');
+    } else html = [...favs, ...L.filter(x => !FAV.includes(x.k))].map(tileHTML).join('');
     el.innerHTML = L.length ? html : '<div class="empty hx-empty">Nichts gefunden. Probier ein anderes Wort.</div>';
     document.querySelectorAll('.hx-cats button').forEach(b => b.classList.toggle('on', !t && b.dataset.hxc === cat));
   }
@@ -193,7 +238,7 @@
   async function lvLoad() {
     const box = q('[data-hxlv]'); if (!box) return;
     if (!konto2()) { box.innerHTML = `<div class="hx-lv" data-hxacct><div class="hx-ring" style="--p:0"><b>?</b></div><div><b>Hub-Level & Wochen-Aufgaben</b><br><small>Melde dich mit deinem Konto an: Jedes Spiel gibt Erfahrung, Level schalten Namensfarben frei.</small></div><span>›</span></div>`; return; }
-    const r = await call('hub_state'); if (r.error) return; LV = r; lvCard();
+    const r = await call('hub_state'); if (r.error) return; LV = r; lvCard(); favMerge(r.favs);
     if (r.news && r.news.lv) levelUp(r.news.lv);
   }
   function lvCard() {
@@ -242,6 +287,63 @@
   setInterval(() => { const e = q('[data-hxrooms]'); if (e && typeof rooms !== 'undefined') e.textContent = `${rooms.length} offene Runde${rooms.length === 1 ? '' : 'n'}`; }, 1500);
   // Zurück zum Hub (nach Rätseln, Turmwacht …): Level neu laden
   new MutationObserver(() => { const hub = q('#hub'); if (hub && !hub.hidden && konto2() && (!lvLoad.t || Date.now() - lvLoad.t > 15000)) { lvLoad.t = Date.now(); lvLoad(); } }).observe(q('#hub'), { attributes: true, attributeFilter: ['hidden'] });
-  window.HubUI = { renderTiles, refresh: lvLoad };
+
+  /* ---------- Favoriten: bleiben immer ganz oben (im Browser und beim Konto gespeichert) ---------- */
+  function favSave() { try { localStorage.setItem('fsg.favs', JSON.stringify(FAV)); } catch {} if (konto2()) call('hub_favs', { favs: FAV }); }
+  function favMerge(srv) { // Vom Konto: gilt, sobald dort welche gespeichert sind
+    if (!Array.isArray(srv)) { if (FAV.length) call('hub_favs', { favs: FAV }); return; }
+    if (srv.join() === FAV.join()) return; FAV = srv.slice(); try { localStorage.setItem('fsg.favs', JSON.stringify(FAV)); } catch {} renderTiles();
+  }
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-hxfav]'); if (!b) return; e.stopPropagation();
+    const k = b.dataset.hxfav, on = !FAV.includes(k);
+    FAV = on ? [...FAV, k] : FAV.filter(x => x !== k); favSave();
+    if (on) { const r = b.getBoundingClientRect(); for (let i = 0; i < 8; i++) { const sp = document.createElement('i'); sp.className = 'hx-spark'; sp.textContent = '★'; const a = (i / 8) * Math.PI * 2; sp.style.cssText = `left:${r.left + r.width / 2 - 8}px;top:${r.top + r.height / 2 - 10}px;--dx:${Math.cos(a) * 46}px;--dy:${Math.sin(a) * 46}px`; document.body.appendChild(sp); setTimeout(() => sp.remove(), 750); } }
+    renderTiles();
+    const nb = q(`[data-hxfav="${k}"]`); if (nb) { nb.classList.add('pop'); if (on) nb.closest('.hx-t').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+    if (window.toast) toast(on ? '⭐ Als Favorit oben angeheftet' : 'Aus den Favoriten genommen');
+  }, true);
+
+  /* ---------- All-Chat: ein Chat für alle im Game Hub ---------- */
+  const AC = { list: [], open: false, seen: 0, adm: false, got: false };
+  const acTime = ts => new Date(ts).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  function acMsg(m) {
+    if (m.del != null) { AC.list = AC.list.filter(x => x.mid !== m.del); AC.seen = Math.min(AC.seen, AC.list.length); acRender(); return; }
+    if (!Array.isArray(m.list)) return;
+    if (m.full) { AC.list = m.list.slice(); AC.adm = !!m.adm; AC.seen = AC.got ? Math.min(AC.seen, AC.list.length) : AC.list.length; AC.got = true; }
+    else { const myName = (konto2() || {}).name; AC.list.push(...m.list); if (AC.open || m.list.every(x => myName && x.n.toLowerCase() === myName.toLowerCase())) AC.seen = AC.list.length; else { const b = q('#achat .ac-btn'); if (b) { b.classList.remove('ping'); void b.offsetWidth; b.classList.add('ping'); } } }
+    if (AC.list.length > 60) { AC.seen = Math.max(0, AC.seen - (AC.list.length - 60)); AC.list = AC.list.slice(-60); }
+    acRender();
+  }
+  function acVisible() { const hub = q('#hub'); return !!hub && !hub.hidden && hub.offsetParent !== null && (typeof room === 'undefined' || !room); }
+  function acRender() {
+    let el = q('#achat');
+    if (!el) {
+      el = document.createElement('div'); el.id = 'achat'; document.body.appendChild(el);
+      el.innerHTML = `<button class="ac-btn" data-ac="toggle" aria-label="All-Chat öffnen"><span class="e">💬</span><span class="l">All-Chat</span><span class="ac-badge" hidden></span></button>
+        <div class="ac-panel" hidden><div class="ac-head"><b>🌍 All-Chat <small>· für alle im Hub</small></b><button data-ac="toggle" aria-label="Schließen">✕</button></div><div class="ac-list"></div><div class="ac-foot"></div></div>`;
+      el.addEventListener('click', e => {
+        if (e.target.closest('[data-ac="toggle"]')) { AC.open = !AC.open; acRender(); if (AC.open) { const i = el.querySelector('input'); if (i && matchMedia('(pointer:fine)').matches) i.focus(); } return; }
+        const d = e.target.closest('[data-acdel]'); if (d && AC.adm) { const mute = confirm('Nachricht löschen. Soll der Schreiber zusätzlich 1 Stunde lang nicht schreiben dürfen? (OK = ja, Abbrechen = nur löschen)'); send({ t: 'achat_del', mid: Number(d.dataset.acdel), mute }); return; }
+        if (e.target.closest('[data-aclogin]')) { AC.open = false; acRender(); const b = q('[data-acct="open"]'); if (b) { b.click(); b.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }
+      });
+      el.addEventListener('submit', e => { e.preventDefault(); const i = el.querySelector('input'), t = i.value.trim(); if (!t) return; send({ t: 'achat', m: t.slice(0, 200) }); i.value = ''; });
+      el.addEventListener('keydown', e => e.stopPropagation()); el.addEventListener('keyup', e => e.stopPropagation());
+    }
+    const vis = acVisible(); el.hidden = !vis; if (!vis) return;
+    const panel = el.querySelector('.ac-panel'), btn = el.querySelector('.ac-btn'), badge = el.querySelector('.ac-badge');
+    panel.hidden = !AC.open; btn.hidden = AC.open;
+    if (AC.open) AC.seen = AC.list.length;
+    const unread = AC.list.length - AC.seen; badge.hidden = unread <= 0; badge.textContent = unread > 9 ? '9+' : unread;
+    if (!AC.open) return;
+    const foot = el.querySelector('.ac-foot'), want = konto2() ? 'form' : 'login';
+    if (foot.dataset.m !== want) { foot.dataset.m = want; foot.innerHTML = want === 'form' ? '<form class="ac-form"><input maxlength="200" placeholder="Nachricht an alle …" autocomplete="off" enterkeyhint="send"><button>Senden</button></form>' : '<div class="ac-login">Mitlesen kann jeder. Zum Schreiben <a href="#" data-aclogin="1">melde dich mit deinem Konto an</a>.</div>'; }
+    const box = el.querySelector('.ac-list'), atEnd = box.scrollTop + box.clientHeight >= box.scrollHeight - 10, myName = ((konto2() || {}).name || '').toLowerCase();
+    const html = AC.list.map(x => `<div class="ac-m ${x.n.toLowerCase() === myName ? 'me' : ''}" data-mid="${x.mid}"><div class="h">${hbHTML(x.n, x.hb, x.adm)}${x.w && x.w !== 'Game Hub' ? `<span class="wh">${esc2(x.w)}</span>` : ''}<time>${acTime(x.ts)}</time>${AC.adm ? `<button class="del" data-acdel="${x.mid}" title="Löschen">🗑</button>` : ''}</div><div class="t">${esc2(x.m)}</div></div>`).join('') || '<p class="ac-empty">Noch ist es still hier.<br>Sag allen Hallo! 👋</p>';
+    if (box.dataset.h !== html) { box.innerHTML = html; box.dataset.h = html; if (atEnd || !box.dataset.s) { box.scrollTop = box.scrollHeight; box.dataset.s = 1; } }
+  }
+  setInterval(() => { const el = q('#achat'), vis = acVisible(); if (!el || el.hidden === vis) acRender(); }, 600);
+  window.addEventListener('fsg-konto', () => setTimeout(() => { send({ t: 'achat_get' }); acRender(); }, 400));
+  window.HubUI = { renderTiles, refresh: lvLoad, chat: acMsg };
   build();
 })();
