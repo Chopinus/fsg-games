@@ -65,6 +65,26 @@
   #kdz .lr{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:16px;background:linear-gradient(90deg,color-mix(in srgb,var(--c1) 35%,#1d1830),#1d1830);border:1px solid rgba(255,255,255,.1);animation:kdzoom .4s both}
   #kdz .lr .a{font-size:34px;width:46px;text-align:center} #kdz .lr .i{flex:1;min-width:0} #kdz .lr .i b{display:block;font-size:16px} #kdz .lr .i small{color:var(--muted);display:block}
   #kdz .lr.lock{filter:grayscale(.8) brightness(.6)} #kdz .lr.done .a::after{content:"✅";font-size:14px;position:relative;left:-8px;top:12px}
+  #kdz .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:12px 8px;justify-items:center}
+  #kdz .mgrid.deck{background:rgba(255,210,63,.06);border:1px solid rgba(255,210,63,.3);border-radius:16px;padding:14px 10px;min-height:120px}
+  #kdz .mw{position:relative;cursor:pointer;transition:transform .15s;-webkit-touch-callout:none;user-select:none}
+  #kdz .mw:active{transform:scale(.94)}
+  #kdz .mw .cnt{position:absolute;top:-7px;right:-5px;z-index:3;background:#ffd23f;color:#2a1a00;border-radius:9px;padding:0 6px;font-size:12px;font-weight:800;border:2px solid #1a1030}
+  #kdz .mw .cnt.free{background:#3dff8a;color:#003a10}
+  #kdz .mw.used{opacity:.4} #kdz .mw.used .cnt{background:#6a6a8a;color:#fff}
+  #kdz .mw .lk{position:absolute;top:30px;left:50%;transform:translateX(-50%);font-size:22px;z-index:3}
+  #kdz .mw.just{animation:kdzjust .45s cubic-bezier(.2,1.6,.4,1)}
+  @keyframes kdzjust{from{transform:scale(.4) translateY(30px);opacity:0}}
+  #kdz .mw.slot{width:76px;height:108px;border:2px dashed rgba(255,210,63,.5);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#ffd23f;font-weight:800;font-size:20px;cursor:default}
+  #kdz .mw.slot small{font-size:11px;color:var(--muted)}
+  .kd-card.mini{width:76px;height:108px;padding:3px;border-radius:10px}
+  .kd-card.mini .in{padding:2px}.kd-card.mini .art{font-size:30px;margin-top:6px}.kd-card.mini .nm{font-size:9px;max-width:100%;overflow-wrap:anywhere;hyphens:auto;-webkit-hyphens:auto}.kd-card.mini .nm.ln{font-size:8px}
+  .kd-card.mini .tx,.kd-card.mini .kw,.kd-card.mini .ty{display:none}
+  .kd-card.mini .cost{width:22px;height:24px;font-size:12px;left:-5px;top:-5px}
+  .kd-card.mini .st{min-width:19px;height:19px;font-size:11px;bottom:-5px}
+  .kd-card.mini .rg{bottom:6px;width:7px;height:7px}
+  .kd-card.mini .lvs{font-size:7px}
+  @media (max-width:520px){#kdz .mgrid{grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:12px 4px}.kd-card.mini{width:68px;height:98px}.kd-card.mini .art{font-size:26px}#kdz .mw.slot{width:68px;height:98px}#kdz .mgrid.deck{padding:12px 6px}}
   #kdpk{position:fixed;inset:0;z-index:9600;background:radial-gradient(circle at 50% 45%,color-mix(in srgb,var(--c1) 35%,#0d0a18),#05030c 75%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:16px;animation:kdzin .25s both;overflow:hidden}
   #kdpk .pk{width:min(220px,56vw);font-size:16px;animation:kdpkw .9s ease-in-out infinite}
   @keyframes kdpkw{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg) scale(1.04)}}
@@ -146,7 +166,7 @@
   async function load() { if (!me()) { Z.st = null; return; } const r = await call('kd_state'); if (r.error) { Z.err = r.error; return; } Z.st = r; Z.err = ''; }
   function setState(s, bump) { const old = Z.st; Z.st = s; render(); if (bump && old) for (const k of ['f', 'st', 'free']) if (old[k] !== s[k]) { const e = q(`#kdz [data-cur="${k}"]`); if (e) { e.classList.remove('bump'); void e.offsetWidth; e.classList.add('bump'); } } }
   async function open(tab) {
-    Z.tab = tab || Z.tab || 'spielen'; if (Z.tab === 'decks' && !Z.ed) Z.ed = null;
+    Z.tab = tab || Z.tab || 'spielen';
     let el = q('#kdz'); if (!el) { el = document.createElement('div'); el.id = 'kdz'; document.body.appendChild(el); document.documentElement.style.overflow = 'hidden'; }
     render(); await load(); render();
   }
@@ -167,7 +187,7 @@
     if (!s) return `<p class="note center">${Z.err ? esc(Z.err) : 'Lädt …'}</p>`;
     if (Z.tab === 'packs') return tabPacks(s);
     if (Z.tab === 'samml') return tabColl(s);
-    if (Z.tab === 'decks') return Z.ed ? tabEdit(s) : tabDecks(s);
+    if (Z.tab === 'decks') return tabDecks(s);
     if (Z.tab === 'leiter') return tabLadder(s);
     return '';
   }
@@ -229,11 +249,6 @@
       toast(r.up ? `✨ ${C[id].n} erreicht Stufe ${r.lv}!` : `✨ ${C[id].n} hergestellt`); showCard(id);
     });
   }
-  function tabDecks(s) {
-    return `<div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn" data-kdzed="new">➕ Neues Deck</button><button class="btn ghost" data-kdzauto="1">✨ Automatisch bauen</button><span class="note">Regeln: genau ${K.DECK_SIZE} Karten, mindestens ${K.MIN_CRE} Kreaturen, jede Karte höchstens 3× (episch 2×, legendär 1×). Themen darfst du frei mischen.</span></div>
-      ${s.decks.length ? `<div class="kd-decks">${s.decks.map((d, i) => { const th = K.mainTheme(d.cards), n = Object.values(d.cards).reduce((a, b) => a + b, 0), bo = K.bonusesOf(d.cards); return `<button class="kd-dk ${d.err ? '' : 'mine'}" data-kdzed="${i}" style="${cv(th)};animation-delay:${i * 0.05}s"><span class="e">${fc(th).e}</span><b>${esc(d.n)}</b><small>${n}/${K.DECK_SIZE} Karten${bo.length ? ' · Bonus ' + bo.map(b => fc(b).e).join('') : ''}</small><small>${d.err ? '⚠️ ' + esc(d.err) : '✅ spielbereit'}</small></button>`; }).join('')}</div>` : '<p class="note center">Noch keine eigenen Decks. Starte mit einem leeren Deck oder einer Kopie eines Grunddecks.</p>'}
-      <h3>🃏 Grunddecks als Vorlage</h3><div class="kd-decks">${Object.keys(K.DECKS).map(f => `<button class="kd-dk" data-kdzcopy="${f}" style="${cv(f)}"><span class="e">${fc(f).e}</span><b>Grunddeck ${fc(f).n}</b><small>Übernimmt alle Karten daraus, die du schon besitzt</small></button>`).join('')}</div>`;
-  }
   // Baut aus der Sammlung ein spielbares Deck: stärkstes Thema bevorzugt (für den Themen-Bonus), genug Kreaturen, nicht zu teuer
   function autoDeck(own) {
     const th = {}; for (const [id, n] of Object.entries(own)) if (C[id] && n > 0) th[C[id].f] = (th[C[id].f] || 0) + Math.min(n, RAR[C[id].r].max);
@@ -248,19 +263,47 @@
     return cards;
   }
   const deckN = cards => Object.values(cards).reduce((a, b) => a + b, 0);
-  function tabEdit(s) {
+  // Deck-Bau wie in Clash Royale: oben das Deck, darunter die eigenen Karten, ganz unten die gesperrten. Speichert automatisch.
+  function ensureEd(s) {
+    if (Z.di == null || Z.di >= s.decks.length) Z.di = s.decks.length ? 0 : -1;
+    if (!Z.ed || Z.ed.i !== Z.di) { const d = s.decks[Z.di]; Z.ed = d ? { i: Z.di, n: d.n, cards: { ...d.cards } } : { i: -1, n: 'Mein Deck', cards: {} }; }
+  }
+  let saveT = null;
+  function saveSoon() {
+    Z.saving = 'wait'; const st = q('#kdz .svst'); if (st) st.textContent = '… speichert';
+    clearTimeout(saveT); saveT = setTimeout(async () => {
+      const d = Z.ed; if (!d) return;
+      const r = await call('kd_deck_save', { i: d.i, n: d.n, cards: d.cards });
+      if (r.error) { Z.saving = 'err'; toast(r.error); render(); return; }
+      if (d.i < 0) { d.i = r.i; Z.di = r.i; }
+      Z.saving = 'ok'; Z.st = r.state;
+      const ae = document.activeElement; if (ae && ae.matches && ae.matches('#kdz [data-kdzname]')) { const st = q('#kdz .svst'); if (st) st.textContent = '✓ gespeichert'; return; }
+      Z.keepScroll = true; render();
+    }, 650);
+  }
+  const mini = (id, o = {}) => card(id, { lv: Math.max(1, K.levelOf(id, (Z.st.c || {})[id] || 0)), cls: 'mini ' + (o.cls || '') });
+  function tabDecks(s) {
+    ensureEd(s);
     const d = Z.ed, n = deckN(d.cards), cre = Object.entries(d.cards).reduce((a, [id, k]) => a + (C[id].t === 'k' ? k : 0), 0), th = K.themesOf(d.cards), err = K.checkDeck(d.cards, s.c);
     const curve = [1, 2, 3, 4, 5, 6, 7].map(c => Object.entries(d.cards).reduce((a, [id, k]) => a + ((c === 7 ? C[id].c >= 7 : C[id].c === c) ? k : 0), 0)), mx = Math.max(4, ...curve);
-    const list = Object.entries(d.cards).sort((a, b) => C[a[0]].c - C[b[0]].c || C[a[0]].n.localeCompare(C[b[0]].n));
-    const pool = filterIds(Z.edTh, 'alle', false, s, true);
-    return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><button class="btn ghost small" data-kdzback="1">‹ Zurück</button><input class="nm" data-kdzname="1" maxlength="24" value="${esc(d.n)}" style="flex:1;min-width:160px"><button class="btn" data-kdzsave="1">💾 Speichern</button>${d.i >= 0 ? '<button class="btn ghost small" data-kdzdel="1">🗑 Löschen</button>' : ''}</div>
-      <div class="ed"><div class="box" style="display:flex;flex-direction:column;gap:8px">
-        <div class="stat"><span class="${n === K.DECK_SIZE ? 'ok' : 'bad'}">🃏 ${n}/${K.DECK_SIZE}</span><span class="${cre >= K.MIN_CRE ? 'ok' : 'bad'}">🐾 ${cre} Kreaturen (min. ${K.MIN_CRE})</span></div>
-        <div class="stat">${Object.entries(th).sort((a, b) => b[1] - a[1]).map(([f, k]) => `<span class="${k >= K.BONUS_MIN ? 'ok' : ''}" title="${esc(B[f][0] + ': ' + B[f][1])}">${fc(f).e} ${k}${k >= K.BONUS_MIN ? ' ✓ ' + B[f][0] : `/${K.BONUS_MIN}`}</span>`).join('') || '<span>Noch leer</span>'}</div>
-        <div class="curve">${curve.map((k, i) => `<div><span>${k || ''}</span><i style="height:${(k / mx) * 38}px"></i>${i === 6 ? '7+' : i + 1}</div>`).join('')}</div>
-        ${err && n ? `<span class="note" style="color:#ffb0b0">⚠️ ${esc(err)}</span>` : ''}
-        <div class="dl">${list.map(([id, k]) => `<div class="dr" data-kdzrm="${id}" style="${cv(C[id].f)}" title="Antippen zum Entfernen"><span class="c">${C[id].c}</span><span>${C[id].art}</span><span class="n" style="color:${RAR[C[id].r].col === '#b8b8c8' ? '#fff' : RAR[C[id].r].col}">${esc(C[id].n)}</span><span class="x">×${k}</span></div>`).join('') || '<p class="note">Tippe unten auf Karten, um sie hinzuzufügen.</p>'}</div></div>
-        <div style="display:flex;flex-direction:column;gap:8px">${themeChips(Z.edTh, 'data-kdzeth')}<div class="grid">${pool.map(id => { const k = d.cards[id] || 0, mx2 = Math.min(RAR[C[id].r].max, s.c[id] || 0); return `<div class="cw" data-kdzadd="${id}" style="${k >= mx2 ? 'opacity:.45' : ''}">${card(id, { lv: Math.max(1, K.levelOf(id, s.c[id])) })}${k ? `<span class="indeck">${k}/${mx2} im Deck</span>` : ''}<span class="pl">${s.c[id]}× im Besitz</span></div>`; }).join('')}</div></div></div>`;
+    const inDeck = Object.entries(d.cards).sort((a, b) => C[a[0]].c - C[b[0]].c || C[a[0]].n.localeCompare(C[b[0]].n));
+    const all = filterIds(Z.edTh, 'alle', false, s);
+    const avail = id => Math.min(RAR[C[id].r].max, s.c[id] || 0) - (d.cards[id] || 0);
+    const owned = all.filter(id => s.c[id] > 0 && avail(id) > 0), locked = all.filter(id => !(s.c[id] > 0));
+    const chip = (dk, i) => { const t = K.mainTheme(dk.cards); return `<button class="${i === Z.di ? 'on' : ''}" data-kdzed="${i}">${fc(t).e} ${esc(dk.n)} ${dk.err ? '⚠️' : '✅'}</button>`; };
+    return `<div class="chips">${s.decks.map(chip).join('')}${Z.di < 0 ? '<button class="on">🆕 Neues Deck</button>' : ''}${s.decks.length < 8 ? '<button data-kdzed="new">＋ Neues Deck</button>' : ''}</div>
+      <div class="box dkhead"><div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><input class="nm" data-kdzname="1" maxlength="24" value="${esc(d.n)}" style="flex:1;min-width:150px"><span class="svst note">${Z.saving === 'wait' ? '… speichert' : Z.saving === 'ok' ? '✓ gespeichert' : ''}</span>
+        <button class="btn ghost small" data-kdzauto="1" title="Füllt das Deck automatisch mit deinen besten Karten">✨ Auto</button>${d.i >= 0 ? '<button class="btn ghost small" data-kdzdel="1" title="Deck löschen">🗑</button>' : ''}</div>
+        <div class="row" style="gap:12px;flex-wrap:wrap;align-items:flex-end;margin-top:8px"><div class="stat" style="flex:1;min-width:220px"><span class="${n === K.DECK_SIZE ? 'ok' : 'bad'}">🃏 ${n}/${K.DECK_SIZE}</span><span class="${cre >= K.MIN_CRE ? 'ok' : 'bad'}">🐾 ${cre}/${K.MIN_CRE} Kreaturen</span>${Object.entries(th).sort((a, b) => b[1] - a[1]).map(([f, k]) => `<span class="${k >= K.BONUS_MIN ? 'ok' : ''}" title="${esc(B[f][0] + ': ' + B[f][1])}">${fc(f).e} ${k}${k >= K.BONUS_MIN ? ' ✓ ' + B[f][0] : `/${K.BONUS_MIN}`}</span>`).join('')}</div>
+        <div class="curve" style="width:170px;height:46px">${curve.map((k, i) => `<div><span>${k || ''}</span><i style="height:${(k / mx) * 28}px"></i>${i === 6 ? '7+' : i + 1}</div>`).join('')}</div></div>
+        ${err ? `<div class="note" style="color:#ffb0b0;margin-top:6px">⚠️ ${esc(err)}</div>` : '<div class="note" style="color:#9fffc4;margin-top:6px">✅ Spielbereit</div>'}</div>
+      <h3>🃏 Dein Deck <span class="note">– antippen zum Herausnehmen</span></h3>
+      <div class="mgrid deck">${inDeck.map(([id, k]) => `<div class="mw ${Z.just === id ? 'just' : ''}" data-kdzrm="${id}" data-hold="${id}">${mini(id)}<span class="cnt">×${k}</span></div>`).join('')}${n < K.DECK_SIZE ? `<div class="mw slot"><span>＋${K.DECK_SIZE - n}</span><small>frei</small></div>` : ''}</div>
+      ${themeChips(Z.edTh, 'data-kdzeth')}
+      <h3>✋ Deine Karten <span class="note">– antippen zum Hinzufügen · gedrückt halten für Details</span></h3>
+      <div class="mgrid">${owned.map(id => `<div class="mw" data-kdzadd="${id}" data-hold="${id}">${mini(id)}<span class="cnt free">${avail(id)}×</span></div>`).join('') || '<p class="note">Alle passenden Karten sind schon im Deck.</p>'}</div>
+      <h3>🔒 Noch nicht gefunden <span class="note">(${locked.length}) – aus Packs oder mit ✨ Sternenstaub herstellen</span></h3>
+      <div class="mgrid">${locked.map(id => `<div class="mw lock" data-kdzcard="${id}">${mini(id, { cls: 'miss' })}<span class="lk">🔒</span></div>`).join('')}</div>`;
   }
   function tabLadder(s) {
     return `<p class="note">Besiege die Gegner der Reihe nach. Jede neue Stufe gibt Funken und ein Gratis-Pack, die letzte sogar drei. Geschaffte Stufen kannst du jederzeit wiederholen.</p><div class="lad">${LADDER.map((L, i) => { const lv = i + 1, done = s.lad >= lv, open = lv <= s.lad + 1; const f = L.th[0];
@@ -353,7 +396,7 @@
       const k = e.target.closest('.kdf'); if (k) { showCard(r.cards[Number(k.dataset.i)].id); return; }
       const b = e.target.closest('[data-pk]'); if (!b) return;
       if (b.dataset.pk === 'again') { o.remove(); openPack(th); }
-      else if (b.dataset.pk === 'auto') { o.remove(); Z.tab = 'decks'; Z.ed = { i: -1, n: 'Mein Deck', cards: autoDeck(Z.st.c), dirty: true }; render(); toast('✨ Deck gebaut – passe es an und speichere es!'); }
+      else if (b.dataset.pk === 'auto') { o.remove(); Z.tab = 'decks'; Z.di = -1; Z.ed = { i: -1, n: 'Mein Deck', cards: autoDeck(Z.st.c) }; render(); saveSoon(); toast('✨ Deck gebaut und gespeichert'); }
       else o.remove();
     });
   }
@@ -371,7 +414,7 @@
     const g = (a) => e.target.closest(`[${a}]`);
     let b;
     if (g('data-kdzx')) { close(); return; }
-    if ((b = g('data-kdzt'))) { Z.tab = b.dataset.kdzt; Z.ed = null; render(); if (!Z.st && me()) { await load(); render(); } return; }
+    if ((b = g('data-kdzt'))) { Z.tab = b.dataset.kdzt; render(); if (!Z.st && me()) { await load(); render(); } return; }
     if (g('data-kdzlogin')) { close(); const a = q('[data-acct="open"]'); if (a) { a.click(); a.scrollIntoView({ behavior: 'smooth', block: 'center' }); } return; }
     if ((b = g('data-kdzgo'))) { startGame(b.dataset.kdzgo); return; }
     if ((b = g('data-kdzpack'))) { if (!b.disabled) openPack(b.dataset.kdzpack); return; }
@@ -379,26 +422,29 @@
     if ((b = g('data-kdzra'))) { Z.ra = b.dataset.kdzra; render(); return; }
     if (g('data-kdzmiss')) { Z.miss = !Z.miss; render(); return; }
     if ((b = g('data-kdzcard'))) { showCard(b.dataset.kdzcard); return; }
-    if ((b = g('data-kdzed'))) { const i = b.dataset.kdzed; if (i === 'new') Z.ed = { i: -1, n: 'Mein Deck', cards: {} }; else { const d = Z.st.decks[Number(i)]; Z.ed = { i: Number(i), n: d.n, cards: { ...d.cards } }; } render(); return; }
-    if (g('data-kdzauto')) { const cards = autoDeck(Z.st.c); Z.ed = { i: -1, n: 'Automatisches Deck', cards, dirty: true }; render(); if (deckN(cards) < K.DECK_SIZE) toast('Für ein volles Deck fehlen dir noch Karten – öffne ein paar Packs.'); return; }
-    if ((b = g('data-kdzcopy'))) { const f = b.dataset.kdzcopy; const cards = {}; for (const [id, k] of Object.entries(K.DECKS[f])) { const m = Math.min(k, Z.st.c[id] || 0); if (m) cards[id] = m; } Z.ed = { i: -1, n: 'Mein ' + fc(f).n + '-Deck', cards }; Z.edTh = f; render(); return; }
-    if (g('data-kdzback')) { if (Z.ed && Z.ed.dirty && !confirm('Änderungen verwerfen?')) return; Z.ed = null; render(); return; }
+    if ((b = g('data-kdzed'))) {
+      const i = b.dataset.kdzed;
+      if (i === 'new') { Z.di = -1; Z.ed = { i: -1, n: 'Deck ' + (Z.st.decks.length + 1), cards: {} }; Z.saving = ''; render(); return; }
+      Z.di = Number(i); Z.ed = null; Z.saving = ''; render(); return;
+    }
+    if (g('data-kdzauto')) { const cards = autoDeck(Z.st.c); Z.ed.cards = cards; Z.keepScroll = true; render(); saveSoon(); if (deckN(cards) < K.DECK_SIZE) toast('Für ein volles Deck fehlen dir noch Karten – öffne ein paar Packs.'); else toast('✨ Deck automatisch gefüllt'); return; }
     if ((b = g('data-kdzeth'))) { Z.edTh = b.dataset.kdzeth; Z.keepScroll = true; render(); return; }
     if ((b = g('data-kdzadd'))) {
       const id = b.dataset.kdzadd, d = Z.ed, k = d.cards[id] || 0, mx = Math.min(RAR[C[id].r].max, Z.st.c[id] || 0);
-      if (k >= mx) { toast(k >= RAR[C[id].r].max ? `${C[id].n} darf höchstens ${RAR[C[id].r].max}× ins Deck.` : `Du besitzt ${C[id].n} nur ${Z.st.c[id] || 0}×.`); return; }
-      if (deckN(d.cards) >= K.DECK_SIZE) { toast(`Das Deck ist voll (${K.DECK_SIZE} Karten).`); return; }
-      d.cards[id] = k + 1; d.dirty = true; Z.keepScroll = true; render(); return;
+      if (k >= mx) return;
+      if (deckN(d.cards) >= K.DECK_SIZE) { toast(`Das Deck ist voll (${K.DECK_SIZE} Karten) – nimm oben erst eine Karte heraus.`); return; }
+      d.cards[id] = k + 1; Z.just = id; Z.keepScroll = true; render(); Z.just = null; saveSoon(); return;
     }
-    if ((b = g('data-kdzrm'))) { const id = b.dataset.kdzrm, d = Z.ed; if (d.cards[id] > 1) d.cards[id]--; else delete d.cards[id]; d.dirty = true; Z.keepScroll = true; render(); return; }
-    if (g('data-kdzsave')) {
-      const d = Z.ed; d.n = (q('#kdz [data-kdzname]') || {}).value || d.n;
-      const r = await call('kd_deck_save', { i: d.i, n: d.n, cards: d.cards }); if (r.error) { toast(r.error); return; }
-      const err = r.state.decks[r.i] && r.state.decks[r.i].err; Z.ed = null; setState(r.state); toast(err ? `Gespeichert – noch nicht spielbereit: ${err}` : '✅ Deck gespeichert und spielbereit!'); return;
-    }
-    if (g('data-kdzdel')) { if (!confirm('Dieses Deck wirklich löschen?')) return; const r = await call('kd_deck_del', { i: Z.ed.i }); if (r.error) { toast(r.error); return; } Z.ed = null; setState(r.state); return; }
+    if ((b = g('data-kdzrm'))) { const id = b.dataset.kdzrm, d = Z.ed; if (d.cards[id] > 1) d.cards[id]--; else delete d.cards[id]; Z.keepScroll = true; render(); saveSoon(); return; }
+    if (g('data-kdzdel')) { if (!confirm(`Deck „${Z.ed.n}“ wirklich löschen?`)) return; const r = await call('kd_deck_del', { i: Z.ed.i }); if (r.error) { toast(r.error); return; } Z.ed = null; Z.di = 0; setState(r.state); return; }
   });
-  document.addEventListener('input', e => { if (e.target.matches && e.target.matches('#kdz [data-kdzname]') && Z.ed) { Z.ed.n = e.target.value; Z.ed.dirty = true; } });
+  // Gedrückt halten: Kartendetails
+  let holdT = null, held = false;
+  document.addEventListener('pointerdown', e => { const h = e.target.closest && e.target.closest('#kdz [data-hold]'); if (!h) return; held = false; clearTimeout(holdT); holdT = setTimeout(() => { held = true; showCard(h.dataset.hold); }, 450); });
+  ['pointerup', 'pointercancel', 'pointermove'].forEach(t => document.addEventListener(t, e => { if (t !== 'pointermove' || Math.abs(e.movementX) + Math.abs(e.movementY) > 6) clearTimeout(holdT); }));
+  document.addEventListener('click', e => { if (held && e.target.closest('#kdz [data-hold]')) { e.stopImmediatePropagation(); e.preventDefault(); held = false; } }, true);
+  document.addEventListener('contextmenu', e => { if (e.target.closest && e.target.closest('#kdz [data-hold]')) e.preventDefault(); });
+  document.addEventListener('input', e => { if (e.target.matches && e.target.matches('#kdz [data-kdzname]') && Z.ed) { Z.ed.n = e.target.value; saveSoon(); } });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && q('#kdz') && !q('#kdpk') && !q('.kd-pop')) close(); });
   window.KDZ = { pending: null, open, close };
 })();
