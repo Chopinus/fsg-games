@@ -72,6 +72,8 @@
   #kdz .mw .cnt{position:absolute;top:-7px;right:-5px;z-index:3;background:#ffd23f;color:#2a1a00;border-radius:9px;padding:0 6px;font-size:12px;font-weight:800;border:2px solid #1a1030}
   #kdz .mw .cnt.free{background:#3dff8a;color:#003a10}
   #kdz .mw.used{opacity:.4} #kdz .mw.used .cnt{background:#6a6a8a;color:#fff}
+  #kdz .mw .ib{position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);z-index:4;width:26px;height:26px;border-radius:50%;border:2px solid #1a1030;background:#3aa8ff;color:#fff;font:italic 800 14px Georgia,serif;cursor:pointer;display:grid;place-items:center;padding:0;box-shadow:0 2px 6px rgba(0,0,0,.5)}
+  #kdz .mw{margin-bottom:6px}
   #kdz .mw .lk{position:absolute;top:30px;left:50%;transform:translateX(-50%);font-size:22px;z-index:3}
   #kdz .mw.just{animation:kdzjust .45s cubic-bezier(.2,1.6,.4,1)}
   @keyframes kdzjust{from{transform:scale(.4) translateY(30px);opacity:0}}
@@ -226,7 +228,7 @@
     const ids = filterIds(Z.th, Z.ra, Z.miss, s);
     const all = filterIds(Z.th, 'alle', false, s), have = all.filter(id => s.c[id] > 0).length;
     return `<div class="box" style="display:flex;flex-direction:column;gap:8px">${themeChips(Z.th, 'data-kdzth')}
-      <div class="chips"><button class="${Z.ra === 'alle' ? 'on' : ''}" data-kdzra="alle">Jede Seltenheit</button>${Object.entries(RAR).map(([k, r]) => `<button class="${Z.ra === k ? 'on' : ''}" data-kdzra="${k}" style="color:${Z.ra === k ? '' : r.col}">◆ ${r.n}</button>`).join('')}<button class="${Z.miss ? 'on' : ''}" data-kdzmiss="1">🔒 Nur fehlende</button></div>
+      <div class="chips"><button class="${Z.ra === 'alle' ? 'on' : ''}" data-kdzra="alle">Jede Seltenheit</button>${Object.entries(RAR).map(([k, r]) => `<button class="${Z.ra === k ? 'on' : ''}" data-kdzra="${k}" style="color:${Z.ra === k ? '' : r.col}">◆ ${r.n}</button>`).join('')}<button class="${Z.miss ? 'on' : ''}" data-kdzmiss="1">🔒 Nur fehlende</button><button data-kdzbonp="1">🎨 Themen-Boni</button></div>
       <span class="note">${have} von ${all.length} Karten · ✨ ${s.st} Sternenstaub zum Herstellen</span></div>
       <div class="grid">${ids.map(id => { const n = s.c[id] || 0, lv = K.levelOf(id, n); const [p, t] = n ? progOf(id, n) : [0, `${RAR[C[id].r].craft} ✨`];
         return `<div class="cw" data-kdzcard="${id}">${n ? `<span class="cnt">×${n}</span>` : '<span class="lock">🔒</span>'}${card(id, { lv: Math.max(1, lv), cls: n ? '' : 'miss' })}${n ? `<span class="prog"><i style="width:${p * 100}%"></i></span>` : ''}<span class="pl">${t}</span></div>`; }).join('') || '<p class="note">Keine Karten für diesen Filter.</p>'}</div>`;
@@ -239,10 +241,19 @@
       <div>${n ? `Du besitzt <b style="font-size:15px">${n}</b> · Stufe ${'★'.repeat(lv)} (${LVTXT[lv]})` : 'Noch nicht in deiner Sammlung.'}</div>
       ${lv < 5 ? `<div class="note">${R.lv.map((t, i) => `★${i + 1}: ${t}×`).join(' · ')}</div>` : ''}
       ${n >= max ? '<div class="note">Weitere Kopien werden zu Sternenstaub (+' + R.dust + ' ✨).</div>' : ''}</div>
+      ${(C[id].kw || []).length ? `<div class="kd-rew" style="max-width:340px">${C[id].kw.map(k => K.KW[k] ? `<div>${K.KW[k][0]} <b style="font-size:14px">${K.KW[k][1]}:</b> ${K.KW[k][2]}</div>` : '').join('')}</div>` : ''}
+      <div class="kd-rew" style="max-width:340px;cursor:pointer" data-kdzbonp="1"><div>${fc(C[id].f).e} Thema <b style="font-size:14px">${fc(C[id].f).n}</b> · Bonus ab ${K.BONUS_MIN} Karten: <b style="font-size:14px">${B[C[id].f][0]}</b> – ${B[C[id].f][1]}</div></div>
+      ${Z.tab === 'decks' && Z.ed && n ? (() => { const k = Z.ed.cards[id] || 0, mx = Math.min(R.max, n); return `<div class="row" style="justify-content:center;gap:8px"><span class="note">Im Deck: <b>${k}/${mx}</b></span>${k ? `<button class="btn ghost small" data-kdzpm="-1">➖ Herausnehmen</button>` : ''}${k < mx ? `<button class="btn small" data-kdzpm="1">➕ Ins Deck</button>` : ''}</div>`; })() : ''}
       <div class="row" style="justify-content:center;gap:8px">${n < max ? `<button class="btn" data-kdzcraft="${id}" ${s.st < R.craft ? 'disabled' : ''}>✨ Herstellen (${R.craft})</button>` : ''}<button class="btn ghost" data-kdx="1">Schließen</button></div>`;
     document.body.appendChild(o);
     o.addEventListener('click', async e => {
       if (e.target === o || e.target.closest('[data-kdx]')) { o.remove(); return; }
+      if (e.target.closest('[data-kdzbonp]')) { showBonus(); return; }
+      const pm = e.target.closest('[data-kdzpm]');
+      if (pm) { o.remove(); const d = Z.ed, k = d.cards[id] || 0;
+        if (pm.dataset.kdzpm === '1') { if (deckN(d.cards) >= K.DECK_SIZE) { toast(`Das Deck ist voll (${K.DECK_SIZE} Karten) – nimm erst eine Karte heraus.`); return; } d.cards[id] = k + 1; Z.just = id; }
+        else if (k > 1) d.cards[id] = k - 1; else delete d.cards[id];
+        Z.keepScroll = true; render(); Z.just = null; saveSoon(); return; }
       const b = e.target.closest('[data-kdzcraft]'); if (!b || Z.busy) return;
       Z.busy = true; const r = await call('kd_craft', { id }); Z.busy = false;
       if (r.error) { toast(r.error); return; } o.remove(); Z.keepScroll = true; setState(r.state, true);
@@ -282,6 +293,16 @@
     }, 650);
   }
   const mini = (id, o = {}) => card(id, { lv: Math.max(1, K.levelOf(id, (Z.st.c || {})[id] || 0)), cls: 'mini ' + (o.cls || '') });
+  function showBonus() { // alle Themen-Boni, mit Stand im aktuellen Deck
+    const th = Z.tab === 'decks' && Z.ed ? K.themesOf(Z.ed.cards) : null;
+    const o = document.createElement('div'); o.className = 'kd-pop'; o.style.zIndex = 9800;
+    o.innerHTML = `<div class="kd-rew" style="max-width:420px;width:100%"><b>🎨 Themen-Boni</b><div class="note">Hast du mindestens ${K.BONUS_MIN} Karten eines Themas im Deck, wirkt sein Bonus im ganzen Duell. Mit 10/10/10 sind sogar drei Boni aktiv.</div>
+      ${Object.entries(B).map(([f, b]) => { const n = th ? th[f] || 0 : null, on = n != null && n >= K.BONUS_MIN; return `<div style="display:flex;gap:10px;align-items:center;margin-top:10px;padding:8px 10px;border-radius:12px;background:${on ? 'rgba(61,255,138,.14)' : 'rgba(255,255,255,.05)'};border:1px solid ${on ? 'rgba(61,255,138,.5)' : 'rgba(255,255,255,.08)'}">
+        <span style="font-size:28px">${fc(f).e}</span><div style="flex:1"><div><b style="font-size:15px;color:${fc(f).col}">${b[0]}</b> <span class="note">(${fc(f).n})</span></div><div>${b[1]}</div></div>
+        ${n != null ? `<span style="font-weight:800;white-space:nowrap;color:${on ? '#3dff8a' : '#cfc6e6'}">${on ? '✓ aktiv' : `${n}/${K.BONUS_MIN}`}</span>` : ''}</div>`; }).join('')}</div><button class="btn ghost" data-kdx="1">Schließen</button>`;
+    document.body.appendChild(o);
+    o.addEventListener('click', e => { if (e.target === o || e.target.closest('[data-kdx]')) o.remove(); });
+  }
   function tabDecks(s) {
     ensureEd(s);
     const d = Z.ed, n = deckN(d.cards), cre = Object.entries(d.cards).reduce((a, [id, k]) => a + (C[id].t === 'k' ? k : 0), 0), th = K.themesOf(d.cards), err = K.checkDeck(d.cards, s.c);
@@ -294,14 +315,14 @@
     return `<div class="chips">${s.decks.map(chip).join('')}${Z.di < 0 ? '<button class="on">🆕 Neues Deck</button>' : ''}${s.decks.length < 8 ? '<button data-kdzed="new">＋ Neues Deck</button>' : ''}</div>
       <div class="box dkhead"><div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><input class="nm" data-kdzname="1" maxlength="24" value="${esc(d.n)}" style="flex:1;min-width:150px"><span class="svst note">${Z.saving === 'wait' ? '… speichert' : Z.saving === 'ok' ? '✓ gespeichert' : ''}</span>
         <button class="btn ghost small" data-kdzauto="1" title="Füllt das Deck automatisch mit deinen besten Karten">✨ Auto</button>${d.i >= 0 ? '<button class="btn ghost small" data-kdzdel="1" title="Deck löschen">🗑</button>' : ''}</div>
-        <div class="row" style="gap:12px;flex-wrap:wrap;align-items:flex-end;margin-top:8px"><div class="stat" style="flex:1;min-width:220px"><span class="${n === K.DECK_SIZE ? 'ok' : 'bad'}">🃏 ${n}/${K.DECK_SIZE}</span><span class="${cre >= K.MIN_CRE ? 'ok' : 'bad'}">🐾 ${cre}/${K.MIN_CRE} Kreaturen</span>${Object.entries(th).sort((a, b) => b[1] - a[1]).map(([f, k]) => `<span class="${k >= K.BONUS_MIN ? 'ok' : ''}" title="${esc(B[f][0] + ': ' + B[f][1])}">${fc(f).e} ${k}${k >= K.BONUS_MIN ? ' ✓ ' + B[f][0] : `/${K.BONUS_MIN}`}</span>`).join('')}</div>
+        <div class="row" style="gap:12px;flex-wrap:wrap;align-items:flex-end;margin-top:8px"><div class="stat" style="flex:1;min-width:220px"><span class="${n === K.DECK_SIZE ? 'ok' : 'bad'}">🃏 ${n}/${K.DECK_SIZE}</span><span class="${cre >= K.MIN_CRE ? 'ok' : 'bad'}">🐾 ${cre}/${K.MIN_CRE} Kreaturen</span>${Object.entries(th).sort((a, b) => b[1] - a[1]).map(([f, k]) => `<span class="${k >= K.BONUS_MIN ? 'ok' : ''}" data-kdzbonp="1" style="cursor:pointer" title="${esc(B[f][0] + ': ' + B[f][1])}">${fc(f).e} ${k}${k >= K.BONUS_MIN ? ' ✓ ' + B[f][0] : `/${K.BONUS_MIN}`}</span>`).join('')}<span data-kdzbonp="1" style="cursor:pointer;background:rgba(255,210,63,.18);color:#ffd23f">🎨 Themen-Boni ansehen</span></div>
         <div class="curve" style="width:170px;height:46px">${curve.map((k, i) => `<div><span>${k || ''}</span><i style="height:${(k / mx) * 28}px"></i>${i === 6 ? '7+' : i + 1}</div>`).join('')}</div></div>
         ${err ? `<div class="note" style="color:#ffb0b0;margin-top:6px">⚠️ ${esc(err)}</div>` : '<div class="note" style="color:#9fffc4;margin-top:6px">✅ Spielbereit</div>'}</div>
-      <h3>🃏 Dein Deck <span class="note">– antippen zum Herausnehmen</span></h3>
-      <div class="mgrid deck">${inDeck.map(([id, k]) => `<div class="mw ${Z.just === id ? 'just' : ''}" data-kdzrm="${id}" data-hold="${id}">${mini(id)}<span class="cnt">×${k}</span></div>`).join('')}${n < K.DECK_SIZE ? `<div class="mw slot"><span>＋${K.DECK_SIZE - n}</span><small>frei</small></div>` : ''}</div>
+      <h3>🃏 Dein Deck <span class="note">– antippen zum Herausnehmen · ⓘ für Details</span></h3>
+      <div class="mgrid deck">${inDeck.map(([id, k]) => `<div class="mw ${Z.just === id ? 'just' : ''}" data-kdzrm="${id}" data-hold="${id}">${mini(id)}<span class="cnt">×${k}</span><button class="ib" data-kdzinfo="${id}" aria-label="Details">i</button></div>`).join('')}${n < K.DECK_SIZE ? `<div class="mw slot"><span>＋${K.DECK_SIZE - n}</span><small>frei</small></div>` : ''}</div>
       ${themeChips(Z.edTh, 'data-kdzeth')}
-      <h3>✋ Deine Karten <span class="note">– antippen zum Hinzufügen · gedrückt halten für Details</span></h3>
-      <div class="mgrid">${owned.map(id => `<div class="mw" data-kdzadd="${id}" data-hold="${id}">${mini(id)}<span class="cnt free">${avail(id)}×</span></div>`).join('') || '<p class="note">Alle passenden Karten sind schon im Deck.</p>'}</div>
+      <h3>✋ Deine Karten <span class="note">– antippen zum Hinzufügen · ⓘ für Details</span></h3>
+      <div class="mgrid">${owned.map(id => `<div class="mw" data-kdzadd="${id}" data-hold="${id}">${mini(id)}<span class="cnt free">${avail(id)}×</span><button class="ib" data-kdzinfo="${id}" aria-label="Details">i</button></div>`).join('') || '<p class="note">Alle passenden Karten sind schon im Deck.</p>'}</div>
       <h3>🔒 Noch nicht gefunden <span class="note">(${locked.length}) – aus Packs oder mit ✨ Sternenstaub herstellen</span></h3>
       <div class="mgrid">${locked.map(id => `<div class="mw lock" data-kdzcard="${id}">${mini(id, { cls: 'miss' })}<span class="lk">🔒</span></div>`).join('')}</div>`;
   }
@@ -422,6 +443,8 @@
     if ((b = g('data-kdzra'))) { Z.ra = b.dataset.kdzra; render(); return; }
     if (g('data-kdzmiss')) { Z.miss = !Z.miss; render(); return; }
     if ((b = g('data-kdzcard'))) { showCard(b.dataset.kdzcard); return; }
+    if ((b = g('data-kdzinfo'))) { showCard(b.dataset.kdzinfo); return; }
+    if (g('data-kdzbonp')) { showBonus(); return; }
     if ((b = g('data-kdzed'))) {
       const i = b.dataset.kdzed;
       if (i === 'new') { Z.di = -1; Z.ed = { i: -1, n: 'Deck ' + (Z.st.decks.length + 1), cards: {} }; Z.saving = ''; render(); return; }
