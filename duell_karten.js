@@ -3,6 +3,7 @@
 // e = Wirkung (Zauber) bzw. Ruf (Kreatur: wirkt beim Ausspielen). tg = Ziel: any (Kreatur oder Spieler), cre (Kreatur), ecre (gegnerische Kreatur), own (eigene Kreatur)
 (function () {
   const F = {
+    abent: { n: 'Abenteuer', e: '🗺️', col: '#e0a050', col2: '#5a3410', txt: 'Das Startthema: mutige Dorfhelden, ehrliche Werte, leicht zu spielen.' },
     glut: { n: 'Glut', e: '🔥', col: '#ff5a3d', col2: '#7a1a08', txt: 'Schnell und angriffslustig: Eile, direkter Schaden und Drachen.' },
     wild: { n: 'Wildnis', e: '🌿', col: '#3ec46d', col2: '#0f4a24', txt: 'Riesige Kreaturen, mehr Kristalle und Durchbruch.' },
     flut: { n: 'Flut', e: '💧', col: '#3aa8ff', col2: '#0b3a6a', txt: 'Flieger, Einfrieren, Zurückschicken und viele Karten.' },
@@ -11,6 +12,7 @@
   };
   // Themen-Bonus: ab 10 Karten eines Themas im Deck
   const B = {
+    abent: ['Kameradschaft', 'Deine Kreaturen kommen mit +1/+0 ins Spiel.'],
     glut: ['Flammenseele', 'Deine Schadenszauber und Rufe machen +1 Schaden.'],
     wild: ['Urkraft', 'Deine Kreaturen kommen mit +0/+1 ins Spiel.'],
     flut: ['Gezeitenwissen', 'Du startest mit 1 Karte mehr auf der Hand.'],
@@ -57,6 +59,25 @@
     mauer: ['🧱', 'Mauer', 'Kann nicht angreifen, nur blocken.'],
   };
   const C = {
+    // ---------- Abenteuer (Startthema) ----------
+    a_bauer: { n: 'Mutiger Bauer', f: 'abent', r: 'g', t: 'k', c: 1, a: 1, h: 2, art: '🧑‍🌾' },
+    a_hund: { n: 'Treuer Hund', f: 'abent', r: 'g', t: 'k', c: 1, a: 2, h: 1, art: '🐶' },
+    a_bogen: { n: 'Bogenschützin', f: 'abent', r: 'g', t: 'k', c: 2, a: 2, h: 2, kw: ['reich'], art: '🎯' },
+    a_wache: { n: 'Stadtwache', f: 'abent', r: 'g', t: 'k', c: 2, a: 2, h: 3, art: '💂' },
+    a_reiter: { n: 'Botenreiter', f: 'abent', r: 'g', t: 'k', c: 3, a: 3, h: 2, kw: ['eile'], art: '🏇' },
+    a_schmied: { n: 'Dorfschmied', f: 'abent', r: 'g', t: 'k', c: 3, a: 2, h: 3, e: { k: 'buff', a: 1, h: 1, tg: 'own' }, art: '🔨', txt: 'Ruf: Eine eigene Kreatur bekommt +1/+1.' },
+    a_ritter: { n: 'Fahrender Ritter', f: 'abent', r: 'g', t: 'k', c: 4, a: 4, h: 4, art: '🪖' },
+    a_riese: { n: 'Hügelriese', f: 'abent', r: 'g', t: 'k', c: 5, a: 5, h: 5, art: '🧌' },
+    a_trank: { n: 'Heiltrank', f: 'abent', r: 'g', t: 'z', c: 1, e: { k: 'heal', n: 4 }, art: '🧪', txt: 'Heile dich um 4.' },
+    a_pfeil: { n: 'Pfeilhagel', f: 'abent', r: 'g', t: 'z', c: 2, e: { k: 'dmgAll', n: 1, side: 'foe' }, art: '🏹', txt: '1 Schaden an alle gegnerischen Kreaturen.' },
+    a_klee: { n: 'Glücksklee', f: 'abent', r: 'g', t: 'z', c: 2, e: { k: 'buff', a: 2, h: 2, tg: 'own' }, art: '🍀', txt: 'Eine eigene Kreatur bekommt +2/+2.' },
+    a_karte: { n: 'Schatzkarte', f: 'abent', r: 'g', t: 'z', c: 3, e: { k: 'draw', n: 2 }, art: '🗺️', txt: 'Ziehe 2 Karten.' },
+    a_magier: { n: 'Wandermagier', f: 'abent', r: 's', t: 'k', c: 3, a: 2, h: 3, e: { k: 'dmg', n: 2, tg: 'any' }, art: '🧙‍♂️', txt: 'Ruf: 2 Schaden an ein beliebiges Ziel.' },
+    a_schwan: { n: 'Schwanenritterin', f: 'abent', r: 's', t: 'k', c: 4, a: 3, h: 4, kw: ['flug'], art: '🦢' },
+    a_falle: { n: 'Fallgrube', f: 'abent', r: 's', t: 'z', c: 3, e: { k: 'dmg', n: 4, tg: 'cre' }, art: '🕳️', txt: '4 Schaden an eine Kreatur.' },
+    a_prinz: { n: 'Prinz der Grenzlande', f: 'abent', r: 'e', t: 'k', c: 5, a: 4, h: 5, kw: ['wach'], e: { k: 'buffOthers', a: 1, h: 0 }, art: '🤴', txt: 'Ruf: Deine anderen Kreaturen bekommen +1/+0.' },
+    a_gilde: { n: 'Gildenmeisterin Rhea', f: 'abent', r: 'l', t: 'k', c: 6, a: 5, h: 5, e: { k: 'token', id: 'a_rekrut', n: 2 }, art: '🧝‍♀️', txt: 'Ruf: Beschwört 2 Gildenrekruten (2/2, Eile).' },
+    a_rekrut: { n: 'Gildenrekrut', f: 'abent', t: 'k', c: 2, a: 2, h: 2, kw: ['eile'], art: '🧑‍🎤', tok: 1 },
     // ---------- Glut ----------
     g_kobold: { n: 'Funkenkobold', f: 'glut', t: 'k', c: 1, a: 2, h: 1, kw: ['eile'], art: '👺' },
     g_fuchs: { n: 'Glutfuchs', f: 'glut', t: 'k', c: 2, a: 3, h: 2, art: '🦊' },
@@ -166,6 +187,7 @@
   };
   // Grunddecks: je 30 Karten (bekommt jeder zum Start)
   const DECKS = {
+    abent: { a_bauer: 3, a_hund: 3, a_bogen: 3, a_wache: 3, a_reiter: 3, a_schmied: 3, a_ritter: 3, a_riese: 2, a_trank: 2, a_pfeil: 2, a_klee: 2, a_karte: 1 },
     glut: { g_kobold: 3, g_fuchs: 3, g_brand: 3, g_stoss: 3, g_krieger: 3, g_phoenix: 2, g_rausch: 2, g_golem: 3, g_sturm: 2, g_meteor: 2, g_drache: 2, g_titan: 2 },
     wild: { w_moos: 2, w_wolf: 3, w_samen: 3, w_peitsche: 3, w_dorn: 3, w_hirsch: 3, w_kraut: 2, w_wuchs: 2, w_baer: 3, w_hydra: 2, w_herde: 2, w_riese: 2 },
     flut: { f_fee: 3, f_muschel: 3, f_frost: 3, f_einfall: 2, f_sirene: 3, f_falke: 3, f_welle: 2, f_schild: 2, f_golem: 3, f_strudel: 2, f_wal: 2, f_krake: 2 },

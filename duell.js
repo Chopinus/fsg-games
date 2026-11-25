@@ -32,6 +32,7 @@ function fx(s, e) { e.q = ++s.seq; s.fx.push(e); if (s.fx.length > 40) s.fx.shif
 function mkCre(s, id, owner) {
   const c = C[id], cr = { u: ++s.uc, id, o: owner, a: c.a, h: c.h, d: 0, kw: (c.kw || []).slice(), sick: !(c.kw || []).includes('eile'), tap: false, frz: false, shield: (c.kw || []).includes('schild') };
   if (bon(s, owner, 'wild')) cr.h += 1; // Urkraft
+  if (bon(s, owner, 'abent')) cr.a += 1; // Kameradschaft
   return cr;
 }
 function findCre(s, u) { for (const pid of s.p) { const c = s.pl[pid].board.find(x => x.u === u); if (c) return c; } return null; }
@@ -325,7 +326,7 @@ function deckOptions(r, pid) { // was dieser Spieler wählen kann
 function setDeck(r, pid, id) {
   const s = r.state, P = s.pl[pid];
   let cards = null, name = '';
-  if (id === 'zufall') id = 'base:' + Object.keys(DECKS)[Math.floor(Math.random() * 5)];
+  if (id === 'zufall') id = 'base:' + (k => k[Math.floor(Math.random() * k.length)])(Object.keys(DECKS));
   if (id.startsWith('base:') && DECKS[id.slice(5)]) { cards = DECKS[id.slice(5)]; name = 'Grunddeck ' + F[id.slice(5)].n; }
   else if (id.startsWith('my:') && API) {
     const acc = API.accOf(pid), d = acc && (API.decks(acc) || [])[Number(id.slice(3))];

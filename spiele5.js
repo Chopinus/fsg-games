@@ -261,7 +261,7 @@
     stage.innerHTML = `<div class="kd"><h2 class="center" style="margin:0">⚔️ Wähle dein Deck</h2><p class="note center">Gegner: ${foeTxt}</p>
       ${!v.mine ? '<p class="status">Die Spieler wählen ihre Decks …</p>' : mineF ? `<p class="status">Deck gewählt. ${foeF ? '' : `Warte auf ${esc(v.nm[v.foe])} …`}</p>` : `${v.left != null ? '<p class="note center">Noch <span data-cd></span> s.</p>' : ''}
       ${my.length ? `<h3 style="margin:4px 0">📦 Deine Decks</h3><div class="kd-decks">${my.map(dk).join('')}</div>` : `<p class="note center">Mit Konto kannst du in der <a href="#" data-kdz="decks">Kristallduell-Zentrale</a> eigene Decks aus deinen Karten bauen.</p>`}
-      <h3 style="margin:10px 0 4px">🃏 Grunddecks</h3><div class="kd-decks">${base.map(dk).join('')}<button class="kd-dk" data-kdd="zufall" style="--c1:#6a6a8a;--c2:#262636"><span class="e">🎲</span><b>Zufall</b><small>Ein zufälliges Grunddeck</small></button></div>`}</div>`;
+      ${my.length ? '<details style="margin-top:12px"><summary style="cursor:pointer;font-weight:800;text-align:center">🃏 Leihdecks (fertige Grunddecks)</summary>' : '<h3 style="margin:10px 0 4px">🃏 Grunddecks</h3>'}<div class="kd-decks" style="margin-top:8px">${base.map(dk).join('')}<button class="kd-dk" data-kdd="zufall" style="--c1:#6a6a8a;--c2:#262636"><span class="e">🎲</span><b>Zufall</b><small>Ein zufälliges Grunddeck</small></button></div>${my.length ? '</details>' : ''}`}</div>`;
   }
   const PT = { glut: ['🔥', '#ff5a3d'], wild: ['🍃', '#3ec46d'], flut: ['💧', '#3aa8ff'], nacht: ['🟣', '#a45cff'], licht: ['✨', '#f5c542'] };
   function trail(from, to, f, lv, delay) { // Angriffs-Effekt ab Stufe 4 (Stufe 5 mit Einschlag)

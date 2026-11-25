@@ -91,6 +91,46 @@
   @keyframes kdrays{to{transform:rotate(360deg)}}
   #kdpk .acts{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:24px;min-height:44px}
   #kdpk .msg{font:400 22px var(--display);color:#fff;text-align:center}
+  .kd-one.open.r-s .fr .kd-card,.kdf.open.r-s .fr .kd-card{box-shadow:0 0 0 2px #4aa8ff,0 0 18px rgba(74,168,255,.6)}
+  .kd-one.open.r-e .fr .kd-card,.kdf.open.r-e .fr .kd-card{box-shadow:0 0 0 3px #b45cff,0 0 34px rgba(180,92,255,.85);animation:kdre 1.6s ease-in-out infinite}
+  .kd-one.open.r-l .fr .kd-card,.kdf.open.r-l .fr .kd-card{box-shadow:0 0 0 3px #ffb020,0 0 44px rgba(255,176,32,.95);animation:kdrl 1.2s ease-in-out infinite}
+  @keyframes kdre{50%{box-shadow:0 0 0 3px #d49cff,0 0 50px rgba(180,92,255,1)}}
+  @keyframes kdrl{50%{box-shadow:0 0 0 4px #ffe08a,0 0 70px rgba(255,200,60,1)}}
+  #kdpk .skip{position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);right:14px;z-index:5}
+  #kdpk .cntr{font-weight:800;color:#cfc6e6;letter-spacing:.1em;z-index:3}
+  #kdpk .meteor{position:absolute;left:-15%;top:8%;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 0 18px 8px var(--mc),0 0 60px 24px var(--mc);transform:rotate(28deg);animation:kdmet 1.1s cubic-bezier(.55,0,.85,1) forwards;z-index:4}
+  #kdpk .meteor::after{content:"";position:absolute;right:8px;top:50%;width:320px;height:8px;transform:translateY(-50%);background:linear-gradient(90deg,transparent,var(--mc));border-radius:4px;filter:blur(1.5px)}
+  @keyframes kdmet{to{left:52%;top:46%}}
+  #kdpk .dim{position:absolute;inset:0;background:#000;opacity:0;transition:opacity .5s;pointer-events:none}
+  #kdpk .dim.on{opacity:.55}
+  #kdpk .vortex{position:absolute;left:50%;top:46%;width:620px;height:620px;margin:-310px 0 0 -310px;border-radius:50%;background:conic-gradient(from 0deg,transparent,var(--vc),transparent 30%,var(--vc),transparent 60%,var(--vc),transparent);filter:blur(18px);opacity:0;transition:opacity .4s;animation:kdrays 1.4s linear infinite;pointer-events:none}
+  #kdpk .vortex.on{opacity:.75}
+  .kd-one{position:relative;width:min(230px,58vw);aspect-ratio:.7;perspective:1200px;cursor:pointer;z-index:3}
+  .kd-one .fl{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .8s cubic-bezier(.3,1.25,.5,1)}
+  .kd-one.open .fl{transform:rotateY(180deg)}
+  .kd-one .bk,.kd-one .fr{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+  .kd-one .fr{transform:rotateY(180deg)} .kd-one .fr .kd-card.big{width:100%;height:100%;animation:none}
+  .kd-one .bk{border-radius:20px;border:3px solid #8a7ab8;background:radial-gradient(circle at 50% 40%,#5a3fa0,#1a1030);display:grid;place-items:center;font-size:84px;box-shadow:0 14px 30px rgba(0,0,0,.6),0 0 var(--gw,0) var(--rc)}
+  .kd-one .bk::after{content:"";position:absolute;inset:10px;border-radius:14px;border:2px dashed rgba(255,255,255,.22)}
+  .kd-one.r-s .bk{--gw:18px}.kd-one.r-e .bk{--gw:34px;animation:kdglow 1.1s ease-in-out infinite}.kd-one.r-l .bk{--gw:50px;animation:kdglow .7s ease-in-out infinite}
+  .kd-one.in{animation:kdonein .5s cubic-bezier(.2,1.3,.4,1) both}
+  @keyframes kdonein{from{transform:translateX(70vw) rotate(25deg);opacity:0}}
+  .kd-one.out{animation:kdoneout .35s ease-in forwards}
+  @keyframes kdoneout{to{transform:translateX(-80vw) rotate(-25deg);opacity:0}}
+  .kd-one.charge{animation:kdcharge .9s ease-in-out}
+  @keyframes kdcharge{20%{transform:translateY(-6px) rotate(-3deg)}40%{transform:translateY(-10px) rotate(3deg) scale(1.04)}60%{transform:translateY(-14px) rotate(-4deg) scale(1.07)}80%{transform:translateY(-18px) rotate(4deg) scale(1.1)}}
+  .kd-one.chargeL{animation:kdchargeL 1.6s ease-in-out}
+  @keyframes kdchargeL{15%{transform:translateY(-8px) rotate(-2deg)}30%{transform:translateY(-16px) rotate(3deg) scale(1.05)}45%{transform:translateY(-24px) rotate(-4deg) scale(1.08)}60%{transform:translateY(-32px) rotate(5deg) scale(1.12)}75%{transform:translateY(-38px) rotate(-6deg) scale(1.16)}90%{transform:translateY(-40px) scale(1.2)}100%{transform:none}}
+  .kd-one.pop{animation:kdonepop .6s cubic-bezier(.2,1.6,.4,1)}
+  @keyframes kdonepop{30%{transform:scale(1.15)}}
+  #kdpk .inf{min-height:66px;text-align:center;opacity:0;transition:opacity .4s .5s;z-index:3}
+  #kdpk .inf.on{opacity:1} #kdpk .inf b{display:block;font:400 26px var(--display);color:#fff} #kdpk .inf .rr{font-weight:800;letter-spacing:.12em;text-transform:uppercase;font-size:13px}
+  #kdpk .inf .lbl{position:static;transform:none;opacity:1;display:block;margin-top:4px;font-size:15px}
+  #kdpk .hint{color:#a99cc8;font-size:13px;z-index:3;min-height:18px}
+  #kdpk .rtx{position:absolute;top:12%;left:50%;white-space:nowrap;font:400 clamp(40px,10vw,76px) var(--display);color:var(--rc);text-shadow:0 0 30px var(--rc),0 4px 0 rgba(0,0,0,.6);animation:kdban 1.8s ease-out forwards;pointer-events:none;z-index:4}
+  #kdpk .sum{display:flex;flex-direction:column;align-items:center;gap:10px;z-index:3;animation:kdzin .3s both}
+  #kdpk .sum .row5 .kdf{animation:kdfin .5s cubic-bezier(.2,1.3,.4,1) both}
+  #kdpk .cv{position:fixed;z-index:4;pointer-events:none;width:8px;height:8px;border-radius:50%;background:#ffd23f;box-shadow:0 0 10px 3px #ffb020;transition:left .9s cubic-bezier(.5,0,.8,.6),top .9s cubic-bezier(.5,0,.8,.6),opacity .9s}
   `;
   const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
   const q = s => document.querySelector(s);
@@ -134,16 +174,18 @@
   const welcomeBox = s => s && s.welcome > 0 ? `<div class="box kdz-wel"><span class="e">🎁</span><div style="flex:1;min-width:180px"><b>Willkommens-Packs: noch ${s.welcome}</b><div class="note" style="color:#f0e8ff">Zufällige Karten aus allen fünf Themen – genug für dein erstes eigenes Deck. Danach baut dir ✨ „Automatisch bauen“ ein Startdeck.</div></div><button class="btn" data-kdzpack="start">Öffnen</button></div>` : '';
   function tabPlay(s) {
     const tot = Object.values(C).filter(c => !c.tok).length, own = s ? Object.keys(s.c).filter(id => C[id] && !C[id].tok && s.c[id] > 0).length : 0;
-    return `${welcomeBox(s)}<div class="big2">
+    const first = s && !s.packs && s.lad === 0 ? `<div class="box kdz-wel" style="animation:none"><span class="e" style="animation:none">🗺️</span><div style="flex:1;min-width:200px"><b>Willkommen, Abenteurer!</b><div class="note" style="color:#f0e8ff">Du besitzt das <b>Abenteuer-Startdeck</b> (30 Karten). So geht's weiter:<br>1. Spiele gegen den Bot oder Freunde → du bekommst 🪙 Funken.<br>2. Öffne mit Funken Packs → neue Karten aus allen Themen.<br>3. Baue unter 📦 Decks dein eigenes Deck.</div></div><button class="btn" data-kdzt="packs">🎁 Erstes Pack öffnen</button></div>` : '';
+    return `${welcomeBox(s)}${first}<div class="big2">
       <button class="bigb" data-kdzgo="friends" style="background:linear-gradient(135deg,#6a3fd6,#2a1a6a)"><span class="e">👥</span><b>Gegen Freunde</b><span>Runde erstellen und Freunde einladen</span></button>
       <button class="bigb" data-kdzgo="0" style="background:linear-gradient(135deg,#1f6a8a,#0b2a3a)"><span class="e">🤖</span><b>Übungs-Bot</b><span>Locker üben, gibt etwas Funken</span></button>
       <button class="bigb" data-kdzt="leiter" style="background:linear-gradient(135deg,#a8790a,#3a2a00)"><span class="e">🏆</span><b>Bot-Leiter</b><span>${s ? `Stufe ${s.lad}/${LADDER.length} geschafft` : '10 Gegner, immer stärker'}</span></button></div>
       ${s ? `<div class="box"><h3>📅 Tagesaufgaben</h3>${s.dq.map(x => `<div class="q ${x.done ? 'done' : ''}"><span class="t">${x.done ? '✅' : '🎯'} ${esc(x.t)}</span><span class="bar"><i style="width:${(x.n / x.g) * 100}%"></i></span><span>${x.n}/${x.g}</span><span>+60 🪙</span></div>`).join('')}
         <div class="q ${s.dfw ? 'done' : ''}"><span class="t">${s.dfw ? '✅' : '🌅'} Erster Sieg des Tages</span><span>+60 🪙</span></div></div>
         <div class="box"><h3>📊 Deine Sammlung</h3><p style="margin:4px 0">${own} von ${tot} Karten · ${s.packs} Packs geöffnet · ${s.decks.length} eigene Decks</p><p class="note" style="margin:0">Funken gibt es für jedes Duell (Siege zählen mehr), für Tagesaufgaben und für neue Stufen der Bot-Leiter.</p></div>` : `<div class="box">${needLogin('Karten zu sammeln, Packs zu öffnen und eigene Decks zu bauen')}</div>`}
-      <div class="box"><h3>⭐ Kartenstufen</h3><p class="note" style="margin:4px 0">Ziehst du eine Karte mehrfach, steigt ihre Stufe – nur das Aussehen ändert sich, nicht die Stärke:</p>
-        <div class="stat"><span>★★ Silberrahmen</span><span>★★★ Goldrahmen mit Glanz</span><span>★★★★ leuchtet + Angriffs-Effekt</span><span>★★★★★ Prisma-Rahmen, Aura und Einschlag</span></div></div>
-      <div class="box"><h3>🎨 Themen-Boni</h3><p class="note" style="margin:4px 0">Ab ${K.BONUS_MIN} Karten eines Themas im Deck. Du kannst Themen frei mischen – mit 10/10/10 hast du sogar drei Boni.</p>${Object.entries(B).map(([f, b]) => `<div>${fc(f).e} <b>${b[0]}</b> – ${b[1]}</div>`).join('')}</div>`;
+      <details class="box"><summary style="cursor:pointer;font-weight:800">ℹ️ So funktioniert das Sammeln</summary>
+        <p class="note" style="margin:8px 0 4px">Ziehst du eine Karte mehrfach, steigt ihre Stufe – nur das Aussehen ändert sich, nicht die Stärke:</p>
+        <div class="stat"><span>★★ Silberrahmen</span><span>★★★ Goldrahmen mit Glanz</span><span>★★★★ leuchtet + Angriffs-Effekt</span><span>★★★★★ Prisma-Rahmen, Aura und Einschlag</span></div>
+        <p class="note" style="margin:10px 0 4px">Themen-Boni gibt es ab ${K.BONUS_MIN} Karten eines Themas im Deck. Themen darfst du frei mischen.</p>${Object.entries(B).map(([f, b]) => `<div>${fc(f).e} <b>${b[0]}</b> – ${b[1]}</div>`).join('')}</details></div>`;
   }
   function tabPacks(s) {
     if (s.welcome > 0) return welcomeBox(s) + '<p class="note center">Öffne zuerst deine Willkommens-Packs – danach kannst du hier mit Funken neue Packs kaufen.</p>';
@@ -226,44 +268,96 @@
         ${open ? `<button class="btn ${done ? 'ghost small' : ''}" data-kdzgo="${lv}">${done ? 'Nochmal' : '⚔️ Kämpfen'}</button>` : '<span style="font-size:22px">🔒</span>'}</div>`; }).join('')}</div>`;
   }
   // Pack öffnen mit Animation
+  // Pack öffnen: Karten werden nacheinander aufgedeckt, am Ende alle zusammen gezeigt. Episch und legendär mit eigener Animation.
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const RCOL = { g: '#e8e8f0', s: '#4aa8ff', e: '#b45cff', l: '#ffb020' };
   async function openPack(th) {
     if (Z.busy) return; Z.busy = true;
     const f = th === 'mix' ? { col: '#b45cff', col2: '#1f3a8a', e: '💎', n: 'Kristall' } : th === 'start' ? { col: '#ffb020', col2: '#7a2a8a', e: '🎁', n: 'Willkommens' } : fc(th);
     const o = document.createElement('div'); o.id = 'kdpk'; o.style.cssText = `--c1:${f.col};--c2:${f.col2}`;
-    o.innerHTML = `<div class="rays"></div><div class="kdz-pack pk" style="--c1:${f.col};--c2:${f.col2}"><span class="e">${f.e}</span><b>${th === 'mix' ? 'Kristallpack' : th === 'start' ? 'Willkommens-Pack' : f.n + '-Pack'}</b></div><div class="msg">Wird geöffnet …</div>`;
+    o.innerHTML = `<div class="dim"></div><div class="rays"></div><div class="vortex"></div><button class="btn ghost small skip" hidden>Überspringen ⏭</button>
+      <div class="kdz-pack pk" style="--c1:${f.col};--c2:${f.col2}"><span class="e">${f.e}</span><b>${th === 'mix' ? 'Kristallpack' : th === 'start' ? 'Willkommens-Pack' : f.n + '-Pack'}</b></div><div class="msg">Wird geöffnet …</div>`;
     document.body.appendChild(o);
-    const [r] = await Promise.all([call('kd_pack', { th }), new Promise(res => setTimeout(res, 1100))]);
+    const [r] = await Promise.all([call('kd_pack', { th }), sleep(600)]);
     Z.busy = false;
     if (r.error) { o.remove(); toast(r.error); return; }
-    o.querySelector('.pk').classList.add('boom'); const fl = document.createElement('div'); fl.className = 'flash'; o.appendChild(fl);
-    await new Promise(res => setTimeout(res, 450));
-    o.querySelector('.pk').remove(); o.querySelector('.msg').textContent = r.pity ? (r.pity === 'l' ? '🧡 Glücksschutz: legendäre Karte garantiert!' : '💜 Glücksschutz: epische Karte garantiert!') : 'Tippe die Karten an!';
-    const row = document.createElement('div'); row.className = 'row5';
-    row.innerHTML = r.cards.map((c, i) => `<div class="kdf r-${c.r}" data-i="${i}" style="--rc:${RAR[c.r].col};animation-delay:${i * 0.12}s"><div class="fl"><div class="bk">💎</div><div class="fr">${card(c.id, { lv: Math.max(1, c.lv) })}</div></div>
-      <span class="lbl ${c.isNew ? 'new' : c.up ? 'up' : c.dust ? 'dust' : 'n'}">${c.isNew ? '✨ NEU!' : c.up ? `★ Stufe ${c.lv}!` : c.dust ? `+${c.dust} ✨ Staub` : `×${c.n}`}</span></div>`).join('');
-    o.appendChild(row);
-    const acts = document.createElement('div'); acts.className = 'acts'; acts.innerHTML = '<button class="btn" data-pk="all">Alle aufdecken</button>'; o.appendChild(acts);
-    const flip = (el) => {
-      if (el.classList.contains('open')) return; el.classList.add('open');
-      const c = r.cards[Number(el.dataset.i)], rc = el.getBoundingClientRect(), at = [rc.left + rc.width / 2, rc.top + rc.height / 2];
-      if (c.r === 'e' || c.r === 'l') setTimeout(() => window.KDfx && KDfx.burst(at, c.r === 'l' ? '🧡' : '💜', RAR[c.r].col), 300);
-      if (c.r === 'l') { o.querySelector('.rays').classList.add('on'); const t = document.createElement('div'); t.className = 'leg'; t.textContent = 'LEGENDÄR!'; o.appendChild(t); setTimeout(() => t.remove(), 1900); if (navigator.vibrate) navigator.vibrate([60, 40, 120]); }
-      if (c.up && c.lv >= 4) setTimeout(() => window.KDfx && KDfx.burst(at, '⭐', '#ffd23f'), 500);
-      if (row.querySelectorAll('.kdf:not(.open)').length === 0) setTimeout(done, 700);
-    };
-    const done = () => {
-      if (r.welcome) { acts.innerHTML = r.state.welcome > 0 ? `<button class="btn" data-pk="again">🎁 Nächstes Willkommens-Pack (${r.state.welcome} übrig)</button><button class="btn ghost" data-pk="close">Später</button>` : '<button class="btn" data-pk="auto">✨ Startdeck automatisch bauen</button><button class="btn ghost" data-pk="close">Fertig</button>'; return; }
-      const can = r.state.free > 0 || r.state.f >= PACK.cost; acts.innerHTML = `${can ? `<button class="btn" data-pk="again">🎁 Noch ein Pack (${r.state.free ? 'Gratis' : PACK.cost + ' 🪙'})</button>` : ''}<button class="btn ghost" data-pk="close">Fertig</button>`; };
+    setState(r.state, true);
+    let waiter = null, skip = false;
+    const tap = () => (skip ? Promise.resolve() : new Promise(res => { waiter = res; }));
+    const skipBtn = o.querySelector('.skip');
     o.addEventListener('click', e => {
-      const k = e.target.closest('.kdf'); if (k) { if (k.classList.contains('open')) { const c = r.cards[Number(k.dataset.i)]; showCard(c.id); } else flip(k); return; }
+      if (e.target.closest('.skip')) { skip = true; skipBtn.hidden = true; }
+      if (waiter) { const w = waiter; waiter = null; w(); }
+    });
+    const msg = o.querySelector('.msg'), pk = o.querySelector('.pk');
+    msg.textContent = r.pity ? (r.pity === 'l' ? '🧡 Glücksschutz: legendäre Karte garantiert!' : '💜 Glücksschutz: epische Karte garantiert!') : 'Tippe auf das Pack!';
+    await tap();
+    // Sternschnuppe in der Farbe der besten Karte
+    const best = ['l', 'e', 's', 'g'].find(x => r.cards.some(c => c.r === x));
+    pk.style.animationDuration = '.25s'; msg.textContent = '';
+    if (!skip) {
+      const m = document.createElement('div'); m.className = 'meteor'; m.style.setProperty('--mc', RCOL[best]); o.appendChild(m);
+      await sleep(1050); m.remove();
+    }
+    pk.classList.add('boom'); const fl = document.createElement('div'); fl.className = 'flash'; fl.style.background = best === 'g' ? '#fff' : RCOL[best]; o.appendChild(fl);
+    await sleep(450); pk.remove(); msg.remove(); setTimeout(() => fl.remove(), 600);
+    skipBtn.hidden = false;
+    const dim = o.querySelector('.dim'), rays = o.querySelector('.rays'), vortex = o.querySelector('.vortex');
+    const center = el => { const b = el.getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; };
+    // Karten einzeln aufdecken
+    for (let i = 0; i < r.cards.length && !skip; i++) {
+      const c = r.cards[i], R = RAR[c.r];
+      const wrap = document.createElement('div'); wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:14px;z-index:3';
+      wrap.innerHTML = `<div class="cntr">KARTE ${i + 1} / ${r.cards.length}</div><div class="kd-one in r-${c.r}" style="--rc:${R.col}"><div class="fl"><div class="bk">💎</div><div class="fr">${card(c.id, { cls: 'big', lv: Math.max(1, c.lv) })}</div></div></div>
+        <div class="inf"><b>${esc(C[c.id].n)}</b><span class="rr" style="color:${R.col}">◆ ${R.n}</span><span class="lbl ${c.isNew ? 'new' : c.up ? 'up' : c.dust ? 'dust' : 'n'}">${c.isNew ? '✨ NEU in deiner Sammlung!' : c.up ? `★ Stufe ${c.lv} erreicht!` : c.dust ? `Höchste Stufe – +${c.dust} ✨ Sternenstaub` : `Jetzt ${c.n}× im Besitz`}</span></div><div class="hint">Tippen zum Aufdecken</div>`;
+      o.appendChild(wrap);
+      const one = wrap.querySelector('.kd-one'), inf = wrap.querySelector('.inf'), hint = wrap.querySelector('.hint');
+      await tap(); if (skip) { wrap.remove(); break; }
+      hint.textContent = '';
+      if (c.r === 'e') { vortex.style.setProperty('--vc', 'rgba(180,92,255,.9)'); vortex.classList.add('on'); one.classList.remove('in'); one.classList.add('charge'); await sleep(900); }
+      if (c.r === 'l') {
+        dim.classList.add('on'); vortex.style.setProperty('--vc', 'rgba(255,176,32,.95)'); vortex.classList.add('on'); one.classList.remove('in'); one.classList.add('chargeL');
+        const [cx, cy] = center(one);
+        for (let k = 0; k < 26; k++) { const p = document.createElement('i'); p.className = 'cv'; const a = Math.random() * Math.PI * 2, d = 260 + Math.random() * 200; p.style.left = cx + Math.cos(a) * d + 'px'; p.style.top = cy + Math.sin(a) * d + 'px'; o.appendChild(p);
+          setTimeout(() => { p.style.left = cx + 'px'; p.style.top = cy + 'px'; p.style.opacity = '0'; }, 50 + k * 30); setTimeout(() => p.remove(), 1500); }
+        if (navigator.vibrate) navigator.vibrate([30, 60, 30, 60, 30]);
+        await sleep(1600);
+      }
+      one.classList.remove('in', 'charge', 'chargeL'); one.classList.add('open');
+      vortex.classList.remove('on'); dim.classList.remove('on');
+      await sleep(350);
+      const at = center(one);
+      if (c.r !== 'g' && window.KDfx) KDfx.burst(at, c.r === 'l' ? '🧡' : c.r === 'e' ? '💜' : '💠', R.col);
+      if (c.r === 'e' || c.r === 'l') {
+        one.classList.add('pop'); const t = document.createElement('div'); t.className = 'rtx'; t.style.setProperty('--rc', R.col); t.textContent = c.r === 'l' ? 'LEGENDÄR!' : 'EPISCH!'; o.appendChild(t); setTimeout(() => t.remove(), 1900);
+        if (window.KDfx) setTimeout(() => KDfx.burst(at, '✦', R.col), 250);
+      }
+      if (c.r === 'l') { rays.classList.add('on'); if (navigator.vibrate) navigator.vibrate([80, 40, 160]); }
+      if (c.up && c.lv >= 3 && window.KDfx) setTimeout(() => KDfx.burst(at, '⭐', '#ffd23f'), 500);
+      inf.classList.add('on'); hint.textContent = i < r.cards.length - 1 ? 'Tippen für die nächste Karte' : 'Tippen für die Übersicht';
+      await tap();
+      rays.classList.remove('on');
+      one.classList.add('out'); inf.style.opacity = 0; await sleep(skip ? 0 : 320); wrap.remove();
+    }
+    // Übersicht
+    skipBtn.remove(); rays.classList.remove('on'); vortex.classList.remove('on'); dim.classList.remove('on');
+    o.querySelectorAll('.kd-one,.cntr,.inf,.hint').forEach(e => e.parentElement && e.parentElement !== o ? e.parentElement.remove() : e.remove());
+    const sum = document.createElement('div'); sum.className = 'sum';
+    sum.innerHTML = `<div class="msg">Deine neuen Karten</div><div class="row5">${r.cards.map((c, i) => `<div class="kdf open r-${c.r}" data-i="${i}" style="--rc:${RAD(c.r)};animation-delay:${i * 0.09}s"><div class="fl"><div class="bk">💎</div><div class="fr">${card(c.id, { lv: Math.max(1, c.lv) })}</div></div>
+      <span class="lbl ${c.isNew ? 'new' : c.up ? 'up' : c.dust ? 'dust' : 'n'}">${c.isNew ? '✨ NEU!' : c.up ? `★ Stufe ${c.lv}!` : c.dust ? `+${c.dust} ✨` : `×${c.n}`}</span></div>`).join('')}</div><div class="acts"></div>`;
+    o.appendChild(sum);
+    const acts = sum.querySelector('.acts');
+    if (r.welcome) acts.innerHTML = r.state.welcome > 0 ? `<button class="btn" data-pk="again">🎁 Nächstes Willkommens-Pack (${r.state.welcome} übrig)</button><button class="btn ghost" data-pk="close">Später</button>` : '<button class="btn" data-pk="auto">✨ Deck automatisch bauen</button><button class="btn ghost" data-pk="close">Fertig</button>';
+    else { const can = r.state.free > 0 || r.state.f >= PACK.cost; acts.innerHTML = `${can ? `<button class="btn" data-pk="again">🎁 Noch ein Pack (${r.state.free ? 'Gratis' : PACK.cost + ' 🪙'})</button>` : ''}<button class="btn ghost" data-pk="close">Fertig</button>`; }
+    sum.addEventListener('click', e => {
+      const k = e.target.closest('.kdf'); if (k) { showCard(r.cards[Number(k.dataset.i)].id); return; }
       const b = e.target.closest('[data-pk]'); if (!b) return;
-      if (b.dataset.pk === 'all') row.querySelectorAll('.kdf:not(.open)').forEach((el, i) => setTimeout(() => flip(el), i * 220));
-      else if (b.dataset.pk === 'again') { o.remove(); openPack(th); }
-      else if (b.dataset.pk === 'auto') { o.remove(); Z.tab = 'decks'; Z.ed = { i: -1, n: 'Mein Startdeck', cards: autoDeck(Z.st.c), dirty: true }; render(); toast('✨ Startdeck gebaut – passe es an und speichere es!'); }
+      if (b.dataset.pk === 'again') { o.remove(); openPack(th); }
+      else if (b.dataset.pk === 'auto') { o.remove(); Z.tab = 'decks'; Z.ed = { i: -1, n: 'Mein Deck', cards: autoDeck(Z.st.c), dirty: true }; render(); toast('✨ Deck gebaut – passe es an und speichere es!'); }
       else o.remove();
     });
-    setState(r.state, true);
   }
+  const RAD = r => RAR[r].col;
   function startGame(kind) {
     close();
     const lvl = kind === 'friends' ? null : Number(kind) || 0;
