@@ -164,7 +164,7 @@
       { ...room('agenten'), g: 'linear-gradient(135deg,#6a2030,#1f3a6a)', cats: ['freunde', 'party'] },
       { ...room('schiffe'), g: 'linear-gradient(180deg,#0f3d6e,#08223f)', cats: ['freunde', 'top'] },
       { ...room('turnier'), g: 'linear-gradient(135deg,#6a4a00,#2a1d00)', cats: ['freunde', 'party'] },
-      { ...room('duell'), g: 'radial-gradient(circle at 50% 40%,#3a1f6a,#0d0a18)', cats: ['freunde'], big: 1 },
+      { ...room('duell'), act: 'data-kdz="1"', btn: 'Spielen', g: 'radial-gradient(circle at 50% 40%,#3a1f6a,#0d0a18)', cats: ['freunde'], big: 1 },
       { k: 'dungeon', t: 'Dungeon', s: 'Pixel-Dungeon-Crawler mit Helden, Artefakten und Bossen – auch im Koop. Testversion v0.1.', art: '<span class="dg-art"></span>', act: 'data-dungeon="1"', btn: 'Spielen', pill: 'v0.1 Test', g: 'linear-gradient(135deg,#2a1a3a,#0d0814)', cats: ['solo'] },
       { k: 'insel', t: 'Inselreich', s: 'Offene Pixelwelt für alle: Inseln erkunden, bauen, segeln und gemeinsam spielen.', art: '<span class="is-art"></span>', act: 'data-insel="1"', btn: 'Spielen', pill: 'Welt', g: 'linear-gradient(135deg,#0f5a7a,#082a3a)', cats: ['solo'] },
       { k: 'welt', t: 'Würfelwelt', s: 'Unendliche Würfelwelt – abbauen, bauen, entdecken. Kreativ- oder Überlebensmodus.', art: '<span class="ww-art"></span>', act: 'data-welt="1"', btn: 'Spielen', pill: 'Welt', g: 'linear-gradient(135deg,#3a6a2a,#1a2e12)', cats: ['solo'] },

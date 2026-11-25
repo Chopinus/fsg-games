@@ -49,6 +49,7 @@ if (konten && konten.czAcc) GAMES.casino.setBank({
   maxBet: k => konten.czMaxBet(k),
   roomLive: (id, k) => !czRelease(k, id),
 });
+if (konten && konten.kdApi) GAMES.duell.setApi({ accOf: pid => ACC_OF.get(pid) || null, ...konten.kdApi }); // Kristallduell: Decks, Stufen, Belohnungen
 if (konten && konten.setCzRelease) konten.setCzRelease(k => czRelease(k));
 // Admin hat den Jetonstand gesetzt: auch den Platz am Tisch anpassen, sonst überschreibt der Tisch den neuen Stand
 if (konten && konten.setCzSetHook) konten.setCzSetHook((k, w) => { for (const r of rooms.values()) { if (r.game !== 'casino' || !r.state || !r.state.seats) continue; for (const x of r.state.seats) if (x && x.acc === k) { x.chips = w; if (x.stack != null) x.stack = 0; pushRoom(r); } } });
@@ -127,7 +128,7 @@ const IDLE_MS = 30 * 60 * 1000; // Räume ohne verbundene Spieler verschwinden n
 
 const STATIC = {
   '/': 'index.html', '/index.html': 'index.html', '/app.js': 'app.js', '/style.css': 'style.css',
-  '/mini.js': 'mini.js', '/ritter.js': 'ritter.js', '/spiele2.js': 'spiele2.js', '/welt.js': 'welt.js', '/casino_ui.js': 'casino_ui.js', '/insel.js': 'insel.js', '/ideen.js': 'ideen.js', '/dungeon.html': 'dungeon.html', '/freunde.js': 'freunde.js', '/wortle_ui.js': 'wortle_ui.js', '/siedler_ui.js': 'siedler_ui.js', '/spiele3.js': 'spiele3.js', '/spiele4.js': 'spiele4.js', '/raetsel_ui.js': 'raetsel_ui.js', '/turmwacht.js': 'turmwacht.js', '/hub_ui.js': 'hub_ui.js', '/spiele5.js': 'spiele5.js', '/duell_karten.js': 'duell_karten.js',
+  '/mini.js': 'mini.js', '/ritter.js': 'ritter.js', '/spiele2.js': 'spiele2.js', '/welt.js': 'welt.js', '/casino_ui.js': 'casino_ui.js', '/insel.js': 'insel.js', '/ideen.js': 'ideen.js', '/dungeon.html': 'dungeon.html', '/freunde.js': 'freunde.js', '/wortle_ui.js': 'wortle_ui.js', '/siedler_ui.js': 'siedler_ui.js', '/spiele3.js': 'spiele3.js', '/spiele4.js': 'spiele4.js', '/raetsel_ui.js': 'raetsel_ui.js', '/turmwacht.js': 'turmwacht.js', '/hub_ui.js': 'hub_ui.js', '/spiele5.js': 'spiele5.js', '/duell_karten.js': 'duell_karten.js', '/kd_zentrale.js': 'kd_zentrale.js',
 };
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
 

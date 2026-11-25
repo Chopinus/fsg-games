@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const WORTLE = require('./wortle.js');
 const HUB = require('./hublevel.js'); // Hub-Level und Wochen-Aufgaben
 const RX = require('./raetsel.js'); // Tagesrätsel
+const KD = require('./kd_konto.js'); // Kristallduell: Sammlung, Packs, Decks
 const fs = require('fs');
 const path = require('path');
 
@@ -929,6 +930,10 @@ async function handle(action, body, ip) {
     if (action === 'wd_guess' && !wasWin && res[1] && res[1].win) HUB.event(acc, 'wortle', 1, markDirty);
     return res;
   }
+  if (KD.ACTIONS.includes(action)) { // Kristallduell
+    if (!acc || !(acc.tokens || []).includes(sha256(String(body.token || '')))) return [401, { error: 'Melde dich im Game Hub an, um Karten zu sammeln.' }];
+    const res = KD.action(action, acc, body); if (res[0] === 200) markDirty(); return res;
+  }
   if (['hub_state', 'hub_color', 'hub_favs', 'rx_state', 'rx_start', 'rx_submit', 'td_submit', 'td_top'].includes(action)) { // Hub-Level, Tagesrätsel, Turmwacht
     if (action === 'td_top') return [200, { top: tdTop() }];
     if (!acc || !(acc.tokens || []).includes(sha256(String(body.token || '')))) return [401, { error: 'Melde dich im Game Hub an, um mitzumachen.' }];
@@ -987,4 +992,10 @@ function tdTop() { if (tdC) return tdC; const L = []; for (const [k, a] of Objec
 // Für server.js: Runde beendet → EP; Level und Namensfarbe für die Anzeige
 const hubEvent = (k, ev, n) => { const a = accounts[k]; return a ? HUB.event(a, ev, n, markDirty) : 0; };
 const hubBadge = k => { const a = accounts[k]; if (!a) return null; const L = HUB.lvOf((a.hub && a.hub.xp) || 0); return { lv: L.lv, nc: HUB.colorOf(a) }; };
-module.exports = { hubEvent, hubBadge, czPlayWork, setCzSetHook, setPresence, setChatHook, friendKeys, areFriends, accName, keyOfName: n => keyOf(cleanName(n)), handle, flush, durable, tokenKey, czAcc, czSync, czSeated, setCzRelease, czMaxBet, isAdmin, adminNames };
+// Kristallduell: Schnittstelle für den Spiel-Server (duell.js)
+const kdApi = {
+  decks: k => (accounts[k] ? KD.deckList(accounts[k]) : []),
+  levels: k => (accounts[k] ? KD.levels(accounts[k]) : {}),
+  reward: (k, info) => { const a = accounts[k]; if (!a) return null; const r = KD.reward(a, info); markDirty(); return r; },
+};
+module.exports = { kdApi, hubEvent, hubBadge, czPlayWork, setCzSetHook, setPresence, setChatHook, friendKeys, areFriends, accName, keyOfName: n => keyOf(cleanName(n)), handle, flush, durable, tokenKey, czAcc, czSync, czSeated, setCzRelease, czMaxBet, isAdmin, adminNames };
