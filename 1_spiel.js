@@ -745,8 +745,21 @@
   const rankOf = a => { a = Math.max(0, Math.floor(a || 0)); const R0 = RANKS[Math.min(a, RANKS.length - 1)]; return { name: a < RANKS.length ? R0.name : `Kaiser ${romanN(a - RANKS.length + 2)}`, col: R0.col, n: a }; };
   const rankBonus = a => 2 * a; // einmalige Kronen beim Erreichen eines neuen Rangs
   // Helden-Meisterschaft: Erfahrung je Held über alle Aufstiege, Stufen geben Bonus und Farben
-  const MAST_MAX = 10;
-  const mastNeed = L => Math.round(300 * Math.pow(1.5, L));
+  // Spieler-Idee (v56): Höchststufe 50 statt 10. Ab Stufe 10 wächst der Bedarf nur noch gleichmäßig (+3000 je Stufe),
+  // jede Stufe darüber gibt +1 % Schaden und Leben, dazu feste Meilensteine, die Fähigkeiten und Runen des Helden verbessern.
+  const MAST_MAX = 50;
+  const mastNeed = L => (L < 10 ? Math.round(300 * Math.pow(1.5, L)) : Math.round(300 * Math.pow(1.5, 10)) + 3000 * (L - 10));
+  const mastPct = L => 2 * Math.min(L, 10) + Math.max(0, L - 10);
+  const MAST_MS = [
+    { L: 15, d: 'Fähigkeiten +10 % Schaden', fx: T => { T.actMul *= 1.1; } },
+    { L: 20, d: 'Abklingzeit der Fähigkeiten −5 %', fx: T => { T.cdr += 0.05; } },
+    { L: 25, d: '+3 % Krit-Chance', fx: T => { T.crit = (T.crit || 0) + 0.03; } },
+    { L: 30, d: 'Fähigkeiten +15 % Schaden', fx: T => { T.actMul *= 1.15; } },
+    { L: 35, d: 'Abklingzeit der Fähigkeiten −5 %', fx: T => { T.cdr += 0.05; } },
+    { L: 40, d: 'Runen in diesem Helden wirken 10 % stärker', fx: T => { T.runeSelf = (T.runeSelf || 0) + 0.1; } },
+    { L: 45, d: '−3 % erlittener Schaden', fx: T => { T.dr += 0.03; } },
+    { L: 50, d: 'Fähigkeiten +25 % Schaden und Runen in diesem Helden 15 % stärker', fx: T => { T.actMul *= 1.25; T.runeSelf = (T.runeSelf || 0) + 0.15; } },
+  ];
   function mastInfo(xp) { let L = 0, rest = Math.max(0, xp || 0); while (L < MAST_MAX && rest >= mastNeed(L)) { rest -= mastNeed(L); L++; } return { L, rest, need: L < MAST_MAX ? mastNeed(L) : 0 }; }
   const mastLevel = (S, id) => mastInfo(S.mast && S.mast[id]).L;
   const SKINS = [
@@ -2321,7 +2334,8 @@
       consApply(T, hid, consOf(S, hid));
       { const ab = artBonus(S, hid); if (ab.atkP) { T.atk *= 1 + ab.atkP; if (T.wolfAtk) T.wolfAtk *= 1 + ab.atkP; } if (ab.hpP) T.hp *= 1 + ab.hpP; if (ab.crit) T.crit += ab.crit; if (ab.critD) T.critD *= 1 + ab.critD;
         if (ab.aps) T.aps *= 1 + ab.aps; if (ab.act) T.actMul *= 1 + ab.act; if (ab.heal && T.heal) T.heal *= 1 + ab.heal; if (ab.dr) T.dr += ab.dr; }
-      const rb = runeBonus(S, hid, runeAmp(S) * (1 + (T.runeSelf || 0))), mb = 1 + 0.02 * mastLevel(S, hid);
+      const mL = mastLevel(S, hid); for (const m of MAST_MS) if (mL >= m.L) m.fx(T);
+      const rb = runeBonus(S, hid, runeAmp(S) * (1 + (T.runeSelf || 0))), mb = 1 + mastPct(mL) / 100;
       T.atk *= mb; T.hp *= mb; if (T.heal) T.heal *= mb; if (T.wolfAtk) T.wolfAtk *= mb;
       if (bardOn) T.aps *= 1 + hs.b.songAps;
       if (bardOn && hs.b.ensemble) { if (T.wolfAps) T.wolfAps *= 1 + hs.b.songAps; if (T.turretAps) T.turretAps *= 1 + hs.b.songAps; }
@@ -3250,7 +3264,7 @@
   }
 
   const core = { RAR, RAR_COL, GEAR_SLOTS, TINTS, HERO_SETS, DECO_SLOTS, ITEMS, TROPHY_N, BSET_AT, itemOf, invN, invAdd, invUsed, invFree, equipGear, setDeco, chestRoll, chestCount, openChest, trophyRoll, bsetCount, bsetAdd, CHEST, TROPHY, TRIPS, TRIP_SHARE, onTrip, tripLeft, rateOf, noteRate, hoursReward, tripReward, startTrip, claimTrip, WB, WB_BOSS, wbScore, wbBarReward, wbBarSecs, wbGoalHours, wbReward, GACHA, G_FIVE, G_FOUR, CONS_H, consList, consApply, evtBanner, evtPeriod, starSock, gachaOpen, evtOpen, gemOpen, gemBossFirst, GIFT_PULLS, consOf, bannerOf, gachaPull, GEM_SRC, LOGIN, loginItem, loginToday, claimLogin, BOUNTY, bountiesOf, bountyDone, bountyClaim, ahnLike, AHN_MISSIONS, AHN_ABIL, AHN_MECH, AHN_BOONS, ahnRollBoons, ahnPickBoon, ahnBoonText, ahnApplyBoons, AHN_TRAIT, AHNE, AHN_TUNE, AHN_COUNT, ahnOpen, ahnBossesOf, ahnLevelFor, placeSigil, ahnClaim, unrebirth, transmute, bossRuneTier, resetPerks, buyLager, lagerCost, LAGER_MAX, runeCap, shardOf, mergeCost, ALTAR_MAX, altarCost, altarMul, buyAltar, kSlots, kFree, keyCap, addSock, removeSock, removeKey, PUZZLE, MISSIONS, MISSION, PIECE_COST, claimExp, splTrade, assembled, pieceCount, pieceMask, expOpen, expStage, fieldOf, fieldSlots, toggleField, bossOf, BOSS_NAMES, TEMPO_COST, maxSpeed, buyTempo, areaMax, zoneName, BIOMES, HEROES, HERO, NODES, NODE, PERKS, RUNES, RUNE, TUNE, fresh, migrate, stats, newRun, step, buy, canBuy, available, blockReason, nodeCost, rank, perk, buyPerk, perkCost,
-    SEASON, rankOf, RANKS, rankBonus, AREAS, areaOf, MISSIONS, extraSocks, XSOCK, sockOk, runeAmp, mastInfo, mastLevel, SKINS, WF_STAGE, WF, wfSpawn,
+    SEASON, rankOf, RANKS, rankBonus, AREAS, areaOf, MISSIONS, extraSocks, XSOCK, sockOk, runeAmp, mastInfo, mastLevel, mastPct, MAST_MS, SKINS, WF_STAGE, WF, wfSpawn,
     sigOn, sig2On, sig2Open, buyFullTree, fullMaxOpen, FULLMAX_ASC, placeSigil2, SIG2_ASC, SIG2_ID, sigActCap, sigKeysUsed, keyNeed, eqOf, slotLim, SIG, SIG_FLAGS, newRun, step, stats, buy, available, blockReason, NODE, migrate, fresh,
     rebirth, ascend, crownsFor, buyCperk, cperkCost, cperk, CPERKS, levelComp, toggleComp, compCost, compMax, compSlots, COMPS, checkAch, ACH, claimWeekly, weekId, dayId, weekRules, RULE, WEEK_TIERS, statsFor, starsFor, toggleEquip, slotsOf, hired, classOpen, keysUsed, keyLimit, capOf, reqOf, feature, encode, decode, fmt, socket, unsocket, merge, canMerge, dismantle, buyRune, runeVal, addRune, arteClaim, artMake, artEquip, artReroll, artDestroy, artToggleLock, artBonus, artRefill, ARTE, TRAITS, SUBS, subOf, pickSub, subOpen, fieldSlots };
   if (typeof module !== 'undefined') { module.exports = core; return; }

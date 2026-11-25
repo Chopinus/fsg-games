@@ -307,6 +307,12 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 91, title: 'Spieler-Idee: Meisterschaft bis Stufe 50 mit Meilensteinen', date: '25.11.2026', items: [
+      'Die Meisterschaft geht jetzt bis Stufe 50 statt 10. Bereits gesammelte Erfahrung zählt sofort – wer viel gespielt hat, steigt direkt mehrere Stufen auf.',
+      'Ab Stufe 10 wächst der Bedarf nur noch gleichmäßig. Jede Stufe über 10 gibt +1 % Schaden und Leben (bis 10 weiterhin +2 %).',
+      'Neue Meilensteine je Held: ★15 Fähigkeiten +10 % Schaden, ★20 Abklingzeit −5 %, ★25 +3 % Krit-Chance, ★30 Fähigkeiten +15 % Schaden, ★35 Abklingzeit −5 %, ★40 Runen im Helden +10 % stärker, ★45 −3 % erlittener Schaden, ★50 Fähigkeiten +25 % und Runen +15 % stärker.',
+      'Die Meilensteine siehst du beim Helden unter der Meisterschaft.',
+    ] },
     { id: 90, title: 'Spieler-Idee: „Alles verschmelzen“ schont eingesetzte Runen', date: '25.11.2026', items: [
       '„Alles verschmelzen“ nimmt nur noch freie Runen. Runen, die im Runengolem oder bei einem anderen Helden eingesetzt sind, bleiben in ihrem Sockel und verschwinden nicht mehr.',
       'Auch beim einzelnen Verschmelzen werden keine eingesetzten Runen mehr verbraucht, deren Sockel die neue, höhere Stufe gar nicht tragen könnte (Zusatz-Sockel mit Höchststufe).',

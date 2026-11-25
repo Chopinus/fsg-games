@@ -1975,9 +1975,11 @@
     const mi = mastInfo((S.mast || {})[h.id]), cur = (S.skin || {})[h.id] || 'std', pct = mi.L >= MAST_MAX ? 100 : Math.floor(mi.rest / mi.need * 100);
     const skins = SKINS.map(k => { const ok = mi.L >= k.L;
       return `<button class="rl-skin ${cur === k.id ? 'on' : ''} ${ok ? '' : 'locked'}" data-skin="${h.id}:${k.id}" ${ok ? '' : 'disabled'} style="--sc:${k.tint || h.color}" title="${esc(k.name)}${ok ? '' : ` (ab Meisterschaft ${k.L})`}" aria-label="Aussehen ${esc(k.name)}"><span class="pic"><img src="${skinPortraitURL(h.id, k.id)}" alt="">${ok ? '' : `<em>🔒 ★${k.L}</em>`}</span><small>${esc(k.name)}</small></button>`; }).join('');
-    return `<div class="rl-mast" style="--hc:${h.color}" title="Meisterschaft: +${2 * mi.L} % Schaden und Leben"><div class="rl-mrow"><b>★ ${mi.L}/${MAST_MAX}</b><span class="rl-mbar"><i style="width:${pct}%"></i></span><small>${mi.L >= MAST_MAX ? 'Max' : `${fmt(mi.rest)}/${fmt(mi.need)}`} · +${2 * mi.L} %</small></div>
+    const ms = MAST_MS.map(m => `<li class="${mi.L >= m.L ? 'ok' : ''}" style="${mi.L >= m.L ? 'color:var(--hc)' : 'opacity:.6'}">${mi.L >= m.L ? '✓' : '🔒'} <b>★${m.L}</b> ${esc(m.d)}</li>`).join('');
+    return `<div class="rl-mast" style="--hc:${h.color}" title="Meisterschaft: +${mastPct(mi.L)} % Schaden und Leben"><div class="rl-mrow"><b>★ ${mi.L}/${MAST_MAX}</b><span class="rl-mbar"><i style="width:${pct}%"></i></span><small>${mi.L >= MAST_MAX ? 'Max' : `${fmt(mi.rest)}/${fmt(mi.need)}`} · +${mastPct(mi.L)} %</small></div>
       <div class="rl-skins">${skins}</div>
-      <p class="note rl-long">Meisterschaft sammelt jeder Held mit jedem besiegten Gegner, solange er kämpft. Sie bleibt für immer, auch über Wiedergeburt und Aufstieg.</p></div>`;
+      <details class="rl-mms"><summary>Meilensteine (${MAST_MS.filter(m => mi.L >= m.L).length}/${MAST_MS.length})</summary><ul style="list-style:none;margin:6px 0 0;padding:0;font-size:13px;line-height:1.6">${ms}</ul></details>
+      <p class="note rl-long">Meisterschaft sammelt jeder Held mit jedem besiegten Gegner, solange er kämpft. Sie bleibt für immer, auch über Wiedergeburt und Aufstieg. Bis Stufe 10 gibt jede Stufe +2 %, danach +1 % Schaden und Leben, dazu Meilensteine bis Stufe 50.</p></div>`;
   }
   /* ---------- Aufstiegsränge ---------- */
   const rankBadge = a => { const r = rankOf(a); return `<i class="rl-rkb" style="--rc:${r.col}" title="${esc(r.name)}">${a >= 10 ? '♛' : a >= 8 ? '♚' : a >= 4 ? '⚜' : a >= 1 ? '⚔' : '·'}</i>`; };
