@@ -307,6 +307,10 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 101, title: 'Spieler-Idee: Kristallduell-Kosmetik im Casino-Shop', date: '26.11.2026', items: [
+      'Im Casino-Shop gibt es zwei neue Bereiche für das Kristallduell: Spielfelder (Zauberwald, Gletscher, Vulkan, Sternenmeer, Thronsaal) und Kartenrahmen um deine eigenen Karten (Neon, Frost, Flamme, Gold, Prisma).',
+      'Bezahlt wird wie bei der Schach-Kosmetik mit Glanzmarken. Es ändert nur das Aussehen auf deinem eigenen Bildschirm.',
+    ] },
     { id: 100, title: 'Spieler-Idee: Helden im Kristallduell', date: '26.11.2026', items: [
       'Jedes Thema hat jetzt einen Helden (z. B. Hohepriesterin Lumen, Flammenkönigin Pyra, Waldkönig Ur) mit 9–10 Leben und einer Heldenkraft, die zu Beginn jedes eigenen Zuges wirkt.',
       'Helden kann man nicht sammeln: Jedes Deck zieht mit ganz geringer Wahrscheinlichkeit (2 % pro Karte, höchstens einmal pro Duell) den Helden seines Hauptthemas – das gilt auch für die Bots.',

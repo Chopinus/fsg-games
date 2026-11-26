@@ -167,7 +167,7 @@ function needNick() {
   store.set('fsg.nick', n); send({ t: 'name', name: n }); return true;
 }
 // Casino wird erst geladen, wenn es jemand braucht
-const CZ_V = 61; // bei jeder Casino-Änderung erhöhen, damit Geräte die neue Datei laden
+const CZ_V = 62; // bei jeder Casino-Änderung erhöhen, damit Geräte die neue Datei laden
 function loadCasino(cb) {
   if (window.Casino) { cb(); return; }
   if (loadCasino.busy) { loadCasino.q.push(cb); return; }
@@ -207,7 +207,7 @@ if (!konto || !konto.token) { konto = null; // schon im Ritterlauf oder Inselrei
   for (const k of ['fsg.ritter.konto', 'insel.konto']) { try { const a = JSON.parse(store.get(k) || 'null'); if (a && a.name && a.token) { konto = { name: a.name, token: a.token }; store.set(AK, JSON.stringify(konto)); break; } } catch {} }
 }
 // Kosmetik aus dem Casino-Shop für Hub-Spiele (Schachbrett, Schachfiguren, Vier gewinnt) – gilt nur auf dem eigenen Bildschirm
-window.fsgLook = eq => { const H = document.documentElement, L = {}; for (const k of ['chb', 'chp', 'c4']) { const v = (eq && eq[k]) || ''; L[k] = v; if (v && !v.endsWith('_std')) H.dataset[k] = v; else delete H.dataset[k]; } try { store.set('fsg.look', JSON.stringify(L)); } catch {} };
+window.fsgLook = eq => { const H = document.documentElement, L = {}; for (const k of ['chb', 'chp', 'c4', 'kdf', 'kdr']) { const v = (eq && eq[k]) || ''; L[k] = v; if (v && !v.endsWith('_std')) H.dataset[k] = v; else delete H.dataset[k]; } try { store.set('fsg.look', JSON.stringify(L)); } catch {} };
 try { window.fsgLook(JSON.parse(store.get('fsg.look') || '{}')); } catch {}
 function lookLoad() { if (konto) kontoApi('cz_look', { name: konto.name, token: konto.token }).then(r => { if (r && r.eq) window.fsgLook(r.eq); }); }
 setTimeout(lookLoad, 1500);

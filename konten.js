@@ -546,6 +546,9 @@ Object.assign(CZ_PRICES, {
   chb: { chb_std: 0, chb_turnier: 8000, chb_holz: 15000, chb_eis: 25000, chb_marmor: 40000, chb_nacht: 50000, chb_gold: 90000 },
   chp: { chp_std: 0, chp_holz: 10000, chp_neon: 30000, chp_kristall: 50000, chp_gold: 90000, chp_feuer: 120000 },
   c4: { c4_std: 0, c4_neon: 12000, c4_edel: 35000, c4_muenze: 60000 },
+  // Spieler-Idee (v71): Kristallduell – Spielfeld und Kartenrahmen (nur Aussehen, gilt nur auf dem eigenen Bildschirm)
+  kdf: { kdf_std: 0, kdf_wald: 15000, kdf_eis: 25000, kdf_lava: 30000, kdf_sternen: 45000, kdf_gold: 90000 },
+  kdr: { kdr_std: 0, kdr_neon: 15000, kdr_frost: 20000, kdr_flamme: 35000, kdr_gold: 60000, kdr_prisma: 120000 },
 });
 const CZ_JOBS = { mine: 1400, teller: 900, putzen: 2200 }; // so schnell kann man frühestens fertig sein (ms)
 // Einsatzlimit wächst mit dem Alter des Kontos: Neue Konten so lange neu anlegen, bis eins Glück hat, lohnt sich so nicht.
@@ -674,7 +677,7 @@ function czAction(action, key, acc, body) {
   if (!acc || !(acc.tokens || []).includes(sha256(String(body.token || '')))) return [401, { error: 'Bitte melde dich im Hub an, um im Casino zu spielen.' }];
   const z = czAcc(key), ok = () => { z.t = Date.now(); markDirty(); return [200, czState(key, acc)]; };
   if (action === 'cz_state') return [200, czState(key, acc)];
-  if (action === 'cz_look') return [200, { eq: { chb: z.eq && z.eq.chb || '', chp: z.eq && z.eq.chp || '', c4: z.eq && z.eq.c4 || '' } }]; // nur lesen: Hub-Kosmetik
+  if (action === 'cz_look') return [200, { eq: { chb: z.eq && z.eq.chb || '', chp: z.eq && z.eq.chp || '', c4: z.eq && z.eq.c4 || '', kdf: z.eq && z.eq.kdf || '', kdr: z.eq && z.eq.kdr || '' } }]; // nur lesen: Hub-Kosmetik
   if (action === 'cz_claim') { // alten Stand dieses Geräts zurückholen (einmal pro Konto und pro Gerät)
     const st = czState(key, acc); acc.gifts = acc.gifts || [];
     if (!czOldDev || acc.gifts.includes(CZ_DEV_ID) || czSeated.has(key)) return [200, st];
