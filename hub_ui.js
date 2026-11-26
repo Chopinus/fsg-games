@@ -344,6 +344,6 @@
   }
   setInterval(() => { const el = q('#achat'), vis = acVisible(); if (!el || el.hidden === vis) acRender(); }, 600);
   window.addEventListener('fsg-konto', () => setTimeout(() => { send({ t: 'achat_get' }); acRender(); }, 400));
-  window.HubUI = { renderTiles, refresh: lvLoad, chat: acMsg };
+  window.HubUI = { renderTiles, refresh: lvLoad, chat: acMsg, games: () => catalog().map(x => x.t) };
   build();
 })();

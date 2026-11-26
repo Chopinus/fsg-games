@@ -33,8 +33,12 @@
   let D = null, tab = 'top', page = null, busy = false, formOpen = false, draft = {};
 
   function games() {
-    const names = [...document.querySelectorAll('#tiles .tile:not(.vz-tile) b')].map(b => (b.firstChild && b.firstChild.textContent || '').trim()).filter(Boolean);
-    return [...new Set([...names, 'Game Hub allgemein'])];
+    // Spieleliste für das Ideen-Formular: zuerst aus dem Hub-Katalog, sonst aus den Kacheln, zur Sicherheit immer mit fester Liste
+    let names = [];
+    try { if (window.HubUI && typeof HubUI.games === 'function') names = HubUI.games() || []; } catch {}
+    if (!names.length) names = [...document.querySelectorAll('#tiles .tile:not(.vz-tile) b, #tiles .hx-t b')].map(b => (b.firstChild && b.firstChild.textContent || '').trim()).filter(Boolean);
+    const FIX = ['Ritterlauf', 'Turmwacht', 'Dungeon', 'Inselreich', 'Würfelwelt', 'Casino Aurum', 'Kristallduell', 'Schach', 'Schiffe versenken', 'Letzte Karte', 'Vier gewinnt', 'Mensch ärgere dich nicht', 'Kniffel', 'Inselsiedler', 'Quiz-Duell', 'Werwolf', 'Wortagenten', 'Montagsmaler', 'Stadt-Land-Fluss', 'Wer ist der Spion?', 'Minispiel-Party', 'Lichtrad', 'Kugel-Arena', 'Vier-gewinnt-Turnier', 'Wörtle', 'Tages-Sudoku', 'Nonogramm', 'Verbindungen', 'Mathe-Blitz'];
+    return [...new Set([...names.map(n => String(n).trim().slice(0, 30)).filter(Boolean), ...FIX, 'Game Hub allgemein'])];
   }
   const date = t => new Date(t).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
 

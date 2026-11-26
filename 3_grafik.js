@@ -307,6 +307,9 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 95, title: 'Spieler-Idee: Spiel bei neuen Ideen auswählbar', date: '26.11.2026', items: [
+      'Beim Einreichen einer Idee konnte man nur noch „Game Hub allgemein“ wählen, weil die neue Startseite die Spiele anders anzeigt. Jetzt stehen wieder alle Spiele in der Auswahl.',
+    ] },
     { id: 94, title: 'Spieler-Idee: Turmwacht – Welle starten klappt wieder', date: '25.11.2026', items: [
       'Der Knopf „Welle starten“ wurde mehrmals pro Sekunde neu gezeichnet. Drückte man genau in dem Moment, kam der Klick nicht an – besonders auf dem Handy. Das ist behoben.',
       'Der Wellen-Knopf bleibt jetzt auch sichtbar, wenn ein Turm ausgewählt ist. Am Computer startet die Leertaste die nächste Welle.',
