@@ -151,7 +151,7 @@
     const room = k => { const g = G(k); return g ? { k, t: g.title, s: g.sub, art: g.art, act: `data-create="${k}"`, btn: k === 'party' ? 'Party starten' : 'Neue Runde', neu: g.neu } : null; };
     const L = [
       { k: 'ritter', t: 'Ritterlauf', s: 'Deine Heldengruppe kämpft sich durch Gegnerwellen. Klassen, Runen, Wiedergeburt und Bestenliste.', art: '<span class="rl-art"></span>', act: 'data-solo="1"', btn: 'Spielen', pill: 'Solo', g: 'linear-gradient(135deg,#5a2c12,#2a1608)', cats: ['solo', 'top'], big: 1 },
-      { k: 'turmwacht', t: 'Turmwacht', s: 'Tower Defense: Baue Bogen-, Kanonen-, Frost- und Blitztürme und verteidige die Burg. Wie weit kommst du?', art: '<span class="tw-art"><span>🏰</span><span>🏹</span></span>', act: 'data-tw-open="1"', btn: 'Spielen', neu: 1, pill: 'Solo', g: 'linear-gradient(135deg,#2f6f2a,#14361a)', cats: ['solo', 'top'] },
+      { k: 'turmwacht', t: 'Turmwacht', s: 'Tower Defense: 10 Türme mit je zwei Ausbaupfaden, Tarn- und Bleigegner, Bosse und Fähigkeiten. Wie weit kommst du?', art: '<span class="tw-art"><span>🏰</span><span>🏹</span></span>', act: 'data-tw-open="1"', btn: 'Spielen', neu: 1, pill: 'Solo', g: 'linear-gradient(135deg,#2f6f2a,#14361a)', cats: ['solo', 'top'] },
       { k: 'sudoku', t: 'Tages-Sudoku', s: 'Jeden Tag ein neues Sudoku – wer löst es heute am schnellsten?', art: '<span class="rx-art">' + ['5', '', '3', '', '7', '', '1', '', '9'].map((x, i) => `<i class="${i % 2 ? 'f' : ''}">${x}</i>`).join('') + '</span>', act: 'data-rx-open="sudoku"', btn: 'Rätseln', g: 'linear-gradient(135deg,#3a2f7a,#1d1840)' },
       { k: 'nono', t: 'Nonogramm', s: 'Male nach Zahlen: Aus den Hinweisen am Rand entsteht jeden Tag ein neues Pixelbild.', art: '<span class="rx-art">' + [1, 0, 1, 1, 1, 1, 0, 1, 0].map(f => `<i class="${f ? 'f' : ''}"></i>`).join('') + '</span>', act: 'data-rx-open="nono"', btn: 'Rätseln', g: 'linear-gradient(135deg,#7a3a2f,#2e1410)' },
       { k: 'wortle', t: 'Wörtle', s: 'Jeden Tag ein neues Wort mit 5 Buchstaben – 6 Versuche. Plus freies Spiel.', art: '<span class="wd-art">🟩</span>', act: 'data-wd-open="1"', btn: 'Spielen', day: 1, g: 'linear-gradient(135deg,#1f6a3a,#0f2e1c)', cats: ['taeglich'] },
@@ -209,7 +209,7 @@
   document.addEventListener('click', e => {
     const b = e.target.closest('[data-tw-open]'); if (!b || window.Turmwacht) return;
     e.stopImmediatePropagation(); b.disabled = true; b.textContent = 'Lädt …';
-    const sc = document.createElement('script'); sc.src = 'turmwacht.js?v=1'; sc.onload = () => { b.disabled = false; b.textContent = 'Spielen'; window.Turmwacht && Turmwacht.open(); }; sc.onerror = () => { b.disabled = false; b.textContent = 'Spielen'; toast('Turmwacht konnte nicht geladen werden.'); }; document.body.appendChild(sc);
+    const sc = document.createElement('script'); sc.src = 'turmwacht.js?v=2'; sc.onload = () => { b.disabled = false; b.textContent = 'Spielen'; window.Turmwacht && Turmwacht.open(); }; sc.onerror = () => { b.disabled = false; b.textContent = 'Spielen'; toast('Turmwacht konnte nicht geladen werden.'); }; document.body.appendChild(sc);
   }, true);
 
   /* ---------- Kopf, Kategorien, Level-Karte ---------- */

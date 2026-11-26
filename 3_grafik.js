@@ -307,6 +307,14 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 96, title: 'Spieler-Idee: Turmwacht im Bloons-Stil', date: '26.11.2026', items: [
+      '10 Türme statt 4: neu sind Stachelturm, Scharfschütze, Ninja, Magier, Goldmine und Kriegsbanner.',
+      'Jeder Turm hat zwei Ausbaupfade mit je 4 Stufen – aber nur einer darf über Stufe 2 hinaus. Stufe 4 bringt bei vielen Türmen eine Fähigkeit (z. B. Eiszeit, Bombardement, Gewittersturm).',
+      'Gegner zerplatzen in kleinere: Riesenschleim → Großschleime → Schleime, Felsgolem, Koloss und Titan als Bosse.',
+      'Neue Eigenschaften: getarnte Gegner (nur mit Tarnungs-Erkennung angreifbar), Bleiklötze (nur Explosionen, Magie, Blitz und Feuer helfen), nachwachsende und verstärkte Gegner.',
+      'Zielwahl pro Turm (Erster, Letzter, Stärkster, Nächster), Vorschau auf die nächste Welle und eine Gegner-Übersicht.',
+      '5 Karten und 3 Schwierigkeitsstufen (Leicht zählt nicht für die Rangliste).',
+    ] },
     { id: 95, title: 'Spieler-Idee: Spiel bei neuen Ideen auswählbar', date: '26.11.2026', items: [
       'Beim Einreichen einer Idee konnte man nur noch „Game Hub allgemein“ wählen, weil die neue Startseite die Spiele anders anzeigt. Jetzt stehen wieder alle Spiele in der Auswahl.',
     ] },
