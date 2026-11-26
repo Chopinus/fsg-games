@@ -19,7 +19,7 @@
   #frw{position:fixed;z-index:9000;font-family:${'"Figtree",-apple-system,"Segoe UI",Roboto,sans-serif'};font-size:15px;color:#f4ede1}
   #frw .frb{width:52px;height:52px;border-radius:50%;border:2px solid #ffb54788;background:#262035ee;font-size:24px;display:grid;place-items:center;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.45);position:relative;color:#fff}
   #frw .frb i{position:absolute;right:-4px;top:-4px;min-width:20px;height:20px;border-radius:10px;background:#e5484d;color:#fff;font:700 12px/20px sans-serif;font-style:normal;padding:0 5px}
-  #frw .frp{position:fixed;inset:auto;width:min(420px,calc(100vw - 20px));height:min(560px,calc(100vh - 40px));background:#1f1a2b;border:1px solid #3d3452;border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.6);display:flex;flex-direction:column;overflow:hidden}
+  #frw .frp{position:fixed;inset:auto;width:min(420px,calc(100vw - 20px));height:min(560px,calc(100vh - 96px));height:min(560px,calc(100dvh - 96px));background:#1f1a2b;border:1px solid #3d3452;border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.6);display:flex;flex-direction:column;overflow:hidden}
   #frw .frh{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid #3d3452;background:#262035}
   #frw .frh b{flex:1;font-size:17px}
   #frw button.x{background:none;border:0;color:#a99fbb;font-size:20px;cursor:pointer}
@@ -30,6 +30,7 @@
   #frw .fr{display:flex;align-items:center;gap:10px;background:#262035;border:1px solid #3d3452;border-radius:12px;padding:9px 10px}
   #frw .dot{width:11px;height:11px;border-radius:50%;flex:none;background:#6b6280}#frw .dot.on{background:#27c06a;box-shadow:0 0 8px #27c06a}
   #frw .nm{flex:1;min-width:0}#frw .nm b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#frw .nm small{color:#a99fbb;font-size:12px}
+  #frw .sb{width:auto;max-width:none;margin:0;display:inline-block;grid-template-columns:none;gap:0;text-align:center;flex:none;white-space:nowrap} /* Spieler-Idee v72: Inselsiedler hat eine eigene Klasse .sb (Rasterlayout mit 100 % Breite) – das hat die Knöpfe hier riesig gemacht und die Namen verdeckt */
   #frw .sb{border:1px solid #3d3452;background:#30293f;color:#f4ede1;border-radius:10px;padding:7px 9px;font:inherit;font-size:13px;cursor:pointer;position:relative}
   #frw .sb.go{background:#ffb547;color:#2a1a00;border-color:#ffb547;font-weight:700}#frw .sb.no{background:#3a2430;border-color:#5a3040}
   #frw .sb:disabled{opacity:.4}
