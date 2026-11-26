@@ -20,7 +20,16 @@ function fleet() {
     if (ok) return { g, ships, shots: Array(N * N).fill(0) }; // shots: 0 = offen, 1 = Wasser, 2 = Treffer
   }
 }
-const sunk = (b, si) => b.ships[si].cells.every(c => b.shots[c] === 2);
+// Spieler-Idee (v65): Schiffe selbst platzieren. Prüft, ob Schiff si mit Anfang c und Ausrichtung h passt (ohne Berührung anderer Schiffe).
+function shipCells(L, c, h) { const x = c % N, y = (c / N) | 0; if (h ? x + L > N : y + L > N) return null; const out = []; for (let k = 0; k < L; k++) out.push((y + (h ? 0 : k)) * N + x + (h ? k : 0)); return out; }
+function place(b, si, c, h) {
+  const sh = b.ships[si]; if (!sh) return 'quiet';
+  const cells = shipCells(sh.L, c, h); if (!cells) return 'Das Schiff passt dort nicht aufs Feld.';
+  for (const cc of cells) { const cx = cc % N, cy = (cc / N) | 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const nx = cx + dx, ny = cy + dy; if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue; const o = b.g[ny * N + nx]; if (o >= 0 && o !== si) return 'Schiffe dürfen sich nicht berühren – auch nicht schräg.'; } }
+  for (const cc of sh.cells) b.g[cc] = -1;
+  sh.cells = cells; sh.h = h; for (const cc of cells) b.g[cc] = si;
+}
+const sunk = (b, si) => b.ships[si].cells.length > 0 && b.ships[si].cells.every(c => b.shots[c] === 2);
 const allSunk = b => b.ships.every((_, i) => sunk(b, i));
 function schedule(r, ms, fn) { if (r.timer) clearTimeout(r.timer); r.timer = setTimeout(() => { r.timer = null; try { fn(); } catch (e) { console.error(e); } r.push(); }, ms / SPEED); }
 function fire(r, pid, c) {
@@ -68,6 +77,9 @@ module.exports = {
     if (!s.p.includes(pid)) return 'Du schaust bei dieser Partie zu.';
     if (s.phase === 'place') {
       if (a.type === 'shuffle' && !s.ready[pid]) { s.b[pid] = fleet(); return; }
+      if (a.type === 'clear' && !s.ready[pid]) { const b = s.b[pid]; b.g.fill(-1); b.ships.forEach(sh => { sh.cells = []; }); return; }
+      if (a.type === 'place' && !s.ready[pid]) { const c = Number(a.c), si = Number(a.si); if (!(c >= 0 && c < N * N) || !(si >= 0 && si < FLEET.length)) return 'quiet'; return place(s.b[pid], si, c, !!a.h); }
+      if (a.type === 'ready' && s.b[pid].ships.some(sh => sh.cells.length !== sh.L)) return 'Stell zuerst alle Schiffe auf.';
       if (a.type === 'ready') { s.ready[pid] = true; if (s.p.every(x => s.ready[x])) { s.phase = 'play'; s.log = `${nameOf(r, s.turn)} schießt zuerst.`; if (s.turn === BOT) schedule(r, 1200, () => botMove(r)); } return; }
       return 'quiet';
     }
@@ -82,7 +94,7 @@ module.exports = {
     const me = s.p.includes(pid) ? pid : s.p[0], foe = s.p[0] === me ? s.p[1] : s.p[0], end = s.phase === 'end';
     const pub = b => ({ shots: b.shots, sunk: b.ships.map((sh, i) => (sunk(b, i) ? sh.cells : null)).filter(Boolean), left: b.ships.map((sh, i) => (sunk(b, i) ? 0 : sh.L)) });
     return { phase: s.phase, p: s.p, names: { [s.p[0]]: nameOf(r, s.p[0]), [s.p[1]]: nameOf(r, s.p[1]) }, mine: s.p.includes(pid), me, foe, turn: s.turn, ready: s.ready, winner: s.winner, last: s.last, log: s.log, score: s.score, bot: s.bot, stats: s.stats,
-      own: { ...pub(s.b[me]), g: s.b[me].g, ships: s.b[me].ships.map(x => ({ cells: x.cells, h: x.h })) },
+      own: { ...pub(s.b[me]), g: s.b[me].g, ships: s.b[me].ships.map(x => ({ cells: x.cells, h: x.h, L: x.L })) },
       enemy: { ...pub(s.b[foe]), ships: end ? s.b[foe].ships.map(x => ({ cells: x.cells, h: x.h })) : null } };
   },
 };

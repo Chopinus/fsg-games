@@ -103,7 +103,7 @@
   .ag-hist span{padding:3px 9px;border-radius:99px;background:var(--surface2)} .ag-hist .r{color:#ff8b9b} .ag-hist .b{color:#8bc4ff}
   /* Schiffe versenken */
   .sv-wrap{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  @media (max-width:720px){.sv-wrap{grid-template-columns:1fr}.sv-wrap .own{order:2}}
+  @media (max-width:720px){.sv-wrap{grid-template-columns:1fr}.sv-wrap .own{order:2}.sv-wrap.placing .own{order:0}}
   .sv-b{display:grid;grid-template-columns:repeat(10,1fr);gap:2px;padding:6px;border-radius:14px;background:linear-gradient(180deg,#0f3d6e,#0a2547);box-shadow:inset 0 0 30px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.3);position:relative;overflow:hidden}
   .sv-b::before{content:"";position:absolute;inset:-50%;background:repeating-linear-gradient(115deg,rgba(255,255,255,.04) 0 14px,transparent 14px 40px);animation:svwave 9s linear infinite;pointer-events:none}
   @keyframes svwave{to{transform:translateX(80px)}}
@@ -121,6 +121,8 @@
   .sv-fleet{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;font-size:12px}
   .sv-fleet i{display:inline-block;height:10px;border-radius:3px;background:#9aa6b8;margin-right:2px}
   .sv-fleet .gone i{background:#5a2020;opacity:.6}
+  .sv-b .sel{background:linear-gradient(180deg,#ffd23f,#c98a1a);box-shadow:0 0 8px rgba(255,210,63,.7)}
+  .sv-pal{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:6px 0}.sv-pal i{display:inline-block;width:10px;height:10px;border-radius:2px;background:currentColor;margin:0 1px}
   .sv-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-weight:800}
   /* Turnier */
   .tu-br{display:flex;gap:14px;overflow-x:auto;padding:6px 2px 10px}
@@ -297,8 +299,10 @@
   });
 
   /* ================= Schiffe versenken ================= */
-  let svLast = null;
+  let svLast = null, svSel = null, svH = true; // Spieler-Idee (v65): gewähltes Schiff und Ausrichtung beim Aufstellen
   function schiffe(stage, v) {
+    const placing = v.phase === 'place' && v.mine && !v.ready[v.me] && room.status === 'playing';
+    if (!placing) svSel = null;
     const N = 10, myTurn = room.status === 'playing' && v.phase === 'play' && v.turn === me() && v.mine;
     const newKey = v.last ? v.last.by + ':' + v.last.c : null, isNew = newKey && newKey !== svLast; svLast = newKey;
     const sunkSet = b => new Set((b.sunk || []).flat());
@@ -307,17 +311,21 @@
     const cell = (b, c, own) => { const s = b.shots[c]; const nw = isNew && v.last.c === c && ((own && v.last.by !== v.me) || (!own && v.last.by === v.me)) ? ' new' : '';
       let cls = own && ownShip.has(c) ? 's' : (!own && eShip.has(c) ? 's' : '');
       if (s === 1) cls += ' m'; if (s === 2) cls += (own ? oSunk : eSunk).has(c) ? ' k' : ' h';
-      return `<button class="${cls}${nw}" ${!own && myTurn && !s ? `data-svf="${c}"` : 'tabindex="-1"'} aria-label="${'ABCDEFGHIJ'[c % N]}${((c / N) | 0) + 1}"></button>`; };
+      if (own && placing && svSel != null && v.own.g[c] === svSel) cls += ' sel';
+      return `<button class="${cls}${nw}" ${!own && myTurn && !s ? `data-svf="${c}"` : own && placing ? `data-svp="${c}"` : 'tabindex="-1"'} aria-label="${'ABCDEFGHIJ'[c % N]}${((c / N) | 0) + 1}"></button>`; };
     const fleet = b => `<div class="sv-fleet">${b.left.map((l, i) => `<span class="${l ? '' : 'gone'}">${'<i style="width:12px"></i>'.repeat([5, 4, 3, 3, 2][i])}</span>`).join('')}</div>`;
     const nm = id => esc(v.names[id]);
     let head;
-    if (v.phase === 'place') head = v.mine ? (v.ready[v.me] ? `<p class="status">Bereit! Warte auf ${nm(v.foe)} …</p>` : `<p class="status mine">Stell deine Flotte auf</p><div class="center row" style="justify-content:center"><button class="btn ghost" data-sv="shuffle">🎲 Neu mischen</button><button class="btn" data-sv="ready">✓ Bereit</button></div>`) : '<p class="status">Die Flotten werden aufgestellt …</p>';
+    const unplaced = v.own.ships.map((sh, i) => [sh, i]).filter(([sh]) => !sh.cells.length), allIn = !unplaced.length;
+    const tip = svSel == null ? (allIn ? 'Tippe ein Schiff an, um es zu verschieben oder zu drehen.' : 'Wähle unten ein Schiff und tippe dann auf dein Feld.') : 'Tippe auf das Feld, wo das Schiff anfangen soll (oben bzw. links).';
+    const palette = `<div class="sv-pal">${unplaced.map(([sh, i]) => `<button class="btn small ${svSel === i ? '' : 'ghost'}" data-svs="${i}">${'<i></i>'.repeat(sh.L)}</button>`).join('')}</div>`;
+    if (v.phase === 'place') head = v.mine ? (v.ready[v.me] ? `<p class="status">Bereit! Warte auf ${nm(v.foe)} …</p>` : `<p class="status mine">Stell deine Flotte auf</p><p class="note center">${tip}</p>${palette}<div class="center row" style="justify-content:center;flex-wrap:wrap;gap:6px"><button class="btn ghost small" data-sv="rot">↻ Drehen (${svH ? 'waagrecht' : 'senkrecht'})</button><button class="btn ghost small" data-sv="clear">🧹 Alle abräumen</button><button class="btn ghost small" data-sv="shuffle">🎲 Zufällig</button><button class="btn" data-sv="ready" ${allIn ? '' : 'disabled'}>✓ Bereit</button></div>`) : '<p class="status">Die Flotten werden aufgestellt …</p>';
     else if (v.phase === 'end') head = `<p class="status">${v.winner === v.me ? '🏆 Du hast gewonnen!' : `${nm(v.winner)} gewinnt!`}</p><div class="center">${v.bot && isHost() ? '<button class="btn" data-svbot="1">Nochmal gegen Admiral Bot</button>' : againHTML('Revanche!')}</div>`;
     else head = `<p class="status ${myTurn ? 'mine' : ''}">${myTurn ? '🎯 Feuer frei – tippe aufs Gegnerfeld' : v.turn === 'bot' ? '🤖 Admiral Bot zielt …' : `${nm(v.turn)} zielt …`}</p>`;
     const st = s => (s && s.shots ? `${s.hits}/${s.shots} Treffer` : '');
     stage.dataset.mode = 'sv';
     stage.innerHTML = `<div class="g3">${head}<p class="log">${esc(v.log || '')}</p>
-      <div class="sv-wrap"><div class="own"><div class="sv-h"><span>⚓ ${v.mine ? 'Deine Flotte' : nm(v.me)}</span><small class="note">${st(v.stats[v.foe])}</small></div><div class="sv-b">${v.own.shots.map((_, c) => cell(v.own, c, true)).join('')}</div>${fleet(v.own)}</div>
+      <div class="sv-wrap ${placing ? 'placing' : ''}"><div class="own"><div class="sv-h"><span>⚓ ${v.mine ? 'Deine Flotte' : nm(v.me)}</span><small class="note">${st(v.stats[v.foe])}</small></div><div class="sv-b">${v.own.shots.map((_, c) => cell(v.own, c, true)).join('')}</div>${fleet(v.own)}</div>
       <div><div class="sv-h"><span>🎯 ${nm(v.foe)}</span><small class="note">${st(v.stats[v.me])}</small></div><div class="sv-b ${myTurn ? 'can' : ''}">${v.enemy.shots.map((_, c) => cell(v.enemy, c, false)).join('')}</div>${fleet(v.enemy)}</div></div>
       <p class="note center">Stand: ${nm(v.p[0])} ${v.score[v.p[0]] || 0} – ${v.score[v.p[1]] || 0} ${nm(v.p[1])}</p></div>`;
     if (isNew && v.last.hit && navigator.vibrate) navigator.vibrate(v.last.sunk != null ? [60, 40, 90] : 50);
@@ -328,7 +336,19 @@
     const sb = e.target.closest('[data-svbot]'); if (sb && isHost()) { send({ t: 'start', bot: 1 }); return; }
     if (room.game !== 'schiffe') return;
     const f = e.target.closest('[data-svf]'); if (f) { act({ type: 'fire', c: Number(f.dataset.svf) }); return; }
-    const b = e.target.closest('[data-sv]'); if (b) act({ type: b.dataset.sv });
+    const v = room.view;
+    const ps = e.target.closest('[data-svs]'); if (ps) { const i = Number(ps.dataset.svs); svSel = svSel === i ? null : i; renderRoom(); return; }
+    const pc = e.target.closest('[data-svp]'); if (pc && v) {
+      const c = Number(pc.dataset.svp), at = v.own.g[c];
+      if (svSel == null || (at >= 0 && at !== svSel)) { if (at >= 0) { svSel = at; svH = !!v.own.ships[at].h; } renderRoom(); return; }
+      if (at === svSel && v.own.ships[svSel].cells[0] === c) { svSel = null; renderRoom(); return; } // nochmal auf den Anfang = abwählen
+      act({ type: 'place', si: svSel, c, h: svH }); svSel = null; return;
+    }
+    const b = e.target.closest('[data-sv]'); if (!b) return;
+    if (b.dataset.sv === 'rot') { svH = !svH; if (svSel != null && v && v.own.ships[svSel].cells.length) act({ type: 'place', si: svSel, c: v.own.ships[svSel].cells[0], h: svH }); else renderRoom(); return; }
+    if (b.dataset.sv === 'clear') svSel = 0;
+    if (b.dataset.sv === 'shuffle') svSel = null;
+    act({ type: b.dataset.sv });
   });
   const svLobby = () => (isHost() ? '<div class="qz-lobby" style="text-align:center"><b>Kein Gegner da?</b><button class="btn" data-svbot="1">🤖 Gegen Admiral Bot spielen</button></div>' : '');
 
