@@ -44,6 +44,12 @@ function draw(s, pid, n = 1) {
   const P = s.pl[pid];
   for (let i = 0; i < n; i++) {
     if (!P.deck.length) { P.fat++; P.life -= P.fat; fx(s, { k: 'fat', p: pid, n: P.fat }); log(s, `${s.nm[pid]} hat keine Karten mehr und verliert ${P.fat} Leben.`); continue; }
+    // Spieler-Idee (v68): ganz selten zieht man statt einer Karte den Helden seines Hauptthemas (höchstens einmal pro Duell)
+    const hid = 'h_' + P.fac;
+    if (C[hid] && !P.heroDrawn && s.phase !== 'pick' && P.hand.length < HAND_MAX && Math.random() < K.HERO_P) {
+      P.heroDrawn = 1; log(s, `✨ ${s.nm[pid]} zieht einen Helden: ${C[hid].n}!`); fx(s, { k: 'hero', p: pid });
+      P.hand.push({ id: hid, h: ++s.uc }); continue;
+    }
     const id = P.deck.pop();
     if (P.hand.length >= HAND_MAX) { P.grave.push(id); fx(s, { k: 'burn', p: pid, id }); log(s, `${s.nm[pid]}s Hand ist voll – ${C[id].n} verbrennt.`); continue; }
     P.hand.push({ id, h: ++s.uc });
@@ -201,6 +207,7 @@ function startTurn(r, pid) {
     c.sick = false; if (c.frz) c.frz = false; else c.tap = false;
     const w = C[c.id].wachs; if (w) { c.a += w[0]; c.h += w[1]; fx(s, { k: 'buff', t: 'u:' + c.u, a: w[0], h: w[1] }); }
   }
+  for (const c of P.board.slice()) { const z = C[c.id].zug; if (z && !c.dead) { applyEffect(s, pid, z, null, c.u); log(s, `${C[c.id].n.replace(/^Held(in)?: /, '')} nutzt die Heldenkraft.`); } } // Heldenkraft (v68)
   if (bon(s, pid, 'licht')) heal(s, pid, 1); // Morgenröte
   if (!(s.n === 1)) draw(s, pid, 1);
   fx(s, { k: 'turn', p: pid });

@@ -207,7 +207,8 @@
       <details class="box"><summary style="cursor:pointer;font-weight:800">ℹ️ So funktioniert das Sammeln</summary>
         <p class="note" style="margin:8px 0 4px">Ziehst du eine Karte mehrfach, steigt ihre Stufe – nur das Aussehen ändert sich, nicht die Stärke:</p>
         <div class="stat"><span>★★ Silberrahmen</span><span>★★★ Goldrahmen mit Glanz</span><span>★★★★ leuchtet + Angriffs-Effekt</span><span>★★★★★ Prisma-Rahmen, Aura und Einschlag</span></div>
-        <p class="note" style="margin:10px 0 4px">Themen-Boni gibt es ab ${K.BONUS_MIN} Karten eines Themas im Deck. Themen darfst du frei mischen.</p>${Object.entries(B).map(([f, b]) => `<div>${fc(f).e} <b>${b[0]}</b> – ${b[1]}</div>`).join('')}</details></div>`;
+        <p class="note" style="margin:10px 0 4px">Themen-Boni gibt es ab ${K.BONUS_MIN} Karten eines Themas im Deck. Themen darfst du frei mischen.</p>${Object.entries(B).map(([f, b]) => `<div>${fc(f).e} <b>${b[0]}</b> – ${b[1]}</div>`).join('')}
+        <p class="note" style="margin:10px 0 4px">✨ Helden: Jedes Deck kann mit ganz geringer Wahrscheinlichkeit (${Math.round((K.HERO_P || 0) * 100)} % pro gezogener Karte, höchstens einmal pro Duell) den Helden seines Hauptthemas ziehen. Helden haben viel Leben und eine Heldenkraft zu Beginn jedes Zuges.</p>${Object.entries(C).filter(([, c]) => c.hero).map(([, c]) => `<div>${fc(c.f).e} <b>${c.art} ${c.n}</b> (${c.c} 💎, ${c.a}/${c.h}) – ${c.txt}</div>`).join('')}</details></div>`;
   }
   function tabPacks(s) {
     if (s.welcome > 0) return welcomeBox(s) + '<p class="note center">Öffne zuerst deine Willkommens-Packs – danach kannst du hier mit Funken neue Packs kaufen.</p>';

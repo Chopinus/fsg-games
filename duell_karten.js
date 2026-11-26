@@ -184,7 +184,17 @@
     l_bann: { n: 'Bannlicht', f: 'licht', r: 'e', t: 'z', c: 5, e: { k: 'kill', tg: 'cre' }, art: '⚡', txt: 'Zerstöre eine Kreatur.' },
     l_koenig: { n: 'Sonnenkönig Aurel', f: 'licht', r: 'l', t: 'k', c: 6, a: 4, h: 5, e: { k: 'buffOthers', a: 1, h: 1, shield: 1 }, art: '👑', txt: 'Ruf: Deine anderen Kreaturen bekommen +1/+1 und Schild.' },
     l_seraph: { n: 'Erzengel Seraphiel', f: 'licht', r: 'l', t: 'k', c: 8, a: 6, h: 7, kw: ['flug', 'wach', 'saug'], art: '😇' },
+    // ---------- Helden (Spieler-Idee v68) ----------
+    // Nicht sammelbar: Jedes Deck kann mit ganz geringer Wahrscheinlichkeit beim Ziehen den Helden seines Hauptthemas bekommen (höchstens einmal pro Duell).
+    // Heldenkraft (zug): wirkt zu Beginn jedes eigenen Zuges, solange der Held auf dem Feld steht.
+    h_abent: { n: 'Held: Hauptmann Aldric', f: 'abent', r: 'l', t: 'k', c: 5, a: 4, h: 9, kw: ['wach'], zug: { k: 'token', id: 'a_rekrut', n: 1 }, art: '🦸‍♂️', txt: 'Heldenkraft: Zu Beginn deines Zuges beschwört er einen Gildenrekruten (2/2, Eile).', tok: 1, hero: 1 },
+    h_glut: { n: 'Heldin: Flammenkönigin Pyra', f: 'glut', r: 'l', t: 'k', c: 5, a: 5, h: 9, kw: ['eile'], zug: { k: 'face', n: 2 }, art: '👸', txt: 'Heldenkraft: Zu Beginn deines Zuges 2 Schaden an den Gegner.', tok: 1, hero: 1 },
+    h_wild: { n: 'Held: Waldkönig Ur', f: 'wild', r: 'l', t: 'k', c: 5, a: 5, h: 10, kw: ['durch'], zug: { k: 'buffOthers', a: 1, h: 1 }, art: '🧔', txt: 'Heldenkraft: Zu Beginn deines Zuges bekommen deine anderen Kreaturen +1/+1.', tok: 1, hero: 1 },
+    h_flut: { n: 'Heldin: Meereskaiserin Nerea', f: 'flut', r: 'l', t: 'k', c: 5, a: 4, h: 9, kw: ['flug'], zug: { k: 'draw', n: 1 }, art: '🧜‍♀️', txt: 'Heldenkraft: Zu Beginn deines Zuges ziehst du 1 Karte.', tok: 1, hero: 1 },
+    h_nacht: { n: 'Held: Nekromant Morvan', f: 'nacht', r: 'l', t: 'k', c: 5, a: 4, h: 9, kw: ['saug'], zug: { k: 'drain', n: 2 }, art: '🧛‍♂️', txt: 'Heldenkraft: Zu Beginn deines Zuges 2 Schaden an den Gegner, du heilst dich um 2.', tok: 1, hero: 1 },
+    h_licht: { n: 'Heldin: Hohepriesterin Lumen', f: 'licht', r: 'l', t: 'k', c: 5, a: 4, h: 10, kw: ['schild'], zug: { k: 'heal', n: 3 }, art: '🧝‍♀️', txt: 'Heldenkraft: Zu Beginn deines Zuges heilst du dich um 3.', tok: 1, hero: 1 },
   };
+  const HERO_P = 0.02; // Chance pro gezogener Karte, stattdessen den Helden zu ziehen
   // Grunddecks: je 30 Karten (bekommt jeder zum Start)
   const DECKS = {
     abent: { a_bauer: 3, a_hund: 3, a_bogen: 3, a_wache: 3, a_reiter: 3, a_schmied: 3, a_ritter: 3, a_riese: 2, a_trank: 2, a_pfeil: 2, a_klee: 2, a_karte: 1 },
@@ -209,6 +219,6 @@
     { n: 'Der Kristallwächter', art: '💎', th: ['glut', 'wild', 'flut', 'nacht', 'licht'], r: 'gsel', life: 30 },
   ];
   const PACK = { cost: 100, size: 5, odds: { g: 60, s: 28, e: 9.5, l: 2.5 }, pityE: 10, pityL: 30 };
-  const out = { LADDER, PACK, F, KW, C, DECKS, B, BONUS_MIN, RAR, levelOf, checkDeck, themesOf, bonusesOf, mainTheme, DECK_SIZE, MIN_CRE };
+  const out = { HERO_P, LADDER, PACK, F, KW, C, DECKS, B, BONUS_MIN, RAR, levelOf, checkDeck, themesOf, bonusesOf, mainTheme, DECK_SIZE, MIN_CRE };
   if (typeof module !== 'undefined' && module.exports) module.exports = out; else window.DuellKarten = out;
 })();

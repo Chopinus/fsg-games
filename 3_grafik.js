@@ -307,6 +307,11 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 100, title: 'Spieler-Idee: Helden im Kristallduell', date: '26.11.2026', items: [
+      'Jedes Thema hat jetzt einen Helden (z. B. Hohepriesterin Lumen, Flammenkönigin Pyra, Waldkönig Ur) mit 9–10 Leben und einer Heldenkraft, die zu Beginn jedes eigenen Zuges wirkt.',
+      'Helden kann man nicht sammeln: Jedes Deck zieht mit ganz geringer Wahrscheinlichkeit (2 % pro Karte, höchstens einmal pro Duell) den Helden seines Hauptthemas – das gilt auch für die Bots.',
+      'Alle Helden stehen in der Kristallduell-Zentrale unter „So funktioniert das Sammeln“.',
+    ] },
     { id: 99, title: 'Spieler-Idee: Schiffe selbst platzieren', date: '26.11.2026', items: [
       'Bei Schiffe versenken kannst du deine Flotte jetzt selbst aufstellen: Schiff antippen, dann das Zielfeld antippen. Mit „Drehen“ wechselst du zwischen waagrecht und senkrecht.',
       '„Alle abräumen“ leert das Feld zum Neu-Aufstellen, „Zufällig“ mischt wie bisher. Schiffe dürfen sich weiterhin nicht berühren.',

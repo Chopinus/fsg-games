@@ -323,6 +323,7 @@
       }
       else if (e.k === 'turn' && e.p === v.me && v.mine) { const b = document.createElement('div'); b.className = 'kd-banner'; b.textContent = 'Dein Zug!'; document.body.appendChild(b); setTimeout(() => b.remove(), 1600); }
       else if (e.k === 'burn' && e.p === v.me && v.mine) toast(`Hand voll – ${C[e.id].n} ist verbrannt.`);
+      else if (e.k === 'hero') { const b = document.createElement('div'); b.className = 'kd-banner'; b.textContent = e.p === v.me ? '✨ Du ziehst deinen Helden!' : `✨ ${v.nm[e.p]} zieht einen Helden!`; document.body.appendChild(b); setTimeout(() => b.remove(), 2000); } // Spieler-Idee v68
       else if (e.k === 'end' && v.mine && v.winner === v.me && window.g3confetti) setTimeout(() => g3confetti(140), delay + 300);
     }
   }
