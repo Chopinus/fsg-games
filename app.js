@@ -393,8 +393,41 @@ $('#room').addEventListener('click', e => {
 });
 $('#room').addEventListener('click', e => {
   const b = e.target.closest('[data-chbot],[data-chpuz]'); if (!b || b.disabled || !isHost()) return;
-  if (b.dataset.chbot) send({ t: 'start', bot: Number(b.dataset.chbot) }); else send({ t: 'start', puz: 1 });
+  if (b.dataset.chbot) send({ t: 'start', bot: Number(b.dataset.chbot), tc: chTC() }); else send({ t: 'start', puz: 1 });
 });
+// Schach: Bedenkzeit wählen und Elo-Rangliste (Spieler-Idee v63)
+const CH_TC = [['none', 'Ohne Uhr'], ['bullet', 'Bullet 1 min'], ['blitz', 'Blitz 3+2'], ['rapid', 'Rapid 10+5'], ['turnier', 'Turnier 30+10']];
+const chTC = () => { const t = store.get('fsg.schach.tc'); return CH_TC.some(x => x[0] === t) ? t : 'none'; };
+let chTop = null, chTopAt = 0;
+function chTopLoad() {
+  if (Date.now() - chTopAt < 20000) return; chTopAt = Date.now();
+  let k = null; try { k = JSON.parse(store.get('fsg.konto') || 'null'); } catch {}
+  fetch('/api/chess_top', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(k && k.name ? { name: k.name, token: k.token } : {}) })
+    .then(r => r.json()).then(d => { if (d && d.list) { chTop = d; if (room && room.game === 'schach' && room.status !== 'playing') renderRoom(); } }).catch(() => {});
+}
+function chessLobbyHTML() {
+  chTopLoad();
+  const tc = chTC(), T = chTop;
+  const pick = isHost() ? `<div class="ch-solo"><p class="note" style="margin:14px 0 6px">⏱ Bedenkzeit:</p><div class="row" style="justify-content:center;flex-wrap:wrap;gap:6px">${CH_TC.map(([k, n]) => `<button class="btn ${k === tc ? '' : 'ghost'} small" data-chtc="${k}">${n}</button>`).join('')}</div></div>` : '';
+  const me = T && T.me ? `<p class="note">Deine Elo: <b>${T.me.r}</b> · ${T.me.sn} Partien diese Saison · Bestwert ${T.me.peak}${T.me.hist && T.me.hist.length ? ` · Letzte Saison: Platz ${T.me.hist[T.me.hist.length - 1].rank} (${esc(T.me.hist[T.me.hist.length - 1].name)}, ${T.me.hist[T.me.hist.length - 1].r})` : ''}</p>` : '';
+  const list = T ? `<details class="ch-elo" style="margin-top:12px"><summary><b>🏆 Elo-Rangliste · Saison ${esc(T.seasonName)}</b></summary>${T.list.length ? `<ol style="text-align:left;margin:8px auto;max-width:320px">${T.list.map(x => `<li>${esc(x.name)} – <b>${x.r}</b> <small class="note">(${x.n} Partien)</small></li>`).join('')}</ol>` : '<p class="note">Diese Saison wurde noch keine Partie gewertet.</p>'}
+    <p class="note">Gewertet werden Partien zwischen zwei angemeldeten Spielern (ab 10 Halbzügen). Jeden Monat beginnt eine neue Saison: Deine Wertung startet dann zur Hälfte Richtung 1200 zurückgesetzt, deine Platzierung wird gespeichert.</p>${me}</details>` : '';
+  return pick + list;
+}
+window.LobbyExtra = Object.assign(window.LobbyExtra || {}, { schach: chessLobbyHTML });
+window.LobbyOpt = Object.assign(window.LobbyOpt || {}, { schach: () => ({ tc: chTC() }) });
+$('#room').addEventListener('click', e => {
+  const b = e.target.closest('[data-chtc]'); if (!b || !isHost()) return;
+  store.set('fsg.schach.tc', b.dataset.chtc); renderRoom();
+});
+// Schachuhr: läuft lokal weiter, bis der Server den nächsten Stand schickt
+const chClk = { v: null, at: 0 };
+const chFmt = ms => { ms = Math.max(0, ms); const s = Math.ceil(ms / 1000); return ms < 20000 ? (ms / 1000).toFixed(1).replace('.', ',') : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+function chClkTick() {
+  const c = chClk.v; if (!c) return;
+  for (const col of ['w', 'b']) { const el = document.querySelector(`[data-chclk="${col}"]`); if (!el) continue; const ms = c[col] - (c.run === col ? Date.now() - chClk.at : 0); el.textContent = chFmt(ms); el.classList.toggle('low', ms < 20000); el.classList.toggle('run', c.run === col); }
+}
+setInterval(chClkTick, 100);
 
 /* ---------- Letzte Karte ---------- */
 const COLORNAME = { r: 'Rot', y: 'Gelb', g: 'Grün', b: 'Blau' };
@@ -482,11 +515,12 @@ function renderChess(st, v) {
   const topCol = flip ? 'w' : 'b', botCol = flip ? 'b' : 'w';
   const cName = col => (v.names ? v.names[col] : nameOf(col === 'w' ? v.w : v.b));
   if (v.puz && v.puz.solved) store.set('fsg.schach.puz', String(v.puz.day));
+  chClk.v = v.clock; chClk.at = Date.now();
   const bar = col => {
-    const id = col === 'w' ? v.w : v.b;
+    const id = col === 'w' ? v.w : v.b, elo = v.elo && v.elo[col] ? ` <small class="note">(${v.elo[col]})</small>` : '';
     return `<div class="bar" style="width:min(100%,560px)"><span class="player ${room.status === 'playing' && v.turn === col ? 'turn' : ''}">
-      <span class="dot" style="background:${col === 'w' ? '#fffaf0' : '#17131f'};border:2px solid var(--muted)"></span>${esc(cName(col))}${id === room.me ? ' (du)' : ''}</span>
-      <span class="taken">${v.taken[col].map(glyph).join('')}</span></div>`;
+      <span class="dot" style="background:${col === 'w' ? '#fffaf0' : '#17131f'};border:2px solid var(--muted)"></span>${esc(cName(col))}${id === room.me ? ' (du)' : ''}${elo}</span>
+      <span class="taken">${v.taken[col].map(glyph).join('')}</span>${v.clock ? `<span class="ch-clk" data-chclk="${col}">${chFmt(v.clock[col])}</span>` : ''}</div>`;
   };
   let status;
   if (v.result) status = v.puz ? esc(v.result.reason) : v.result.winner ? `${v.result.winner === v.mine ? 'Du gewinnst' : `${esc(cName(v.result.winner))} gewinnt`} – ${esc(v.result.reason)}` : esc(v.result.reason);
@@ -496,11 +530,12 @@ function renderChess(st, v) {
   if (room.status === 'ended') {
     if (v.puz) again = isHost() ? (v.puz.solved ? '<p class="note">Morgen gibt es ein neues Rätsel.</p>' : '<button class="btn" data-chpuz="1">Rätsel nochmal versuchen</button>') + chessSoloHTML() : '';
     else if (v.bot) again = isHost() ? `<button class="btn" data-chbot="${v.bot.lv}">Nochmal (${CH_LV[v.bot.lv - 1]}, Farben tauschen)</button>${chessSoloHTML(v.bot.lv)}` : '';
-    else again = againHTML('Neue Partie (Farben tauschen)') + chessSoloHTML();
+    else again = againHTML('Neue Partie (Farben tauschen)') + chessSoloHTML() + chessLobbyHTML();
     if ((v.bot || v.puz) && room.players.length >= 2) again += againHTML('Gegen einen Menschen spielen');
   }
+  const eloRes = v.eloRes ? `<p class="note">📈 Elo: ${['w', 'b'].map(c => `${esc(cName(c))} ${v.eloRes[c].old} → <b>${v.eloRes[c].new}</b> (${v.eloRes[c].new >= v.eloRes[c].old ? '+' : ''}${v.eloRes[c].new - v.eloRes[c].old})`).join(' · ')}</p>` : v.unrated && room.status === 'ended' ? `<p class="note">${esc(v.unrated)}</p>` : '';
   st.innerHTML = `${bar(topCol)}<div class="chess">${cells}</div>${bar(botCol)}
-    <p class="status ${myTurn ? 'mine' : ''}">${status}</p><p class="log">${esc(v.log)}</p>
+    <p class="status ${myTurn ? 'mine' : ''}">${status}</p><p class="log">${esc(v.log)}</p>${v.clock ? `<p class="note">⏱ ${esc(v.tcName)}</p>` : ''}${eloRes}
     ${!v.mine ? '<p class="note">Du schaust bei dieser Partie zu.</p>' : ''}
     ${again}
     ${room.status === 'playing' && v.mine ? `<button class="btn ${ui.resign ? 'danger' : 'ghost'} small" data-chess="resign">${ui.resign ? 'Wirklich aufgeben? Tippen zum Bestätigen' : 'Aufgeben'}</button>` : ''}`;

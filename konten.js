@@ -6,6 +6,7 @@ const WORTLE = require('./wortle.js');
 const HUB = require('./hublevel.js'); // Hub-Level und Wochen-Aufgaben
 const RX = require('./raetsel.js'); // Tagesrätsel
 const KD = require('./kd_konto.js'); // Kristallduell: Sammlung, Packs, Decks
+const makeChessElo = require('./schach_elo.js'); // Schach-Elo mit Saisons (Spieler-Idee v63)
 const fs = require('fs');
 const path = require('path');
 
@@ -948,6 +949,10 @@ async function handle(action, body, ip) {
     }
     return RX.action(action, key, acc, body, accounts, markDirty, isTester, kind => { HUB.event(acc, 'raetsel', 1, markDirty); HUB.event(acc, 'raetsel:' + kind, 1, markDirty); });
   }
+  if (action === 'chess_top') { // Schach-Elo: Rangliste der Saison (öffentlich), eigene Wertung nur mit gültiger Anmeldung
+    const me = acc && (acc.tokens || []).includes(sha256(String(body.token || ''))) ? CHESS.mine(key) : null;
+    return [200, { ...CHESS.top(), me }];
+  }
   if (['friends', 'friend_add', 'friend_answer', 'friend_remove', 'chat', 'chat_send', 'profile'].includes(action)) {
     if (!acc || !(acc.tokens || []).includes(sha256(String(body.token || '')))) return [401, { error: 'Bitte melde dich neu an.' }];
     return social(action, key, acc, body);
@@ -992,10 +997,13 @@ function tdTop() { if (tdC) return tdC; const L = []; for (const [k, a] of Objec
 // Für server.js: Runde beendet → EP; Level und Namensfarbe für die Anzeige
 const hubEvent = (k, ev, n) => { const a = accounts[k]; return a ? HUB.event(a, ev, n, markDirty) : 0; };
 const hubBadge = k => { const a = accounts[k]; if (!a) return null; const L = HUB.lvOf((a.hub && a.hub.xp) || 0); return { lv: L.lv, nc: HUB.colorOf(a) }; };
+// Schach: Elo-Schnittstelle für den Spiel-Server (schach.js)
+const CHESS = makeChessElo(() => accounts, markDirty, isTester);
+const chessApi = { rating: k => CHESS.rating(k), result: (kW, kB, sc) => CHESS.result(kW, kB, sc) };
 // Kristallduell: Schnittstelle für den Spiel-Server (duell.js)
 const kdApi = {
   decks: k => (accounts[k] ? KD.deckList(accounts[k]) : []),
   levels: k => (accounts[k] ? KD.levels(accounts[k]) : {}),
   reward: (k, info) => { const a = accounts[k]; if (!a) return null; const r = KD.reward(a, info); markDirty(); return r; },
 };
-module.exports = { kdApi, hubEvent, hubBadge, czPlayWork, setCzSetHook, setPresence, setChatHook, friendKeys, areFriends, accName, keyOfName: n => keyOf(cleanName(n)), handle, flush, durable, tokenKey, czAcc, czSync, czSeated, setCzRelease, czMaxBet, isAdmin, adminNames };
+module.exports = { kdApi, chessApi, hubEvent, hubBadge, czPlayWork, setCzSetHook, setPresence, setChatHook, friendKeys, areFriends, accName, keyOfName: n => keyOf(cleanName(n)), handle, flush, durable, tokenKey, czAcc, czSync, czSeated, setCzRelease, czMaxBet, isAdmin, adminNames };

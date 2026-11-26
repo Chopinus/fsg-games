@@ -307,6 +307,11 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 98, title: 'Spieler-Idee: Schach mit Bedenkzeit und Elo-Saisons', date: '26.11.2026', items: [
+      'Vor der Partie wählt der Gastgeber die Bedenkzeit: Ohne Uhr, Bullet 1 min, Blitz 3+2, Rapid 10+5 oder Turnier 30+10 (Minuten + Sekunden pro Zug). Wer keine Zeit mehr hat, verliert.',
+      'Partien zwischen zwei angemeldeten Spielern zählen für die Elo-Wertung (Start 1200). Die Rangliste steht in der Schach-Lobby.',
+      'Jeden Monat beginnt eine neue Saison: Die Wertung wird zur Hälfte Richtung 1200 zurückgesetzt (baut also auf der alten Saison auf), und deine Platzierung der alten Saison wird gespeichert.',
+    ] },
     { id: 97, title: 'Spieler-Idee: Erweiterung des Zeitbaums', date: '26.11.2026', items: [
       'Der Zeitbaum hat zwei neue Äste für Seelen, die für immer bleiben.',
       '🧭 Reisefieber (3 Stufen): Heldenreisen dauern 10 / 20 / 30 % kürzer. Wird nach Tempo ×3,5 freigeschaltet.',

@@ -278,9 +278,47 @@ const PUZZLES = [
 ];
 const puzDay = () => Math.floor((Date.now() + 3600e3) / 864e5); // Tageswechsel nach deutscher Zeit (grob)
 
+/* ================= Bedenkzeit & Elo (Spieler-Idee v63) ================= */
+// Bedenkzeiten: Grundzeit in Sekunden + Zuschlag pro Zug
+const TC = {
+  none: { n: 'Ohne Uhr' },
+  bullet: { n: 'Bullet 1 min', t: 60, inc: 0 },
+  blitz: { n: 'Blitz 3+2', t: 180, inc: 2 },
+  rapid: { n: 'Rapid 10+5', t: 600, inc: 5 },
+  turnier: { n: 'Turnier 30+10', t: 1800, inc: 10 },
+};
+let API = null; // vom Server: accOf(pid) → Kontoschlüssel, rating(k), result(kW, kB, scoreWeiß)
+// Verbrauchte Zeit des Spielers am Zug abziehen
+const eloOf = pid => { try { const k = API.accOf(pid); return k ? API.rating(k) : null; } catch { return null; } };
+function spend(s, now = Date.now()) { if (!s.clock || s.clock.at == null) return; s.clock[s.turn] -= now - s.clock.at; s.clock.at = now; }
+function armClock(r) {
+  if (r._chT) { clearTimeout(r._chT); r._chT = null; }
+  const s = r.state; if (!s || !s.clock || r.status !== 'playing') return;
+  const gen = s.gen, ply = s.ply, ms = Math.max(0, s.clock[s.turn] - (Date.now() - s.clock.at));
+  r._chT = setTimeout(() => {
+    r._chT = null; const t = r.state; if (t !== s || t.gen !== gen || t.ply !== ply || r.status !== 'playing') return;
+    spend(t); if (t.clock[t.turn] > 0) { armClock(r); return; }
+    t.clock[t.turn] = 0; const loser = t.turn, win = other(loser);
+    // Hat der Gegner zu wenig Material zum Mattsetzen, ist es unentschieden
+    const mat = t.board.filter(p => p && p[0] === win && p[1] !== 'K'), noMate = !mat.length || (mat.length === 1 && 'NB'.includes(mat[0][1]));
+    t.result = noMate ? { winner: null, reason: 'Zeit abgelaufen, aber zu wenig Material – unentschieden' } : { winner: win, reason: `Zeit abgelaufen (${loser === 'w' ? 'Weiß' : 'Schwarz'})` };
+    r.status = 'ended'; rate(r); if (r.push) r.push();
+  }, ms + 60);
+}
+// Gewertete Partie: zwei verschiedene angemeldete Konten, kein Bot, mindestens 10 Halbzüge (gegen Absprachen)
+function rate(r) {
+  const s = r.state; if (!s || s.rated || r.status !== 'ended' || s.bot || s.puz || !API || !API.result) return;
+  s.rated = 1; if ((s.ply || 0) < 10) { s.unrated = 'Weniger als 10 Halbzüge – nicht gewertet'; return; }
+  const kW = API.accOf(s.w), kB = API.accOf(s.b); if (!kW || !kB || kW === kB) return;
+  const sc = !s.result || !s.result.winner ? 0.5 : s.result.winner === 'w' ? 1 : 0;
+  try { s.elo = API.result(kW, kB, sc); } catch (e) { console.error(e); }
+}
+
 // Einen Zug ausführen (Mensch oder Bot) und prüfen, ob die Partie vorbei ist
 function doMove(r, col, m, promo, who) {
   const s = r.state, moved = s.board[m.f];
+  if (s.clock) { spend(s); s.clock[col] += (TC[s.tc].inc || 0) * 1000; }
+  s.ply = (s.ply || 0) + 1;
   const n = apply(s, m, promo);
   s.board = n.board; s.castle = n.castle; s.ep = n.ep; s.turn = n.turn;
   if (n.captured) s.taken[col].push(n.captured);
@@ -299,6 +337,8 @@ function doMove(r, col, m, promo, who) {
     r.status = 'ended'; s.result = { winner: null, reason: '50 Züge ohne Schlagen – unentschieden' };
   } else if (check) msg += ' – Schach!';
   s.log = msg;
+  if (s.clock) { s.clock.at = Date.now(); if (r.status === 'playing') armClock(r); else if (r._chT) { clearTimeout(r._chT); r._chT = null; } }
+  if (r.status === 'ended') rate(r);
 }
 // Ist der Bot dran, zieht er nach kurzer Denkpause
 function botSoon(r) {
@@ -322,7 +362,10 @@ module.exports = {
   start(r, m) {
     m = m || {};
     const old = r.state, ids = r.players.map(p => p.id), gen = ((old && old.gen) || 0) + 1;
-    const base = { board: START.slice(), castle: { wK: true, wQ: true, bK: true, bQ: true }, ep: null, turn: 'w', last: null, result: null, taken: { w: [], b: [] }, quiet: 0, gen, bot: null, puz: null };
+    const base = { board: START.slice(), castle: { wK: true, wQ: true, bK: true, bQ: true }, ep: null, turn: 'w', last: null, result: null, taken: { w: [], b: [] }, quiet: 0, gen, bot: null, puz: null, ply: 0, tc: 'none', clock: null };
+    if (r._chT) { clearTimeout(r._chT); r._chT = null; }
+    const tc = TC[m.tc] && !m.puz ? m.tc : 'none';
+    if (TC[tc].t) { base.tc = tc; base.clock = { w: TC[tc].t * 1000, b: TC[tc].t * 1000, at: Date.now() }; }
     if (m.puz && PUZZLES.length) { // Rätsel des Tages: der Gastgeber spielt die Seite am Zug, der Bot verteidigt
       const day = puzDay(), k = day % PUZZLES.length, [fen, n] = PUZZLES[k], f = fromFen(fen), me = f.turn, bc = other(me);
       r.state = { ...base, ...f, w: me === 'w' ? r.host : 'bot', b: me === 'b' ? r.host : 'bot', bot: { col: bc, lv: 4 }, puz: { day, nr: k + 1, n, left: n } };
@@ -334,20 +377,22 @@ module.exports = {
       const hc = old && old.bot && !old.puz && (old.w === r.host || old.b === r.host) ? (old.w === r.host ? 'b' : 'w') : Math.random() < 0.5 ? 'w' : 'b';
       r.state = { ...base, w: hc === 'w' ? r.host : 'bot', b: hc === 'b' ? r.host : 'bot', bot: { col: other(hc), lv } };
       r.state.log = `${nameOf(r, r.host)} spielt ${hc === 'w' ? 'Weiß und beginnt' : 'Schwarz'} gegen den Schachbot (${BOT_LV[lv].name}).`;
-      r.status = 'playing'; botSoon(r); return;
+      if (base.clock) r.state.log += ` Bedenkzeit: ${TC[tc].n}.`;
+      r.status = 'playing'; armClock(r); botSoon(r); return;
     }
     let w, b;
     if (old && !old.bot && ids.includes(old.w) && ids.includes(old.b)) { w = old.b; b = old.w; } // Farben tauschen
     else { const two = ids.slice(0, 2).sort(() => Math.random() - 0.5); [w, b] = two; }
-    r.state = { ...base, w, b, log: `${nameOf(r, w)} spielt Weiß und beginnt.` };
-    r.status = 'playing';
+    r.state = { ...base, w, b, log: `${nameOf(r, w)} spielt Weiß und beginnt.${base.clock ? ` Bedenkzeit: ${TC[tc].n}.` : ''}` };
+    r.status = 'playing'; armClock(r);
   },
+  setApi(a) { API = a; },
   onLeave(r, pid, name) {
     const s = r.state;
     if (!s || r.status !== 'playing' || (pid !== s.w && pid !== s.b)) return;
     const winner = pid === s.w ? 'b' : 'w';
     s.result = { winner, reason: `${name} hat das Spiel verlassen` };
-    r.status = 'ended';
+    r.status = 'ended'; if (s.clock) spend(s); armClock(r); rate(r);
   },
   act(r, pid, a) {
     const s = r.state;
@@ -356,10 +401,12 @@ module.exports = {
     if (!col) return 'Du schaust bei dieser Partie zu.';
     if (a.type === 'resign') {
       s.result = { winner: other(col), reason: s.puz ? 'Rätsel aufgegeben' : `${nameOf(r, pid)} hat aufgegeben` };
-      r.status = 'ended'; return;
+      if (s.clock) spend(s);
+      r.status = 'ended'; armClock(r); rate(r); return;
     }
     if (a.type !== 'move') return;
     if (s.turn !== col) return 'Du bist gerade nicht dran.';
+    if (s.clock && s.clock[col] - (Date.now() - s.clock.at) <= 0) return 'Deine Zeit ist abgelaufen.';
     const m = legal(s).find(m => m.f === a.f && m.t === a.t);
     if (!m) return 'Dieser Zug ist nicht erlaubt.';
     const promo = 'QRBN'.includes(a.promo) && a.promo ? a.promo : 'Q';
@@ -382,7 +429,11 @@ module.exports = {
       board: s.board, turn: s.turn, mine, w: s.w, b: s.b, moves, last: s.last, log: s.log, names: { w: nm(s.w), b: nm(s.b) },
       check: r.status === 'playing' && inCheck(s, s.turn), result: s.result, taken: s.taken,
       bot: s.bot ? { col: s.bot.col, lv: s.bot.lv } : null, puz: s.puz ? { ...s.puz } : null, think: !!(s.bot && r.status === 'playing' && s.turn === s.bot.col),
+      tc: s.tc || 'none', tcName: TC[s.tc || 'none'].n,
+      clock: s.clock ? { w: Math.max(0, s.clock.w - (r.status === 'playing' && s.turn === 'w' ? Date.now() - s.clock.at : 0)), b: Math.max(0, s.clock.b - (r.status === 'playing' && s.turn === 'b' ? Date.now() - s.clock.at : 0)), run: r.status === 'playing' ? s.turn : null } : null,
+      elo: API && API.rating && !s.bot ? { w: eloOf(s.w), b: eloOf(s.b) } : null, eloRes: s.elo || null, unrated: s.unrated || null,
     };
   },
+  TC,
   _test: { legal, apply, START, inCheck, botMove, mateMoves, fromFen, toFen, allMoves, evalW, PUZZLES },
 };

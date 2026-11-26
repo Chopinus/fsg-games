@@ -49,6 +49,7 @@ if (konten && konten.czAcc) GAMES.casino.setBank({
   maxBet: k => konten.czMaxBet(k),
   roomLive: (id, k) => !czRelease(k, id),
 });
+if (konten && konten.chessApi) GAMES.schach.setApi({ accOf: pid => ACC_OF.get(pid) || null, ...konten.chessApi }); // Schach: Elo (Spieler-Idee v63)
 if (konten && konten.kdApi) GAMES.duell.setApi({ accOf: pid => ACC_OF.get(pid) || null, ...konten.kdApi }); // Kristallduell: Decks, Stufen, Belohnungen
 if (konten && konten.setCzRelease) konten.setCzRelease(k => czRelease(k));
 // Admin hat den Jetonstand gesetzt: auch den Platz am Tisch anpassen, sonst überschreibt der Tisch den neuen Stand
