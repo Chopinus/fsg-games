@@ -307,6 +307,11 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 103, title: 'Kristallduell: Helden mit eigenem Platz im Deck', date: '26.11.2026', items: [
+      'Jedes Deck hat jetzt rechts einen großen Heldenplatz (zusätzlich zu den 30 Karten). Den Abenteuer-Helden Hauptmann Aldric hat jeder von Anfang an.',
+      'Im Duell steht dein Held neben deinen Leben. Ist seine Abklingzeit vorbei, leuchtet er – antippen und die Heldenkraft einsetzen (z. B. Schwerthieb, Feuerregen, Seelenraub).',
+      'Alle anderen Helden gibt es mit 1 % Chance in jedem Themenpack – mit eigener großer Enthüllung.',
+    ] },
     { id: 102, title: 'Spieler-Fehler: Freundesliste wird wieder richtig angezeigt', date: '26.11.2026', items: [
       'In der Freundesliste waren die Knöpfe riesig und haben die Namen verdeckt (ein Stil von Inselsiedler hat sich mit der Freundesliste überschnitten). Jetzt stehen Name, Status, Chat- und Einladen-Knopf wieder ordentlich nebeneinander.',
       'Das Freunde-Fenster wird auf kleinen Handys unten nicht mehr abgeschnitten.',

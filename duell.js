@@ -44,12 +44,6 @@ function draw(s, pid, n = 1) {
   const P = s.pl[pid];
   for (let i = 0; i < n; i++) {
     if (!P.deck.length) { P.fat++; P.life -= P.fat; fx(s, { k: 'fat', p: pid, n: P.fat }); log(s, `${s.nm[pid]} hat keine Karten mehr und verliert ${P.fat} Leben.`); continue; }
-    // Spieler-Idee (v68): ganz selten zieht man statt einer Karte den Helden seines Hauptthemas (höchstens einmal pro Duell)
-    const hid = 'h_' + P.fac;
-    if (C[hid] && !P.heroDrawn && s.phase !== 'pick' && P.hand.length < HAND_MAX && Math.random() < K.HERO_P) {
-      P.heroDrawn = 1; log(s, `✨ ${s.nm[pid]} zieht einen Helden: ${C[hid].n}!`); fx(s, { k: 'hero', p: pid });
-      P.hand.push({ id: hid, h: ++s.uc }); continue;
-    }
     const id = P.deck.pop();
     if (P.hand.length >= HAND_MAX) { P.grave.push(id); fx(s, { k: 'burn', p: pid, id }); log(s, `${s.nm[pid]}s Hand ist voll – ${C[id].n} verbrennt.`); continue; }
     P.hand.push({ id, h: ++s.uc });
@@ -134,6 +128,7 @@ function applyEffect(s, pid, e, T, srcU) {
     }
   }
   if (e.heal && e.k !== 'heal') heal(s, pid, e.heal);
+  if (e.face) hitFace(s, foe, dmgN(s, pid, e.face));
   if (e.draw && e.k !== 'draw') draw(s, pid, e.draw);
 }
 
@@ -154,6 +149,15 @@ function play(s, pid, hi, tgt) {
   else { P.grave.push(card.id); log(s, `${s.nm[pid]} wirkt ${c.n}.`); s.st[pid].spell++; }
   if (c.e && (!c.e.tg || T)) applyEffect(s, pid, c.e, T || {}, src && src.u);
   cleanup(s);
+}
+function useHero(s, pid, tgt) { // Heldenkraft einsetzen
+  const P = s.pl[pid], h = P.hero; if (!h) return 'Dieses Deck hat keinen Helden.';
+  if (h.cd > 0) return `Die Heldenkraft ist erst in ${h.cd} Zug${h.cd > 1 ? 'en' : ''} bereit.`;
+  const H = K.HEROES[h.id], e = H.e; let T = {};
+  if (e.tg) { if (!anyTarget(s, pid, e)) return 'Dafür gibt es gerade kein Ziel.'; T = validTarget(s, pid, e, tgt); if (!T) return 'Wähle ein gültiges Ziel.'; }
+  h.cd = H.cd; fx(s, { k: 'heropow', p: pid, id: h.id, tgt: tgt || null });
+  log(s, `${H.art} ${H.n} setzt ${H.pow} ein!`);
+  applyEffect(s, pid, e, T, null); cleanup(s);
 }
 const canAttack = (c) => !c.tap && !c.sick && !has(c, 'mauer') && c.a > 0;
 const canBlock = (b, a) => !b.tap && (!has(a, 'flug') || has(b, 'flug') || has(b, 'reich'));
@@ -207,7 +211,7 @@ function startTurn(r, pid) {
     c.sick = false; if (c.frz) c.frz = false; else c.tap = false;
     const w = C[c.id].wachs; if (w) { c.a += w[0]; c.h += w[1]; fx(s, { k: 'buff', t: 'u:' + c.u, a: w[0], h: w[1] }); }
   }
-  for (const c of P.board.slice()) { const z = C[c.id].zug; if (z && !c.dead) { applyEffect(s, pid, z, null, c.u); log(s, `${C[c.id].n.replace(/^Held(in)?: /, '')} nutzt die Heldenkraft.`); } } // Heldenkraft (v68)
+  if (P.hero && P.hero.cd > 0) P.hero.cd--; // Heldenkraft lädt auf
   if (bon(s, pid, 'licht')) heal(s, pid, 1); // Morgenröte
   if (!(s.n === 1)) draw(s, pid, 1);
   fx(s, { k: 'turn', p: pid });
@@ -262,6 +266,13 @@ function botWants(s, me, c) { // ungezielte Karten: lohnt sich das gerade?
 function botStep(r) {
   const s = r.state; if (s.phase !== 'main' || s.turn !== BOT) return;
   const me = BOT, foe = foeOf(s, me), P = s.pl[me];
+  // 0. Heldenkraft, wenn bereit und sinnvoll
+  if (P.hero && P.hero.cd === 0) {
+    const e = K.HEROES[P.hero.id].e; let t, ok = true;
+    if (e.tg) { t = botTargetFor(s, me, e); if (!t && e.tg === 'any') t = 'f:' + foe; ok = !!t; }
+    else if (e.k === 'shieldAll') ok = P.board.length >= 1 || P.life < s.maxLife[me];
+    if (ok && useHero(s, me, t) === undefined) { if (s.phase === 'main') schedule(r, 1200, () => botStep(r)); return; }
+  }
   // 1. Karten ausspielen (teuerste zuerst)
   const order = P.hand.map((h, i) => ({ i, c: C[h.id] })).filter(x => x.c.c <= P.cr).sort((a, b) => b.c.c - a.c.c);
   for (const { i, c } of order) {
@@ -325,23 +336,24 @@ function ladderDeck(L) { // feste Decks der Bot-Leiter (gleich bei jedem Versuch
   return cards;
 }
 function deckOptions(r, pid) { // was dieser Spieler wählen kann
-  const out = Object.keys(DECKS).map(f => ({ id: 'base:' + f, n: 'Grunddeck ' + F[f].n, th: f, bon: K.bonusesOf(DECKS[f]) }));
+  const out = Object.keys(DECKS).map(f => ({ id: 'base:' + f, n: 'Grunddeck ' + F[f].n, th: f, bon: K.bonusesOf(DECKS[f]), hero: f === 'abent' ? 'abent' : null }));
   const acc = API && API.accOf(pid);
-  if (acc) (API.decks(acc) || []).forEach((d, i) => out.push({ id: 'my:' + i, n: d.n, th: K.mainTheme(d.cards), bon: K.bonusesOf(d.cards), ok: !d.err, err: d.err || null, mine: 1 }));
+  if (acc) (API.decks(acc) || []).forEach((d, i) => out.push({ id: 'my:' + i, n: d.n, hero: d.hero || null, th: K.mainTheme(d.cards), bon: K.bonusesOf(d.cards), ok: !d.err, err: d.err || null, mine: 1 }));
   return out;
 }
 function setDeck(r, pid, id) {
   const s = r.state, P = s.pl[pid];
-  let cards = null, name = '';
+  let cards = null, name = '', hero = null;
   if (id === 'zufall') id = 'base:' + (k => k[Math.floor(Math.random() * k.length)])(Object.keys(DECKS));
-  if (id.startsWith('base:') && DECKS[id.slice(5)]) { cards = DECKS[id.slice(5)]; name = 'Grunddeck ' + F[id.slice(5)].n; }
+  if (id.startsWith('base:') && DECKS[id.slice(5)]) { cards = DECKS[id.slice(5)]; name = 'Grunddeck ' + F[id.slice(5)].n; if (id === 'base:abent') hero = 'abent'; }
   else if (id.startsWith('my:') && API) {
     const acc = API.accOf(pid), d = acc && (API.decks(acc) || [])[Number(id.slice(3))];
     if (!d) return 'Dieses Deck gibt es nicht.'; if (d.err) return 'Dieses Deck ist nicht fertig: ' + d.err;
-    cards = d.cards; name = d.n;
+    cards = d.cards; name = d.n; hero = d.hero || null;
   }
   if (!cards) return 'Unbekanntes Deck.';
   P.cards = cards; P.deckName = name; P.fac = K.mainTheme(cards); P.bon = K.bonusesOf(cards);
+  P.hero = hero && K.HEROES[hero] ? { id: hero, cd: K.HEROES[hero].cd } : null;
   const acc = API && pid !== BOT && API.accOf(pid);
   const all = acc ? API.levels(acc) : {}; P.lv = {}; for (const k of Object.keys(cards)) P.lv[k] = Math.max(1, all[k] || 1);
   for (const k of Object.keys(C)) if (C[k].tok) P.lv[k] = 1;
@@ -376,7 +388,7 @@ module.exports = {
     for (const id of p) s.st[id] = { spell: 0, summon: 0, kill: 0 };
     for (const id of p) if (id !== BOT) s.opts[id] = deckOptions(r, id);
     if (m.bot) {
-      if (lvl) { const L = LADDER[lvl - 1]; const cards = ladderDeck(lvl); const P = pl[BOT]; P.cards = cards; P.deckName = L.n; P.fac = K.mainTheme(cards); P.bon = K.bonusesOf(cards); P.lv = {}; for (const k of Object.keys(C)) P.lv[k] = Math.min(5, Math.ceil(lvl / 2)); P.life = maxLife[BOT] = L.life; nm[BOT] = L.n; P.art = L.art; }
+      if (lvl) { const L = LADDER[lvl - 1]; const cards = ladderDeck(lvl); const P = pl[BOT]; P.cards = cards; P.deckName = L.n; P.fac = K.mainTheme(cards); P.bon = K.bonusesOf(cards); P.lv = {}; for (const k of Object.keys(C)) P.lv[k] = Math.min(5, Math.ceil(lvl / 2)); P.life = maxLife[BOT] = L.life; nm[BOT] = L.n; P.art = L.art; if (lvl >= 3) P.hero = { id: L.th[0], cd: K.HEROES[L.th[0]].cd }; }
       else setDeck(r, BOT, 'zufall');
     }
     r.status = 'playing';
@@ -413,6 +425,7 @@ module.exports = {
     if (s.turn !== pid) return 'Du bist gerade nicht dran.';
     if (s.phase !== 'main') return 'quiet';
     if (a.type === 'play') return play(s, pid, Number(a.i), a.t);
+    if (a.type === 'hero') return useHero(s, pid, a.t);
     if (a.type === 'attack') return attack(r, pid, Array.isArray(a.us) ? a.us.slice(0, BOARD_MAX) : []);
     if (a.type === 'end') { endTurn(r); return; }
     return 'quiet';
@@ -421,7 +434,7 @@ module.exports = {
   view(r, pid) {
     const s = r.state; if (!s) return null;
     const mine = s.p.includes(pid), me = mine ? pid : s.p[0], foe = foeOf(s, me), pick = s.phase === 'pick';
-    const pub = id => { const P = s.pl[id]; return { life: P.life, max: s.maxLife[id], mx: P.mx, cr: P.cr, deck: P.deck.length, hand: P.hand.length, board: P.board.map(c => ({ u: c.u, id: c.id, a: c.a, h: c.h, d: c.d, kw: c.kw, sick: c.sick, tap: c.tap, frz: c.frz, shield: c.shield })), grave: P.grave.length,
+    const pub = id => { const P = s.pl[id]; return { hero: P.hero && !(pick && id !== pid) ? { id: P.hero.id, cd: P.hero.cd } : null, life: P.life, max: s.maxLife[id], mx: P.mx, cr: P.cr, deck: P.deck.length, hand: P.hand.length, board: P.board.map(c => ({ u: c.u, id: c.id, a: c.a, h: c.h, d: c.d, kw: c.kw, sick: c.sick, tap: c.tap, frz: c.frz, shield: c.shield })), grave: P.grave.length,
       fac: pick && id !== pid ? (P.cards ? '?' : null) : P.fac, bon: pick && id !== pid ? [] : P.bon, dn: pick && id !== pid ? '' : P.deckName, art: P.art || null, lv: pick ? {} : P.lv, fat: P.fat }; };
     return { phase: s.phase, p: s.p, me, foe, mine, nm: s.nm, turn: s.turn, n: s.n, attacked: s.attacked, atk: s.atk, blocks: s.blocks, winner: s.winner, draw: s.draw, log: s.log, fx: s.fx, seq: s.seq, score: s.score, bot: s.bot, lvl: s.lvl,
       left: s.dl ? Math.max(0, s.dl - Date.now()) : null, lastDeck: s.lastDeck[pid] || null, opts: pick && mine ? s.opts[pid] || [] : null, rew: s.rew && s.rew[pid] || null,

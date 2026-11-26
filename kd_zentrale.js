@@ -3,6 +3,7 @@
 (function () {
   const K = window.DuellKarten; if (!K) return;
   const { C, F, RAR, B, LADDER, PACK } = K;
+  const HE = K.HEROES || {};
   const css = `
   #kdz{position:fixed;inset:0;z-index:9500;background:radial-gradient(ellipse at 50% -10%,#3a1f6a,#0d0a18 70%);color:var(--fg);display:flex;flex-direction:column;animation:kdzin .25s ease-out both;font-family:var(--body)}
   @keyframes kdzin{from{opacity:0;transform:scale(.98)}}
@@ -65,6 +66,22 @@
   #kdz .lr{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:16px;background:linear-gradient(90deg,color-mix(in srgb,var(--c1) 35%,#1d1830),#1d1830);border:1px solid rgba(255,255,255,.1);animation:kdzoom .4s both}
   #kdz .lr .a{font-size:34px;width:46px;text-align:center} #kdz .lr .i{flex:1;min-width:0} #kdz .lr .i b{display:block;font-size:16px} #kdz .lr .i small{color:var(--muted);display:block}
   #kdz .lr.lock{filter:grayscale(.8) brightness(.6)} #kdz .lr.done .a::after{content:"✅";font-size:14px;position:relative;left:-8px;top:12px}
+  #kdz .dkrow{display:flex;gap:10px;align-items:stretch}
+  #kdz .dkrow .mgrid.deck{flex:1;min-width:0}
+  #kdz .heroslot{flex:none;width:128px;border-radius:18px;border:3px solid #ffd23f;background:radial-gradient(circle at 50% 30%,rgba(255,255,255,.18),transparent 60%),linear-gradient(170deg,var(--c1),var(--c2));color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:12px 8px;cursor:pointer;font:inherit;text-align:center;box-shadow:0 0 22px rgba(255,210,63,.35);position:relative;transition:transform .15s}
+  #kdz .heroslot:hover{transform:translateY(-3px)}
+  #kdz .heroslot .hp{font-size:58px;filter:drop-shadow(0 6px 8px rgba(0,0,0,.5));animation:kdbob 2.6s ease-in-out infinite}
+  #kdz .heroslot b{font-size:14px;line-height:1.1} #kdz .heroslot small{font-size:11.5px;opacity:.9} #kdz .heroslot .cd{opacity:.75}
+  #kdz .heroslot .tag{position:absolute;top:-11px;background:#ffd23f;color:#2a1a00;font-weight:800;font-size:11px;letter-spacing:.12em;padding:2px 10px;border-radius:9px}
+  #kdz .heroslot.empty{border-style:dashed;background:rgba(255,210,63,.06);box-shadow:none;color:#ffd23f}
+  #kdz .heroslot.empty .hp{font-size:40px;animation:none}
+  @media (max-width:520px){#kdz .heroslot{width:94px;padding:10px 4px}#kdz .heroslot .hp{font-size:42px}#kdz .heroslot b{font-size:12px}#kdz .heroslot small{font-size:10px}}
+  .hgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:10px}
+  .htile{position:relative;border-radius:16px;border:2px solid color-mix(in srgb,var(--c1) 60%,#fff);background:linear-gradient(165deg,var(--c1),var(--c2));color:#fff;display:flex;flex-direction:column;align-items:center;gap:3px;padding:12px 8px;text-align:center;cursor:pointer;font:inherit}
+  .htile .hp{font-size:44px} .htile b{font-size:14px} .htile small{font-size:11.5px;opacity:.9}
+  .htile .st{margin-top:4px;font-size:11px;font-weight:800;background:rgba(0,0,0,.35);border-radius:8px;padding:2px 8px}
+  .htile.on{border-color:#ffd23f;box-shadow:0 0 0 2px #ffd23f,0 0 20px rgba(255,210,63,.6)}
+  .htile.lock{filter:grayscale(.85) brightness(.55)}
   #kdz .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:12px 8px;justify-items:center}
   #kdz .mgrid.deck{background:rgba(255,210,63,.06);border:1px solid rgba(255,210,63,.3);border-radius:16px;padding:14px 10px;min-height:120px}
   #kdz .mw{position:relative;cursor:pointer;transition:transform .15s;-webkit-touch-callout:none;user-select:none}
@@ -118,6 +135,8 @@
   .kd-one.open.r-l .fr .kd-card,.kdf.open.r-l .fr .kd-card{box-shadow:0 0 0 3px #ffb020,0 0 44px rgba(255,176,32,.95);animation:kdrl 1.2s ease-in-out infinite}
   @keyframes kdre{50%{box-shadow:0 0 0 3px #d49cff,0 0 50px rgba(180,92,255,1)}}
   @keyframes kdrl{50%{box-shadow:0 0 0 4px #ffe08a,0 0 70px rgba(255,200,60,1)}}
+  .kd-heroc.big{width:min(300px,80vw)} .kd-heroc.big .hp{animation:kdbob 2.4s ease-in-out infinite}
+  .kd-heroc.mini{width:104px;height:148px;padding:8px 4px;gap:2px;border-width:2px;animation:none;justify-content:center} .kd-heroc.mini .hp{font-size:48px} .kd-heroc.mini b{font-size:12px;font-family:var(--body);font-weight:800}
   #kdpk .skip{position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);right:14px;z-index:5}
   #kdpk .cntr{font-weight:800;color:#cfc6e6;letter-spacing:.1em;z-index:3}
   #kdpk .meteor{position:absolute;left:-15%;top:8%;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 0 18px 8px var(--mc),0 0 60px 24px var(--mc);transform:rotate(28deg);animation:kdmet 1.1s cubic-bezier(.55,0,.85,1) forwards;z-index:4}
@@ -208,7 +227,7 @@
         <p class="note" style="margin:8px 0 4px">Ziehst du eine Karte mehrfach, steigt ihre Stufe – nur das Aussehen ändert sich, nicht die Stärke:</p>
         <div class="stat"><span>★★ Silberrahmen</span><span>★★★ Goldrahmen mit Glanz</span><span>★★★★ leuchtet + Angriffs-Effekt</span><span>★★★★★ Prisma-Rahmen, Aura und Einschlag</span></div>
         <p class="note" style="margin:10px 0 4px">Themen-Boni gibt es ab ${K.BONUS_MIN} Karten eines Themas im Deck. Themen darfst du frei mischen.</p>${Object.entries(B).map(([f, b]) => `<div>${fc(f).e} <b>${b[0]}</b> – ${b[1]}</div>`).join('')}
-        <p class="note" style="margin:10px 0 4px">✨ Helden: Jedes Deck kann mit ganz geringer Wahrscheinlichkeit (${Math.round((K.HERO_P || 0) * 100)} % pro gezogener Karte, höchstens einmal pro Duell) den Helden seines Hauptthemas ziehen. Helden haben viel Leben und eine Heldenkraft zu Beginn jedes Zuges.</p>${Object.entries(C).filter(([, c]) => c.hero).map(([, c]) => `<div>${fc(c.f).e} <b>${c.art} ${c.n}</b> (${c.c} 💎, ${c.a}/${c.h}) – ${c.txt}</div>`).join('')}</details></div>`;
+        <p class="note" style="margin:10px 0 4px">🦸 Helden: Jedes Deck hat einen eigenen Heldenplatz (zusätzlich zu den 30 Karten). Die Heldenkraft setzt du im Duell ein, sobald ihre Abklingzeit vorbei ist. Den Abenteuer-Helden hat jeder, alle anderen gibt es mit ${Math.round(K.HERO_P * 100)} % Chance aus Packs.</p>${Object.entries(HE).map(([f, h]) => `<div>${fc(f).e} <b>${h.art} ${h.n}</b> – ⚡ ${h.pow} (alle ${h.cd} Züge): ${h.txt}</div>`).join('')}</details></div>`;
   }
   function tabPacks(s) {
     if (s.welcome > 0) return welcomeBox(s) + '<p class="note center">Öffne zuerst deine Willkommens-Packs – danach kannst du hier mit Funken neue Packs kaufen.</p>';
@@ -231,6 +250,8 @@
     return `<div class="box" style="display:flex;flex-direction:column;gap:8px">${themeChips(Z.th, 'data-kdzth')}
       <div class="chips"><button class="${Z.ra === 'alle' ? 'on' : ''}" data-kdzra="alle">Jede Seltenheit</button>${Object.entries(RAR).map(([k, r]) => `<button class="${Z.ra === k ? 'on' : ''}" data-kdzra="${k}" style="color:${Z.ra === k ? '' : r.col}">◆ ${r.n}</button>`).join('')}<button class="${Z.miss ? 'on' : ''}" data-kdzmiss="1">🔒 Nur fehlende</button><button data-kdzbonp="1">🎨 Themen-Boni</button></div>
       <span class="note">${have} von ${all.length} Karten · ✨ ${s.st} Sternenstaub zum Herstellen</span></div>
+      <h3>🦸 Helden <span class="note">(${Object.keys(s.heroes || {}).filter(h => HE[h]).length}/${Object.keys(HE).length})</span></h3><div class="hgrid">${Object.keys(HE).map(id => heroTile(id, s, false)).join('')}</div>
+      <h3>🃏 Karten</h3>
       <div class="grid">${ids.map(id => { const n = s.c[id] || 0, lv = K.levelOf(id, n); const [p, t] = n ? progOf(id, n) : [0, `${RAR[C[id].r].craft} ✨`];
         return `<div class="cw" data-kdzcard="${id}">${n ? `<span class="cnt">×${n}</span>` : '<span class="lock">🔒</span>'}${card(id, { lv: Math.max(1, lv), cls: n ? '' : 'miss' })}${n ? `<span class="prog"><i style="width:${p * 100}%"></i></span>` : ''}<span class="pl">${t}</span></div>`; }).join('') || '<p class="note">Keine Karten für diesen Filter.</p>'}</div>`;
   }
@@ -278,14 +299,14 @@
   // Deck-Bau wie in Clash Royale: oben das Deck, darunter die eigenen Karten, ganz unten die gesperrten. Speichert automatisch.
   function ensureEd(s) {
     if (Z.di == null || Z.di >= s.decks.length) Z.di = s.decks.length ? 0 : -1;
-    if (!Z.ed || Z.ed.i !== Z.di) { const d = s.decks[Z.di]; Z.ed = d ? { i: Z.di, n: d.n, cards: { ...d.cards } } : { i: -1, n: 'Mein Deck', cards: {} }; }
+    if (!Z.ed || Z.ed.i !== Z.di) { const d = s.decks[Z.di]; Z.ed = d ? { i: Z.di, n: d.n, cards: { ...d.cards }, hero: d.hero || null } : { i: -1, n: 'Mein Deck', cards: {}, hero: (s.heroes || {}).abent ? 'abent' : null }; }
   }
   let saveT = null;
   function saveSoon() {
     Z.saving = 'wait'; const st = q('#kdz .svst'); if (st) st.textContent = '… speichert';
     clearTimeout(saveT); saveT = setTimeout(async () => {
       const d = Z.ed; if (!d) return;
-      const r = await call('kd_deck_save', { i: d.i, n: d.n, cards: d.cards });
+      const r = await call('kd_deck_save', { i: d.i, n: d.n, cards: d.cards, hero: d.hero || null });
       if (r.error) { Z.saving = 'err'; toast(r.error); render(); return; }
       if (d.i < 0) { d.i = r.i; Z.di = r.i; }
       Z.saving = 'ok'; Z.st = r.state;
@@ -304,6 +325,28 @@
     document.body.appendChild(o);
     o.addEventListener('click', e => { if (e.target === o || e.target.closest('[data-kdx]')) o.remove(); });
   }
+  function heroSlot(id) {
+    const H = HE[id];
+    if (!H) return `<button class="heroslot empty" data-kdzhero="1"><span class="hp">＋</span><b>Held</b><small>Platz für deinen Helden</small></button>`;
+    return `<button class="heroslot" data-kdzhero="1" style="${cv(id)}"><span class="tag">HELD</span><span class="hp">${H.art}</span><b>${esc(H.n)}</b><small>⚡ ${esc(H.pow)}</small><small class="cd">⏳ alle ${H.cd} Züge</small></button>`;
+  }
+  function heroTile(id, s, sel) { const H = HE[id], own = (s.heroes || {})[id];
+    return `<button class="htile ${own ? '' : 'lock'} ${sel ? 'on' : ''}" data-kdzhpick="${id}" style="${cv(id)}"><span class="hp">${own ? H.art : '🔒'}</span><b>${esc(H.n)}</b><small>⚡ ${esc(H.pow)} · alle ${H.cd} Züge</small><small>${esc(H.txt)}</small>${own ? (sel ? '<span class="st">✓ im Deck</span>' : '') : `<span class="st">${Math.round(K.HERO_P * 100)} % pro ${fc(id).n}-Pack</span>`}</button>`; }
+  function heroPicker(mode) { // mode 'deck': Held fürs aktuelle Deck wählen · 'info': nur anschauen
+    const s = Z.st, cur = mode === 'deck' && Z.ed ? Z.ed.hero : null;
+    const o = document.createElement('div'); o.className = 'kd-pop'; o.style.zIndex = 9700;
+    o.innerHTML = `<div class="kd-rew" style="max-width:640px;width:100%"><b>🦸 Helden</b><div class="note">Ein Held hat einen eigenen Platz im Deck. Seine Heldenkraft setzt du im Duell ein, sobald die Abklingzeit vorbei ist – danach lädt sie neu auf.${mode === 'deck' ? ' Tippe einen Helden an, um ihn ins Deck zu nehmen.' : ''}</div>
+      <div class="hgrid">${Object.keys(HE).map(id => heroTile(id, s, id === cur)).join('')}</div></div>
+      <div class="row" style="justify-content:center;gap:8px">${mode === 'deck' && cur ? '<button class="btn ghost" data-kdzhpick="">Ohne Helden</button>' : ''}<button class="btn ghost" data-kdx="1">Schließen</button></div>`;
+    document.body.appendChild(o);
+    o.addEventListener('click', e => {
+      if (e.target === o || e.target.closest('[data-kdx]')) { o.remove(); return; }
+      const t = e.target.closest('[data-kdzhpick]'); if (!t || mode !== 'deck') return;
+      const id = t.dataset.kdzhpick;
+      if (id && !(s.heroes || {})[id]) { toast(`Diesen Helden hast du noch nicht – er steckt mit ${Math.round(K.HERO_P * 100)} % in jedem ${fc(id).n}-Pack.`); return; }
+      Z.ed.hero = id || null; o.remove(); Z.keepScroll = true; render(); saveSoon(); toast(id ? `${HE[id].art} ${HE[id].n} führt jetzt dein Deck an` : 'Deck ohne Helden');
+    });
+  }
   function tabDecks(s) {
     ensureEd(s);
     const d = Z.ed, n = deckN(d.cards), cre = Object.entries(d.cards).reduce((a, [id, k]) => a + (C[id].t === 'k' ? k : 0), 0), th = K.themesOf(d.cards), err = K.checkDeck(d.cards, s.c);
@@ -320,10 +363,10 @@
         <div class="curve" style="width:170px;height:46px">${curve.map((k, i) => `<div><span>${k || ''}</span><i style="height:${(k / mx) * 28}px"></i>${i === 6 ? '7+' : i + 1}</div>`).join('')}</div></div>
         ${err ? `<div class="note" style="color:#ffb0b0;margin-top:6px">⚠️ ${esc(err)}</div>` : '<div class="note" style="color:#9fffc4;margin-top:6px">✅ Spielbereit</div>'}</div>
       <h3>🃏 Dein Deck <span class="note">– antippen zum Herausnehmen · ⓘ für Details</span></h3>
-      <div class="mgrid deck">${inDeck.map(([id, k]) => `<div class="mw ${Z.just === id ? 'just' : ''}" data-kdzrm="${id}" data-hold="${id}">${mini(id)}<span class="cnt">×${k}</span><button class="ib" data-kdzinfo="${id}" aria-label="Details">i</button></div>`).join('')}${n < K.DECK_SIZE ? `<div class="mw slot"><span>＋${K.DECK_SIZE - n}</span><small>frei</small></div>` : ''}</div>
+      <div class="dkrow"><div class="mgrid deck">${inDeck.map(([id, k]) => `<div class="mw ${Z.just === id ? 'just' : ''}" data-kdzrm="${id}" data-hold="${id}">${mini(id)}<span class="cnt">×${k}</span><button class="ib" data-kdzinfo="${id}" aria-label="Details">i</button></div>`).join('')}${n < K.DECK_SIZE ? `<div class="mw slot"><span>＋${K.DECK_SIZE - n}</span><small>frei</small></div>` : ''}</div>${heroSlot(d.hero)}</div>
       ${themeChips(Z.edTh, 'data-kdzeth')}
       <h3>✋ Deine Karten <span class="note">– antippen zum Hinzufügen · ⓘ für Details</span></h3>
-      <div class="mgrid">${owned.map(id => `<div class="mw" data-kdzadd="${id}" data-hold="${id}">${mini(id)}<span class="cnt free">${avail(id)}×</span><button class="ib" data-kdzinfo="${id}" aria-label="Details">i</button></div>`).join('') || '<p class="note">Alle passenden Karten sind schon im Deck.</p>'}</div>
+      <div class="mgrid">${owned.map(id => `<div class="mw" data-kdzadd="${id}" data-hold="${id}">${mini(id)}<span class="cnt free">${avail(id)}×</span><button class="ib" data-kdzinfo="${id}" aria-label="Details">i</button></div>`).join('') || '<p class="note" style="grid-column:1/-1">Alle passenden Karten sind schon im Deck.</p>'}</div>
       <h3>🔒 Noch nicht gefunden <span class="note">(${locked.length}) – aus Packs oder mit ✨ Sternenstaub herstellen</span></h3>
       <div class="mgrid">${locked.map(id => `<div class="mw lock" data-kdzcard="${id}">${mini(id, { cls: 'miss' })}<span class="lk">🔒</span></div>`).join('')}</div>`;
   }
@@ -358,7 +401,7 @@
     msg.textContent = r.pity ? (r.pity === 'l' ? '🧡 Glücksschutz: legendäre Karte garantiert!' : '💜 Glücksschutz: epische Karte garantiert!') : 'Tippe auf das Pack!';
     await tap();
     // Sternschnuppe in der Farbe der besten Karte
-    const best = ['l', 'e', 's', 'g'].find(x => r.cards.some(c => c.r === x));
+    const best = r.hero ? 'l' : ['l', 'e', 's', 'g'].find(x => r.cards.some(c => c.r === x));
     pk.style.animationDuration = '.25s'; msg.textContent = '';
     if (!skip) {
       const m = document.createElement('div'); m.className = 'meteor'; m.style.setProperty('--mc', RCOL[best]); o.appendChild(m);
@@ -404,11 +447,28 @@
       rays.classList.remove('on');
       one.classList.add('out'); inf.style.opacity = 0; await sleep(skip ? 0 : 320); wrap.remove();
     }
+    // Held gezogen (1 %): eigene große Enthüllung
+    if (r.hero && HE[r.hero.id]) {
+      const H = HE[r.hero.id], hf = fc(r.hero.id);
+      skipBtn.hidden = true; dim.classList.add('on'); vortex.style.setProperty('--vc', 'rgba(255,255,255,.9)'); vortex.classList.add('on');
+      const t0 = document.createElement('div'); t0.className = 'msg'; t0.style.zIndex = 3; t0.textContent = 'Moment … da ist noch etwas im Pack!'; o.appendChild(t0);
+      if (navigator.vibrate) navigator.vibrate([40, 80, 40, 80, 200]);
+      await sleep(1500); t0.remove(); vortex.classList.remove('on');
+      const fl2 = document.createElement('div'); fl2.className = 'flash'; fl2.style.background = '#ffd23f'; o.appendChild(fl2); setTimeout(() => fl2.remove(), 700);
+      rays.classList.add('on'); dim.classList.remove('on');
+      const w = document.createElement('div'); w.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:12px;z-index:3';
+      w.innerHTML = `<div class="kd-heroc big" style="--c1:${hf.col};--c2:${hf.col2}"><span class="hp">${H.art}</span><b>${esc(H.n)}</b><small>${hf.e} Held · ${hf.n}</small><div class="pw"><b>⚡ ${esc(H.pow)}</b><div>${esc(H.txt)}</div><div class="note" style="color:#eee">Abklingzeit: ${H.cd} Züge</div></div></div>
+        <div class="msg">${r.hero.dup ? `Schon in deiner Sammlung – +${r.hero.dust} ✨ Sternenstaub` : '🦸 Neuer Held! Setze ihn unter 📦 Decks in den Heldenplatz.'}</div><div class="hint">Tippen für die Übersicht</div>`;
+      o.appendChild(w);
+      const t = document.createElement('div'); t.className = 'rtx'; t.style.setProperty('--rc', '#ffd23f'); t.textContent = 'HELD!'; o.appendChild(t); setTimeout(() => t.remove(), 1900);
+      const at = center(w.querySelector('.kd-heroc')); if (window.KDfx) { KDfx.burst(at, '⭐', '#ffd23f'); setTimeout(() => KDfx.burst(at, H.art, hf.col), 300); setTimeout(() => KDfx.burst(at, '✦', '#fff'), 600); }
+      skip = false; await tap(); w.remove(); rays.classList.remove('on');
+    }
     // Übersicht
     skipBtn.remove(); rays.classList.remove('on'); vortex.classList.remove('on'); dim.classList.remove('on');
     o.querySelectorAll('.kd-one,.cntr,.inf,.hint').forEach(e => e.parentElement && e.parentElement !== o ? e.parentElement.remove() : e.remove());
     const sum = document.createElement('div'); sum.className = 'sum';
-    sum.innerHTML = `<div class="msg">Deine neuen Karten</div><div class="row5">${r.cards.map((c, i) => `<div class="kdf open r-${c.r}" data-i="${i}" style="--rc:${RAD(c.r)};animation-delay:${i * 0.09}s"><div class="fl"><div class="bk">💎</div><div class="fr">${card(c.id, { lv: Math.max(1, c.lv) })}</div></div>
+    sum.innerHTML = `<div class="msg">Deine neuen Karten</div><div class="row5">${r.hero && HE[r.hero.id] ? `<div class="kdf open r-l" style="--rc:#ffd23f"><div class="kd-heroc mini" style="--c1:${fc(r.hero.id).col};--c2:${fc(r.hero.id).col2}"><span class="hp">${HE[r.hero.id].art}</span><b>${esc(HE[r.hero.id].n)}</b></div><span class="lbl up" style="opacity:1">${r.hero.dup ? '+' + r.hero.dust + ' ✨' : '🦸 HELD!'}</span></div>` : ''}${r.cards.map((c, i) => `<div class="kdf open r-${c.r}" data-i="${i}" style="--rc:${RAD(c.r)};animation-delay:${i * 0.09}s"><div class="fl"><div class="bk">💎</div><div class="fr">${card(c.id, { lv: Math.max(1, c.lv) })}</div></div>
       <span class="lbl ${c.isNew ? 'new' : c.up ? 'up' : c.dust ? 'dust' : 'n'}">${c.isNew ? '✨ NEU!' : c.up ? `★ Stufe ${c.lv}!` : c.dust ? `+${c.dust} ✨` : `×${c.n}`}</span></div>`).join('')}</div><div class="acts"></div>`;
     o.appendChild(sum);
     const acts = sum.querySelector('.acts');
@@ -444,6 +504,8 @@
     if ((b = g('data-kdzra'))) { Z.ra = b.dataset.kdzra; render(); return; }
     if (g('data-kdzmiss')) { Z.miss = !Z.miss; render(); return; }
     if ((b = g('data-kdzcard'))) { showCard(b.dataset.kdzcard); return; }
+    if (g('data-kdzhero')) { heroPicker('deck'); return; }
+    if (g('data-kdzhpick')) { heroPicker('info'); return; }
     if ((b = g('data-kdzinfo'))) { showCard(b.dataset.kdzinfo); return; }
     if (g('data-kdzbonp')) { showBonus(); return; }
     if ((b = g('data-kdzed'))) {

@@ -17,6 +17,19 @@
   .kd-life{position:relative;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font:400 22px var(--display);color:#fff;background:radial-gradient(circle at 35% 30%,#ff6b7d,#8a0f24);box-shadow:0 0 0 3px #3a0f18,0 0 18px rgba(255,60,90,.45);flex:none;transition:transform .2s}
   .kd-life.low{animation:kdpulse 1s ease-in-out infinite}
   @keyframes kdpulse{50%{box-shadow:0 0 0 3px #3a0f18,0 0 30px rgba(255,60,90,.9)}}
+  .kd-hero{position:relative;flex:none;width:58px;height:58px;border-radius:50%;padding:0;border:0;cursor:pointer;background:conic-gradient(#ffd23f var(--p),rgba(255,255,255,.12) 0);display:grid;place-items:center;transition:transform .2s}
+  .kd-hero .hp{width:50px;height:50px;border-radius:50%;display:grid;place-items:center;font-size:30px;background:radial-gradient(circle at 35% 30%,var(--c1),var(--c2));box-shadow:inset 0 0 10px rgba(0,0,0,.5)}
+  .kd-hero .cdn{position:absolute;bottom:-4px;right:-4px;min-width:22px;height:22px;border-radius:11px;background:#1a1030;border:2px solid #6a5a9a;color:#fff;font:800 12px/18px var(--body)}
+  .kd-hero .rd{position:absolute;bottom:-4px;right:-4px;width:24px;height:24px;border-radius:50%;background:#ffd23f;border:2px solid #1a1030;font-size:13px;line-height:20px}
+  .kd-hero.ready{background:conic-gradient(#ffd23f 100%,#ffd23f 0);box-shadow:0 0 14px rgba(255,210,63,.6)}
+  .kd-hero.go{animation:kdhgo 1.1s ease-in-out infinite}
+  @keyframes kdhgo{50%{transform:scale(1.1);box-shadow:0 0 26px rgba(255,210,63,1)}}
+  .kd-hero.fire{animation:kdhfire .8s cubic-bezier(.2,1.6,.4,1)}
+  @keyframes kdhfire{30%{transform:scale(1.4) rotate(-8deg);filter:brightness(1.8)}}
+  @media (max-width:520px){.kd-hero{width:46px;height:46px}.kd-hero .hp{width:40px;height:40px;font-size:24px}}
+  .kd-heroc{width:min(300px,82vw);border-radius:22px;padding:18px;background:linear-gradient(160deg,var(--c1),var(--c2));border:3px solid #ffd23f;box-shadow:0 0 40px rgba(255,210,63,.5);color:#fff;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;animation:kdzoom .35s cubic-bezier(.2,1.4,.4,1) both}
+  .kd-heroc .hp{font-size:90px;filter:drop-shadow(0 6px 10px rgba(0,0,0,.5))} .kd-heroc>b{font:400 26px var(--display)} .kd-heroc small{opacity:.85}
+  .kd-heroc .pw{margin-top:6px;background:rgba(0,0,0,.35);border-radius:14px;padding:10px 12px;width:100%} .kd-heroc .pw b{color:#ffd23f;font-size:17px}
   .kd-gems{display:flex;flex-wrap:wrap;gap:2px;max-width:150px;align-items:center}
   .kd-gems i{width:12px;height:16px;clip-path:polygon(50% 0,100% 35%,80% 100%,20% 100%,0 35%);background:#2a3a5a}
   .kd-gems i.on{background:linear-gradient(160deg,#9ff3ff,#22a6ff 60%,#1650c0);filter:drop-shadow(0 0 3px #3ac8ff)}
@@ -201,11 +214,18 @@
     return `<div class="${cls.join(' ')}" style="${cv(k.f)};${k.r ? `--rc:${RAR[k.r].col}` : ''}" data-u="${c.u}" data-side="${side}" data-lv="${lv}" data-f="${k.f}">${lvFx(lv)}${k.r ? '<i class="rg"></i>' : ''}${badge}<div class="kwi">${kwIcons(c.kw)}</div><div class="art">${k.art}</div><span class="cn">${esc(k.n)}</span>${c.sick && !c.tap && my ? '<span class="zz">💤</span>' : ''}
       <span class="st a ${c.a > k.a ? 'up' : ''}">${c.a}</span><span class="st h ${hurt ? 'hurt' : ''} ${up && !hurt ? 'up' : ''}">${c.h - c.d}</span></div>`;
   }
+  const HE = K.HEROES || {};
+  function heroHTML(v, pid, side) { // Held mit Abklingzeit (Ring füllt sich), antippbar wenn bereit
+    const h = v.P[pid].hero; if (!h || !HE[h.id]) return '';
+    const H = HE[h.id], f = fc(h.id), ready = h.cd === 0, mineNow = side === 'me' && v.mine && v.turn === v.me && v.phase === 'main' && !S.tgt;
+    const pct = Math.round((1 - h.cd / H.cd) * 100);
+    return `<button class="kd-hero ${ready ? 'ready' : ''} ${ready && mineNow ? 'go' : ''}" data-kdhero="${pid}" style="--c1:${f.col};--c2:${f.col2};--p:${pct}%" title="${esc(H.n + ' – ' + H.pow + ': ' + H.txt)}"><span class="hp">${H.art}</span>${ready ? '<span class="rd">⚡</span>' : `<span class="cdn">${h.cd}</span>`}</button>`;
+  }
   function barHTML(v, pid, side) {
     const P = v.P[pid], f = fc(P.fac), gems = Array.from({ length: P.mx }, (_, i) => `<i class="${i < P.cr ? 'on' : ''}"></i>`).join('');
     const tg = S.tgt && S.tgt.opts.includes('f:' + pid) ? 'tgt' : '';
     return `<div class="kd-bar ${v.turn === pid && v.phase !== 'end' ? 'turn' : ''}"><div class="who"><span class="av" style="--c1:${f.col};--c2:${f.col2}">${P.art || (pid === 'bot' ? '🤖' : f.e)}</span><span class="nm">${esc(v.nm[pid])}${side === 'me' && v.mine ? ' (du)' : ''}${(P.bon || []).length ? `<span class="kd-bon" data-kdbon="${pid}" title="Themen-Bonus">${P.bon.map(b => `<i>${fc(b).e}</i>`).join('')}</span>` : ''}<small>${esc(P.dn || f.n)} · <span title="Handkarten">🂠 ${P.hand}</span> · <span title="Karten im Deck">📚 ${P.deck}</span></small></span></div>
-      <div class="kd-gems">${gems}<b>${P.cr}/${P.mx}</b></div>
+      <div class="kd-gems">${gems}<b>${P.cr}/${P.mx}</b></div>${heroHTML(v, pid, side)}
       <div class="kd-life ${P.life <= 5 ? 'low' : ''} ${tg}" data-face="f:${pid}" title="Leben">${Math.max(0, P.life)}</div></div>`;
   }
 
@@ -233,7 +253,7 @@
         <p class="note">Stand: ${esc(v.nm[v.p[0]])} ${v.score[v.p[0]] || 0} – ${v.score[v.p[1]] || 0} ${esc(v.nm[v.p[1]])}</p>
         <div class="row" style="justify-content:center;gap:8px;flex-wrap:wrap">${v.bot && isHost() ? `${next}<button class="btn ${next ? 'ghost' : ''}" data-kdbot="${v.lvl || 0}">⚔️ Nochmal</button>` : againHTML('⚔️ Revanche!')}<button class="btn ghost" data-kdz="spielen">💎 Zentrale</button></div></div>`;
     } else if (S.tgt) {
-      mid = `<div class="kd-tgtbar">🎯 Ziel für ${esc(C[v.hand[S.tgt.i] ? v.hand[S.tgt.i].id : ''] ? C[v.hand[S.tgt.i].id].n : '')} wählen <button class="btn ghost small" data-kd="cancel">Abbrechen</button></div>`;
+      mid = `<div class="kd-tgtbar">🎯 Ziel für ${S.tgt.hero ? esc(HE[v.P[v.me].hero.id].pow) : esc(C[v.hand[S.tgt.i] ? v.hand[S.tgt.i].id : ''] ? C[v.hand[S.tgt.i].id].n : '')} wählen <button class="btn ghost small" data-kd="cancel">Abbrechen</button></div>`;
     } else if (v.phase === 'block') {
       if (v.mine && v.turn !== me) { const n = Object.keys(S.blk).length; mid = `<span class="msg mine">🛡️ Angriff! ${S.bsel ? 'Jetzt einen roten Angreifer antippen' : 'Tippe deine Kreatur, dann den Angreifer, den sie blocken soll'}</span><button class="btn" data-kd="block">${n ? `🛡️ Mit ${n} blocken` : 'Nicht blocken'}</button>`; }
       else mid = `<span class="msg">⏳ ${esc(v.nm[foe === v.turn ? me : foe])} wählt Blocker …</span>`;
@@ -255,7 +275,7 @@
     const key = 'pick' + mineF + foeF + (v.opts || []).length;
     if (stage.dataset.mode === key) return; stage.dataset.mode = key;
     const dk = (o, i) => { const f = fc(o.th); return `<button class="kd-dk ${o.mine ? 'mine' : ''} ${o.ok === false ? 'bad' : ''}" data-kdd="${o.id}" style="--c1:${f.col};--c2:${f.col2};animation-delay:${i * 0.05}s" ${o.ok === false ? `title="${esc(o.err || '')}"` : ''}>
-      <span class="e">${f.e}</span><b>${esc(o.n)}</b><small>${o.ok === false ? '⚠️ ' + esc(o.err || 'nicht fertig') : o.bon.length ? 'Bonus: ' + o.bon.map(b => fc(b).e + ' ' + K.B[b][0]).join(', ') : 'kein Themen-Bonus'}</small>${v.lastDeck === o.id ? '<span class="last">zuletzt</span>' : ''}</button>`; };
+      <span class="e">${o.hero && HE[o.hero] ? HE[o.hero].art : f.e}</span><b>${esc(o.n)}</b><small>${o.ok === false ? '⚠️ ' + esc(o.err || 'nicht fertig') : o.bon.length ? 'Bonus: ' + o.bon.map(b => fc(b).e + ' ' + K.B[b][0]).join(', ') : 'kein Themen-Bonus'}</small>${v.lastDeck === o.id ? '<span class="last">zuletzt</span>' : ''}</button>`; };
     const my = (v.opts || []).filter(o => o.mine), base = (v.opts || []).filter(o => !o.mine);
     const foeTxt = v.bot ? `${v.P[v.foe].art || '🤖'} ${esc(v.nm[v.foe])}${v.lvl ? ` · Bot-Leiter Stufe ${v.lvl} · ❤️ ${v.P[v.foe].max}` : ''}` : esc(v.nm[v.foe]);
     stage.innerHTML = `<div class="kd"><h2 class="center" style="margin:0">⚔️ Wähle dein Deck</h2><p class="note center">Gegner: ${foeTxt}</p>
@@ -321,6 +341,13 @@
         const o = document.createElement('div'); o.className = 'kd-cast'; o.innerHTML = `<div class="who">${esc(v.nm[e.p])} spielt</div>${cardHTML(e.id, { cls: 'big', lv: (v.P[e.p].lv || {})[e.id] || 1 })}`;
         document.body.appendChild(o); setTimeout(() => o.remove(), 1650); delay += 500;
       }
+      else if (e.k === 'heropow') {
+        const hb = stage.querySelector(`[data-kdhero="${e.p}"]`), H = HE[e.id];
+        if (hb) { hb.classList.add('fire'); setTimeout(() => hb.classList.remove('fire'), 900); if (window.KDfx) KDfx.burst(centerOf(hb), H ? H.art : '⚡', fc(e.id).col); }
+        if (H) { const b = document.createElement('div'); b.className = 'kd-banner'; b.style.fontSize = 'clamp(30px,7vw,56px)'; b.textContent = `${H.art} ${H.pow}!`; document.body.appendChild(b); setTimeout(() => b.remove(), 1600); }
+        if (hb && e.tgt) { const to = pos(e.tgt); if (to) trail(centerOf(hb), to, e.id, 5, 200); }
+        delay += 500;
+      }
       else if (e.k === 'turn' && e.p === v.me && v.mine) { const b = document.createElement('div'); b.className = 'kd-banner'; b.textContent = 'Dein Zug!'; document.body.appendChild(b); setTimeout(() => b.remove(), 1600); }
       else if (e.k === 'burn' && e.p === v.me && v.mine) toast(`Hand voll – ${C[e.id].n} ist verbrannt.`);
       else if (e.k === 'hero') { const b = document.createElement('div'); b.className = 'kd-banner'; b.textContent = e.p === v.me ? '✨ Du ziehst deinen Helden!' : `✨ ${v.nm[e.p]} zieht einen Helden!`; document.body.appendChild(b); setTimeout(() => b.remove(), 2000); } // Spieler-Idee v68
@@ -349,6 +376,17 @@
     }
     act({ type: 'play', i });
   }
+  function showHero(v, pid) {
+    const h = v.P[pid].hero, H = HE[h.id], f = fc(h.id), mine = pid === v.me && v.mine, can = mine && v.turn === v.me && v.phase === 'main' && h.cd === 0;
+    const o = popup(`<div class="kd-heroc" style="--c1:${f.col};--c2:${f.col2}"><span class="hp">${H.art}</span><b>${esc(H.n)}</b><small>${f.e} Held · ${f.n}</small>
+      <div class="pw"><b>⚡ ${esc(H.pow)}</b><div>${esc(H.txt)}</div><div class="note">Abklingzeit: ${H.cd} Züge · ${h.cd ? `bereit in ${h.cd} Zug${h.cd > 1 ? 'en' : ''}` : 'bereit!'}</div></div></div>
+      <div class="row" style="justify-content:center;gap:8px">${can ? '<button class="btn" data-kdpow="1">⚡ Einsetzen</button>' : ''}<button class="btn ghost" data-kdx="1">Schließen</button></div>`);
+    const b = o.querySelector('[data-kdpow]'); if (b) b.addEventListener('click', () => {
+      o.remove(); const e = H.e;
+      if (e.tg) { const opts = targetsFor(v, e); if (!opts.length) { toast('Dafür gibt es gerade kein Ziel.'); return; } S.tgt = { hero: 1, opts }; S.atk.clear(); renderRoom(); return; }
+      act({ type: 'hero' });
+    });
+  }
   function showCre(u) {
     const v = room.view; let c = null, lv = 1; for (const pid of [v.me, v.foe]) { const x = v.P[pid].board.find(y => y.u === u); if (x) { c = x; lv = (v.P[pid].lv || {})[x.id] || 1; } } if (!c) return;
     const st = [c.tap && (c.frz ? '❄️ eingefroren' : '😴 erschöpft'), c.sick && !c.tap && '💤 gerade beschworen', c.shield && '🛡️ Schild aktiv', c.d && `💔 ${c.d} Schaden (heilt am Zugende)`].filter(Boolean).join(' · ');
@@ -362,10 +400,12 @@
     const f = e.target.closest('[data-kdd]'); if (f) { if (f.classList.contains('bad')) { toast(f.title || 'Dieses Deck ist nicht fertig.'); return; } act({ type: 'deck', d: f.dataset.kdd }); return; }
     const bo = e.target.closest('[data-kdbon]'); if (bo) { const P = v.P[bo.dataset.kdbon]; popup(`<div class="kd-rew" style="max-width:340px"><b>Themen-Bonus</b>${(P.bon || []).map(b => `<div>${fc(b).e} <b style="font-size:15px">${K.B[b][0]}:</b> ${K.B[b][1]}</div>`).join('')}<div class="note">Ab ${K.BONUS_MIN} Karten eines Themas im Deck.</div></div><button class="btn ghost" data-kdx="1">Schließen</button>`); return; }
     if (!e.target.closest('#stage')) return;
+    const hb = e.target.closest('[data-kdhero]');
+    if (hb && !S.tgt) { showHero(v, hb.dataset.kdhero); return; }
     // Zielwahl
     if (S.tgt) {
       const t = e.target.closest('[data-u],[data-face]'); const key = t ? (t.dataset.face || 'u:' + t.dataset.u) : null;
-      if (key && S.tgt.opts.includes(key)) { const i = S.tgt.i; S.tgt = null; act({ type: 'play', i, t: key }); return; }
+      if (key && S.tgt.opts.includes(key)) { const i = S.tgt.i, hero = S.tgt.hero; S.tgt = null; act(hero ? { type: 'hero', t: key } : { type: 'play', i, t: key }); return; }
       if (e.target.closest('[data-kd="cancel"]') || e.target.closest('[data-hi]')) { S.tgt = null; renderRoom(); }
       return;
     }

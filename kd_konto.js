@@ -21,7 +21,7 @@ const START_DECK = DECKS.abent, START_NAME = 'Abenteuer-Startdeck'; // jeder bes
 const WELCOME = 8; // Willkommens-Packs: zusammen 40 Karten aus allen Themen, genug für ein erstes Deck
 const OLD_STARTER = {}; for (const [f, d] of Object.entries(DECKS)) if (f !== 'abent') for (const [id, n] of Object.entries(d)) OLD_STARTER[id] = (OLD_STARTER[id] || 0) + n;
 function init(acc) {
-  if (!acc.kd) acc.kd = { v: 5, c: { ...START_DECK }, welcome: 0, f: 300, st: 0, pe: 0, pl: 0, free: 0, decks: [{ n: START_NAME, cards: { ...START_DECK } }], lad: 0, packs: 0, d: '', dq: [], dbw: 0, dpw: 0, dfw: false };
+  if (!acc.kd) acc.kd = { v: 6, heroes: { abent: 1 }, c: { ...START_DECK }, welcome: 0, f: 300, st: 0, pe: 0, pl: 0, free: 0, decks: [{ n: START_NAME, cards: { ...START_DECK }, hero: 'abent' }], lad: 0, packs: 0, d: '', dq: [], dbw: 0, dpw: 0, dfw: false };
   if (!acc.kd.v || acc.kd.v === 1) { // alte, zu große Startsammlung verkleinern – gezogene Karten bleiben
     const c = {}; for (const [id, n] of Object.entries(acc.kd.c)) { const k = Math.max(0, n - (OLD_STARTER[id] || 0)); if (k) c[id] = k; }
     for (const id of Object.keys(STARTER)) c[id] = (c[id] || 0) + 1;
@@ -42,6 +42,11 @@ function init(acc) {
     for (const d of k.decks) for (const id of Object.keys(d.cards)) if (!keep(id)) delete d.cards[id];
     k.v = 5;
   }
+  if (acc.kd.v === 5) { // Helden: jeder hat den Abenteuer-Helden, das Startdeck bekommt ihn
+    const k = acc.kd; k.heroes = { abent: 1, ...(k.heroes || {}) };
+    for (const d of k.decks) if (d.n === START_NAME && !d.hero) d.hero = 'abent';
+    k.v = 6;
+  }
   const k = acc.kd, d = day();
   if (k.d !== d) { // neuer Tag: neue Aufgaben
     let h = 0; for (const ch of d + (acc.name || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
@@ -52,10 +57,10 @@ function init(acc) {
   return k;
 }
 const levels = acc => { const k = init(acc), out = {}; for (const [id, n] of Object.entries(k.c)) out[id] = K.levelOf(id, n); return out; };
-const deckList = acc => init(acc).decks.map(d => ({ n: d.n, cards: d.cards, err: K.checkDeck(d.cards, acc.kd.c) }));
+const deckList = acc => init(acc).decks.map(d => ({ n: d.n, cards: d.cards, hero: d.hero && (acc.kd.heroes || {})[d.hero] ? d.hero : null, err: K.checkDeck(d.cards, acc.kd.c) }));
 function state(acc) {
   const k = init(acc);
-  return { c: k.c, welcome: k.welcome || 0, f: k.f, st: k.st, pe: k.pe, pl: k.pl, free: k.free, lad: k.lad, packs: k.packs, decks: deckList(acc), dq: k.dq, dfw: k.dfw };
+  return { c: k.c, heroes: k.heroes || {}, welcome: k.welcome || 0, f: k.f, st: k.st, pe: k.pe, pl: k.pl, free: k.free, lad: k.lad, packs: k.packs, decks: deckList(acc), dq: k.dq, dfw: k.dfw };
 }
 function rollRarity() { const o = PACK.odds, t = o.g + o.s + o.e + o.l; let x = Math.random() * t; for (const r of ['l', 'e', 's', 'g']) { if (x < o[r]) return r; x -= o[r]; } return 'g'; }
 function pickCard(th, r, own, taken, cre) {
@@ -101,7 +106,13 @@ function openPack(acc, th) {
   rs.sort((a, b) => order[a] - order[b]); // die besten zum Schluss aufdecken
   const cards = addCards(k, th, rs, 0);
   k.packs++;
-  return [200, { cards, pity: forceL ? 'l' : forceE ? 'e' : null, free, state: state(acc) }];
+  // Held: 1 % pro Pack (Themenpack: Held des Themas, Kristallpack: zufälliger Held). Hat man ihn schon, gibt es Sternenstaub.
+  let hero = null;
+  if (Math.random() < K.HERO_P) {
+    const hid = th === 'mix' ? Object.keys(K.HEROES)[Math.floor(Math.random() * Object.keys(K.HEROES).length)] : th;
+    if (K.HEROES[hid]) { k.heroes = k.heroes || {}; const dup = !!k.heroes[hid]; if (dup) k.st += 500; else k.heroes[hid] = 1; hero = { id: hid, dup, dust: dup ? 500 : 0 }; }
+  }
+  return [200, { cards, hero, pity: forceL ? 'l' : forceE ? 'e' : null, free, state: state(acc) }];
 }
 function craft(acc, id) {
   const k = init(acc), c = C[id]; if (!c || c.tok) return [400, { error: 'Unbekannte Karte.' }];
@@ -117,8 +128,9 @@ function saveDeck(acc, body) {
   const cards = {};
   for (const [id, n] of Object.entries(body.cards || {})) { const c = C[id]; const m = Math.max(0, Math.min(3, Number(n) | 0)); if (c && !c.tok && m) cards[id] = m; }
   const i = Number(body.i);
-  if (Number.isInteger(i) && i >= 0 && i < k.decks.length) k.decks[i] = { n: name, cards };
-  else { if (k.decks.length >= 8) return [400, { error: 'Mehr als 8 Decks gehen nicht – lösche zuerst eines.' }]; k.decks.push({ n: name, cards }); }
+  const hero = body.hero && K.HEROES[body.hero] && (k.heroes || {})[body.hero] ? String(body.hero) : null;
+  if (Number.isInteger(i) && i >= 0 && i < k.decks.length) k.decks[i] = { n: name, cards, hero };
+  else { if (k.decks.length >= 8) return [400, { error: 'Mehr als 8 Decks gehen nicht – lösche zuerst eines.' }]; k.decks.push({ n: name, cards, hero }); }
   return [200, { state: state(acc), i: Number.isInteger(i) && i >= 0 && i < k.decks.length ? i : k.decks.length - 1 }];
 }
 function delDeck(acc, i) { const k = init(acc); if (!(i >= 0 && i < k.decks.length)) return [400, { error: 'Dieses Deck gibt es nicht.' }]; k.decks.splice(i, 1); return [200, { state: state(acc) }]; }
