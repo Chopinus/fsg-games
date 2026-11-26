@@ -1729,7 +1729,7 @@
   const TRIP_SHARE = 0.25; // ein Held bringt ein Viertel des Gruppen-Ertrags
   const HOUR = 3600000;
   const onTrip = (S, id) => !!(S.trips && S.trips[id]);
-  const tripLeft = (S, id, now = Date.now()) => { const T = S.trips && S.trips[id]; return T ? Math.max(0, T.at + T.h * HOUR - now) : 0; };
+  const tripLeft = (S, id, now = Date.now()) => { const T = S.trips && S.trips[id]; return T ? Math.max(0, T.at + T.h * HOUR * tripTimeMul(S) - now) : 0; };
   // Ertrag pro Sekunde im Feldzug: gleitender Durchschnitt der letzten Feldzüge, sonst eine grobe Schätzung nach Rekord
   function rateOf(S) {
     const r = S.rate;
@@ -1748,7 +1748,7 @@
     const out = { gold: Math.floor(R.g * sec), souls: Math.floor(R.s * sec), dust: feature(S, 'runen') ? Math.floor(R.d * sec) : 0, spl: expOpen(S) ? Math.max(1, Math.round(h * eff * 4)) : 0 };
     return out;
   }
-  const tripReward = (S, T) => { const o = TRIPS.find(x => x.h === T.h) || TRIPS[0]; return { ...hoursReward(S, T.h * TRIP_SHARE, o.eff), gem: gemOpen(S) ? T.h * GEM_SRC.tripHour : 0 }; };
+  const tripReward = (S, T) => { const o = TRIPS.find(x => x.h === T.h) || TRIPS[0], r = hoursReward(S, T.h * TRIP_SHARE, o.eff), m = tripRewMul(S); return { gold: Math.floor(r.gold * m), souls: Math.floor(r.souls * m), dust: Math.floor(r.dust * m), spl: r.spl ? Math.round(r.spl * m) : 0, gem: gemOpen(S) ? T.h * GEM_SRC.tripHour : 0 }; };
   function startTrip(S, id, h) {
     const o = TRIPS.find(x => x.h === h);
     if (!o || !HERO_BY_ID[id] || !hired(S, HERO_BY_ID[id].tree) || onTrip(S, id)) return false;
@@ -1816,7 +1816,7 @@
   function fresh() {
     return { v: SAVE_VERSION, gold: 0, souls: 0, best: 0, bestEver: 0, runs: 0, nodes: { start: 1 }, equip: [], speed: 1, stars: 0, rebirths: 0, perks: {},
       runes: [], sockets: Object.fromEntries(HEROES.map(h => [h.id, [null, null, null, null, null, null]])), dust: 0, runeSeq: 1, towerBest: 0,
-      season: SEASON, asc: 0, ascBest: 0, rankGot: 0, mast: {}, skin: {}, wf: 0, crowns: 0, cperks: {}, ach: {}, tot: { kills: 0, souls: 0 }, weekly: { week: '', best: 0, claimed: 0 }, comps: {}, compActive: [], gem: 0, gacha: gFix(), cons: {}, inv: {}, gear: {}, camp: {}, chest: {}, pity: { tro: 0, leg: 0 }, gBoss: 0, login: { day: '', n: 0 }, bounty: { day: '', done: [] }, seenIntro: false, area: 0, tempo: 0, bench: [], altar: 0, seenField: false, exp: { spl: 0, done: 0, target: 'a', pieces: {} }, ahn: ahnFix() };
+      season: SEASON, asc: 0, ascBest: 0, rankGot: 0, mast: {}, skin: {}, wf: 0, crowns: 0, cperks: {}, ach: {}, tot: { kills: 0, souls: 0 }, weekly: { week: '', best: 0, claimed: 0 }, comps: {}, compActive: [], gem: 0, gacha: gFix(), cons: {}, inv: {}, gear: {}, camp: {}, chest: {}, pity: { tro: 0, leg: 0 }, gBoss: 0, login: { day: '', n: 0 }, bounty: { day: '', done: [] }, seenIntro: false, area: 0, tempo: 0, zr: 0, zk: 0, bench: [], altar: 0, seenField: false, exp: { spl: 0, done: 0, target: 'a', pieces: {} }, ahn: ahnFix() };
   }
   // Spieler-Idee (v53): Runen platzsparend speichern, damit große Spielstände unter die Server-Grenze passen.
   // Statt [{id,t,tier}, …] wird für den Server { "glueck.14": [3834, 6578], … } geschickt; migrate() liest beide Formen.
@@ -1869,6 +1869,7 @@
     out.seenIntro = !!d.seenIntro || out.runs > 0;
     out.area = Math.max(0, Math.min(99, Math.floor(Number(d.area) || 0)));
     out.tempo = Math.max(0, Math.min(TEMPO_COST.length, Math.floor(Number(d.tempo) || 0)));
+    out.zr = Math.max(0, Math.min(ZEIT_REISE.length, Math.floor(Number(d.zr) || 0))); out.zk = Math.max(0, Math.min(ZEIT_KAPSEL.length, Math.floor(Number(d.zk) || 0)));
     out.bench = Array.isArray(d.bench) ? [...new Set(d.bench.filter(id => HERO_BY_ID[id]))] : [];
     out.seenField = !!d.seenField; out.seenExp = !!d.seenExp;
     out.trips = {}; for (const h of HEROES) { const T = d.trips && d.trips[h.id]; if (T && TRIPS.some(o => o.h === T.h) && Number(T.at) > 0) out.trips[h.id] = { at: Number(T.at), h: T.h }; }
@@ -2657,6 +2658,20 @@
     S.souls -= cost; S.tempo = lv + 1; S.speed = maxSpeed(S);
     return true;
   }
+  // Spieler-Idee (v62): Erweiterung des Zeitbaums – zwei neue Äste für Seelen, bleiben ebenfalls für immer.
+  // Reisefieber: Heldenreisen dauern kürzer (ab Tempo ×3,5). Zeitkapsel: Heldenreisen bringen mehr mit (ab Reisefieber I).
+  const ZEIT_REISE = [{ cost: 150, cut: 0.1 }, { cost: 400, cut: 0.2 }, { cost: 1000, cut: 0.3 }];
+  const ZEIT_KAPSEL = [{ cost: 250, bon: 0.15 }, { cost: 700, bon: 0.3 }, { cost: 1600, bon: 0.5 }];
+  const tripTimeMul = S => 1 - ((ZEIT_REISE[(S.zr || 0) - 1] || {}).cut || 0);
+  const tripRewMul = S => 1 + ((ZEIT_KAPSEL[(S.zk || 0) - 1] || {}).bon || 0);
+  const zeitOpen = (S, k) => S.asc > 0 && (k === 'zr' ? (S.tempo || 0) >= 1 : (S.zr || 0) >= 1);
+  function buyZeit(S, k) {
+    const L = k === 'zr' ? ZEIT_REISE : k === 'zk' ? ZEIT_KAPSEL : null; if (!L) return false;
+    const lv = S[k] || 0, o = L[lv];
+    if (!o || !zeitOpen(S, k) || S.souls < o.cost) return false;
+    S.souls -= o.cost; S[k] = lv + 1;
+    return true;
+  }
   // Startgebiet: ein Gebiet ist wählbar, sobald der Boss des Gebiets davor in diesem Durchgang besiegt wurde
   const areaMax = S => Math.max(0, Math.min(Math.floor((S.best || 0) / 10), Math.floor((Math.min(capOf(S), 1e6) - 1) / 10)));
   // Gegner werden pro Stufe stärker – anfangs schneller, später langsamer
@@ -3210,7 +3225,7 @@
       S.tot.kills, S.tot.souls, COMPS.length, ...COMPS.map(c => S.comps[c.id] || 0), ...[0, 1].map(i => (S.compActive[i] ? COMPS.findIndex(c => c.id === S.compActive[i]) + 1 : 0)), S.tempo || 0,
       S.exp.spl, S.exp.done, Math.max(0, PUZZLE.indexOf(S.exp.target)), PUZZLE.length, ...PUZZLE.map(id => pieceMask(S, id)),
       1, kSlots(S), HEROES.length, ...HEROES.map(h => (S.kplace || {})[h.id] || 0), S.altar || 0, 1, 1, 1, S.rlager || 0, 1,
-      1, S.ahn.sig, S.ahn.got, S.ahn.m, S.ahn.lvl, HEROES.length, ...HEROES.map(h => (S.ahn.place[h.id] ? 1 : 0)), S.ascBest || 0, 1, S.rankGot || 0, S.wf || 0, HEROES.length, ...HEROES.map(h => (S.mast || {})[h.id] || 0), ...HEROES.map(h => Math.max(0, SKINS.findIndex(k => k.id === (S.skin || {})[h.id]))), 1, HEROES.length, ...HEROES.flatMap(h => [3, 4, 5].map(i => rIdx((S.sockets[h.id] || [])[i]))), 1, S.season || 0, 1, S.tst ? 1 : 0, 1, S.cpV || 0]);
+      1, S.ahn.sig, S.ahn.got, S.ahn.m, S.ahn.lvl, HEROES.length, ...HEROES.map(h => (S.ahn.place[h.id] ? 1 : 0)), S.ascBest || 0, 1, S.rankGot || 0, S.wf || 0, HEROES.length, ...HEROES.map(h => (S.mast || {})[h.id] || 0), ...HEROES.map(h => Math.max(0, SKINS.findIndex(k => k.id === (S.skin || {})[h.id]))), 1, HEROES.length, ...HEROES.flatMap(h => [3, 4, 5].map(i => rIdx((S.sockets[h.id] || [])[i]))), 1, S.season || 0, 1, S.tst ? 1 : 0, 1, S.cpV || 0, 1, S.zr || 0, S.zk || 0]);
   }
   function decode(code) {
     const nums = unpackNums(code); if (!nums) return null;
@@ -3258,6 +3273,7 @@
           if (i < nums.length) { next(); d.season = next(); }
           if (i < nums.length) { next(); if (next()) d.tst = 1; }
           if (i < nums.length) { next(); d.cpV = next(); }
+          if (i < nums.length) { next(); d.zr = next(); d.zk = next(); }
         }
       } else return null;
       return migrate(d);

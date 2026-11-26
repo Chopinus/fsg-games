@@ -307,6 +307,11 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 97, title: 'Spieler-Idee: Erweiterung des Zeitbaums', date: '26.11.2026', items: [
+      'Der Zeitbaum hat zwei neue Äste für Seelen, die für immer bleiben.',
+      '🧭 Reisefieber (3 Stufen): Heldenreisen dauern 10 / 20 / 30 % kürzer. Wird nach Tempo ×3,5 freigeschaltet.',
+      '⏳ Zeitkapsel (3 Stufen): Heldenreisen bringen 15 / 30 / 50 % mehr Gold, Seelen, Staub und Splitter mit. Wird nach Reisefieber I freigeschaltet.',
+    ] },
     { id: 96, title: 'Spieler-Idee: Turmwacht im Bloons-Stil', date: '26.11.2026', items: [
       '10 Türme statt 4: neu sind Stachelturm, Scharfschütze, Ninja, Magier, Goldmine und Kriegsbanner.',
       'Jeder Turm hat zwei Ausbaupfade mit je 4 Stufen – aber nur einer darf über Stufe 2 hinaus. Stufe 4 bringt bei vielen Türmen eine Fähigkeit (z. B. Eiszeit, Bombardement, Gewittersturm).',

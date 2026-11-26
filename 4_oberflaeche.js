@@ -850,10 +850,10 @@
       const T = S.trips && S.trips[h.id], left = T ? tripLeft(S, h.id, now) : 0;
       const pic = `<span class="rl-trpic" style="--hc:${h.color}"><img src="${portraitURL(h.id)}" alt=""></span>`;
       if (T && left <= 0) return `<div class="rl-trrow done">${pic}<div class="rl-trmid"><b>${h.name} ist zurück!</b><small>${(TRIPS.find(o => o.h === T.h) || TRIPS[0]).name} · Mitgebracht: ${rewHTML(tripReward(S, T))}</small></div><button class="btn gold small" data-tr="claim" data-id="${h.id}">Abholen</button></div>`;
-      if (T) { const pc = 100 - left / (T.h * 3600000) * 100;
+      if (T) { const pc = 100 - left / (T.h * 3600000 * tripTimeMul(S)) * 100;
         return `<div class="rl-trrow away">${pic}<div class="rl-trmid"><b>${h.name} <em class="rl-trtag">unterwegs</em></b><span class="rl-trbar"><i style="width:${pc.toFixed(1)}%"></i></span><small>Zurück in <b>${durStr(left)}</b> · bringt ${rewHTML(tripReward(S, T))}</small></div></div>`; }
       const last = free.length <= 1, camp = inCamp();
-      const btns = TRIPS.map(o => `<button class="btn ghost small rl-trgo" data-tr="go" data-id="${h.id}" data-h="${o.h}" ${last || !camp ? 'disabled' : ''}><b>${o.h} h</b><small>${rewHTML(tripReward(S, { h: o.h }))}</small></button>`).join('');
+      const btns = TRIPS.map(o => `<button class="btn ghost small rl-trgo" data-tr="go" data-id="${h.id}" data-h="${o.h}" ${last || !camp ? 'disabled' : ''}><b>${tripTimeMul(S) < 1 ? durStr(o.h * 3600000 * tripTimeMul(S)) : o.h + ' h'}</b><small>${rewHTML(tripReward(S, { h: o.h }))}</small></button>`).join('');
       return `<div class="rl-trrow">${pic}<div class="rl-trmid"><b>${h.name}</b><small>${last ? 'Bleibt im Lager: Ein Held muss immer da sein.' : !camp ? 'Losschicken geht nur im Lager.' : `${fieldOf(S).includes(h.id) ? 'Kämpft gerade mit. ' : ''}Wohin soll die Reise gehen?`}</small><div class="rl-trbtns">${btns}</div></div></div>`;
     }).join('');
     const ready = tripsReady(now).length;
@@ -1862,6 +1862,7 @@
     if (b.dataset.xinfo) { const id = b.dataset.xinfo; if (expInfo.has(id)) expInfo.delete(id); else expInfo.add(id); panel(); return; }
     if (b.dataset.target) { S.exp.target = b.dataset.target; save(); panel(); return; }
     if (b.dataset.spltrade) { testerSplinters(); const n = b.dataset.spltrade === 'all' ? Infinity : Number(b.dataset.spltrade); const g = splTrade(S, n); if (g) { SND.play('buy'); toast(`+${g} Sternkristalle`); afterChange(); } return; }
+    if (b.dataset.zeit) { const k = b.dataset.zeit; if (buyZeit(S, k)) { SND.play('buy'); toast(k === 'zr' ? `Reisefieber ${S.zr} freigeschaltet: Reisen dauern ${Math.round((1 - tripTimeMul(S)) * 100)} % kürzer!` : `Zeitkapsel ${S.zk} freigeschaltet: Reisen bringen ${Math.round((tripRewMul(S) - 1) * 100)} % mehr mit!`, true); afterChange(); } return; }
     if (b.dataset.tempo) { if (buyTempo(S)) { toast(`Tempo ×${String(maxSpeed(S)).replace('.', ',')} freigeschaltet!`, true); afterChange(); } return; }
     if (b.dataset.pathmode) { pathMode = b.dataset.pathmode; panel(); return; }
     if (b.dataset.skin) { const [hid, id] = b.dataset.skin.split(':'); if (SKIN[id] && mastLevel(S, hid) >= SKIN[id].L) { S.skin = S.skin || {}; if (id === 'std') delete S.skin[hid]; else S.skin[hid] = id; SND.play('tick'); save(); panel(); } return; }
@@ -2119,6 +2120,22 @@
     if (next) html += `<p class="note rl-nextshop">Als Nächstes kommt der <b>${next[1]}</b> ${next[2]}.</p>`;
     return html;
   }
+  // Spieler-Idee (v62): zwei neue Äste im Zeitbaum für die Heldenreisen
+  function zeitAeste(f) {
+    const ast = (k, L, ic, name, txt, need) => {
+      const lv = S[k] || 0, open = zeitOpen(S, k);
+      const nodes = L.map((o, i) => {
+        const own = i < lv, next = i === lv, can = next && open && S.souls >= o.cost;
+        return `${i ? `<i class="rl-zlink ${own ? 'own' : ''}"></i>` : ''}<div class="rl-znode ${own ? 'own' : next && open ? 'next' : 'locked'}"><span class="ic">${own ? '✓' : next && open ? ic : '🔒'}</span><b>${txt(o)}</b>
+          ${own ? '<small>freigeschaltet</small>' : `<button class="btn small ${can ? '' : 'ghost'}" ${next && open ? `data-zeit="${k}" ${can ? '' : 'disabled'}` : 'disabled'}>${soul}${o.cost}</button>`}</div>`;
+      }).join('');
+      return `<h4 class="rl-h3" style="font-size:1em;margin-top:14px">${ic} ${name}</h4>${open ? '' : `<p class="note">🔒 ${need}</p>`}<div class="rl-ztree">${nodes}</div>`;
+    };
+    return `<h3 class="rl-h3" style="margin-top:18px">Zeitbaum – Reiseäste</h3><p class="note">Neue Äste für deine Heldenreisen. Auch sie bleiben für immer.</p>`
+      + ast('zr', ZEIT_REISE, '🧭', 'Reisefieber', o => `−${Math.round(o.cut * 100)} % Reisezeit`, 'Schalte zuerst Tempo ×3,5 frei.')
+      + ast('zk', ZEIT_KAPSEL, '⏳', 'Zeitkapsel', o => `+${Math.round(o.bon * 100)} % Reise-Ertrag`, 'Schalte zuerst Reisefieber I frei.')
+      + `<p class="note">Gerade: Reisen dauern ${Math.round(tripTimeMul(S) * 100)} % der Zeit und bringen ${Math.round(tripRewMul(S) * 100)} % Ertrag.</p>`;
+  }
   function zeitTab() {
     const lv = S.tempo || 0, f = x => String(x).replace('.', ',');
     const nodes = [`<div class="rl-znode own"><span class="ic">⏱</span><b>×1 bis ×3</b><small>von Anfang an</small></div>`];
@@ -2130,7 +2147,7 @@
     return `<div class="rl-zeit"><h3 class="rl-h3">Zeitbaum</h3>
       <p class="note">Hier schaltest du mit Seelen schnellere Spieltempos frei, bis maximal ×5. Was du hier kaufst, bleibt für immer, auch nach Wiedergeburt und Aufstieg. Umschalten kannst du oben rechts mit dem Knopf „Tempo“.</p>
       <div class="rl-ztree">${nodes.join('')}</div>
-      <p class="note">Gerade möglich: bis ×${f(maxSpeed(S))} · Du hast ${soul}${S.souls} Seelen.</p></div>`;
+      <p class="note">Gerade möglich: bis ×${f(maxSpeed(S))} · Du hast ${soul}${S.souls} Seelen.</p>${zeitAeste(f)}</div>`;
   }
   function halleTab() {
     const dy = dayId(), rules = weekRules(dy), mine = S.daily && S.daily.day === dy ? S.daily : { best: 0, claimed: 0 };
