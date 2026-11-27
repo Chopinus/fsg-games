@@ -3,7 +3,7 @@ const K = require('./duell_karten.js');
 const { C, DECKS, RAR, PACK, F, LADDER } = K;
 const day = () => new Date(Date.now() + 3600e3).toISOString().slice(0, 10);
 const POOL = {}; // Thema -> Seltenheit -> Karten
-for (const [id, c] of Object.entries(C)) { if (c.tok) continue; ((POOL[c.f] = POOL[c.f] || {})[c.r] = POOL[c.f][c.r] || []).push(id); }
+for (const [id, c] of Object.entries(C)) { if (c.tok || c.t === 'l') continue; ((POOL[c.f] = POOL[c.f] || {})[c.r] = POOL[c.f][c.r] || []).push(id); }
 const QUESTS = [
   { k: 'win', g: 2, t: 'Gewinne 2 Duelle' },
   { k: 'play', g: 3, t: 'Spiele 3 Duelle' },
@@ -15,40 +15,15 @@ const QUESTS = [
 ];
 const Q_REWARD = 60, FIRST_WIN = 60;
 
-// Startsammlung: je 1× jede gewöhnliche Karte aus den Grunddecks (35 Karten) – der Rest kommt aus Packs
-const STARTER = {}; for (const [f, d] of Object.entries(DECKS)) if (f !== 'abent') for (const id of Object.keys(d)) if (C[id].r === 'g') STARTER[id] = 1;
-const START_DECK = DECKS.abent, START_NAME = 'Abenteuer-Startdeck'; // jeder besitzt es von Anfang an
-const WELCOME = 8; // Willkommens-Packs: zusammen 40 Karten aus allen Themen, genug für ein erstes Deck
-const OLD_STARTER = {}; for (const [f, d] of Object.entries(DECKS)) if (f !== 'abent') for (const [id, n] of Object.entries(d)) OLD_STARTER[id] = (OLD_STARTER[id] || 0) + n;
+// Start: jeder besitzt das Abenteuer-Startdeck (40 Karten, Grundländer gehören ohnehin allen) und den Abenteuer-Helden.
+const START_DECK = DECKS.abent, START_NAME = 'Abenteuer-Startdeck';
+const fresh = () => ({ v: 8, tr: 0, trMax: 0, road: 0, fp: {}, heroes: { abent: 1 }, c: Object.fromEntries(Object.entries(START_DECK).filter(([id]) => C[id].t !== 'l')), welcome: 0, f: 300, st: 0, pe: 0, pl: 0, free: 0,
+  decks: [{ n: START_NAME, cards: { ...START_DECK }, hero: 'abent' }], lad: 0, packs: 0, d: '', dq: [], dbw: 0, dpw: 0, dfw: false, heroPick: 0 });
 function init(acc) {
-  if (!acc.kd) acc.kd = { v: 7, tr: 0, trMax: 0, road: 0, fp: {}, heroes: { abent: 1 }, c: { ...START_DECK }, welcome: 0, f: 300, st: 0, pe: 0, pl: 0, free: 0, decks: [{ n: START_NAME, cards: { ...START_DECK }, hero: 'abent' }], lad: 0, packs: 0, d: '', dq: [], dbw: 0, dpw: 0, dfw: false };
-  if (!acc.kd.v || acc.kd.v === 1) { // alte, zu große Startsammlung verkleinern – gezogene Karten bleiben
-    const c = {}; for (const [id, n] of Object.entries(acc.kd.c)) { const k = Math.max(0, n - (OLD_STARTER[id] || 0)); if (k) c[id] = k; }
-    for (const id of Object.keys(STARTER)) c[id] = (c[id] || 0) + 1;
-    acc.kd.c = c; acc.kd.v = 2;
-  }
-  if (acc.kd.v === 2) { // Start mit Willkommens-Packs statt fester Karten (wer noch kein Pack geöffnet hat, bekommt sie)
-    if (!acc.kd.packs) { acc.kd.c = {}; acc.kd.welcome = WELCOME; }
-    acc.kd.v = 3;
-  }
-  if (acc.kd.v === 3) { // Jeder besitzt das Abenteuer-Startdeck; ungeöffnete Willkommens-Packs werden zu Gratis-Packs
-    const k = acc.kd; for (const [id, n] of Object.entries(START_DECK)) k.c[id] = Math.max(k.c[id] || 0, n);
-    if (!k.decks.some(d => d.n === START_NAME)) k.decks.unshift({ n: START_NAME, cards: { ...START_DECK } });
-    k.free = (k.free || 0) + (k.welcome || 0); k.welcome = 0; k.v = 4;
-  }
-  if (acc.kd.v === 4) { // einmalig: alle Karten außer dem Abenteuer-Thema aus allen Sammlungen und Decks entfernen
-    const k = acc.kd, keep = id => C[id] && C[id].f === 'abent';
-    for (const id of Object.keys(k.c)) if (!keep(id)) delete k.c[id];
-    for (const d of k.decks) for (const id of Object.keys(d.cards)) if (!keep(id)) delete d.cards[id];
-    k.v = 5;
-  }
-  if (acc.kd.v === 5) { // Helden: jeder hat den Abenteuer-Helden, das Startdeck bekommt ihn
-    const k = acc.kd; k.heroes = { abent: 1, ...(k.heroes || {}) };
-    for (const d of k.decks) if (d.n === START_NAME && !d.hero) d.hero = 'abent';
-    k.v = 6;
-  }
-  if (acc.kd.v === 6) { // Trophäen: Fortschritt der Bot-Leiter wird in Trophäen umgerechnet (ohne doppelte Belohnungen)
-    const k = acc.kd; k.tr = (k.lad || 0) * 150; k.trMax = k.tr; k.road = Math.floor(k.tr / 100); k.fp = k.fp || {}; k.v = 7;
+  if (!acc.kd) acc.kd = fresh();
+  if ((acc.kd.v || 0) < 8) { // Umbau auf Länder und 40-Karten-Decks: alle starten neu. Wer in der Bot-Leiter Stufe 6 geschafft hat, darf sich einen Helden aussuchen.
+    const old = acc.kd, vet = (old.lad || 0) >= 6 || (old.trMax || 0) >= 900;
+    acc.kd = fresh(); if (vet) acc.kd.heroPick = 1;
   }
   const k = acc.kd, d = day();
   if (k.d !== d) { // neuer Tag: neue Aufgaben
@@ -63,7 +38,7 @@ const levels = acc => { const k = init(acc), out = {}; for (const [id, n] of Obj
 const deckList = acc => init(acc).decks.map(d => ({ n: d.n, cards: d.cards, hero: d.hero && (acc.kd.heroes || {})[d.hero] ? d.hero : null, err: K.checkDeck(d.cards, acc.kd.c) }));
 function state(acc) {
   const k = init(acc);
-  return { c: k.c, heroes: k.heroes || {}, welcome: k.welcome || 0, f: k.f, st: k.st, pe: k.pe, pl: k.pl, free: k.free, fp: k.fp || {}, tr: k.tr || 0, trMax: k.trMax || 0, ar: K.arenaOf(k.trMax || 0), lad: k.lad, packs: k.packs, decks: deckList(acc), dq: k.dq, dfw: k.dfw };
+  return { c: k.c, heroPick: k.heroPick || 0, heroes: k.heroes || {}, welcome: k.welcome || 0, f: k.f, st: k.st, pe: k.pe, pl: k.pl, free: k.free, fp: k.fp || {}, tr: k.tr || 0, trMax: k.trMax || 0, ar: K.arenaOf(k.trMax || 0), lad: k.lad, packs: k.packs, decks: deckList(acc), dq: k.dq, dfw: k.dfw };
 }
 function rollRarity(o) { o = o || PACK.odds; t = o.g + o.s + o.e + o.l; let x = Math.random() * t; for (const r of ['l', 'e', 's', 'g']) { if (x < o[r]) return r; x -= o[r]; } return 'g'; }
 function pickCard(th, r, own, taken, cre) {
@@ -134,7 +109,7 @@ function saveDeck(acc, body) {
   const k = init(acc);
   const name = String(body.n || '').replace(/[<>]/g, '').trim().slice(0, 24) || 'Mein Deck';
   const cards = {};
-  for (const [id, n] of Object.entries(body.cards || {})) { const c = C[id]; const m = Math.max(0, Math.min(3, Number(n) | 0)); if (c && !c.tok && m) cards[id] = m; }
+  for (const [id, n] of Object.entries(body.cards || {})) { const c = C[id]; const m = Math.max(0, Math.min(c && c.t === 'l' ? 40 : K.MAX_COPIES, Number(n) | 0)); if (c && !c.tok && m) cards[id] = m; }
   const i = Number(body.i);
   const hero = body.hero && K.HEROES[body.hero] && (k.heroes || {})[body.hero] ? String(body.hero) : null;
   if (Number.isInteger(i) && i >= 0 && i < k.decks.length) k.decks[i] = { n: name, cards, hero };
@@ -197,10 +172,12 @@ function reward(acc, info) {
 
 function action(action, acc, body) {
   if (action === 'kd_state') return [200, state(acc)];
+  if (action === 'kd_heropick') { const k = init(acc), id = String(body.id || ''); if (!k.heroPick) return [400, { error: 'Du hast deinen Helden schon gewählt.' }]; if (!K.HEROES[id] || id === 'abent') return [400, { error: 'Diesen Helden gibt es nicht.' }];
+    k.heroes[id] = 1; k.heroPick = 0; return [200, { id, state: state(acc) }]; }
   if (action === 'kd_pack') return openPack(acc, String(body.th || 'mix'), String(body.type || 'klein'));
   if (action === 'kd_craft') return craft(acc, String(body.id || ''));
   if (action === 'kd_deck_save') return saveDeck(acc, body);
   if (action === 'kd_deck_del') return delDeck(acc, Number(body.i));
   return [404, { error: 'Unbekannt' }];
 }
-module.exports = { action, reward, levels, deckList, init, ACTIONS: ['kd_state', 'kd_pack', 'kd_craft', 'kd_deck_save', 'kd_deck_del'] };
+module.exports = { action, reward, levels, deckList, init, ACTIONS: ['kd_heropick', 'kd_state', 'kd_pack', 'kd_craft', 'kd_deck_save', 'kd_deck_del'] };

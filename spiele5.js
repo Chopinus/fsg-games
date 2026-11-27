@@ -176,51 +176,114 @@
   .kd-rew{background:rgba(255,210,63,.1);border:1px solid rgba(255,210,63,.4);border-radius:14px;padding:10px 14px;text-align:left;font-size:14px;max-width:420px}
   .kd-rew b{color:#ffd23f;font-size:18px} .kd-rew div{margin-top:3px}
   .kd-lad{font-size:13px;color:#ffd23f}
+  /* ---------- klassischer Kartenstil ---------- */
+  .kd-card .cost{display:none}
+  .kd-card .mc{position:absolute;top:3px;right:3px;display:flex;gap:1px;z-index:2}
+  .pip{width:17px;height:17px;border-radius:50%;display:inline-grid;place-items:center;font-size:11px;font-weight:800;line-height:1;background:var(--pc,#cfcfd8);color:#1a1a1a;box-shadow:0 1px 2px rgba(0,0,0,.6),inset 0 -1px 2px rgba(0,0,0,.25)}
+  .pip.gen{background:#cfcfd8}
+  .kd-card.big .mc{top:8px;right:8px;gap:2px}.kd-card.big .pip{width:24px;height:24px;font-size:14px}
+  .kd-card .in{padding-top:16px}
+  .kd-card .tl{font-size:8.5px;color:#d8cfa8;font-weight:700;letter-spacing:.02em;border-top:1px solid rgba(255,255,255,.15);border-bottom:1px solid rgba(255,255,255,.15);width:100%;text-align:center;padding:1px 0}
+  .kd-card.big .tl{font-size:13px;padding:3px 0}
+  .kd-card .pt{position:absolute;bottom:-6px;right:-5px;min-width:34px;height:22px;padding:0 6px;border-radius:8px;background:linear-gradient(#f4ead0,#c9b88a);color:#2a1a00;font:800 13px/22px var(--body);text-align:center;border:2px solid #1a1030;box-shadow:0 2px 4px rgba(0,0,0,.5)}
+  .kd-card.big .pt{min-width:58px;height:34px;font-size:20px;line-height:30px;bottom:-10px;right:-10px;border-radius:12px}
+  .kd-card.land .in{justify-content:center}.kd-card.land .art{font-size:48px}.kd-card.big.land .art{font-size:110px}
+  .kd-card .st,.kd-card .ty,.kd-card .sof{display:none}
+  .kd-card .kwt{color:#ffe58a;font-weight:800}
+  /* Phasenleiste, Länder, Mana */
+  .kd-mid{justify-content:space-between;padding:0 4px}
+  .kd-phase{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .kd-pill{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:99px;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.16);font-weight:800;font-size:13.5px;white-space:nowrap}
+  .kd-pill.me{background:linear-gradient(135deg,rgba(255,210,63,.25),rgba(255,140,40,.15));border-color:rgba(255,210,63,.6);color:#ffe9a8}
+  .kd-pill.warn{background:rgba(255,80,80,.18);border-color:rgba(255,100,100,.6);color:#ffd0d0}
+  .kd-acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .kd-lands{display:flex;justify-content:center;gap:5px;flex-wrap:wrap;min-height:32px;margin:2px 0;position:relative;z-index:1;cursor:pointer}
+  .kd-land{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;font-size:19px;font-style:normal;background:radial-gradient(circle at 35% 30%,var(--pc),color-mix(in srgb,var(--pc) 40%,#000));border:1px solid rgba(255,255,255,.4);box-shadow:0 2px 4px rgba(0,0,0,.5);transition:transform .3s,filter .3s}
+  .kd-land.t{transform:rotate(90deg) scale(.86);filter:brightness(.45) saturate(.4)}
+  .kd-land.pop{animation:kdsum .5s cubic-bezier(.2,1.5,.4,1)}
+  .kd-land.flash{animation:kdlflash .5s}
+  @keyframes kdlflash{40%{filter:brightness(2.2);transform:scale(1.2)}}
+  .kd-lands .none{font-size:11px;color:#6a5e8a}
+  .kd-mana{display:flex;gap:2px;align-items:center;flex-wrap:wrap;max-width:140px}
+  .kd-mana .pip{width:17px;height:17px;font-size:10px}.kd-mana .pip.off{opacity:.28;filter:grayscale(1)}
+  .kd-cnt{display:flex;gap:8px;font-size:12px;color:var(--muted);font-weight:700}
+  .kd-icbtn{width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.35);color:#fff;font-size:16px;cursor:pointer;display:grid;place-items:center;flex:none}
+  .kd-topbtns{display:flex;gap:6px;flex:none}
+  .kd-cre .ab{position:absolute;top:-8px;left:-6px;width:22px;height:22px;border-radius:50%;background:#3aa8ff;border:2px solid #0d0a18;font-size:12px;display:grid;place-items:center;z-index:3}
+  .kd-cre .ab.on{background:#3dff8a;animation:kdcan 1.2s infinite}
+  .kd-cre .au{position:absolute;bottom:14px;left:2px;font-size:11px;z-index:2}
+  /* Mulligan */
+  .kd-mull{display:flex;flex-direction:column;align-items:center;gap:14px;padding:10px 0;animation:kdzoom .4s both}
+  .kd-mull .cards{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+  .kd-mull h2{margin:0;font:400 30px var(--display)}
+  /* Aktions-Blatt (wie in Handyspielen von unten) */
+  .kd-sheet{position:fixed;inset:0;z-index:9900;background:rgba(5,3,12,.6);display:flex;flex-direction:column;justify-content:flex-end;align-items:center;animation:kdfade .2s both}
+  .kd-sheet .pan{width:min(560px,100%);background:linear-gradient(180deg,#241c3a,#161126);border-radius:24px 24px 0 0;border:1px solid #4a3f66;border-bottom:0;padding:10px 16px calc(env(safe-area-inset-bottom,0px) + 18px);display:flex;flex-direction:column;align-items:center;gap:12px;animation:kdsheet .3s cubic-bezier(.2,1.1,.4,1) both;max-height:88vh;overflow-y:auto}
+  @keyframes kdsheet{from{transform:translateY(100%)}}
+  .kd-sheet .grab{width:44px;height:5px;border-radius:3px;background:rgba(255,255,255,.25)}
+  .kd-sheet .bigbtns{display:flex;flex-direction:column;gap:8px;width:100%}
+  .kd-sheet .bigbtns .btn{width:100%;min-height:50px;font-size:17px}
+  .kd-sheet h3{margin:0;font:400 24px var(--display)}
+  .kd-gl{display:flex;flex-direction:column;gap:6px;width:100%;font-size:14px}
+  .kd-gl div{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.05)}
+  .kd-gl b{color:#ffe58a}
+  .kd-tabs{display:flex;gap:6px;background:rgba(0,0,0,.3);padding:4px;border-radius:14px}
+  .kd-tabs button{border:0;background:none;color:#cfc6e6;font:800 14px var(--body);padding:8px 14px;border-radius:10px;cursor:pointer}
+  .kd-tabs button.on{background:#ffd23f;color:#2a1a00}
+
   `;
   const stl = document.createElement('style'); stl.textContent = css; document.head.appendChild(stl);
   const q = s => document.querySelector(s);
-  const S = { rid: null, seen: -1, atk: new Set(), blk: [], asel: null, bsel: null, tgt: null, hand: new Set(), phaseKey: '' };
+  const S = { rid: null, seen: -1, atk: new Set(), blk: [], bsel: null, tgt: null, hand: new Set(), phaseKey: '' };
   const fc = f => F[f] || { col: '#666', col2: '#222', e: '❔', n: '?' };
   const cv = (f) => `--c1:${fc(f).col};--c2:${fc(f).col2}`;
   const kwIcons = kw => kw.map(k => (KW[k] ? KW[k][0] : '')).join('');
   const RAR = K.RAR;
   const stars = lv => (lv >= 2 ? `<span class="lvs">${'★'.repeat(lv)}</span>` : '');
   const lvFx = lv => (lv >= 3 ? '<i class="shine"></i>' : '') + (lv >= 5 ? '<i class="spk"></i>' : '');
+  const MANA = { W: ['☀️', '#f8e7a0'], U: ['💧', '#7cc4ff'], B: ['💀', '#b894e8'], R: ['🔥', '#ff9a7a'], G: ['🌿', '#8ee0a8'], A: ['🗺️', '#f0c890'] };
+  const pip = (ch, off) => ch === 'gen' ? '' : `<i class="pip ${off ? 'off' : ''}" style="--pc:${MANA[ch] ? MANA[ch][1] : '#ccc'}">${MANA[ch] ? MANA[ch][0] : ch}</i>`;
+  function pips(m) { const o = K.parseCost(m); return (o.gen ? `<i class="pip gen">${o.gen}</i>` : '') + Object.entries(o).filter(([k]) => k !== 'gen').map(([k, n]) => pip(k).repeat(n)).join(''); }
+  window.KDpips = pips;
   function cardHTML(id, o = {}) {
     const c = C[id]; if (!c) return '';
-    const kw = (c.kw || []).map(k => KW[k] ? KW[k][1] : k).join(' · '), lv = o.lv || 0;
-    return `<div class="kd-card ${o.cls || ''} ${lv >= 2 ? 'lv' + lv : ''}" style="${cv(c.f)};${c.r ? `--rc:${RAR[c.r].col};` : ''}${o.style || ''}" ${o.attr || ''}>${lvFx(lv)}<span class="cost">${c.c}</span>${stars(lv)}<div class="in"><div class="art">${c.art}</div><b class="nm ${c.n.length > 13 ? 'ln' : ''}">${esc(c.n)}</b>${kw ? `<div class="kw">${kw}</div>` : ''}${c.txt ? `<p class="tx">${esc(c.txt)}</p>` : ''}</div>
-      ${c.r ? '<i class="rg"></i>' : ''}${c.inst ? '<span class="sof" title="Sofortzauber (Klassisch): auch im gegnerischen Zug">⚡ Sofort</span>' : ''}${c.t === 'k' ? `<span class="st a">${o.a ?? c.a}</span><span class="st h">${o.h ?? c.h}</span><span class="ty">Kreatur</span>` : '<span class="ty">Zauber</span>'}</div>`;
+    const kw = (c.kw || []).map(k => KW[k] ? KW[k][1] : k).join(', '), lv = o.lv || 0, land = c.t === 'l';
+    const txt = [kw ? `<span class="kwt">${kw}</span>` : '', c.txt ? esc(c.txt).replace(/\{(\w)\}/g, (m0, x) => (MANA[x] ? MANA[x][0] : x)) : ''].filter(Boolean).join(' ');
+    return `<div class="kd-card ${land ? 'land' : ''} ${o.cls || ''} ${lv >= 2 ? 'lv' + lv : ''}" style="${cv(c.f)};${c.r ? `--rc:${RAR[c.r].col};` : ''}${o.style || ''}" ${o.attr || ''}>${lvFx(lv)}${land ? '' : `<span class="mc">${pips(c.m)}</span>`}${stars(lv)}
+      <div class="in"><div class="art">${c.art}</div><b class="nm ${c.n.length > 13 ? 'ln' : ''}">${esc(c.n)}</b><div class="tl">${esc(c.tl || '')}</div>${txt ? `<p class="tx">${txt}</p>` : ''}</div>
+      ${c.r && !land ? '<i class="rg"></i>' : ''}${c.t === 'k' ? `<span class="pt">${o.a ?? c.a}/${o.h ?? c.h}</span>` : ''}</div>`;
   }
   window.KDcard = cardHTML;
-  const canAttack = c => !c.tap && !c.sick && !c.kw.includes('mauer') && c.a > 0;
-  const canAtk = (c, v) => !c.tap && !c.sick && !c.kw.includes('mauer') && c.a > 0 && (v.mode !== 'arena' || (c.al || 0) > 0);
-  const isGuard = c => c.kw.includes('wache') || c.kw.includes('mauer');
-  function strikeOpts(v) { // Arena: erlaubte Ziele der gewählten Kreatur
-    const A = v.P[v.me].board.find(c => c.u === S.asel); if (!A) return [];
-    const FB = v.P[v.foe].board, guards = FB.filter(isGuard), fly = A.kw.includes('flug');
-    return guards.length && !fly ? guards.map(c => 'u:' + c.u) : ['f:' + v.foe, ...FB.map(c => 'u:' + c.u)];
-  }
-  const canBlock = (b, a) => !b.tap && (!a.kw.includes('flug') || b.kw.includes('flug') || b.kw.includes('reich'));
+  const canAttack = c => !c.tap && !c.sick && !c.kw.includes('mauer') && !c.kw.includes('bann') && c.a > 0;
+  const canBlock = (b, a) => !b.tap && !b.kw.includes('bann') && (!a.kw.includes('flug') || b.kw.includes('flug') || b.kw.includes('reich'));
   const targetsFor = (v, e) => {
     const me = v.me, foe = v.foe, out = [], tg = e.tg;
     if (tg === 'any') out.push('f:' + me, 'f:' + foe);
-    for (const pid of [me, foe]) for (const c of v.P[pid].board) if ((tg === 'any' || tg === 'cre' || (tg === 'ecre' && pid === foe) || (tg === 'own' && pid === me)) && !(e.k === 'steal' && c.a > e.max)) out.push('u:' + c.u);
+    for (const pid of [me, foe]) for (const c of v.P[pid].board) if ((tg === 'any' || tg === 'cre' || (tg === 'ecre' && pid === foe) || (tg === 'own' && pid === me)) && !(e.k === 'steal' && c.a > e.max) && !(c.kw.includes('fluch') && pid !== me)) out.push('u:' + c.u);
     return out;
   };
-
+  // Mana wie auf dem Server: passt das in die ungetappten Länder?
+  function canPay(v, m) {
+    if (!m) return true;
+    const o = K.parseCost(m), free = v.P[v.me].lands.filter(l => !l.tap).map(l => l.col);
+    for (const [col, n] of Object.entries(o)) { if (col === 'gen') continue; for (let i = 0; i < n; i++) { const j = free.indexOf(col); if (j < 0) return false; free.splice(j, 1); } }
+    return free.length >= o.gen;
+  }
+  const fast = c => !!(c.inst || (c.kw || []).includes('blitz'));
   const instWin = v => v.mine && ((v.phase === 'block' && v.turn !== v.me) || (v.phase === 'trick' && v.turn === v.me));
-  const playable = (v, c) => { const P = v.P[v.me]; return v.mine && ((v.turn === v.me && v.phase === 'main') || (c.inst && instWin(v))) && c.c <= P.cr && !(c.t === 'k' && P.board.length >= 6) && !(c.t === 'z' && c.e && c.e.tg && !targetsFor(v, c.e).length); };
+  const myMain = v => v.mine && v.turn === v.me && v.phase === 'main';
+  const playable = (v, c) => {
+    const P = v.P[v.me]; if (!v.mine) return false;
+    if (c.t === 'l') return myMain(v) && !P.landPlayed;
+    if (!(myMain(v) || (fast(c) && instWin(v)))) return false;
+    return canPay(v, c.m) && !(c.t === 'k' && P.board.length >= 7) && !(c.t !== 'k' && c.e && c.e.tg && !targetsFor(v, c.e).length);
+  };
+  const abilityReady = (v, c) => { const A = C[c.id].act; return !!A && v.mine && (myMain(v) || instWin(v)) && !(A.tap && (c.tap || (c.sick && !c.kw.includes('eile')))) && canPay(v, A.m) && !(A.e.tg && !targetsFor(v, A.e).length); };
   function creHTML(c, v, side) {
-    const k = C[c.id], my = side === 'me', main = v.phase === 'main' && v.turn === v.me && v.mine;
+    const k = C[c.id], my = side === 'me', main = myMain(v);
     const cls = ['kd-cre'];
     if (c.tap) cls.push('tap'); if (c.sick && !c.tap) cls.push('sick'); if (c.frz) cls.push('frz'); if (c.shield) cls.push('shield');
-    const arena = v.mode === 'arena';
-    if (arena) {
-      if (my && main && !S.tgt && canAtk(c, v)) cls.push(S.asel === c.u ? 'sel' : 'can');
-      if (my && v.turn === v.me && !c.tap && !c.sick && (c.al || 0) <= 0) cls.push('used');
-      if (!my && S.asel != null && strikeOpts(v).includes('u:' + c.u)) cls.push('tgt');
-    } else if (my && main && !S.tgt && !v.attacked && canAttack(c)) cls.push(S.atk.has(c.u) ? 'sel' : 'can');
+    if (my && main && !S.tgt && !v.attacked && canAttack(c)) cls.push(S.atk.has(c.u) ? 'sel' : 'can');
     if (v.atk.includes(c.u)) cls.push('attacking');
     if (S.bsel === c.u) cls.push('bsel');
     if (S.tgt && S.tgt.opts.includes('u:' + c.u)) cls.push('tgt');
@@ -233,32 +296,37 @@
     }
     const hurt = c.d > 0, up = c.a > k.a || c.h > k.h, lv = (v.P[side === 'me' ? v.me : v.foe].lv || {})[c.id] || 1;
     if (lv >= 2) cls.push('lv' + lv);
-    return `<div class="${cls.join(' ')}" style="${cv(k.f)};${k.r ? `--rc:${RAR[k.r].col}` : ''}" data-u="${c.u}" data-side="${side}" data-lv="${lv}" data-f="${k.f}">${lvFx(lv)}${k.r ? '<i class="rg"></i>' : ''}${badge}<div class="kwi">${kwIcons(c.kw)}</div><div class="art">${k.art}</div><span class="cn">${esc(k.n)}</span>${c.sick && !c.tap && my ? '<span class="zz">💤</span>' : ''}
+    const ab = k.act ? `<span class="ab ${my && abilityReady(v, c) ? 'on' : ''}">⟳</span>` : '';
+    return `<div class="${cls.join(' ')}" style="${cv(k.f)};${k.r ? `--rc:${RAR[k.r].col}` : ''}" data-u="${c.u}" data-side="${side}" data-lv="${lv}" data-f="${k.f}">${lvFx(lv)}${k.r ? '<i class="rg"></i>' : ''}${badge}${ab}<div class="kwi">${kwIcons(c.kw)}</div><div class="art">${k.art}</div><span class="cn">${esc(k.n)}</span>${(c.auras || []).length ? `<span class="au">📜${c.auras.length}</span>` : ''}${c.sick && !c.tap && my ? '<span class="zz">💤</span>' : ''}
       <span class="st a ${c.a > k.a ? 'up' : ''}">${c.a}</span><span class="st h ${hurt ? 'hurt' : ''} ${up && !hurt ? 'up' : ''}">${c.h - c.d}</span></div>`;
   }
   const HE = K.HEROES || {};
-  function heroHTML(v, pid, side) { // Held mit Abklingzeit (Ring füllt sich), antippbar wenn bereit
+  function heroHTML(v, pid, side) {
     const h = v.P[pid].hero; if (!h || !HE[h.id]) return '';
-    const H = HE[h.id], f = fc(h.id), ready = h.cd === 0, mineNow = side === 'me' && v.mine && v.turn === v.me && v.phase === 'main' && !S.tgt;
+    const H = HE[h.id], f = fc(h.id), ready = h.cd === 0, mineNow = side === 'me' && myMain(v) && !S.tgt;
     const pct = Math.round((1 - h.cd / H.cd) * 100);
-    return `<button class="kd-hero ${ready ? 'ready' : ''} ${ready && mineNow ? 'go' : ''}" data-kdhero="${pid}" style="--c1:${f.col};--c2:${f.col2};--p:${pct}%" title="${esc(H.n + ' – ' + H.pow + ': ' + H.txt)}"><span class="hp">${H.art}</span>${ready ? '<span class="rd">⚡</span>' : `<span class="cdn">${h.cd}</span>`}</button>`;
+    return `<button class="kd-hero ${ready ? 'ready' : ''} ${ready && mineNow ? 'go' : ''}" data-kdhero="${pid}" style="--c1:${f.col};--c2:${f.col2};--p:${pct}%" aria-label="Held"><span class="hp">${H.art}</span>${ready ? '<span class="rd">⚡</span>' : `<span class="cdn">${h.cd}</span>`}</button>`;
   }
+  function manaHTML(P) { // ungetappte Länder als leuchtende Mana-Symbole
+    const cols = {}; for (const l of P.lands) { cols[l.col] = cols[l.col] || [0, 0]; cols[l.col][0]++; if (!l.tap) cols[l.col][1]++; }
+    return Object.entries(cols).map(([c, [n, free]]) => pip(c).repeat(free) + pip(c, 1).repeat(n - free)).join('') || '<span class="note" style="font-size:11px">kein Mana</span>';
+  }
+  function landsHTML(v, pid) { const L = v.P[pid].lands; return `<div class="kd-lands" data-kdlands="${pid}">${L.length ? L.map(l => `<i class="kd-land ${l.tap ? 't' : ''}" data-l="${l.u}" style="--pc:${MANA[l.col][1]}">${MANA[l.col][0]}</i>`).join('') : '<span class="none">noch keine Länder</span>'}</div>`; }
   function barHTML(v, pid, side) {
-    const P = v.P[pid], f = fc(P.fac), gems = Array.from({ length: P.mx }, (_, i) => `<i class="${i < P.cr ? 'on' : ''}"></i>`).join('');
-    const tg = (S.tgt && S.tgt.opts.includes('f:' + pid)) || (S.asel != null && v.mode === 'arena' && strikeOpts(v).includes('f:' + pid)) ? 'tgt' : '';
-    return `<div class="kd-bar ${v.turn === pid && v.phase !== 'end' ? 'turn' : ''}"><div class="who"><span class="av" style="--c1:${f.col};--c2:${f.col2}">${P.art || (pid === 'bot' ? '🤖' : f.e)}</span><span class="nm">${esc(v.nm[pid])}${side === 'me' && v.mine ? ' (du)' : ''}${(P.bon || []).length ? `<span class="kd-bon" data-kdbon="${pid}" title="Themen-Bonus">${P.bon.map(b => `<i>${fc(b).e}</i>`).join('')}</span>` : ''}<small>${esc(P.dn || f.n)} · <span title="Handkarten">🂠 ${P.hand}</span> · <span title="Karten im Deck">📚 ${P.deck}</span></small></span></div>
-      <div class="kd-gems">${gems}<b>${P.cr}/${P.mx}</b></div>${heroHTML(v, pid, side)}
-      <div class="kd-life ${P.life <= 5 ? 'low' : ''} ${tg}" data-face="f:${pid}" title="Leben">${Math.max(0, P.life)}</div></div>`;
+    const P = v.P[pid], f = fc(P.fac);
+    const tg = S.tgt && S.tgt.opts.includes('f:' + pid) ? 'tgt' : '';
+    return `<div class="kd-bar ${v.turn === pid && v.phase !== 'end' ? 'turn' : ''}"><div class="who"><span class="av" style="--c1:${f.col};--c2:${f.col2}">${P.art || (pid === 'bot' ? '🤖' : f.e)}</span><span class="nm">${esc(v.nm[pid])}${side === 'me' && v.mine ? ' (du)' : ''}${(P.bon || []).length ? `<span class="kd-bon" data-kdbon="${pid}">${P.bon.map(b => `<i>${fc(b).e}</i>`).join('')}</span>` : ''}
+      <small class="kd-cnt"><span>🂠 ${P.hand}</span><span>📚 ${P.deck}</span><span>🪦 ${P.grave}</span></small></span></div>
+      <div class="kd-mana">${manaHTML(P)}</div>${heroHTML(v, pid, side)}
+      <div class="kd-life ${P.life <= 5 ? 'low' : ''} ${tg}" data-face="f:${pid}">${Math.max(0, P.life)}</div></div>`;
   }
 
   function render(stage, v) {
-    if (S.rid !== room.id) { S.rid = room.id; S.seen = -1; S.atk.clear(); S.blk = []; S.asel = null; S.bsel = null; S.tgt = null; S.hand = new Set(); }
-    // Auswahl aufräumen
+    if (S.rid !== room.id) { S.rid = room.id; S.seen = -1; S.atk.clear(); S.blk = []; S.bsel = null; S.tgt = null; S.hand = new Set(); }
     const pk = v.phase + ':' + v.turn + ':' + v.n + ':' + v.attacked;
-    if (pk !== S.phaseKey) { S.phaseKey = pk; if (v.phase !== 'end') S.arenaShown = 0; S.atk.clear(); S.blk = []; S.bsel = null; S.tgt = null; S.asel = null; }
-    if (S.asel != null && !v.P[v.me].board.some(c => c.u === S.asel && canAtk(c, v))) S.asel = null;
+    if (pk !== S.phaseKey) { S.phaseKey = pk; if (v.phase !== 'end') S.arenaShown = 0; S.atk.clear(); S.blk = []; S.bsel = null; S.tgt = null; }
     if (v.phase === 'pick') return renderPick(stage, v);
-    // Alte Positionen merken (für Animationen gestorbener Kreaturen)
+    if (v.phase === 'mull') return renderMull(stage, v);
     const prev = {}; stage.querySelectorAll('[data-u]').forEach(e => { prev[e.dataset.u] = { r: e.getBoundingClientRect(), html: e.outerHTML }; });
     const me = v.me, foe = v.foe, myTurn = v.mine && v.turn === me, P = v.P[me];
     const hand = v.hand.map((h, i) => {
@@ -267,57 +335,65 @@
       return cardHTML(h.id, { lv: (P.lv || {})[h.id] || 1, cls: (ok ? 'play' : 'no') + (isNew ? ' new' : '') + (S.tgt && S.tgt.i === i ? ' on' : ''), attr: `data-hi="${i}"`, style: `--r:${((i - mid) * (n > 6 ? 1.5 : 2.5)).toFixed(1)}deg;--y:${(Math.abs(i - mid) ** 1.5 * 1.5).toFixed(1)}px;animation-delay:${isNew ? 0.1 : 0}s` });
     }).join('');
     S.hand = new Set(v.hand.map(h => h.h));
-    let mid = '';
+    let pill = '', acts = '';
     if (v.phase === 'end') {
       const win = v.winner === me && v.mine, rw = v.rew;
       const nextAr = v.arena != null ? (rw && rw.tr != null ? K.arenaOf(rw.tr) : v.arena) : null;
-      const next = nextAr != null ? `<button class="btn" data-kdbot="1" data-kdarena="${nextAr}">🏆 Nächster Trophäenkampf</button>` : v.bot && v.lvl && win && v.lvl < K.LADDER.length ? `<button class="btn" data-kdbot="${v.lvl + 1}">🏆 Weiter zu Stufe ${v.lvl + 1}</button>` : '';
-      if (rw && rw.newArena != null && !S.arenaShown) { S.arenaShown = 1; const A = K.ARENAS[rw.newArena]; setTimeout(() => { const b = document.createElement('div'); b.className = 'kd-banner'; b.style.fontSize = 'clamp(28px,7vw,54px)'; b.textContent = `${A.e} ${A.n}!`; document.body.appendChild(b); setTimeout(() => b.remove(), 1700); if (window.g3confetti) g3confetti(160); }, 400); }
-      mid = `<div class="kd-end"><div class="big ${win || !v.mine ? '' : 'l'}">${v.draw ? 'Unentschieden!' : win ? '🏆 Sieg!' : v.mine ? 'Niederlage' : `${esc(v.nm[v.winner])} gewinnt!`}</div>
-        ${rw && rw.lines && rw.lines.length ? `<div class="kd-rew">${rw.f ? `<b>+${rw.f} 🪙 Funken</b>` : ''}${rw.lines.map(l => `<div>${esc(l)}</div>`).join('')}${rw.total != null ? `<div class="note">Jetzt: ${rw.total} 🪙 · <a href="#" data-kdz="packs">Packs öffnen</a></div>` : ''}</div>` : ''}
-        <p class="note">Stand: ${esc(v.nm[v.p[0]])} ${v.score[v.p[0]] || 0} – ${v.score[v.p[1]] || 0} ${esc(v.nm[v.p[1]])}</p>
-        <div class="row" style="justify-content:center;gap:8px;flex-wrap:wrap">${v.bot && isHost() ? (nextAr != null ? next : `${next}<button class="btn ${next ? 'ghost' : ''}" data-kdbot="${v.lvl || 0}">⚔️ Nochmal</button>`) : againHTML('⚔️ Revanche!')}<button class="btn ghost" data-kdz="spielen">💎 Zentrale</button></div></div>`;
+      if (rw && rw.newArena != null && !S.arenaShown) { S.arenaShown = 1; const A = K.ARENAS[rw.newArena]; setTimeout(() => { banner(`${A.e} ${A.n}!`); if (window.g3confetti) g3confetti(160); }, 400); }
+      pill = `<div class="kd-end"><div class="big ${win || !v.mine ? '' : 'l'}">${v.draw ? 'Unentschieden!' : win ? '🏆 Sieg!' : v.mine ? 'Niederlage' : `${esc(v.nm[v.winner])} gewinnt!`}</div>
+        ${rw && rw.lines && rw.lines.length ? `<div class="kd-rew">${rw.f ? `<b>+${rw.f} 🪙</b>` : ''}${rw.lines.map(l => `<div>${esc(l)}</div>`).join('')}</div>` : ''}
+        <div class="row" style="justify-content:center;gap:8px;flex-wrap:wrap">${v.bot && isHost() ? (nextAr != null ? `<button class="btn" data-kdbot="1" data-kdarena="${nextAr}">🏆 Nächster Kampf</button>` : `<button class="btn" data-kdbot="0">⚔️ Nochmal</button>`) : againHTML('⚔️ Revanche!')}<button class="btn ghost" data-kdz="spielen">💎 Zentrale</button></div></div>`;
     } else if (S.tgt) {
-      mid = `<div class="kd-tgtbar">🎯 Ziel für ${S.tgt.hero ? esc(HE[v.P[v.me].hero.id].pow) : esc(C[v.hand[S.tgt.i] ? v.hand[S.tgt.i].id : ''] ? C[v.hand[S.tgt.i].id].n : '')} wählen <button class="btn ghost small" data-kd="cancel">Abbrechen</button></div>`;
+      const what = S.tgt.hero ? HE[P.hero.id].pow : S.tgt.abil ? 'Fähigkeit' : (v.hand[S.tgt.i] ? C[v.hand[S.tgt.i].id].n : '');
+      pill = `<span class="kd-pill me">🎯 Ziel für ${esc(what)}</span>`; acts = '<button class="btn ghost small" data-kd="cancel">✕ Abbrechen</button>';
     } else if (v.phase === 'block') {
-      if (v.mine && v.turn !== me) { const n = S.blk.length, inst = v.hand.some(h => C[h.id].inst && C[h.id].c <= P.cr);
-        mid = `<span class="msg mine">🛡️ Angriff! ${S.bsel ? 'Jetzt einen roten Angreifer antippen' : 'Tippe deine Kreatur, dann den Angreifer – mehrere Blocker pro Angreifer gehen.'}${inst ? ' ⚡ Sofortzauber kannst du jetzt auch spielen.' : ''}</span><button class="btn" data-kd="block">${n ? `🛡️ Blocks bestätigen (${n})` : 'Nicht blocken'}</button>`; }
-      else mid = `<span class="msg">⏳ ${esc(v.nm[foe === v.turn ? me : foe])} wählt Blocker …</span>`;
+      if (v.mine && v.turn !== me) { const n = S.blk.length; pill = `<span class="kd-pill warn">🛡️ ${S.bsel != null ? 'Angreifer antippen' : 'Blocker wählen'}</span>`; acts = `<button class="btn" data-kd="block">${n ? `✅ Blocken (${n})` : 'Nicht blocken'}</button>`; }
+      else pill = `<span class="kd-pill">⏳ ${esc(v.nm[foe === v.turn ? me : foe])} blockt …</span>`;
     } else if (v.phase === 'trick') {
-      if (v.mine && v.turn === me) mid = `<span class="msg mine">⚡ Kampftricks: Spiele jetzt Sofortzauber – oder lass den Kampf beginnen.</span><button class="btn atk" data-kd="go">💥 Schaden!</button>`;
-      else mid = `<span class="msg">⏳ ${esc(v.nm[v.turn])} überlegt einen Kampftrick …</span>`;
-    } else if (myTurn && v.mode === 'arena') {
-      const can = P.board.some(c => canAtk(c, v));
-      mid = `<span class="msg mine">${S.asel != null ? '🎯 Wähle das Ziel (leuchtend) – oder tippe die Kreatur nochmal zum Abbrechen' : can ? 'Tippe eine grün leuchtende Kreatur zum Angreifen' : 'Spiele Karten oder beende den Zug'}</span><button class="btn end" data-kd="end">Zug beenden ⏭</button>`;
+      if (v.mine && v.turn === me) { pill = '<span class="kd-pill me">⚡ Kampftricks?</span>'; acts = '<button class="btn atk" data-kd="go">💥 Kampfschaden</button>'; }
+      else pill = `<span class="kd-pill">⏳ ${esc(v.nm[v.turn])} überlegt …</span>`;
     } else if (myTurn) {
       const n = S.atk.size, can = !v.attacked && P.board.some(canAttack);
-      mid = `<span class="msg mine">${v.attacked ? 'Angriff vorbei – spiele noch Karten oder beende den Zug' : can ? (n ? '' : 'Karten spielen oder Angreifer antippen') : 'Dein Zug – spiele Karten aus'}</span>
-        ${can && !n ? '<button class="btn ghost small" data-kd="all">⚔️ Alle wählen</button>' : ''}${n ? `<button class="btn atk" data-kd="attack">⚔️ Angreifen (${n})</button>` : ''}<button class="btn end" data-kd="end">Zug beenden ⏭</button>`;
-    } else mid = `<span class="msg">⏳ ${esc(v.nm[v.turn])} ist am Zug …</span>`;
-    if (v.left != null && v.phase !== 'end') mid += ` <span class="note">⏱ <span data-cd></span> s</span>`;
-    const row = (pid, side) => { const b = v.P[pid].board; return `<div class="kd-row ${side}">${b.length ? b.map(c => creHTML(c, v, side)).join('') : '<span class="empty">– keine Kreaturen –</span>'}</div>`; };
+      pill = `<span class="kd-pill me">${v.attacked ? '☀️ Zweite Hauptphase' : '☀️ Hauptphase'}</span>`;
+      acts = `${can && !n ? '<button class="btn ghost small" data-kd="all">⚔️ Alle</button>' : ''}${n ? `<button class="btn atk" data-kd="attack">⚔️ Angreifen (${n})</button>` : ''}<button class="btn end" data-kd="end">Zug beenden ⏭</button>`;
+    } else pill = `<span class="kd-pill">⏳ ${esc(v.nm[v.turn])} ist am Zug</span>`;
+    if (v.left != null && v.phase !== 'end') pill += ` <span class="kd-pill">⏱ <span data-cd></span></span>`;
+    const row = (pid, side) => { const b = v.P[pid].board; return `<div class="kd-row ${side}">${b.length ? b.map(c => creHTML(c, v, side)).join('') : '<span class="empty">–</span>'}</div>`; };
     stage.dataset.mode = 'kd';
-    const AR = v.arena != null && K.ARENAS ? K.ARENAS[v.arena] : null, MO = K.MODES ? K.MODES[v.mode || 'klassisch'] : null;
-    stage.innerHTML = `<div class="kd"><div class="kd-table" style="--fo:${fc(v.P[foe].fac).col};--fm:${fc(P.fac).col};${AR ? `background:radial-gradient(ellipse at 50% 50%,color-mix(in srgb,${AR.col} 22%,transparent),transparent 70%),linear-gradient(180deg,${AR.col2},#0d0a18 50%,${AR.col2})` : ''}">${MO ? `<span class="kd-mode" data-kdrules="1">${MO.e} ${MO.n}${AR ? ` · ${AR.e} ${AR.n}` : ''} ⓘ</span>` : ''}${barHTML(v, foe, 'foe')}${row(foe, 'foe')}<div class="kd-mid">${mid}</div>${row(me, 'me')}${barHTML(v, me, 'me')}</div>
-      ${v.mine ? `<div class="kd-hand">${hand || '<span class="note">Keine Handkarten</span>'}</div>` : ''}<p class="kd-log">${esc(v.log[v.log.length - 1] || '')}</p></div>`;
+    const AR = v.arena != null && K.ARENAS ? K.ARENAS[v.arena] : null;
+    const mid = v.phase === 'end' ? pill : `<div class="kd-topbtns"><button class="kd-icbtn" data-kdrules="1" aria-label="Regeln">📖</button><button class="kd-icbtn" data-kdlog="1" aria-label="Verlauf">📜</button></div><div class="kd-phase">${pill}</div><div class="kd-acts">${acts}</div>`;
+    stage.innerHTML = `<div class="kd"><div class="kd-table" style="--fo:${fc(v.P[foe].fac).col};--fm:${fc(P.fac).col};${AR ? `background:radial-gradient(ellipse at 50% 50%,color-mix(in srgb,${AR.col} 22%,transparent),transparent 70%),linear-gradient(180deg,${AR.col2},#0d0a18 50%,${AR.col2})` : ''}">
+      ${barHTML(v, foe, 'foe')}${landsHTML(v, foe)}${row(foe, 'foe')}<div class="kd-mid">${mid}</div>${row(me, 'me')}${landsHTML(v, me)}${barHTML(v, me, 'me')}</div>
+      ${v.mine ? `<div class="kd-hand">${hand || '<span class="note">Keine Handkarten</span>'}</div>` : ''}</div>`;
     if (deadline != null) { const s = Math.max(0, Math.ceil((deadline - Date.now()) / 1000)); stage.querySelectorAll('[data-cd]').forEach(e => (e.textContent = s)); }
     animate(stage, v, prev);
+  }
+  function renderMull(stage, v) {
+    const done = v.mull && v.mull[v.me], key = 'mull' + v.hand.map(h => h.h).join() + done;
+    if (stage.dataset.mode === key) return; stage.dataset.mode = key;
+    const P = v.P[v.me], lands = v.hand.filter(h => C[h.id].t === 'l').length;
+    stage.innerHTML = `<div class="kd"><div class="kd-mull"><h2>Deine Starthand</h2>
+      <div class="kd-phase"><span class="kd-pill">🃏 ${v.hand.length} Karten</span><span class="kd-pill">🏞️ ${lands} Länder</span><span class="kd-pill">${v.first === v.me ? '▶️ Du beginnst' : '⏸ Gegner beginnt'}</span></div>
+      <div class="cards">${v.hand.map(h => cardHTML(h.id, { lv: (P.lv || {})[h.id] || 1 })).join('')}</div>
+      ${!v.mine ? '' : done ? '<span class="kd-pill">⏳ Warte auf den Gegner …</span>' : `<div class="row" style="gap:10px;justify-content:center"><button class="btn" data-kdkeep="1" style="min-height:52px;font-size:18px">✅ Behalten</button>${v.mulled[v.me] ? '' : `<button class="btn ghost" data-kdmull="1" style="min-height:52px;font-size:18px">🔄 Mulligan (${v.hand.length - 1})</button>`}</div>`}
+      ${v.left != null ? '<span class="kd-pill">⏱ <span data-cd></span></span>' : ''}</div></div>`;
   }
   function renderPick(stage, v) {
     const mineF = v.P[v.me].fac, foeF = v.P[v.foe].fac;
     const key = 'pick' + mineF + foeF + (v.opts || []).length;
     if (stage.dataset.mode === key) return; stage.dataset.mode = key;
-    const dk = (o, i) => { const f = fc(o.th); return `<button class="kd-dk ${o.mine ? 'mine' : ''} ${o.ok === false ? 'bad' : ''}" data-kdd="${o.id}" style="--c1:${f.col};--c2:${f.col2};animation-delay:${i * 0.05}s" ${o.ok === false ? `title="${esc(o.err || '')}"` : ''}>
-      <span class="e">${o.hero && HE[o.hero] ? HE[o.hero].art : f.e}</span><b>${esc(o.n)}</b><small>${o.ok === false ? '⚠️ ' + esc(o.err || 'nicht fertig') : o.bon.length ? 'Bonus: ' + o.bon.map(b => fc(b).e + ' ' + K.B[b][0]).join(', ') : 'kein Themen-Bonus'}</small>${v.lastDeck === o.id ? '<span class="last">zuletzt</span>' : ''}</button>`; };
+    const dk = (o, i) => { const f = fc(o.th); return `<button class="kd-dk ${o.mine ? 'mine' : ''} ${o.ok === false ? 'bad' : ''}" data-kdd="${o.id}" style="--c1:${f.col};--c2:${f.col2};animation-delay:${i * 0.05}s">
+      <span class="e">${o.hero && HE[o.hero] ? HE[o.hero].art : f.e}</span><b>${esc(o.n)}</b><small>${o.ok === false ? '⚠️ unfertig' : o.bon.length ? o.bon.map(b => fc(b).e + ' ' + K.B[b][0]).join(' · ') : f.n}</small>${v.lastDeck === o.id ? '<span class="last">zuletzt</span>' : ''}</button>`; };
     const my = (v.opts || []).filter(o => o.mine), base = (v.opts || []).filter(o => !o.mine);
-    const foeTxt = v.bot ? `${v.P[v.foe].art || '🤖'} ${esc(v.nm[v.foe])}${v.lvl ? ` · Bot-Leiter Stufe ${v.lvl} · ❤️ ${v.P[v.foe].max}` : ''}` : esc(v.nm[v.foe]);
-    stage.innerHTML = `<div class="kd"><h2 class="center" style="margin:0">⚔️ Wähle dein Deck</h2><p class="note center">Gegner: ${foeTxt}</p>
-      ${!v.mine ? '<p class="status">Die Spieler wählen ihre Decks …</p>' : mineF ? `<p class="status">Deck gewählt. ${foeF ? '' : `Warte auf ${esc(v.nm[v.foe])} …`}</p>` : `${v.left != null ? '<p class="note center">Noch <span data-cd></span> s.</p>' : ''}
-      ${my.length ? `<h3 style="margin:4px 0">📦 Deine Decks</h3><div class="kd-decks">${my.map(dk).join('')}</div>` : `<p class="note center">Mit Konto kannst du in der <a href="#" data-kdz="decks">Kristallduell-Zentrale</a> eigene Decks aus deinen Karten bauen.</p>`}
-      ${my.length ? '<details style="margin-top:12px"><summary style="cursor:pointer;font-weight:800;text-align:center">🃏 Leihdecks (fertige Grunddecks)</summary>' : '<h3 style="margin:10px 0 4px">🃏 Grunddecks</h3>'}<div class="kd-decks" style="margin-top:8px">${base.map(dk).join('')}<button class="kd-dk" data-kdd="zufall" style="--c1:#6a6a8a;--c2:#262636"><span class="e">🎲</span><b>Zufall</b><small>Ein zufälliges Grunddeck</small></button></div>${my.length ? '</details>' : ''}`}</div>`;
+    const foeTxt = `${v.P[v.foe].art || (v.bot ? '🤖' : '👤')} ${esc(v.nm[v.foe])}`;
+    stage.innerHTML = `<div class="kd"><div class="kd-phase" style="justify-content:center"><span class="kd-pill me">⚔️ Deck wählen</span><span class="kd-pill">Gegner: ${foeTxt}</span>${v.left != null ? '<span class="kd-pill">⏱ <span data-cd></span></span>' : ''}</div>
+      ${!v.mine ? '<p class="status">Die Spieler wählen ihre Decks …</p>' : mineF ? `<p class="status">✅ Deck gewählt${foeF ? '' : ` – warte auf ${esc(v.nm[v.foe])}`}</p>` : `
+      ${my.length ? `<div class="kd-decks">${my.map(dk).join('')}</div>` : ''}
+      <div class="kd-phase" style="justify-content:center;margin-top:10px"><span class="kd-pill">🃏 Leihdecks</span></div><div class="kd-decks" style="margin-top:8px">${base.map(dk).join('')}</div>`}</div>`;
   }
-  const PT = { glut: ['🔥', '#ff5a3d'], wild: ['🍃', '#3ec46d'], flut: ['💧', '#3aa8ff'], nacht: ['🟣', '#a45cff'], licht: ['✨', '#f5c542'] };
-  function trail(from, to, f, lv, delay) { // Angriffs-Effekt ab Stufe 4 (Stufe 5 mit Einschlag)
+  function banner(t) { const b = document.createElement('div'); b.className = 'kd-banner'; b.style.fontSize = 'clamp(28px,7vw,54px)'; b.textContent = t; document.body.appendChild(b); setTimeout(() => b.remove(), 1700); }
+  const PT = { glut: ['🔥', '#ff5a3d'], wild: ['🍃', '#3ec46d'], flut: ['💧', '#3aa8ff'], nacht: ['🟣', '#a45cff'], licht: ['✨', '#f5c542'], abent: ['⭐', '#e0a050'] };
+  function trail(from, to, f, lv, delay) {
     const [em, col] = PT[f] || ['✦', '#fff'];
     setTimeout(() => {
       for (let i = 0; i < 7; i++) setTimeout(() => {
@@ -347,6 +423,9 @@
     for (const e of evs) {
       const el = elFor(stage, e.t);
       if (e.k === 'summon') { if (el) { el.classList.add('summon'); setTimeout(() => el.classList.remove('summon'), 700); if (Number(el.dataset.lv) >= 4) ring(el, Number(el.dataset.lv), delay + 150); } }
+      else if (e.k === 'land') { const l = stage.querySelector(`[data-l="${e.u}"]`); if (l) l.classList.add('pop'); }
+      else if (e.k === 'tapL') for (const u of e.us || []) { const l = stage.querySelector(`[data-l="${u}"]`); if (l) pulse(l, 'flash', delay); }
+      else if (e.k === 'ability') { pulse(el, 'shake', delay); if (el && e.tgt) { const to = pos(e.tgt); if (to) trail(centerOf(el), to, el.dataset.f, 5, delay + 100); } delay += 300; }
       else if (e.k === 'hit') {
         delay += 380; const a = stage.querySelector(`[data-u="${e.from}"]`) || null, pv = prev[e.from];
         if (a) pulse(a, a.dataset.side === 'me' ? 'lunge-up' : 'lunge-dn', delay - 300);
@@ -358,11 +437,11 @@
       else if (e.k === 'steal') { const p = pos(e.t); if (p) floatAt(p[0], p[1], '🪦 übernommen', 'b', delay); }
       else if (e.k === 'dmg') { const p = pos(e.t); if (p) floatAt(p[0], p[1], '-' + e.n, '', delay); pulse(el, 'shake', delay); if (navigator.vibrate && e.t === 'f:' + v.me && v.mine) setTimeout(() => navigator.vibrate(40), delay); }
       else if (e.k === 'heal') { const p = pos(e.t); if (p) floatAt(p[0], p[1], '+' + e.n, 'g', delay); }
-      else if (e.k === 'buff') { const p = pos(e.t); if (p) floatAt(p[0], p[1], `+${e.a}/+${e.h}`, 'y', delay); }
+      else if (e.k === 'buff') { const p = pos(e.t); if (p) floatAt(p[0], p[1], e.kw && e.kw.includes('bann') ? '🔗' : `+${e.a}/+${e.h}`, 'y', delay); }
       else if (e.k === 'freeze') { const p = pos(e.t); if (p) floatAt(p[0], p[1], '❄️', 'b', delay); }
       else if (e.k === 'shield') { const p = pos(e.t); if (p) floatAt(p[0], p[1], '🛡️', 'y', delay); }
       else if (e.k === 'kill') { const p = pos(e.t); if (p) floatAt(p[0], p[1], '💀', '', delay); }
-      else if (e.k === 'ramp') { const b = stage.querySelector(`[data-face="f:${e.p}"]`); if (b) { const p = centerOf(b.parentElement.querySelector('.kd-gems')); floatAt(p[0], p[1], '+💎', 'b', delay); } }
+      else if (e.k === 'ramp') { const b = stage.querySelector(`[data-kdlands="${e.p}"]`); if (b) { const p = centerOf(b); floatAt(p[0], p[1], '+🏞️', 'b', delay); } }
       else if (e.k === 'die' || e.k === 'bounce') {
         const p = prev[e.t.slice(2)]; if (!p) continue;
         const g = document.createElement('div'); g.innerHTML = p.html; const n = g.firstElementChild; if (!n) continue;
@@ -370,151 +449,154 @@
         Object.assign(n.style, { left: p.r.left + 'px', top: p.r.top + 'px', width: p.r.width + 'px', height: p.r.height + 'px' });
         document.body.appendChild(n); setTimeout(() => n.classList.add(e.k === 'die' ? 'die' : 'bounce'), delay + 150); setTimeout(() => n.remove(), delay + 1100);
       }
-      else if (e.k === 'play' && e.p !== v.me) { // gegnerische Karte groß zeigen
-        const o = document.createElement('div'); o.className = 'kd-cast'; o.innerHTML = `<div class="who">${esc(v.nm[e.p])} spielt</div>${cardHTML(e.id, { cls: 'big', lv: (v.P[e.p].lv || {})[e.id] || 1 })}`;
+      else if (e.k === 'play' && e.p !== v.me) {
+        const o = document.createElement('div'); o.className = 'kd-cast'; o.innerHTML = `<div class="who">${esc(v.nm[e.p])} wirkt</div>${cardHTML(e.id, { cls: 'big', lv: (v.P[e.p].lv || {})[e.id] || 1 })}`;
         document.body.appendChild(o); setTimeout(() => o.remove(), 1650); delay += 500;
       }
       else if (e.k === 'heropow') {
         const hb = stage.querySelector(`[data-kdhero="${e.p}"]`), H = HE[e.id];
-        if (hb) { hb.classList.add('fire'); setTimeout(() => hb.classList.remove('fire'), 900); if (window.KDfx) KDfx.burst(centerOf(hb), H ? H.art : '⚡', fc(e.id).col); }
-        if (H) { const b = document.createElement('div'); b.className = 'kd-banner'; b.style.fontSize = 'clamp(30px,7vw,56px)'; b.textContent = `${H.art} ${H.pow}!`; document.body.appendChild(b); setTimeout(() => b.remove(), 1600); }
+        if (hb) { hb.classList.add('fire'); setTimeout(() => hb.classList.remove('fire'), 900); burst(centerOf(hb), H ? H.art : '⚡', fc(e.id).col); }
+        if (H) banner(`${H.art} ${H.pow}!`);
         if (hb && e.tgt) { const to = pos(e.tgt); if (to) trail(centerOf(hb), to, e.id, 5, 200); }
         delay += 500;
       }
-      else if (e.k === 'turn' && e.p === v.me && v.mine) { const b = document.createElement('div'); b.className = 'kd-banner'; b.textContent = 'Dein Zug!'; document.body.appendChild(b); setTimeout(() => b.remove(), 1600); }
-      else if (e.k === 'burn' && e.p === v.me && v.mine) toast(`Hand voll – ${C[e.id].n} ist verbrannt.`);
-      else if (e.k === 'hero') { const b = document.createElement('div'); b.className = 'kd-banner'; b.textContent = e.p === v.me ? '✨ Du ziehst deinen Helden!' : `✨ ${v.nm[e.p]} zieht einen Helden!`; document.body.appendChild(b); setTimeout(() => b.remove(), 2000); } // Spieler-Idee v68
+      else if (e.k === 'turn' && e.p === v.me && v.mine) banner('Dein Zug!');
+      else if (e.k === 'burn' && e.p === v.me && v.mine) toast(`Hand voll – ${C[e.id].n} kommt in den Friedhof.`);
       else if (e.k === 'end' && v.mine && v.winner === v.me && window.g3confetti) setTimeout(() => g3confetti(140), delay + 300);
     }
   }
-  function popup(html) {
-    const o = document.createElement('div'); o.className = 'kd-pop'; o.innerHTML = html; document.body.appendChild(o);
-    o.addEventListener('click', e => { if (e.target === o || e.target.closest('[data-kdx]')) o.remove(); });
+  // ---------- Blätter von unten (Handyspiel-Stil) ----------
+  function sheet(html, opts = {}) {
+    const o = document.createElement('div'); o.className = 'kd-sheet'; o.innerHTML = `<div class="pan"><i class="grab"></i>${html}</div>`; document.body.appendChild(o);
+    const close = () => { o.remove(); }; o.addEventListener('click', e => { if (e.target === o || e.target.closest('[data-kdx]')) close(); });
+    let y0 = null; const pan = o.querySelector('.pan'); // nach unten wischen schließt
+    pan.addEventListener('touchstart', e => { if (pan.scrollTop <= 0) y0 = e.touches[0].clientY; }, { passive: true });
+    pan.addEventListener('touchmove', e => { if (y0 != null) { const d = e.touches[0].clientY - y0; if (d > 0) pan.style.transform = `translateY(${d}px)`; } }, { passive: true });
+    pan.addEventListener('touchend', e => { if (y0 == null) return; const d = (e.changedTouches[0].clientY - y0); y0 = null; if (d > 90) close(); else pan.style.transform = ''; });
     return o;
   }
-  const kwList = kw => kw.length ? `<div class="kwl">${kw.map(k => KW[k] ? `<span>${KW[k][0]} <b>${KW[k][1]}:</b> ${KW[k][2]}</span>` : '').join('')}</div>` : '';
+  window.KDsheet = sheet;
+  const popup = sheet;
+  const kwList = kw => kw.length ? `<div class="kd-gl">${kw.map(k => KW[k] ? `<div><span>${KW[k][0]}</span><span><b>${KW[k][1]}</b> – ${KW[k][2]}</span></div>` : '').join('')}</div>` : '';
   function showHand(i) {
     const v = room.view, h = v.hand[i]; if (!h) return; const c = C[h.id], P = v.P[v.me];
     const ok = playable(v, c);
-    const why = v.turn !== v.me ? 'Du bist nicht am Zug.' : v.phase !== 'main' ? '' : c.c > P.cr ? `Du brauchst ${c.c} 💎 (hast ${P.cr}).` : c.t === 'k' && P.board.length >= 6 ? 'Dein Feld ist voll.' : 'Dafür gibt es gerade kein Ziel.';
-    const o = popup(`${cardHTML(h.id, { cls: 'big', lv: (P.lv || {})[h.id] || 1 })}${kwList(c.kw || [])}<div class="row" style="justify-content:center;gap:8px">${ok ? '<button class="btn" data-kdplay="1">✨ Ausspielen</button>' : `<span class="note">${why}</span>`}<button class="btn ghost" data-kdx="1">Schließen</button></div>`);
+    const why = !v.mine ? '' : c.t === 'l' ? (P.landPlayed ? 'Du hast in diesem Zug schon ein Land gespielt.' : 'Länder spielst du in deiner Hauptphase.') : !(myMain(v) || (fast(c) && instWin(v))) ? (fast(c) ? 'Gerade ist der Gegner dran.' : 'Nur in deiner Hauptphase.') : !canPay(v, c.m) ? 'Nicht genug passendes Mana.' : 'Dafür gibt es gerade kein Ziel.';
+    const o = sheet(`${cardHTML(h.id, { cls: 'big', lv: (P.lv || {})[h.id] || 1 })}${kwList(c.kw || [])}<div class="bigbtns">${ok ? `<button class="btn" data-kdplay="1">${c.t === 'l' ? '🏞️ Land ausspielen' : '✨ Wirken'}</button>` : `<span class="kd-pill warn" style="justify-content:center">${why}</span>`}<button class="btn ghost" data-kdx="1">Schließen</button></div>`);
     const b = o.querySelector('[data-kdplay]'); if (b) b.addEventListener('click', () => { o.remove(); tryPlay(i); });
   }
   function tryPlay(i) {
     const v = room.view, h = v.hand[i]; if (!h) return; const c = C[h.id];
-    if (c.e && c.e.tg) {
+    if (c.t !== 'l' && c.e && c.e.tg) {
       const opts = targetsFor(v, c.e);
       if (opts.length) { S.tgt = { i, opts }; S.atk.clear(); renderRoom(); return; }
-      if (c.t === 'z') { toast('Dafür gibt es gerade kein Ziel.'); return; }
+      if (c.t !== 'k') { toast('Dafür gibt es gerade kein Ziel.'); return; }
     }
     act({ type: 'play', i });
   }
+  function useAbility(u) {
+    const v = room.view, c = v.P[v.me].board.find(x => x.u === u); if (!c) return; const A = C[c.id].act;
+    if (A.e.tg) { const opts = targetsFor(v, A.e); if (!opts.length) { toast('Dafür gibt es gerade kein Ziel.'); return; } S.tgt = { abil: u, opts }; S.atk.clear(); renderRoom(); return; }
+    act({ type: 'ability', u });
+  }
   function showHero(v, pid) {
-    const h = v.P[pid].hero, H = HE[h.id], f = fc(h.id), mine = pid === v.me && v.mine, can = mine && v.turn === v.me && v.phase === 'main' && h.cd === 0;
-    const o = popup(`<div class="kd-heroc" style="--c1:${f.col};--c2:${f.col2}"><span class="hp">${H.art}</span><b>${esc(H.n)}</b><small>${f.e} Held · ${f.n}</small>
-      <div class="pw"><b>⚡ ${esc(H.pow)}</b><div>${esc(H.txt)}</div><div class="note">Abklingzeit: ${H.cd} Züge · ${h.cd ? `bereit in ${h.cd} Zug${h.cd > 1 ? 'en' : ''}` : 'bereit!'}</div></div></div>
-      <div class="row" style="justify-content:center;gap:8px">${can ? '<button class="btn" data-kdpow="1">⚡ Einsetzen</button>' : ''}<button class="btn ghost" data-kdx="1">Schließen</button></div>`);
+    const h = v.P[pid].hero, H = HE[h.id], f = fc(h.id), mine = pid === v.me && v.mine, can = mine && myMain(v) && h.cd === 0;
+    const o = sheet(`<div class="kd-heroc" style="--c1:${f.col};--c2:${f.col2}"><span class="hp">${H.art}</span><b>${esc(H.n)}</b><small>${f.e} Held</small>
+      <div class="pw"><b>⚡ ${esc(H.pow)}</b><div>${esc(H.txt)}</div></div></div><div class="kd-phase" style="justify-content:center"><span class="kd-pill">⏳ alle ${H.cd} Züge</span><span class="kd-pill ${h.cd ? '' : 'me'}">${h.cd ? `bereit in ${h.cd}` : '⚡ bereit'}</span></div>
+      <div class="bigbtns">${can ? '<button class="btn" data-kdpow="1">⚡ Heldenkraft einsetzen</button>' : ''}<button class="btn ghost" data-kdx="1">Schließen</button></div>`);
     const b = o.querySelector('[data-kdpow]'); if (b) b.addEventListener('click', () => {
       o.remove(); const e = H.e;
       if (e.tg) { const opts = targetsFor(v, e); if (!opts.length) { toast('Dafür gibt es gerade kein Ziel.'); return; } S.tgt = { hero: 1, opts }; S.atk.clear(); renderRoom(); return; }
       act({ type: 'hero' });
     });
   }
-  function showCre(u) {
-    const v = room.view; let c = null, lv = 1; for (const pid of [v.me, v.foe]) { const x = v.P[pid].board.find(y => y.u === u); if (x) { c = x; lv = (v.P[pid].lv || {})[x.id] || 1; } } if (!c) return;
-    const st = [c.tap && (c.frz ? '❄️ eingefroren' : '😴 erschöpft'), c.sick && !c.tap && '💤 gerade beschworen', c.shield && '🛡️ Schild aktiv', c.d && `💔 ${c.d} Schaden (heilt am Zugende)`].filter(Boolean).join(' · ');
-    popup(`${cardHTML(c.id, { cls: 'big', a: c.a, h: c.h - c.d, lv })}${st ? `<p class="note" style="color:#ddd;margin:0">${st}</p>` : ''}${kwList(c.kw)}<button class="btn ghost" data-kdx="1">Schließen</button>`);
+  function showCre(u, actions) {
+    const v = room.view; let c = null, lv = 1, side = null; for (const pid of [v.me, v.foe]) { const x = v.P[pid].board.find(y => y.u === u); if (x) { c = x; side = pid; lv = (v.P[pid].lv || {})[x.id] || 1; } } if (!c) return;
+    const st = [c.tap && (c.frz ? '❄️ eingefroren' : '↪️ getappt'), c.sick && !c.tap && '💤 gerade gekommen', c.shield && '🛡️ Schutzschild', c.d && `💔 ${c.d} Schaden`, (c.auras || []).length && `📜 ${c.auras.map(a => C[a].n).join(', ')}`].filter(Boolean);
+    const mine = side === v.me && v.mine, ab = mine && abilityReady(v, c), atkOk = mine && myMain(v) && !v.attacked && canAttack(c);
+    const o = sheet(`${cardHTML(c.id, { cls: 'big', a: c.a, h: c.h - c.d, lv })}${st.length ? `<div class="kd-phase" style="justify-content:center">${st.map(x => `<span class="kd-pill">${x}</span>`).join('')}</div>` : ''}${kwList(c.kw)}
+      <div class="bigbtns">${ab ? '<button class="btn" data-kdab="1">⟳ Fähigkeit nutzen</button>' : ''}${atkOk ? `<button class="btn ${S.atk.has(u) ? 'ghost' : 'atk'}" data-kdatk="1">${S.atk.has(u) ? '✕ Nicht angreifen' : '⚔️ Angreifen'}</button>` : ''}<button class="btn ghost" data-kdx="1">Schließen</button></div>`);
+    const a1 = o.querySelector('[data-kdab]'); if (a1) a1.addEventListener('click', () => { o.remove(); useAbility(u); });
+    const a2 = o.querySelector('[data-kdatk]'); if (a2) a2.addEventListener('click', () => { o.remove(); if (S.atk.has(u)) S.atk.delete(u); else S.atk.add(u); renderRoom(); });
   }
+  function showRules() {
+    const M = K.MODES.klassisch;
+    const o = sheet(`<h3>📖 Regeln</h3><div class="kd-tabs"><button class="on" data-rt="r">Ablauf</button><button data-rt="k">Fähigkeiten</button><button data-rt="m">Mana</button></div><div class="kd-gl" data-rtc></div><button class="btn ghost" data-kdx="1" style="width:100%">Schließen</button>`);
+    const fill = t => { o.querySelectorAll('[data-rt]').forEach(b => b.classList.toggle('on', b.dataset.rt === t)); o.querySelector('[data-rtc]').innerHTML = t === 'r' ? M.rules.map((x, i) => `<div><span>${i + 1}.</span><span>${esc(x)}</span></div>`).join('')
+      : t === 'k' ? Object.values(KW).map(k => `<div><span>${k[0]}</span><span><b>${k[1]}</b> – ${k[2]}</span></div>`).join('')
+      : Object.entries(F).map(([f, x]) => `<div><span>${pip(x.m)}</span><span><b>${x.n}</b> – Land „${x.land}“. ${esc(x.txt)}</span></div>`).join('') + '<div><span>⟳</span><span><b>Tappen</b> – Länder tappen sich beim Bezahlen von selbst. Getappte Länder sind ausgegraut und enttappen zu Beginn deines Zuges.</span></div>'; };
+    fill('r'); o.addEventListener('click', e => { const b = e.target.closest('[data-rt]'); if (b) fill(b.dataset.rt); });
+  }
+  window.KDrules = showRules;
+  // gedrückt halten: Details
+  let holdT = null, held = false;
+  document.addEventListener('pointerdown', e => { const h = e.target.closest && e.target.closest('#stage [data-u], #stage [data-hi]'); if (!h || !room || room.game !== 'duell') return; held = false; clearTimeout(holdT); holdT = setTimeout(() => { held = true; if (h.dataset.u) showCre(Number(h.dataset.u)); else showHand(Number(h.dataset.hi)); }, 480); });
+  ['pointerup', 'pointercancel'].forEach(t => document.addEventListener(t, () => clearTimeout(holdT)));
+  document.addEventListener('click', e => { if (held && e.target.closest('#stage [data-u], #stage [data-hi]')) { e.stopImmediatePropagation(); e.preventDefault(); held = false; } }, true);
   document.addEventListener('click', e => {
     if (!room || room.game !== 'duell') return;
-    const kb = e.target.closest('[data-kdbot]'); if (kb && isHost()) { const ar = kb.dataset.kdarena; send({ t: 'start', bot: 1, mode: getMode(), ...(ar != null ? { arena: Number(ar) } : { lvl: Number(kb.dataset.kdbot) || 0 }) }); return; }
+    const kb = e.target.closest('[data-kdbot]'); if (kb && isHost()) { const ar = kb.dataset.kdarena; send({ t: 'start', bot: 1, ...(ar != null ? { arena: Number(ar) } : {}) }); return; }
+    if (e.target.closest('[data-kdrinfo]')) { showRules(); return; }
     if (!room.view) return;
     const v = room.view;
-    const f = e.target.closest('[data-kdd]'); if (f) { if (f.classList.contains('bad')) { toast(f.title || 'Dieses Deck ist nicht fertig.'); return; } act({ type: 'deck', d: f.dataset.kdd }); return; }
-    const bo = e.target.closest('[data-kdbon]'); if (bo) { const P = v.P[bo.dataset.kdbon]; popup(`<div class="kd-rew" style="max-width:340px"><b>Themen-Bonus</b>${(P.bon || []).map(b => `<div>${fc(b).e} <b style="font-size:15px">${K.B[b][0]}:</b> ${K.B[b][1]}</div>`).join('')}<div class="note">Ab ${K.BONUS_MIN} Karten eines Themas im Deck.</div></div><button class="btn ghost" data-kdx="1">Schließen</button>`); return; }
+    if (e.target.closest('[data-kdkeep]')) { act({ type: 'keep' }); return; }
+    if (e.target.closest('[data-kdmull]')) { act({ type: 'mull' }); return; }
+    const f = e.target.closest('[data-kdd]'); if (f) { if (f.classList.contains('bad')) { toast('Dieses Deck ist nicht fertig – baue es in der Zentrale fertig.'); return; } act({ type: 'deck', d: f.dataset.kdd }); return; }
+    if (e.target.closest('[data-kdrules]')) { showRules(); return; }
+    if (e.target.closest('[data-kdlog]')) { sheet(`<h3>📜 Verlauf</h3><div class="kd-gl">${v.log.slice().reverse().map(l => `<div><span>•</span><span>${esc(l)}</span></div>`).join('')}</div><button class="btn ghost" data-kdx="1" style="width:100%">Schließen</button>`); return; }
+    const bo = e.target.closest('[data-kdbon]'); if (bo) { const P = v.P[bo.dataset.kdbon]; sheet(`<h3>🎨 Themen-Bonus</h3><div class="kd-gl">${(P.bon || []).map(b => `<div><span>${fc(b).e}</span><span><b>${K.B[b][0]}</b> – ${K.B[b][1]}</span></div>`).join('')}</div><button class="btn ghost" data-kdx="1" style="width:100%">Schließen</button>`); return; }
+    const ld = e.target.closest('[data-kdlands]'); if (ld && !S.tgt) { const L = v.P[ld.dataset.kdlands].lands, cnt = {}; for (const l of L) { cnt[l.col] = cnt[l.col] || [0, 0]; cnt[l.col][0]++; if (!l.tap) cnt[l.col][1]++; }
+      sheet(`<h3>🏞️ Länder</h3><div class="kd-gl">${Object.entries(cnt).map(([c, [n, fr]]) => `<div><span>${pip(c)}</span><span><b>${C['land_' + c].n}</b> – ${n}× im Spiel, ${fr} ungetappt</span></div>`).join('') || '<div><span>–</span><span>Noch keine Länder im Spiel.</span></div>'}</div><button class="btn ghost" data-kdx="1" style="width:100%">Schließen</button>`); return; }
     if (!e.target.closest('#stage')) return;
     const hb = e.target.closest('[data-kdhero]');
     if (hb && !S.tgt) { showHero(v, hb.dataset.kdhero); return; }
-    // Zielwahl
     if (S.tgt) {
       const t = e.target.closest('[data-u],[data-face]'); const key = t ? (t.dataset.face || 'u:' + t.dataset.u) : null;
-      if (key && S.tgt.opts.includes(key)) { const i = S.tgt.i, hero = S.tgt.hero; S.tgt = null; act(hero ? { type: 'hero', t: key } : { type: 'play', i, t: key }); return; }
+      if (key && S.tgt.opts.includes(key)) { const T = S.tgt; S.tgt = null; act(T.hero ? { type: 'hero', t: key } : T.abil ? { type: 'ability', u: T.abil, t: key } : { type: 'play', i: T.i, t: key }); return; }
       if (e.target.closest('[data-kd="cancel"]') || e.target.closest('[data-hi]')) { S.tgt = null; renderRoom(); }
       return;
     }
     const b = e.target.closest('[data-kd]');
     if (b) {
       const a = b.dataset.kd;
-      if (a === 'end') { if (S.atk.size && !v.attacked && !confirm('Du hast Angreifer gewählt, aber noch nicht angegriffen. Trotzdem Zug beenden?')) return; act({ type: 'end' }); }
+      if (a === 'end') { if (S.atk.size && !v.attacked) { const o = sheet(`<h3>Zug beenden?</h3><span class="kd-pill warn">Du hast Angreifer gewählt, aber nicht angegriffen.</span><div class="bigbtns"><button class="btn atk" data-y="a">⚔️ Doch angreifen</button><button class="btn ghost" data-y="e">Zug beenden</button></div>`); o.addEventListener('click', ev => { const y = ev.target.closest('[data-y]'); if (!y) return; o.remove(); act(y.dataset.y === 'a' ? { type: 'attack', us: [...S.atk] } : { type: 'end' }); }); return; } act({ type: 'end' }); }
       else if (a === 'attack') act({ type: 'attack', us: [...S.atk] });
       else if (a === 'all') { v.P[v.me].board.filter(canAttack).forEach(c => S.atk.add(c.u)); renderRoom(); }
       else if (a === 'block') act({ type: 'block', b: S.blk });
       else if (a === 'go') act({ type: 'go' });
       return;
     }
-    const fEl = e.target.closest('[data-face]');
-    if (fEl && v.mode === 'arena' && S.asel != null) { const t = fEl.dataset.face; if (strikeOpts(v).includes(t)) { const a = S.asel; S.asel = null; act({ type: 'strike', u: a, t }); } else toast('Erst die Wächter besiegen – nur Flieger dürfen darüber hinweg.'); return; }
-    const rl = e.target.closest('[data-kdrules]'); if (rl) { showRules(v.mode); return; }
-    const h = e.target.closest('[data-hi]'); if (h) { showHand(Number(h.dataset.hi)); return; }
+    const h = e.target.closest('[data-hi]'); if (h) { const i = Number(h.dataset.hi), c = C[v.hand[i].id]; if (c.t === 'l' && playable(v, c)) { act({ type: 'play', i }); return; } showHand(i); return; }
     const cEl = e.target.closest('[data-u]'); if (!cEl) return;
     const u = Number(cEl.dataset.u), side = cEl.dataset.side;
     const mine = v.P[v.me].board.find(c => c.u === u);
-    // Blocken (Klassisch): mehrere Blocker pro Angreifer, Wächter dürfen zwei Angreifer blocken
-    if (v.phase === 'block' && v.mine && v.turn !== v.me) {
+    if (v.phase === 'block' && v.mine && v.turn !== v.me) { // Blocken: mehrere Blocker pro Angreifer, Wache blockt zwei
       if (side === 'me' && mine) {
+        if (abilityReady(v, mine) && S.bsel == null && !S.blk.some(([x]) => x === u)) { showCre(u); return; }
         if (S.bsel === u) { S.bsel = null; renderRoom(); return; }
-        if (S.blk.some(([b]) => b === u) && !(mine.kw.includes('wache') && S.blk.filter(([b]) => b === u).length < 2)) { S.blk = S.blk.filter(([b]) => b !== u); S.bsel = null; renderRoom(); return; }
-        if (mine.tap) { toast('Erschöpfte Kreaturen können nicht blocken.'); return; }
+        if (S.blk.some(([x]) => x === u) && !(mine.kw.includes('wache') && S.blk.filter(([x]) => x === u).length < 2)) { S.blk = S.blk.filter(([x]) => x !== u); S.bsel = null; renderRoom(); return; }
+        if (mine.tap || mine.kw.includes('bann')) { toast('Diese Kreatur kann nicht blocken.'); return; }
         S.bsel = u; renderRoom(); return;
       }
       if (side === 'foe' && v.atk.includes(u) && S.bsel != null) {
         const B = v.P[v.me].board.find(c => c.u === S.bsel), A = v.P[v.foe].board.find(c => c.u === u);
-        if (!canBlock(B, A)) { toast('Fliegende Angreifer können nur von Flug oder Reichweite geblockt werden.'); return; }
-        if (S.blk.some(([b, a]) => b === B.u && a === u)) { S.bsel = null; renderRoom(); return; }
-        if (!B.kw.includes('wache')) S.blk = S.blk.filter(([b]) => b !== B.u); // normale Blocker: nur ein Angreifer
+        if (!canBlock(B, A)) { toast('Flieger können nur von Flugfähigkeit oder Reichweite geblockt werden.'); return; }
+        if (S.blk.some(([x, y]) => x === B.u && y === u)) { S.bsel = null; renderRoom(); return; }
+        if (!B.kw.includes('wache')) S.blk = S.blk.filter(([x]) => x !== B.u);
         S.blk.push([B.u, u]); S.bsel = null; renderRoom(); return;
       }
       showCre(u); return;
     }
-    // Arena: Angreifer antippen, dann Ziel
-    if (v.mode === 'arena' && v.phase === 'main' && v.turn === v.me && v.mine) {
-      if (side === 'me' && mine && canAtk(mine, v)) { S.asel = S.asel === u ? null : u; renderRoom(); return; }
-      if (side === 'foe' && S.asel != null) { const t = 'u:' + u; if (strikeOpts(v).includes(t)) { const a = S.asel; S.asel = null; act({ type: 'strike', u: a, t }); } else toast('Erst die Wächter besiegen – nur Flieger dürfen darüber hinweg.'); return; }
-    }
-    // Angreifer wählen (Klassisch)
-    if (v.mode !== 'arena' && side === 'me' && mine && v.phase === 'main' && v.turn === v.me && !v.attacked && canAttack(mine)) { if (S.atk.has(u)) S.atk.delete(u); else S.atk.add(u); renderRoom(); return; }
+    if (side === 'me' && mine && abilityReady(v, mine)) { showCre(u); return; }
+    if (side === 'me' && mine && myMain(v) && !v.attacked && canAttack(mine)) { if (S.atk.has(u)) S.atk.delete(u); else S.atk.add(u); renderRoom(); return; }
     showCre(u);
   });
-  function showRules(mode) {
-    const M = K.MODES[mode || 'klassisch'];
-    popup(`<div class="kd-rew" style="max-width:420px"><b>${M.e} ${M.n}-Modus</b>${M.rules.map(r => `<div style="margin-top:6px">• ${esc(r)}</div>`).join('')}</div><button class="btn ghost" data-kdx="1">Schließen</button>`);
-  }
-  window.KDrules = showRules;
-  const getMode = () => { try { return localStorage.getItem('fsg.kdmode') === 'arena' ? 'arena' : 'klassisch'; } catch { return 'klassisch'; } };
-  window.KDmode = getMode;
-  const modePick = () => `<div class="kd-modes">${Object.entries(K.MODES).map(([k, M]) => `<button class="${getMode() === k ? 'on' : ''}" data-kdmode="${k}">${M.e} ${M.n}<small>${M.short} · <span data-kdrulesx="${k}" style="text-decoration:underline">Regeln</span></small></button>`).join('')}</div>`;
-  window.KDmodePick = modePick;
-  document.addEventListener('click', e => {
-    const rx = e.target.closest('[data-kdrulesx]'); if (rx) { e.stopPropagation(); showRules(rx.dataset.kdrulesx); return; }
-    const m = e.target.closest('[data-kdmode]'); if (!m) return;
-    try { localStorage.setItem('fsg.kdmode', m.dataset.kdmode); } catch {}
-    document.querySelectorAll('[data-kdmode]').forEach(b => b.classList.toggle('on', b.dataset.kdmode === m.dataset.kdmode));
-  }, true);
-  window.LobbyOpt = Object.assign(window.LobbyOpt || {}, { duell: () => ({ mode: getMode() }) });
-  // Lobby: Bot-Knopf und Kurzregeln
+  // Lobby
+  window.KDmode = () => 'klassisch';
+  window.KDmodePick = () => '';
   const kdLobby = () => {
-    if (window.KDZ && KDZ.pending != null && isHost()) { const p = KDZ.pending; KDZ.pending = null; setTimeout(() => send({ t: 'start', bot: 1, mode: getMode(), ...(typeof p === 'object' ? p : { lvl: p }) }), 50); }
-    return `${isHost() ? `<div class="qz-lobby" style="text-align:center"><b>Spielmodus</b>${modePick()}<b>Kein Gegner da?</b><div class="row" style="justify-content:center;gap:8px;flex-wrap:wrap"><button class="btn" data-kdbot="0">🤖 Übungs-Bot</button><button class="btn ghost" data-kdz="trophaen">🏆 Trophäenkampf</button></div></div>` : ''}
-    <p class="center"><button class="btn ghost small" data-kdz="packs">💎 Sammlung, Packs & Decks</button></p>
-    <details class="kd-rules"><summary>📖 So geht Kristallduell</summary><ul>
-    <li>Jeder startet mit <b>20 Leben</b>. Bringe den Gegner auf 0.</li>
-    <li>Jeden Zug bekommst du einen <b>💎 Kristall</b> mehr (bis 10) und ziehst eine Karte.</li>
-    <li>Karten kosten Kristalle: <b>Kreaturen</b> kommen aufs Feld, <b>Zauber</b> wirken sofort.</li>
-    <li>Neue Kreaturen schlafen eine Runde 💤 (außer mit ⚡ Eile).</li>
-    <li>Einmal pro Zug darfst du <b>angreifen</b>: Kreaturen antippen, dann „Angreifen“. Der Gegner entscheidet, wer blockt.</li>
-    <li>Geblockte Kreaturen kämpfen gegeneinander, ungeblockte treffen den Spieler. Schaden an Kreaturen heilt am Zugende.</li>
-    <li>Karte antippen zeigt alle Details und Fähigkeiten.</li>
-    <li>Ab 10 Karten eines Themas im Deck gibt es einen <b>Themen-Bonus</b>.</li></ul></details>`;
+    if (window.KDZ && KDZ.pending != null && isHost()) { const p = KDZ.pending; KDZ.pending = null; setTimeout(() => send({ t: 'start', bot: 1, ...(typeof p === 'object' ? p : {}) }), 50); }
+    return `<div class="kd-phase" style="justify-content:center;margin:6px 0">${isHost() ? '<button class="btn" data-kdbot="0">🤖 Gegen den Bot</button><button class="btn ghost" data-kdz="trophaen">🏆 Trophäenkampf</button>' : ''}<button class="btn ghost" data-kdz="spielen">💎 Zentrale</button><button class="kd-icbtn" data-kdrinfo="1" aria-label="Regeln">📖</button></div>`;
   };
   window.LobbyExtra = Object.assign(window.LobbyExtra || {}, { duell: kdLobby });
   const S2 = window.Spiele2 || (window.Spiele2 = { cast() {} });

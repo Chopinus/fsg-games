@@ -307,6 +307,15 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 105, title: 'Kristallduell 2.0: Länder, Farben und neuer Look', date: '27.11.2026', items: [
+      '🏞️ Neue Regeln wie bei Magic: Länder spielen (eins pro Zug), Mana in sechs Farben, Mulligan, Sofortzauber, Auren, Fähigkeiten zum Tappen.',
+      '🃏 Decks haben jetzt 40 Karten. Standardländer sind gratis und unbegrenzt, jede andere Karte höchstens 4×.',
+      '✨ 18 neue Karten und neue Fähigkeiten: Fluchsicher, Bedrohlich, Aufblitzen und Gefesselt.',
+      '💎 Seltenheiten heißen jetzt Gewöhnlich, Ungewöhnlich, Selten und Mythisch.',
+      '📱 Neue Oberfläche: Tableiste unten, wischbare Menüs, Info-Knöpfe und Aktionsblätter im Duell.',
+      '🔄 Alle Sammlungen starten neu mit dem Abenteuer-Startdeck. Wer schon weit gekommen war, darf sich einen Helden aussuchen.',
+      '🗑️ Der Arena-Modus ist entfernt – es gibt nur noch das Duell.',
+    ] },
     { id: 104, title: 'Kristallduell: zwei Kampfmodi, Trophäen und 12 Kampfgebiete', date: '27.11.2026', items: [
       '⚔️ Arena-Modus: Jede Kreatur greift einzeln an und wählt ihr Ziel. Wächter müssen zuerst fallen, Wunden bleiben, Siegeszug gibt +1/+1, Wachsame greifen zweimal an.',
       '🃏 Klassisch-Modus (wie Magic): Mehrfachblocks, Wächter blocken zwei Angreifer, Sofortzauber im gegnerischen Zug und Kampftricks nach den Blocks. Neu: Erstschlag.',

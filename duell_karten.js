@@ -1,65 +1,72 @@
 // Kristallduell – alle Karten (eigene Erfindung). Wird vom Server (duell.js) und im Browser (spiele5.js) benutzt.
-// t: 'k' = Kreatur, 'z' = Zauber · c = Kosten in Kristallen · a/h = Angriff/Leben · kw = Fähigkeiten
-// e = Wirkung (Zauber) bzw. Ruf (Kreatur: wirkt beim Ausspielen). tg = Ziel: any (Kreatur oder Spieler), cre (Kreatur), ecre (gegnerische Kreatur), own (eigene Kreatur)
+// Regeln nah an klassischen Sammelkartenspielen: Länder (1 pro Zug) erzeugen farbiges Mana, Karten kosten z. B. „2R“ (2 beliebige + 1 Glut).
+// t: 'k' Kreatur, 'z' Hexerei (inst: 1 = Spontanzauber), 'a' Aura, 'l' Land · c = umgewandelte Kosten · m = Manakosten · a/h = Stärke/Widerstand
+// e = Wirkung (Zauber/Aura) bzw. „Wenn … ins Spiel kommt“ (Kreatur) · tod = „Wenn … stirbt“ · act = aktivierte Fähigkeit (tap: Tappen als Kosten)
 (function () {
   const F = {
-    abent: { n: 'Abenteuer', e: '🗺️', col: '#e0a050', col2: '#5a3410', txt: 'Das Startthema: mutige Dorfhelden, ehrliche Werte, leicht zu spielen.' },
-    glut: { n: 'Glut', e: '🔥', col: '#ff5a3d', col2: '#7a1a08', txt: 'Schnell und angriffslustig: Eile, direkter Schaden und Drachen.' },
-    wild: { n: 'Wildnis', e: '🌿', col: '#3ec46d', col2: '#0f4a24', txt: 'Riesige Kreaturen, mehr Kristalle und Durchbruch.' },
-    flut: { n: 'Flut', e: '💧', col: '#3aa8ff', col2: '#0b3a6a', txt: 'Flieger, Einfrieren, Zurückschicken und viele Karten.' },
-    nacht: { n: 'Schatten', e: '💀', col: '#a45cff', col2: '#3a1466', txt: 'Gift, Lebensentzug, Vernichtung und Wiederkehr.' },
-    licht: { n: 'Licht', e: '✨', col: '#f5c542', col2: '#6a4a08', txt: 'Heilung, Schilde, Engel und unerschütterliche Ritter.' },
+    abent: { n: 'Abenteuer', e: '🗺️', m: 'A', land: 'Wegkreuzung', landArt: '🛤️', col: '#e0a050', col2: '#5a3410', txt: 'Das Startthema: mutige Dorfhelden, leicht zu spielen.' },
+    glut: { n: 'Glut', e: '🔥', m: 'R', land: 'Glutberg', landArt: '🌋', col: '#ff5a3d', col2: '#7a1a08', txt: 'Rot: Eile, direkter Schaden und Drachen.' },
+    wild: { n: 'Wildnis', e: '🌿', m: 'G', land: 'Urwald', landArt: '🌳', col: '#3ec46d', col2: '#0f4a24', txt: 'Grün: riesige Kreaturen, Trampelschaden und mehr Länder.' },
+    flut: { n: 'Flut', e: '💧', m: 'U', land: 'Gezeitenquelle', landArt: '🌊', col: '#3aa8ff', col2: '#0b3a6a', txt: 'Blau: Flieger, Tappen, Zurückschicken und Karten ziehen.' },
+    nacht: { n: 'Schatten', e: '💀', m: 'B', land: 'Grabmoor', landArt: '🪦', col: '#a45cff', col2: '#3a1466', txt: 'Schwarz: Todesberührung, Lebensverknüpfung, Zerstören und Wiederkehr.' },
+    licht: { n: 'Licht', e: '✨', m: 'W', land: 'Sonnenfeld', landArt: '🌄', col: '#f5c542', col2: '#6a4a08', txt: 'Weiß: Lebenspunkte, Schutz, Engel und Ritter.' },
   };
-  // Themen-Bonus: ab 10 Karten eines Themas im Deck
+  // Themen-Bonus: ab 10 Nicht-Land-Karten einer Farbe im Deck
   const B = {
     abent: ['Kameradschaft', 'Deine Kreaturen kommen mit +1/+0 ins Spiel.'],
-    glut: ['Flammenseele', 'Deine Schadenszauber und Rufe machen +1 Schaden.'],
+    glut: ['Flammenseele', 'Deine Karten fügen 1 zusätzlichen Schadenspunkt zu.'],
     wild: ['Urkraft', 'Deine Kreaturen kommen mit +0/+1 ins Spiel.'],
-    flut: ['Gezeitenwissen', 'Du startest mit 1 Karte mehr auf der Hand.'],
-    nacht: ['Seelenernte', 'Stirbt eine gegnerische Kreatur, heilst du dich um 1.'],
-    licht: ['Morgenröte', 'Zu Beginn deines Zuges heilst du dich um 1.'],
+    flut: ['Gezeitenwissen', 'Deine Starthand hat 1 Karte mehr.'],
+    nacht: ['Seelenernte', 'Immer wenn eine gegnerische Kreatur stirbt, erhältst du 1 Lebenspunkt dazu.'],
+    licht: ['Morgenröte', 'Zu Beginn deines Zuges erhältst du 1 Lebenspunkt dazu.'],
   };
   const BONUS_MIN = 10;
-  // Seltenheit: g gewöhnlich, s selten, e episch, l legendär
+  // Seltenheit: g gewöhnlich, s ungewöhnlich, e selten, l mythisch
   const RAR = {
-    g: { n: 'Gewöhnlich', col: '#b8b8c8', max: 3, lv: [1, 4, 8, 13, 20], craft: 30, dust: 5 },
-    s: { n: 'Selten', col: '#4aa8ff', max: 3, lv: [1, 3, 6, 10, 15], craft: 80, dust: 15 },
-    e: { n: 'Episch', col: '#b45cff', max: 2, lv: [1, 2, 4, 7, 10], craft: 250, dust: 50 },
-    l: { n: 'Legendär', col: '#ffa31a', max: 1, lv: [1, 2, 3, 5, 7], craft: 1000, dust: 200 },
+    g: { n: 'Gewöhnlich', col: '#b8b8c8', max: 4, lv: [1, 4, 8, 13, 20], craft: 30, dust: 5 },
+    s: { n: 'Ungewöhnlich', col: '#c8d4e8', max: 4, lv: [1, 3, 6, 10, 15], craft: 80, dust: 15 },
+    e: { n: 'Selten', col: '#ffcc33', max: 4, lv: [1, 2, 4, 7, 10], craft: 250, dust: 50 },
+    l: { n: 'Mythisch', col: '#ff6a1a', max: 4, lv: [1, 2, 3, 5, 7], craft: 1000, dust: 200 },
   };
   // Stufe einer Karte aus der Anzahl, die man besitzt (0 = nicht im Besitz)
   const levelOf = (id, n) => { const c = C[id]; if (!c || !n) return 0; const t = RAR[c.r || 'g'].lv; let l = 0; for (let i = 0; i < t.length; i++) if (n >= t[i]) l = i + 1; return l; };
-  const DECK_SIZE = 30, MIN_CRE = 12;
+  const DECK_SIZE = 40, MIN_CRE = 0, MAX_COPIES = 4;
   // Deck prüfen: cards = { id: Anzahl }, own = Sammlung { id: Anzahl } (null = nicht prüfen). Gibt Fehlertext oder null zurück.
   function checkDeck(cards, own) {
-    let n = 0, cre = 0;
+    let n = 0;
     for (const [id, k] of Object.entries(cards || {})) {
       const c = C[id]; if (!c || c.tok) return 'Unbekannte Karte im Deck.';
       if (!(k > 0)) continue;
-      const mx = RAR[c.r || 'g'].max; if (k > mx) return `${c.n} darf höchstens ${mx}× ins Deck.`;
-      if (own && (own[id] || 0) < k) return `Du besitzt ${c.n} nicht oft genug.`;
-      n += k; if (c.t === 'k') cre += k;
+      if (c.t !== 'l') { // Grundländer: beliebig viele, gehören allen
+        if (k > MAX_COPIES) return `${c.n} darf höchstens ${MAX_COPIES}× ins Deck.`;
+        if (own && (own[id] || 0) < k) return `Du besitzt ${c.n} nicht oft genug.`;
+      }
+      n += k;
     }
     if (n !== DECK_SIZE) return `Ein Deck braucht genau ${DECK_SIZE} Karten (gerade ${n}).`;
-    if (cre < MIN_CRE) return `Ein Deck braucht mindestens ${MIN_CRE} Kreaturen (gerade ${cre}).`;
     return null;
   }
-  function themesOf(cards) { const t = {}; for (const [id, k] of Object.entries(cards || {})) { const c = C[id]; if (c) t[c.f] = (t[c.f] || 0) + k; } return t; }
+  function themesOf(cards) { const t = {}; for (const [id, k] of Object.entries(cards || {})) { const c = C[id]; if (c && c.t !== 'l') t[c.f] = (t[c.f] || 0) + k; } return t; }
   const bonusesOf = cards => Object.entries(themesOf(cards)).filter(([, n]) => n >= BONUS_MIN).map(([f]) => f);
   const mainTheme = cards => (Object.entries(themesOf(cards)).sort((a, b) => b[1] - a[1])[0] || ['glut'])[0];
   const KW = {
-    flug: ['🪽', 'Flug', 'Kann nur von Kreaturen mit Flug oder Reichweite geblockt werden.'],
-    reich: ['🏹', 'Reichweite', 'Kann auch Flieger blocken.'],
-    eile: ['⚡', 'Eile', 'Kann sofort angreifen.'],
-    wach: ['👁️', 'Wachsam', 'Wird beim Angreifen nicht erschöpft und kann danach noch blocken.'],
-    durch: ['🦏', 'Durchbruch', 'Überschüssiger Schaden beim Blocken trifft trotzdem den Spieler.'],
-    gift: ['🧪', 'Gift', 'Jeder Schaden an einer Kreatur zerstört sie.'],
-    saug: ['🩸', 'Lebensentzug', 'Verursachter Schaden heilt dich.'],
-    schild: ['🛡️', 'Schild', 'Der erste Schaden wird verhindert, dann ist der Schild weg.'],
-    mauer: ['🧱', 'Mauer', 'Kann nicht angreifen. Im Arena-Modus zusätzlich Wächter.'],
-    erst: ['🗡️', 'Erstschlag', 'Teilt im Kampf zuerst Schaden aus. Stirbt der Gegner dabei, schlägt er nicht zurück.'],
-    wache: ['🛡️', 'Wächter', 'Arena: Muss zuerst angegriffen werden (Flieger dürfen darüber hinweg). Klassisch: Darf zwei Angreifer gleichzeitig blocken.'],
+    flug: ['🪽', 'Flugfähigkeit', 'Kann nur von Kreaturen mit Flugfähigkeit oder Reichweite geblockt werden.'],
+    reich: ['🏹', 'Reichweite', 'Kann Kreaturen mit Flugfähigkeit blocken.'],
+    eile: ['⚡', 'Eile', 'Kann angreifen und ⟳ nutzen, sobald sie ins Spiel kommt.'],
+    wach: ['👁️', 'Wachsamkeit', 'Wird durch Angreifen nicht getappt.'],
+    durch: ['🦏', 'Trampelschaden', 'Überzähliger Kampfschaden geht an den verteidigenden Spieler.'],
+    gift: ['☠️', 'Todesberührung', 'Jeder Schaden, den sie einer Kreatur zufügt, ist tödlich.'],
+    saug: ['🩸', 'Lebensverknüpfung', 'Schaden, den sie zufügt, gibt dir ebenso viele Lebenspunkte.'],
+    schild: ['🛡️', 'Schutzschild', 'Der nächste Schaden an ihr wird verhindert, dann ist der Schild weg.'],
+    mauer: ['🧱', 'Verteidiger', 'Kann nicht angreifen.'],
+    erst: ['🗡️', 'Erstschlag', 'Fügt Kampfschaden vor Kreaturen ohne Erstschlag zu.'],
+    wache: ['🛡', 'Wache', 'Kann eine zusätzliche Kreatur blocken.'],
+    fluch: ['🔰', 'Fluchsicher', 'Kann nicht das Ziel von Zaubern oder Fähigkeiten deiner Gegner werden.'],
+    bedroh: ['😈', 'Bedrohlich', 'Kann nur von zwei oder mehr Kreaturen geblockt werden.'],
+    blitz: ['💨', 'Aufblitzen', 'Kann gewirkt werden, wann immer du einen Spontanzauber wirken könntest.'],
+    bann: ['🔗', 'Gefesselt', 'Kann weder angreifen noch blocken.'],
   };
+
   const C = {
     // ---------- Abenteuer (Startthema) ----------
     a_bauer: { n: 'Mutiger Bauer', f: 'abent', r: 'g', t: 'k', c: 1, a: 1, h: 2, art: '🧑‍🌾' },
@@ -80,6 +87,25 @@
     a_prinz: { n: 'Prinz der Grenzlande', f: 'abent', r: 'e', t: 'k', c: 5, a: 4, h: 5, kw: ['wach'], e: { k: 'buffOthers', a: 1, h: 0 }, art: '🤴', txt: 'Ruf: Deine anderen Kreaturen bekommen +1/+0.' },
     a_gilde: { n: 'Gildenmeisterin Rhea', f: 'abent', r: 'l', t: 'k', c: 6, a: 5, h: 5, e: { k: 'token', id: 'a_rekrut', n: 2 }, art: '🧝‍♀️', txt: 'Ruf: Beschwört 2 Gildenrekruten (2/2, Eile).' },
     a_rekrut: { n: 'Gildenrekrut', f: 'abent', t: 'k', c: 2, a: 2, h: 2, kw: ['eile'], art: '🧑‍🎤', tok: 1 },
+    // ---------- Neue Karten im klassischen Stil ----------
+    a_wegelag: { n: 'Wegelagerer', f: 'abent', r: 'g', t: 'k', c: 2, a: 2, h: 1, kw: ['bedroh'], art: '🧔‍♂️' },
+    a_kompass: { n: 'Glückskompass', f: 'abent', r: 'g', t: 'a', c: 1, e: { k: 'buff', a: 1, h: 1, tg: 'own' }, art: '🧭' },
+    a_kundschaft: { n: 'Kundschafterin', f: 'abent', r: 's', t: 'k', c: 2, a: 1, h: 2, act: { tap: 1, m: '1', e: { k: 'draw', n: 1 } }, art: '🔭' },
+    g_lehrling: { n: 'Funkenlehrling', f: 'glut', r: 's', t: 'k', c: 2, a: 1, h: 1, act: { tap: 1, e: { k: 'dmg', n: 1, tg: 'any' } }, art: '🪄' },
+    g_wut: { n: 'Kampfwut', f: 'glut', r: 'g', t: 'a', c: 2, e: { k: 'buff', a: 2, h: 0, kw: ['eile'], tg: 'own' }, art: '😡' },
+    g_pluender: { n: 'Glutplünderer', f: 'glut', r: 'g', t: 'k', c: 2, a: 2, h: 1, kw: ['bedroh'], art: '🦹' },
+    w_geist: { n: 'Wildnisgeist', f: 'wild', r: 'g', t: 'a', c: 3, e: { k: 'buff', a: 2, h: 2, kw: ['durch'], tg: 'own' }, art: '🐾' },
+    w_wandler: { n: 'Mooswandler', f: 'wild', r: 's', t: 'k', c: 3, a: 3, h: 3, kw: ['fluch'], art: '🦥' },
+    w_hueter: { n: 'Dickichthüterin', f: 'wild', r: 'g', t: 'k', c: 2, a: 1, h: 4, kw: ['reich'], art: '🦔' },
+    f_schwebe: { n: 'Schwebezauber', f: 'flut', r: 'g', t: 'a', c: 2, e: { k: 'buff', a: 1, h: 1, kw: ['flug'], tg: 'own' }, art: '🎈' },
+    f_pirat: { n: 'Nebelpirat', f: 'flut', r: 's', t: 'k', c: 3, a: 2, h: 2, kw: ['blitz', 'flug'], art: '🏴‍☠️' },
+    f_seher: { n: 'Gedankenseherin', f: 'flut', r: 's', t: 'k', c: 3, a: 1, h: 3, act: { tap: 1, m: '1', e: { k: 'freeze', tg: 'ecre' } }, art: '👁️' },
+    n_fluchband: { n: 'Grabesfluch', f: 'nacht', r: 'g', t: 'a', c: 2, e: { k: 'weaken', a: 2, h: 2, tg: 'cre' }, art: '⛓️' },
+    n_schleicher: { n: 'Schattenschleicher', f: 'nacht', r: 'g', t: 'k', c: 2, a: 2, h: 1, kw: ['bedroh'], art: '🐈‍⬛' },
+    n_fresser: { n: 'Knochenfresser', f: 'nacht', r: 's', t: 'k', c: 4, a: 3, h: 3, kw: ['gift'], art: '🦂' },
+    l_fessel: { n: 'Fesseln des Lichts', f: 'licht', r: 'g', t: 'a', c: 2, e: { k: 'buff', a: 0, h: 0, kw: ['bann'], tg: 'ecre' }, art: '🔗' },
+    l_sani: { n: 'Feldsanitäterin', f: 'licht', r: 'g', t: 'k', c: 2, a: 1, h: 3, act: { tap: 1, e: { k: 'heal', n: 2 } }, art: '🧑‍⚕️' },
+    l_himmel: { n: 'Himmelswächterin', f: 'licht', r: 's', t: 'k', c: 3, a: 2, h: 2, kw: ['flug', 'wach'], art: '🕊️' },
     // ---------- Glut ----------
     g_kobold: { n: 'Funkenkobold', f: 'glut', t: 'k', c: 1, a: 2, h: 1, kw: ['eile'], art: '👺' },
     g_fuchs: { n: 'Glutfuchs', f: 'glut', t: 'k', c: 2, a: 3, h: 2, art: '🦊' },
@@ -198,9 +224,66 @@
     licht: { n: 'Hohepriesterin Lumen', art: '🧝‍♀️', pow: 'Heiliger Schutz', cd: 4, e: { k: 'shieldAll', heal: 3 }, txt: 'Alle deine Kreaturen bekommen Schild, du heilst dich um 3.' },
   };
   const HERO_P = 0.01; // pro Pack
-  // Grunddecks: je 30 Karten (bekommt jeder zum Start)
+
+  // ---------- Grundländer, Manakosten und Kartentexte ----------
+  for (const [f, x] of Object.entries(F)) C['land_' + x.m] = { n: x.land, f, r: 'g', t: 'l', c: 0, col: x.m, art: x.landArt, basic: 1 };
+  const COLORS = Object.fromEntries(Object.entries(F).map(([f, x]) => [x.m, f]));
+  for (const c of Object.values(C)) {
+    if (c.t === 'l' || c.tok) continue;
+    if (!c.m) { const L = F[c.f].m, pips = c.c <= 2 ? 1 : c.c <= 5 ? (c.r === 'e' || c.r === 'l' ? 2 : 1) : 2, gen = Math.max(0, c.c - pips); c.m = (gen ? String(gen) : '') + L.repeat(Math.min(pips, c.c)); }
+  }
+  // Kosten zerlegen: '2RR' -> { gen: 2, R: 2 }
+  const parseCost = m => { const o = { gen: 0 }; const n = String(m || '').match(/^\d+/); if (n) o.gen = Number(n[0]); for (const ch of String(m || '').replace(/^\d+/, '')) o[ch] = (o[ch] || 0) + 1; return o; };
+  const cmc = m => { const o = parseCost(m); return Object.values(o).reduce((a, b) => a + b, 0); };
+  const TYPE = c => c.t === 'k' ? 'Kreatur' : c.t === 'a' ? 'Verzauberung — Aura' : c.t === 'l' ? 'Standardland' : c.inst ? 'Spontanzauber' : 'Hexerei';
+  const pl = (n, one, many) => n === 1 ? one : many;
+  function effText(e, name) {
+    const tgt = { any: 'einem Ziel deiner Wahl', cre: 'einer Kreatur deiner Wahl', ecre: 'einer Kreatur deiner Wahl, die ein Gegner kontrolliert', own: 'einer Kreatur deiner Wahl, die du kontrollierst' }[e.tg] || '';
+    const kwl = e.kw && e.kw.length ? ' und ' + e.kw.map(k => KW[k] ? KW[k][1] : k).join(' und ') : '';
+    let t = '';
+    switch (e.k) {
+      case 'dmg': t = `füge ${tgt} ${e.n} ${pl(e.n, 'Schadenspunkt', 'Schadenspunkte')} zu`; break;
+      case 'face': t = `füge jedem Gegner ${e.n} ${pl(e.n, 'Schadenspunkt', 'Schadenspunkte')} zu`; break;
+      case 'drain': t = `jeder Gegner verliert ${e.n} Lebenspunkte und du erhältst ${e.n} Lebenspunkte dazu`; break;
+      case 'heal': t = `du erhältst ${e.n} Lebenspunkte dazu`; break;
+      case 'draw': t = `ziehe ${e.n === 1 ? 'eine Karte' : e.n + ' Karten'}${e.self ? ` und verliere ${e.self} Lebenspunkte` : ''}`; break;
+      case 'kill': t = 'zerstöre eine Kreatur deiner Wahl'; break;
+      case 'bounce': t = `bringe ${e.tg === 'ecre' ? 'eine Kreatur deiner Wahl, die ein Gegner kontrolliert,' : 'eine Kreatur deiner Wahl'} auf die Hand ihres Besitzers zurück`; break;
+      case 'freeze': t = `tappe ${e.tg === 'ecre' ? 'eine Kreatur deiner Wahl, die ein Gegner kontrolliert' : 'eine Kreatur deiner Wahl'}. Sie enttappt während des nächsten Enttappsegments ihres Beherrschers nicht`; break;
+      case 'freezeAll': t = 'tappe alle Kreaturen deiner Gegner. Sie enttappen während des nächsten Enttappsegments nicht'; break;
+      case 'buff': t = e.kw && e.kw.includes('bann') && !e.a && !e.h ? 'die verzauberte Kreatur kann weder angreifen noch blocken' : `${e.aura ? 'die verzauberte Kreatur' : 'eine Kreatur deiner Wahl, die du kontrollierst,'} erhält +${e.a}/+${e.h}${kwl}${e.shield ? ' und Schutzschild' : ''}`; break;
+      case 'buffAll': t = `Kreaturen, die du kontrollierst, erhalten +${e.a}/+${e.h}`; break;
+      case 'buffOthers': t = `andere Kreaturen, die du kontrollierst, erhalten +${e.a}/+${e.h}${e.shield ? ' und Schutzschild' : ''}`; break;
+      case 'shieldAll': t = 'Kreaturen, die du kontrollierst, erhalten Schutzschild'; break;
+      case 'weaken': t = `${e.aura ? 'die verzauberte Kreatur' : 'eine Kreatur deiner Wahl'} erhält -${e.a}/-${e.h}`; break;
+      case 'steal': t = `übernimm die Kontrolle über eine Kreatur mit Stärke ${e.max} oder weniger, die ein Gegner kontrolliert`; break;
+      case 'dmgAll': t = `füge ${e.side === 'all' ? 'jeder Kreatur' : 'jeder Kreatur, die ein Gegner kontrolliert,'} ${e.n} ${pl(e.n, 'Schadenspunkt', 'Schadenspunkte')} zu`; break;
+      case 'token': { const T = C[e.id]; t = `erzeuge ${e.n === 1 ? 'einen' : e.n} ${T.a}/${T.h} ${pl(e.n, 'Kreaturenspielstein', 'Kreaturenspielsteine')} „${T.n}“${T.kw && T.kw.length ? ' mit ' + T.kw.map(k => KW[k][1]).join(' und ') : ''}`; break; }
+      case 'ramp': t = 'bringe ein Grundland aus deiner Bibliothek getappt ins Spiel'; break;
+      case 'revive': t = e.n > 1 ? `bringe die letzten ${e.n} Kreaturen, die in deinen Friedhof gelegt wurden, ins Spiel zurück` : 'bringe die letzte Kreatur, die in deinen Friedhof gelegt wurde, ins Spiel zurück'; break;
+    }
+    if (e.heal && e.k !== 'heal') t += `. Du erhältst ${e.heal} Lebenspunkte dazu`;
+    if (e.face) t += `. Füge jedem Gegner ${e.face} Schadenspunkte zu`;
+    if (e.draw && e.k !== 'draw') t += `. Ziehe ${e.draw === 1 ? 'eine Karte' : e.draw + ' Karten'}`;
+    return t;
+  }
+  const cap = t => t ? t[0].toUpperCase() + t.slice(1) + '.' : '';
+  const costTxt = m => { const o = parseCost(m); return (o.gen ? `{${o.gen}}` : '') + Object.entries(o).filter(([k]) => k !== 'gen').map(([k, n]) => `{${k}}`.repeat(n)).join(''); };
+  for (const [id, c] of Object.entries(C)) {
+    c.tl = TYPE(c);
+    if (c.t === 'a' && c.e) c.e.aura = 1;
+    if (c.t === 'l') { c.txt = `⟳: Erzeuge {${c.col}}.`; continue; }
+    const parts = [];
+    if (c.t === 'k' && c.e) parts.push(`Wenn ${c.n} ins Spiel kommt, ${effText(c.e, c.n)}.`);
+    if (c.t !== 'k' && c.e) parts.push(cap(effText(c.e, c.n)));
+    if (c.wachs) parts.push(`Zu Beginn deines Zuges erhält ${c.n} +${c.wachs[0]}/+${c.wachs[1]}.`);
+    if (c.tod) parts.push(`Wenn ${c.n} stirbt, ${effText(c.tod, c.n)}.`);
+    if (c.act) parts.push(`${c.act.m ? costTxt(c.act.m) + ', ' : ''}${c.act.tap ? '⟳' : ''}: ${cap(effText(c.act.e, c.n))}`);
+    c.txt = parts.join(' ');
+  }
+  // Grunddecks: je 40 Karten (23 Zauber/Kreaturen + 17 Länder)
   const DECKS = {
-    abent: { a_bauer: 3, a_hund: 3, a_bogen: 3, a_wache: 3, a_reiter: 3, a_schmied: 3, a_ritter: 3, a_riese: 2, a_trank: 2, a_pfeil: 2, a_klee: 2, a_karte: 1 },
+    abent: { a_bauer: 2, a_hund: 2, a_bogen: 2, a_wache: 2, a_wegelag: 2, a_reiter: 2, a_schmied: 2, a_ritter: 2, a_riese: 2, a_trank: 1, a_pfeil: 2, a_klee: 1, a_kompass: 1, land_A: 17 },
     glut: { g_kobold: 3, g_fuchs: 3, g_brand: 3, g_stoss: 3, g_krieger: 3, g_phoenix: 2, g_rausch: 2, g_golem: 3, g_sturm: 2, g_meteor: 2, g_drache: 2, g_titan: 2 },
     wild: { w_moos: 2, w_wolf: 3, w_samen: 3, w_peitsche: 3, w_dorn: 3, w_hirsch: 3, w_kraut: 2, w_wuchs: 2, w_baer: 3, w_hydra: 2, w_herde: 2, w_riese: 2 },
     flut: { f_fee: 3, f_muschel: 3, f_frost: 3, f_einfall: 2, f_sirene: 3, f_falke: 3, f_welle: 2, f_schild: 2, f_golem: 3, f_strudel: 2, f_wal: 2, f_krake: 2 },
@@ -208,6 +291,17 @@
     licht: { l_novize: 3, l_knappe: 3, l_segen: 3, l_ross: 3, l_ritter: 3, l_haende: 2, l_strahl: 3, l_waechter: 2, l_moench: 2, l_paladin: 2, l_engel: 2, l_sonne: 2 },
   };
   for (const [id, c] of Object.entries(C)) if (!c.tok && !c.r) c.r = 'g';
+  // alte 30er-Listen -> 40er-Decks: 23 Zauber/Kreaturen + 17 Länder passend zu den Farben
+  function to40(list) {
+    if (Object.keys(list).some(id => id.startsWith('land_'))) return list;
+    const d = { ...list }; let n = Object.values(d).reduce((a, b) => a + b, 0);
+    while (n > 23) { const id = Object.keys(d).sort((a, b) => d[b] - d[a] || C[b].c - C[a].c)[0]; if (--d[id] <= 0) delete d[id]; n--; }
+    const col = {}; for (const [id, k] of Object.entries(d)) { const o = parseCost(C[id].m); for (const [ch, x] of Object.entries(o)) if (ch !== 'gen') col[ch] = (col[ch] || 0) + x * k; }
+    const tot = Object.values(col).reduce((a, b) => a + b, 0) || 1, cols = Object.keys(col).sort((a, b) => col[b] - col[a]); let left = 17;
+    cols.forEach((ch, i) => { const k = i === cols.length - 1 ? left : Math.max(1, Math.round(17 * col[ch] / tot)); d['land_' + ch] = (d['land_' + ch] || 0) + Math.min(k, left); left -= Math.min(k, left); });
+    return d;
+  }
+  for (const f of Object.keys(DECKS)) DECKS[f] = to40(DECKS[f]);
   // Bot-Leiter: 10 Gegner, die immer stärker werden
   const LADDER = [
     { n: 'Lehrling Pip', art: '🧒', th: ['glut'], r: 'g', life: 14 },
@@ -225,19 +319,11 @@
 
   // Spielmodi – gleiche Karten, andere Kampfregeln
   const MODES = {
-    arena: { n: 'Arena', e: '⚔️', short: 'Gezielter Angriff', rules: [
-      'Jede Kreatur greift einzeln an und wählt ihr Ziel: den Gegner oder eine bestimmte Kreatur. Es gibt kein Blocken – die angegriffene Kreatur schlägt zurück.',
-      '🛡️ Wächter (und Mauern) müssen zuerst angegriffen werden. Flieger dürfen über Wächter hinweg.',
-      '🩸 Wunden bleiben: Schaden an Kreaturen heilt am Zugende nicht.',
-      '🏆 Siegeszug: Tötet ein Angreifer sein Ziel und überlebt, bekommt er dauerhaft +1/+1.',
-      '👁️ Wachsam: darf zweimal pro Zug angreifen.',
-    ] },
-    klassisch: { n: 'Klassisch', e: '🃏', short: 'Angreifen und Blocken', rules: [
-      'Du wählst alle Angreifer auf einmal, der Gegner entscheidet, wer blockt – auch mehrere Blocker gegen einen Angreifer.',
-      '⚡ Sofortzauber: Nicht ausgegebene Kristalle bleiben stehen. Damit spielst du Sofortzauber auch im gegnerischen Zug – beim Blocken oder als Kampftrick nach den Blocks.',
-      '🛡️ Wächter dürfen zwei Angreifer gleichzeitig blocken.',
-      '💫 Schaden an Kreaturen heilt am Zugende.',
-      '🎯 Wer geblockt wird, verteilt seinen Schaden der Reihe nach auf die Blocker.',
+    klassisch: { n: 'Duell', e: '🃏', short: 'Angreifen und Blocken', rules: [
+      'Pro Zug darfst du ein Land ausspielen. Länder tappen sich automatisch, um deine Karten zu bezahlen.',
+      'Du greifst mit beliebig vielen Kreaturen an, dein Gegner verteilt seine Blocker – auch mehrere gegen einen Angreifer.',
+      'Spontanzauber, Kreaturen mit Aufblitzen und ⟳-Fähigkeiten gehen auch im gegnerischen Zug: beim Blocken oder als Kampftrick.',
+      'Schaden an Kreaturen heilt am Ende des Zuges. Wer auf 0 Lebenspunkte fällt, verliert.',
     ] },
   };
   // Kampfgebiete (Trophäenweg). bot: Fehlerquote der Bots, smart: Bots nutzen Mehrfachblocks, Sofortzauber und planen voraus.
@@ -267,8 +353,8 @@
   const PACKS = {
     klein: { n: 'Pack', size: 5, cost: 100, min: 0, sure: 's', txt: '5 Karten, mindestens 1 seltene' },
     gross: { n: 'Großes Pack', size: 8, cost: 180, min: 3, sure: 's', sure2: 1, txt: '8 Karten, mindestens 2 seltene' },
-    koenig: { n: 'Königspack', size: 10, cost: 350, min: 6, sure: 'e', txt: '10 Karten, mindestens 1 epische, doppelte Helden-Chance' },
-    legende: { n: 'Legendenpack', size: 12, cost: 700, min: 9, sure: 'l', txt: '12 Karten, mindestens 1 legendäre, dreifache Helden-Chance' },
+    koenig: { n: 'Königspack', size: 10, cost: 350, min: 6, sure: 'e', txt: '10 Karten, mindestens 1 seltene, doppelte Helden-Chance' },
+    legende: { n: 'Mythospack', size: 12, cost: 700, min: 9, sure: 'l', txt: '12 Karten, mindestens 1 mythische, dreifache Helden-Chance' },
   };
   // Bot-Decks pro Kampfgebiet (zufällig gewählt)
   const D = str => Object.fromEntries(str.trim().split(/\s+/).map(x => { const [id, n] = x.split('*'); return [id, Number(n)]; }));
@@ -306,10 +392,10 @@
     [['Sternennacht', 'n_fleder*3 f_fee*3 n_meuchler*3 f_sirene*3 n_hexe*3 f_magier*2 n_vampir*2 f_orakel*1 n_morgul*1 n_zug*3 f_frost*3 n_fluch*3'],
      ['Abgrund', 'f_krabbe*3 n_spinne*3 f_otter*3 n_ghul*3 f_hai*3 n_lich*2 f_krake*2 n_faenger*2 f_levi*1 n_gruft*1 f_welle*3 n_verderb*2 f_strudel*2'],
      ['Leere', 'n_kauz*3 n_skelett*3 f_muschel*3 n_ghul*3 f_golem*3 n_vampir*2 f_wal*3 n_lich*2 n_pest*2 f_einfall*3 n_grab*3']],
-    [['Kristallkönig', 'a_prinz*2 a_gilde*1 g_ignar*1 w_gaia*1 f_levi*1 n_gruft*1 l_seraph*1 l_koenig*1 a_magier*3 g_phoenix*3 w_hydra*3 f_hai*3 l_engel*3 g_meteor*3 n_fluch*3'],
-     ['Prisma', 'l_novize*3 f_fee*3 g_salam*3 n_fleder*3 w_druide*3 l_einhorn*2 f_magier*2 g_schmied*2 n_vampir*2 w_loewe*2 f_orakel*1 n_morgul*1 l_bann*2 g_sturm*1'],
+    [['Kristallkönig', 'l_seraph*1 l_koenig*1 g_ignar*1 g_phoenix2*1 l_engel*3 l_paladin*3 g_phoenix*3 g_meteor*3 l_bann*2 g_schmied*2 l_einhorn*2 g_drache*2 l_ritter*3 g_krieger*3'],
+     ['Prisma', 'f_levi*1 n_gruft*1 f_orakel*1 n_morgul*1 f_magier*2 n_vampir*2 f_hai*3 n_fresser*3 f_pirat*3 n_fluch*3 f_welle*3 n_hexe*3 f_frost*2 n_faenger*2'],
      ['Drachenthron', 'g_krieger*3 w_hirsch*3 g_berserk*3 w_baer*3 g_drache*2 w_riese*2 g_titan*2 w_brakka*1 g_phoenix2*1 g_ignar*1 g_stoss*3 w_peitsche*3 w_herde*2 g_rausch*1']],
-  ].map(list => list.map(([n, str]) => ({ n, cards: D(str) })));
-  const out = { MODES, ARENAS, arenaOf, PACKS, BOTDECKS, HEROES, HERO_P, LADDER, PACK, F, KW, C, DECKS, B, BONUS_MIN, RAR, levelOf, checkDeck, themesOf, bonusesOf, mainTheme, DECK_SIZE, MIN_CRE };
+  ].map(list => list.map(([n, str]) => ({ n, cards: to40(D(str)) })));
+  const out = { parseCost, cmc, COLORS, MAX_COPIES, to40, MODES, ARENAS, arenaOf, PACKS, BOTDECKS, HEROES, HERO_P, LADDER, PACK, F, KW, C, DECKS, B, BONUS_MIN, RAR, levelOf, checkDeck, themesOf, bonusesOf, mainTheme, DECK_SIZE, MIN_CRE };
   if (typeof module !== 'undefined' && module.exports) module.exports = out; else window.DuellKarten = out;
 })();

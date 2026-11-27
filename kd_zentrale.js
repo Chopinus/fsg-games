@@ -14,10 +14,38 @@
   #kdz .cur span.bump{animation:kdzbump .5s}
   @keyframes kdzbump{40%{transform:scale(1.25);background:rgba(255,210,63,.35)}}
   #kdz .zx{width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;font-size:18px;cursor:pointer}
-  #kdz .tabs{display:flex;gap:6px;padding:0 14px 8px;overflow-x:auto;scrollbar-width:none;flex:none}
-  #kdz .tabs button{flex:none;border:1px solid #4a3f66;background:#1d1830;color:#cfc6e6;padding:9px 14px;border-radius:12px;font:700 14px var(--body);cursor:pointer}
-  #kdz .tabs button.on{background:linear-gradient(135deg,#6a3fd6,#3a6ad6);color:#fff;border-color:transparent;box-shadow:0 4px 14px rgba(90,60,220,.45)}
-  #kdz .zb{flex:1;overflow-y:auto;padding:6px 14px calc(env(safe-area-inset-bottom,0px) + 24px);-webkit-overflow-scrolling:touch}
+  #kdz .tabs{display:flex;justify-content:space-around;gap:4px;padding:6px 8px calc(env(safe-area-inset-bottom,0px) + 6px);flex:none;background:rgba(13,10,24,.94);border-top:1px solid rgba(255,255,255,.1);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  #kdz .tabs button{flex:1;max-width:120px;display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;color:#8f84ad;padding:6px 2px;border-radius:14px;font:800 11px var(--body);cursor:pointer;transition:background .2s,color .2s}
+  #kdz .tabs button i{font-style:normal;font-size:24px;line-height:1;transition:transform .25s cubic-bezier(.2,1.6,.4,1)}
+  #kdz .tabs button.on{color:#fff;background:linear-gradient(160deg,rgba(106,63,214,.75),rgba(58,106,214,.55));box-shadow:0 4px 14px rgba(90,60,220,.4)}
+  #kdz .tabs button.on i{transform:translateY(-3px) scale(1.18)}
+  #kdz .tabs button .dot{position:absolute;margin:-2px 0 0 22px;width:9px;height:9px;border-radius:50%;background:#ff4d6d;box-shadow:0 0 6px #ff4d6d}
+  #kdz .zb{flex:1;overflow-y:auto;padding:6px 14px 24px;-webkit-overflow-scrolling:touch}
+  #kdz .zb.swl{animation:kdzswl .25s ease-out} #kdz .zb.swr{animation:kdzswr .25s ease-out}
+  @keyframes kdzswl{from{transform:translateX(40px);opacity:.3}} @keyframes kdzswr{from{transform:translateX(-40px);opacity:.3}}
+  #kdz .hd{display:flex;align-items:center;gap:8px;margin:6px 0 2px} #kdz .hd h3{margin:0;flex:1}
+  .kdz-i{flex:none;width:28px;height:28px;border-radius:50%;border:1px solid rgba(159,243,255,.5);background:rgba(58,168,255,.18);color:#9ff3ff;font:italic 800 15px Georgia,serif;cursor:pointer;display:inline-grid;place-items:center;padding:0;vertical-align:middle}
+  .kdz-i:active{transform:scale(.9)}
+  #kdz .car{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:6px 4px 14px;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin:0 -14px;padding-left:14px;padding-right:14px}
+  #kdz .car::-webkit-scrollbar{display:none}
+  #kdz .car>*{flex:none;scroll-snap-align:center}
+  #kdz .car .kdz-pack{width:min(170px,44vw)}
+  #kdz .dots{display:flex;justify-content:center;gap:6px;margin-top:-6px} #kdz .dots i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.2)} #kdz .dots i.on{background:#ffd23f;width:18px;border-radius:4px}
+  #kdz .arc{width:min(250px,70vw);border-radius:20px;padding:16px 14px;background:radial-gradient(circle at 50% 20%,color-mix(in srgb,var(--c1) 60%,transparent),transparent 70%),linear-gradient(170deg,var(--c2),#120c22);border:2px solid color-mix(in srgb,var(--c1) 60%,#fff);display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;position:relative}
+  #kdz .arc .ae{font-size:56px;filter:drop-shadow(0 6px 10px rgba(0,0,0,.5))} #kdz .arc b{font:400 21px var(--display)} #kdz .arc small{color:#e8e0ff;opacity:.85;font-size:12px}
+  #kdz .arc.lock{filter:grayscale(.75) brightness(.6)} #kdz .arc.cur{box-shadow:0 0 0 3px #ffd23f,0 0 26px rgba(255,210,63,.5)}
+  #kdz .arc .tags{display:flex;gap:4px;flex-wrap:wrap;justify-content:center} #kdz .arc .tags span{font-size:11px;font-weight:800;padding:2px 8px;border-radius:8px;background:rgba(0,0,0,.35)}
+  #kdz .arc .here{position:absolute;top:-10px;font-size:11px;font-weight:800;background:#ffd23f;color:#2a1a00;padding:2px 10px;border-radius:8px}
+  #kdz .pbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  #kdz .pbar .kpl{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:99px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);font-weight:800;font-size:13px;white-space:nowrap}
+  #kdz .lands{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+  #kdz .lrow{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:14px;background:linear-gradient(90deg,color-mix(in srgb,var(--c1) 40%,transparent),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.1)}
+  #kdz .lrow .la{font-size:26px} #kdz .lrow .ln{flex:1;min-width:0;font-weight:800;font-size:14px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} #kdz .lrow .ln small{display:block;font-weight:600;color:var(--muted)}
+  #kdz .lrow button{flex:none;width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.3);color:#fff;font:800 18px var(--body);cursor:pointer;padding:0}
+  #kdz .lrow button:active{transform:scale(.88)} #kdz .lrow .n{min-width:24px;text-align:center;font-weight:800;font-size:17px}
+  .kdz-hp{position:fixed;inset:0;z-index:9850;background:rgba(5,3,12,.8);display:flex;align-items:center;justify-content:center;padding:16px;animation:kdzin .3s both}
+  .kdz-hp .pn{max-width:680px;width:100%;max-height:90vh;overflow-y:auto;background:linear-gradient(180deg,#2a1f48,#151022);border:2px solid #ffd23f;border-radius:24px;padding:18px;text-align:center;box-shadow:0 0 50px rgba(255,210,63,.35)}
+  .kdz-hp h2{margin:4px 0;font:400 28px var(--display);color:#ffd23f}
   #kdz .wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
   #kdz h3{margin:6px 0 2px;font-size:17px}
   #kdz .box{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:12px 14px}
@@ -75,9 +103,9 @@
   #kdz .heroslot .tag{position:absolute;top:-11px;background:#ffd23f;color:#2a1a00;font-weight:800;font-size:11px;letter-spacing:.12em;padding:2px 10px;border-radius:9px}
   #kdz .heroslot.empty{border-style:dashed;background:rgba(255,210,63,.06);box-shadow:none;color:#ffd23f}
   #kdz .heroslot.empty .hp{font-size:40px;animation:none}
-  @media (max-width:520px){#kdz .heroslot{width:94px;padding:10px 4px}#kdz .heroslot .hp{font-size:42px}#kdz .heroslot b{font-size:12px}#kdz .heroslot small{font-size:10px}}
+  @media (max-width:600px){#kdz .dkrow{flex-direction:column-reverse;gap:16px}#kdz .heroslot{width:100%;flex-direction:row;justify-content:flex-start;gap:12px;padding:14px 16px;text-align:left}#kdz .heroslot .hp{font-size:46px}#kdz .heroslot b{font-size:15px}#kdz .heroslot small{font-size:12px}#kdz .heroslot .tag{left:16px}}
   .hgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:10px}
-  .htile{position:relative;border-radius:16px;border:2px solid color-mix(in srgb,var(--c1) 60%,#fff);background:linear-gradient(165deg,var(--c1),var(--c2));color:#fff;display:flex;flex-direction:column;align-items:center;gap:3px;padding:12px 8px;text-align:center;cursor:pointer;font:inherit}
+  .htile{position:relative;min-width:150px;border-radius:16px;border:2px solid color-mix(in srgb,var(--c1) 60%,#fff);background:linear-gradient(165deg,var(--c1),var(--c2));color:#fff;display:flex;flex-direction:column;align-items:center;gap:3px;padding:12px 8px;text-align:center;cursor:pointer;font:inherit}
   .htile .hp{font-size:44px} .htile b{font-size:14px} .htile small{font-size:11.5px;opacity:.9}
   .htile .st{margin-top:4px;font-size:11px;font-weight:800;background:rgba(0,0,0,.35);border-radius:8px;padding:2px 8px}
   .htile.on{border-color:#ffd23f;box-shadow:0 0 0 2px #ffd23f,0 0 20px rgba(255,210,63,.6)}
@@ -111,8 +139,9 @@
   .kd-card.mini{width:76px;height:108px;padding:3px;border-radius:10px}
   .kd-card.mini .in{padding:2px}.kd-card.mini .art{font-size:30px;margin-top:6px}.kd-card.mini .nm{font-size:9px;max-width:100%;overflow-wrap:anywhere;hyphens:auto;-webkit-hyphens:auto}.kd-card.mini .nm.ln{font-size:8px}
   .kd-card.mini .tx,.kd-card.mini .kw,.kd-card.mini .ty{display:none}
-  .kd-card.mini .cost{width:22px;height:24px;font-size:12px;left:-5px;top:-5px}
-  .kd-card.mini .st{min-width:19px;height:19px;font-size:11px;bottom:-5px}
+  .kd-card.mini .mc{top:2px;right:2px;gap:0}.kd-card.mini .pip{width:12px;height:12px;font-size:7px}
+  .kd-card.mini .tl{display:none}
+  .kd-card.mini .pt{min-width:26px;height:18px;font-size:11px;line-height:15px;bottom:-5px;right:-4px;padding:0 4px}
   .kd-card.mini .rg{bottom:6px;width:7px;height:7px}
   .kd-card.mini .lvs{font-size:7px}
   @media (max-width:520px){#kdz .mgrid{grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:12px 4px}.kd-card.mini{width:68px;height:98px}.kd-card.mini .art{font-size:26px}#kdz .mw.slot{width:68px;height:98px}#kdz .mgrid.deck{padding:12px 6px}}
@@ -201,18 +230,33 @@
   async function open(tab) {
     Z.tab = tab || Z.tab || 'spielen';
     let el = q('#kdz'); if (!el) { el = document.createElement('div'); el.id = 'kdz'; document.body.appendChild(el); document.documentElement.style.overflow = 'hidden'; }
-    render(); await load(); render();
+    render(); await load(); render(); afterTab();
   }
   function close() { const el = q('#kdz'); if (el) el.remove(); document.documentElement.style.overflow = ''; Z.ed = null; }
-  const TABS = [['spielen', '⚔️ Spielen'], ['packs', '🎁 Packs'], ['samml', '🃏 Sammlung'], ['decks', '📦 Decks'], ['trophaen', '🏆 Trophäen']];
+  const TABS = [['spielen', '⚔️', 'Spielen'], ['packs', '🎁', 'Packs'], ['decks', '📦', 'Decks'], ['samml', '🃏', 'Sammlung'], ['trophaen', '🏆', 'Trophäen']];
+  const sheet = h => window.KDsheet(h);
+  const ib = k => `<button class="kdz-i" data-kdzi="${k}" aria-label="Info">i</button>`;
+  const hd = (t, k, extra) => `<div class="hd"><h3>${t}</h3>${extra || ''}${k ? ib(k) : ''}</div>`;
+  const INFO = {
+    levels: () => `<h3>⭐ Kartenstufen</h3><div class="kd-gl"><div><span>★★</span><span>Silberrahmen</span></div><div><span>★★★</span><span>Goldrahmen mit Glanz</span></div><div><span>★★★★</span><span>Leuchten und Angriffs-Effekt</span></div><div><span>★★★★★</span><span>Prisma-Rahmen, Aura und Einschlag</span></div><div><span>💡</span><span>Mehrfach gezogene Karten steigen auf. Nur das Aussehen ändert sich, nie die Stärke.</span></div></div>`,
+    bonus: () => null,
+    heroes: () => `<h3>🦸 Helden</h3><div class="kd-gl"><div><span>🎴</span><span>Jedes Deck hat einen eigenen Heldenplatz zusätzlich zu den ${K.DECK_SIZE} Karten.</span></div><div><span>⚡</span><span>Die Heldenkraft setzt du in deiner Hauptphase ein. Danach lädt sie über einige Züge neu auf.</span></div><div><span>🎁</span><span>Den Abenteuer-Helden hat jeder. Alle anderen stecken mit ${Math.round(K.HERO_P * 100)} % in Themen-Packs – in höheren Kampfgebieten öfter.</span></div></div>`,
+    funken: () => `<h3>🪙 Funken & ✨ Sternenstaub</h3><div class="kd-gl"><div><span>🪙</span><span>Gibt es für jedes Duell (Siege mehr), Tagesaufgaben und den Trophäenweg. Damit kaufst du Packs.</span></div><div><span>✨</span><span>Entsteht aus Karten über der Höchststufe. Damit stellst du fehlende Karten her.</span></div></div>`,
+    packs: () => { const s = Z.st, A = K.ARENAS[s.ar || 0], L = K.ARENAS[K.ARENAS.length - 1]; return `<h3>🎁 Pack-Chancen</h3><div class="kd-phase" style="justify-content:center"><span class="kd-pill">${A.e} ${A.n}</span></div><div class="kd-gl">${Object.entries(RAR).map(([k, r]) => `<div><span style="color:${r.col}">◆</span><span><b style="color:${r.col}">${r.n}</b> – ${A.odds[k]} %</span></div>`).join('')}<div><span>🦸</span><span><b>Held</b> – ${A.hero} % pro Themen-Pack</span></div><div><span>💜</span><span>Seltene Karte spätestens in <b>${PACK.pityE - s.pe}</b> Packs garantiert</span></div><div><span>🧡</span><span>Mythische Karte spätestens in <b>${PACK.pityL - s.pl}</b> Packs garantiert</span></div><div><span>📈</span><span>Höhere Kampfgebiete verbessern die Chancen – bis ${L.odds.l} % mythisch und ${L.hero} % Held.</span></div></div>`; },
+    trophy: () => `<h3>🏆 Trophäenkampf</h3><div class="kd-gl"><div><span>⬆️</span><span>Sieg ≈ +30 🏆</span></div><div><span>⬇️</span><span>Niederlage ≈ −20 🏆 – unter den Anfang deines Gebiets fällst du nie.</span></div><div><span>🤖</span><span>Die Bots spielen zufällig eines von drei Gebiets-Decks und werden mit jedem Gebiet schlauer.</span></div><div><span>🎁</span><span>Alle 100 🏆 gibt es eine Belohnung auf dem Trophäenweg.</span></div></div>`,
+    deck: () => `<h3>📦 Deckregeln</h3><div class="kd-gl"><div><span>🃏</span><span>Genau <b>${K.DECK_SIZE}</b> Karten.</span></div><div><span>4️⃣</span><span>Höchstens ${K.MAX_COPIES} Kopien pro Karte – Standardländer unbegrenzt.</span></div><div><span>🏞️</span><span>Faustregel: 17 Länder, 23 Zauber, höchstens zwei Farben.</span></div><div><span>🎨</span><span>Ab ${K.BONUS_MIN} Karten einer Farbe wirkt ihr Themen-Bonus.</span></div><div><span>👆</span><span>Antippen fügt hinzu oder nimmt heraus, gedrückt halten zeigt Details.</span></div></div>`,
+    rules: () => { window.KDrules && KDrules(); return null; },
+  };
   function render() {
     const el = q('#kdz'); if (!el) return;
     const s = Z.st, sc = el.querySelector('.zb') ? el.querySelector('.zb').scrollTop : 0;
-    el.innerHTML = `<div class="zh"><h2>💎 Kristallduell</h2><div class="cur">${s ? `<span data-cur="f" title="Funken: bekommst du fürs Spielen">🪙 ${s.f}</span><span data-cur="st" title="Sternenstaub: zum Herstellen fehlender Karten">✨ ${s.st}</span>${s.free ? `<span data-cur="free" title="Gratis-Packs">🎁 ${s.free}</span>` : ''}` : ''}</div><button class="zx" data-kdzx="1" aria-label="Schließen">✕</button></div>
-      <div class="tabs">${TABS.map(([k, n]) => `<button class="${Z.tab === k ? 'on' : ''}" data-kdzt="${k}">${n}</button>`).join('')}</div><div class="zb"><div class="wrap">${body()}</div></div>`;
+    el.innerHTML = `<div class="zh"><h2>💎 Kristallduell</h2><div class="cur" data-kdzi="funken" style="cursor:pointer">${s ? `<span data-cur="f">🪙 ${s.f}</span><span data-cur="st">✨ ${s.st}</span>${s.free ? `<span data-cur="free">🎁 ${s.free}</span>` : ''}` : ''}</div><button class="zx" data-kdzx="1" aria-label="Schließen">✕</button></div>
+      <div class="zb ${Z.swipe || ''}"><div class="wrap">${body()}</div></div><nav class="tabs">${TABS.map(([k, e, n]) => `<button class="${Z.tab === k ? 'on' : ''}" data-kdzt="${k}"><i>${e}</i>${n}${k === 'packs' && s && (s.free || Object.values(s.fp || {}).some(x => x > 0)) ? '<span class="dot"></span>' : ''}</button>`).join('')}</nav>`;
+    Z.swipe = '';
     const zb = el.querySelector('.zb'); if (zb && Z.keepScroll) zb.scrollTop = sc; Z.keepScroll = false;
+    if (s && s.heroPick && !q('.kdz-hp')) heroRefund();
   }
-  const needLogin = what => `<div class="box center"><p>Melde dich mit deinem Hub-Konto an, um ${what}.</p><p class="note">Ohne Konto kannst du trotzdem mit den Grunddecks spielen – gegen Freunde oder den Bot.</p><button class="btn" data-kdzlogin="1">Anmelden</button></div>`;
+  const needLogin = what => `<div class="box center"><div style="font-size:44px">🔐</div><p>Melde dich an, um ${what}.</p><button class="btn" data-kdzlogin="1">Anmelden</button></div>`;
   function body() {
     const s = Z.st;
     if (Z.tab === 'spielen') return tabPlay(s);
@@ -224,56 +268,62 @@
     if (Z.tab === 'trophaen' || Z.tab === 'leiter') return tabTrophy(s);
     return '';
   }
-  const welcomeBox = s => s && s.welcome > 0 ? `<div class="box kdz-wel"><span class="e">🎁</span><div style="flex:1;min-width:180px"><b>Willkommens-Packs: noch ${s.welcome}</b><div class="note" style="color:#f0e8ff">Zufällige Karten aus allen fünf Themen – genug für dein erstes eigenes Deck. Danach baut dir ✨ „Automatisch bauen“ ein Startdeck.</div></div><button class="btn" data-kdzpack="start">Öffnen</button></div>` : '';
+  const welcomeBox = s => s && s.welcome > 0 ? `<div class="box kdz-wel"><span class="e">🎁</span><div style="flex:1;min-width:180px"><b>Willkommens-Packs: noch ${s.welcome}</b></div><button class="btn" data-kdzpack="start">Öffnen</button></div>` : '';
   const ARn = s => K.ARENAS[K.arenaOf(s.tr || 0)];
   function tabPlay(s) {
-    const tot = Object.values(C).filter(c => !c.tok).length, own = s ? Object.keys(s.c).filter(id => C[id] && !C[id].tok && s.c[id] > 0).length : 0;
-    const first = s && !s.packs && s.lad === 0 ? `<div class="box kdz-wel" style="animation:none"><span class="e" style="animation:none">🗺️</span><div style="flex:1;min-width:200px"><b>Willkommen, Abenteurer!</b><div class="note" style="color:#f0e8ff">Du besitzt das <b>Abenteuer-Startdeck</b> (30 Karten). So geht's weiter:<br>1. Spiele gegen den Bot oder Freunde → du bekommst 🪙 Funken.<br>2. Öffne mit Funken Packs → neue Karten aus allen Themen.<br>3. Baue unter 📦 Decks dein eigenes Deck.</div></div><button class="btn" data-kdzt="packs">🎁 Erstes Pack öffnen</button></div>` : '';
+    const tot = Object.values(C).filter(c => !c.tok && c.t !== 'l').length, own = s ? Object.keys(s.c).filter(id => C[id] && !C[id].tok && C[id].t !== 'l' && s.c[id] > 0).length : 0;
+    const first = s && !s.packs && !(s.tr > 0) ? `<div class="box kdz-wel" style="animation:none"><span class="e" style="animation:none">🗺️</span><div style="flex:1;min-width:180px"><b>Willkommen, Abenteurer!</b><div class="pbar" style="margin-top:6px"><span class="kpl">📦 Startdeck: ${K.DECK_SIZE} Karten</span><span class="kpl">🏞️ mit Ländern</span></div></div><button class="btn" data-kdzgo="0">⚔️ Erstes Duell</button>${ib('rules')}</div>` : '';
     return `${welcomeBox(s)}${first}<div class="big2">
-      <button class="bigb" data-kdzgo="arena" style="background:linear-gradient(135deg,#a8790a,#3a2a00)"><span class="e">🏆</span><b>Trophäenkampf</b><span>${s ? `${ARn(s).e} ${ARn(s).n} · ${s.tr} 🏆` : 'Gegen Bots um Trophäen kämpfen'}</span></button>
-      <button class="bigb" data-kdzgo="friends" style="background:linear-gradient(135deg,#6a3fd6,#2a1a6a)"><span class="e">👥</span><b>Gegen Freunde</b><span>Runde erstellen – Siege geben auch Trophäen</span></button>
-      <button class="bigb" data-kdzgo="0" style="background:linear-gradient(135deg,#1f6a8a,#0b2a3a)"><span class="e">🤖</span><b>Übungs-Bot</b><span>Ohne Trophäen, locker üben</span></button></div>
-      <div class="box"><h3 style="margin-bottom:0">🎮 Spielmodus</h3>${window.KDmodePick ? KDmodePick() : ''}</div>
-      ${s ? `<div class="box"><h3>📅 Tagesaufgaben</h3>${s.dq.map(x => `<div class="q ${x.done ? 'done' : ''}"><span class="t">${x.done ? '✅' : '🎯'} ${esc(x.t)}</span><span class="bar"><i style="width:${(x.n / x.g) * 100}%"></i></span><span>${x.n}/${x.g}</span><span>+60 🪙</span></div>`).join('')}
+      <button class="bigb" data-kdzgo="arena" style="background:linear-gradient(135deg,#a8790a,#3a2a00)"><span class="e">🏆</span><b>Trophäenkampf</b><span>${s ? `${ARn(s).e} ${ARn(s).n} · ${s.tr} 🏆` : 'Gegen Bots um Trophäen'}</span></button>
+      <button class="bigb" data-kdzgo="friends" style="background:linear-gradient(135deg,#6a3fd6,#2a1a6a)"><span class="e">👥</span><b>Gegen Freunde</b><span>Runde erstellen</span></button>
+      <button class="bigb" data-kdzgo="0" style="background:linear-gradient(135deg,#1f6a8a,#0b2a3a)"><span class="e">🤖</span><b>Übungs-Bot</b><span>Ohne Trophäen</span></button></div>
+      <div class="pbar" style="justify-content:center"><button class="btn ghost small" data-kdzi="rules">📖 Regeln</button><button class="btn ghost small" data-kdzbonp="1">🎨 Themen-Boni</button><button class="btn ghost small" data-kdzi="heroes">🦸 Helden</button><button class="btn ghost small" data-kdzi="levels">⭐ Stufen</button></div>
+      ${s ? `<div class="box">${hd('📅 Tagesaufgaben')}${s.dq.map(x => `<div class="q ${x.done ? 'done' : ''}"><span class="t">${x.done ? '✅' : '🎯'} ${esc(x.t)}</span><span class="bar"><i style="width:${(x.n / x.g) * 100}%"></i></span><span>${x.n}/${x.g}</span><span>+60 🪙</span></div>`).join('')}
         <div class="q ${s.dfw ? 'done' : ''}"><span class="t">${s.dfw ? '✅' : '🌅'} Erster Sieg des Tages</span><span>+60 🪙</span></div></div>
-        <div class="box"><h3>📊 Deine Sammlung</h3><p style="margin:4px 0">${own} von ${tot} Karten · ${s.packs} Packs geöffnet · ${s.decks.length} eigene Decks</p><p class="note" style="margin:0">Funken gibt es für jedes Duell (Siege zählen mehr), für Tagesaufgaben und auf dem Trophäenweg.</p></div>` : `<div class="box">${needLogin('Karten zu sammeln, Packs zu öffnen und eigene Decks zu bauen')}</div>`}
-      <details class="box"><summary style="cursor:pointer;font-weight:800">ℹ️ So funktioniert das Sammeln</summary>
-        <p class="note" style="margin:8px 0 4px">Ziehst du eine Karte mehrfach, steigt ihre Stufe – nur das Aussehen ändert sich, nicht die Stärke:</p>
-        <div class="stat"><span>★★ Silberrahmen</span><span>★★★ Goldrahmen mit Glanz</span><span>★★★★ leuchtet + Angriffs-Effekt</span><span>★★★★★ Prisma-Rahmen, Aura und Einschlag</span></div>
-        <p class="note" style="margin:10px 0 4px">Themen-Boni gibt es ab ${K.BONUS_MIN} Karten eines Themas im Deck. Themen darfst du frei mischen.</p>${Object.entries(B).map(([f, b]) => `<div>${fc(f).e} <b>${b[0]}</b> – ${b[1]}</div>`).join('')}
-        <p class="note" style="margin:10px 0 4px">🦸 Helden: Jedes Deck hat einen eigenen Heldenplatz (zusätzlich zu den 30 Karten). Die Heldenkraft setzt du im Duell ein, sobald ihre Abklingzeit vorbei ist. Den Abenteuer-Helden hat jeder, alle anderen gibt es mit ${Math.round(K.HERO_P * 100)} % Chance aus Packs.</p>${Object.entries(HE).map(([f, h]) => `<div>${fc(f).e} <b>${h.art} ${h.n}</b> – ⚡ ${h.pow} (alle ${h.cd} Züge): ${h.txt}</div>`).join('')}</details></div>`;
+        <div class="box">${hd('📊 Sammlung', 'funken')}<div class="pbar"><span class="kpl">🃏 ${own}/${tot} Karten</span><span class="kpl">🎁 ${s.packs} Packs</span><span class="kpl">📦 ${s.decks.length} Decks</span><span class="kpl">🦸 ${Object.keys(s.heroes || {}).filter(h => HE[h]).length}/${Object.keys(HE).length} Helden</span></div></div>` : `<div class="box">${needLogin('Karten zu sammeln, Packs zu öffnen und eigene Decks zu bauen')}</div>`}`;
   }
   function tabPacks(s) {
-    if (s.welcome > 0) return welcomeBox(s) + '<p class="note center">Öffne zuerst deine Willkommens-Packs – danach kannst du hier mit Funken neue Packs kaufen.</p>';
-    const ai = s.ar || 0, A = K.ARENAS[ai], T = K.PACKS[Z.ptype] && ai >= K.PACKS[Z.ptype].min ? Z.ptype : 'klein', P = K.PACKS[T];
+    if (s.welcome > 0) return welcomeBox(s);
+    const ai = s.ar || 0, T = K.PACKS[Z.ptype] && ai >= K.PACKS[Z.ptype].min ? Z.ptype : 'klein', P = K.PACKS[T];
     const freeN = t => (t === 'klein' ? s.free : (s.fp || {})[t] || 0);
-    const can = freeN(T) > 0 || s.f >= P.cost, hm = T === 'koenig' ? 2 : T === 'legende' ? 3 : 1;
-    const pk = (th, i) => { const f = fc(th === 'mix' ? null : th); return `<button class="kdz-pack ${T}" data-kdzpack="${th}" style="${th === 'mix' ? '--c1:#b45cff;--c2:#1f3a8a' : cv(th)};animation:kdzoom .4s ${i * 0.05}s both" ${can ? '' : 'disabled'}><span class="e">${th === 'mix' ? '💎' : f.e}</span><b>${th === 'mix' ? 'Kristall' : f.n}<br>${P.n}</b><span class="note" style="position:relative;color:#eee;font-size:12px">${th === 'mix' ? 'alle Themen' : 'nur ' + f.n + '-Karten'}</span><span class="pr ${freeN(T) ? 'free' : ''}">${freeN(T) ? `Gratis (${freeN(T)})` : P.cost + ' 🪙'}</span></button>`; };
-    return `<div class="chips ptypes">${Object.entries(K.PACKS).map(([k, p]) => { const lock = ai < p.min; return `<button class="${k === T ? 'on' : ''}" data-kdzptype="${k}" ${lock ? `title="ab ${K.ARENAS[p.min].n}"` : ''}>${lock ? '🔒' : '🎁'} ${p.n} · ${p.size} Karten${freeN(k) ? ` · <b>${freeN(k)}× gratis</b>` : ''}${lock ? ` · ab ${K.ARENAS[p.min].e}` : ''}</button>`; }).join('')}</div>
-      <div class="box"><div class="pity"><span>📦 ${esc(P.txt)}</span><span>💜 Epische Karte garantiert in spätestens <b>${PACK.pityE - s.pe}</b> Packs</span><span>🧡 Legendäre Karte garantiert in spätestens <b>${PACK.pityL - s.pl}</b> Packs</span></div>
-      <div class="pity" style="margin-top:6px"><span>${A.e} Chancen in <b>${A.n}</b> (höchstes erreichtes Gebiet):</span>${Object.entries(RAR).map(([k, r]) => `<span style="color:${r.col}">◆ ${r.n} ${A.odds[k]} %</span>`).join('')}<span style="color:#ffd23f">🦸 Held ${+(A.hero * hm).toFixed(1)} %</span></div>
-      <div class="note" style="margin-top:6px">Je höher dein Kampfgebiet, desto besser die Chancen – bis ${K.ARENAS[K.ARENAS.length - 1].odds.l} % legendär und ${K.ARENAS[K.ARENAS.length - 1].hero} % Held im ${K.ARENAS[K.ARENAS.length - 1].e} ${K.ARENAS[K.ARENAS.length - 1].n}.</div></div>
-      ${can ? '' : `<p class="note center">Du brauchst ${P.cost} 🪙 für dieses Pack – spiel ein paar Trophäenkämpfe!</p>`}
-      <div class="packs">${['mix', ...Object.keys(F)].map(pk).join('')}</div>`;
+    const can = freeN(T) > 0 || s.f >= P.cost;
+    const pk = (th, i) => { const f = fc(th === 'mix' ? null : th); return `<button class="kdz-pack ${T}" data-kdzpack="${th}" style="${th === 'mix' ? '--c1:#b45cff;--c2:#1f3a8a' : cv(th)};animation:kdzoom .4s ${i * 0.05}s both" ${can ? '' : 'disabled'}><span class="e">${th === 'mix' ? '💎' : f.e}</span><b>${th === 'mix' ? 'Kristall' : f.n}<br>${P.n}</b><span class="note" style="position:relative;color:#eee;font-size:12px">${th === 'mix' ? 'alle Farben' : f.n + ' · ' + f.land}</span><span class="pr ${freeN(T) ? 'free' : ''}">${freeN(T) ? `Gratis (${freeN(T)})` : P.cost + ' 🪙'}</span></button>`; };
+    const list = ['mix', ...Object.keys(F)];
+    return `<div class="chips ptypes">${Object.entries(K.PACKS).map(([k, p]) => { const lock = ai < p.min; return `<button class="${k === T ? 'on' : ''}" data-kdzptype="${k}">${lock ? '🔒' : '🎁'} ${p.n} · ${p.size}🃏${freeN(k) ? ` · <b>${freeN(k)}× gratis</b>` : ''}${lock ? ` · ${K.ARENAS[p.min].e}` : ''}</button>`; }).join('')}</div>
+      ${hd(`🎁 ${P.n}`, 'packs', `<span class="pbar"><span class="kpl" style="color:${RAR.e.col}">💜 ${PACK.pityE - s.pe}</span><span class="kpl" style="color:${RAR.l.col}">🧡 ${PACK.pityL - s.pl}</span></span>`)}
+      <div class="car" data-kdzcar="1">${list.map(pk).join('')}</div><div class="dots">${list.map((x, i) => `<i class="${i ? '' : 'on'}"></i>`).join('')}</div>
+      ${can ? '' : `<div class="pbar" style="justify-content:center"><span class="kpl">🔒 ${P.cost} 🪙 nötig</span><button class="btn small" data-kdzgo="arena">🏆 Funken verdienen</button></div>`}`;
   }
   // Trophäen: aktuelles Kampfgebiet, Weg mit allen Gebieten, Rangliste
   function tabTrophy(s) {
     const ai = K.arenaOf(s.tr), A = K.ARENAS[ai], N = K.ARENAS[ai + 1];
     const pct = N ? Math.max(0, Math.min(100, ((s.tr - A.t) / (N.t - A.t)) * 100)) : 100;
     const nextRoad = (Math.floor((s.trMax || 0) / 100) + 1) * 100;
-    if (!Z.top && !Z.topLoading) { Z.topLoading = 1; call('kd_top').then(r => { Z.top = r; Z.topLoading = 0; if (Z.tab === 'trophaen') { Z.keepScroll = true; render(); } }); }
-    return `<div class="arhero" style="--c1:${A.col};--c2:${A.col2}"><span class="ae">${A.e}</span><div class="ai"><small>Kampfgebiet ${ai + 1} von ${K.ARENAS.length}</small><b>${A.n}</b>
-        <div class="trn">🏆 ${s.tr}</div><div class="trbar"><i style="width:${pct}%"></i></div><small>${N ? `Noch ${N.t - s.tr} 🏆 bis ${N.e} ${N.n}` : 'Höchstes Kampfgebiet erreicht!'} · nächste Weg-Belohnung bei ${nextRoad} 🏆</small></div>
-        <button class="btn big" data-kdzgo="arena">⚔️ Kämpfen</button></div>
-      <div class="box"><b>🎮 Spielmodus für Trophäenkämpfe</b>${window.KDmodePick ? KDmodePick() : ''}<div class="note">Sieg ≈ +30 🏆, Niederlage −20 🏆. Unter den Anfang deines Kampfgebiets fällst du nie. Die Gegner spielen zufällig eines von drei Gebiets-Decks und werden mit jedem Gebiet schlauer.</div></div>
-      <h3>🛤️ Kampfgebiete</h3><div class="arpath">${K.ARENAS.map((x, i) => { const reached = (s.trMax || 0) >= x.t, cur = i === ai;
-        return `<div class="arr ${reached ? '' : 'lock'} ${cur ? 'cur' : ''}" style="--c1:${x.col};--c2:${x.col2};animation-delay:${i * 0.03}s"><span class="ae">${reached ? x.e : '🔒'}</span><div class="ai"><b>${i + 1}. ${x.n}</b><small>ab ${x.t} 🏆 · Bots: ${i < 2 ? 'Anfänger' : i < 5 ? 'geübt' : i < 8 ? 'clever' : i < 11 ? 'Meister' : 'Champion'} · Kartenstufe ${x.lv}</small>
-          <small>Packs: ◆ legendär ${x.odds.l} % · ◆ episch ${x.odds.e} % · 🦸 Held ${x.hero} %${Object.values(K.PACKS).filter(p => p.min === i && i > 0).map(p => ` · 🎁 ${p.n} freigeschaltet`).join('')}</small></div>${cur ? '<span class="here">DU BIST HIER</span>' : ''}</div>`; }).reverse().join('')}</div>
-      <h3>🏅 Rangliste</h3><div class="box">${Z.top ? (Z.top.top || []).map((x, i) => `<div class="q" style="${me() && x.n === me().name ? 'color:#ffd23f;font-weight:800' : ''}"><span style="width:28px">${['🥇', '🥈', '🥉'][i] || i + 1 + '.'}</span><span class="t">${esc(x.n)}</span><span>${K.ARENAS[K.arenaOf(x.tr)].e}</span><span><b>${x.tr}</b> 🏆</span></div>`).join('') + (Z.top.me && Z.top.me.rank > 30 ? `<div class="q" style="color:#ffd23f"><span>${Z.top.me.rank}.</span><span class="t">Du</span><span><b>${Z.top.me.tr}</b> 🏆</span></div>` : '') || '<p class="note">Noch niemand mit Trophäen – sei die oder der Erste!</p>' : '<p class="note">Lädt …</p>'}</div>`;
+    const bot = i => (i < 2 ? 'Anfänger' : i < 5 ? 'Geübt' : i < 8 ? 'Clever' : i < 11 ? 'Meister' : 'Champion');
+    return `<div class="arhero" style="--c1:${A.col};--c2:${A.col2}"><span class="ae">${A.e}</span><div class="ai"><small>Kampfgebiet ${ai + 1}/${K.ARENAS.length}</small><b>${A.n}</b>
+        <div class="trn">🏆 ${s.tr}</div><div class="trbar"><i style="width:${pct}%"></i></div><div class="pbar">${N ? `<span class="kpl">${N.e} noch ${N.t - s.tr} 🏆</span>` : '<span class="kpl">👑 Höchstes Gebiet</span>'}<span class="kpl">🎁 bei ${nextRoad} 🏆</span></div></div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:center"><button class="btn big" data-kdzgo="arena">⚔️ Kämpfen</button><div class="pbar">${ib('trophy')}<button class="btn ghost small" data-kdztop="1">🏅 Rangliste</button></div></div></div>
+      ${hd('🛤️ Kampfgebiete', '', '<span class="note">← wischen →</span>')}<div class="car" data-kdzcar="ar">${K.ARENAS.map((x, i) => { const reached = (s.trMax || 0) >= x.t, cur = i === ai;
+        return `<div class="arc ${reached ? '' : 'lock'} ${cur ? 'cur' : ''}" style="--c1:${x.col};--c2:${x.col2}" ${cur ? 'data-cur-ar="1"' : ''}>${cur ? '<span class="here">DU BIST HIER</span>' : ''}<span class="ae">${reached ? x.e : '🔒'}</span><b>${i + 1}. ${x.n}</b><small>ab ${x.t} 🏆</small>
+          <div class="tags"><span>🤖 ${bot(i)}</span><span>⭐ Stufe ${x.lv}</span></div><div class="tags"><span style="color:${RAR.l.col}">◆ ${x.odds.l} %</span><span style="color:${RAR.e.col}">◆ ${x.odds.e} %</span><span>🦸 ${x.hero} %</span></div>${Object.values(K.PACKS).filter(p => p.min === i && i > 0).map(p => `<div class="tags"><span style="background:rgba(255,210,63,.25)">🎁 ${p.n}</span></div>`).join('')}</div>`; }).join('')}</div>`;
+  }
+  async function showTop() {
+    const o = sheet('<h3>🏅 Rangliste</h3><p class="note">Lädt …</p>');
+    const r = await call('kd_top'); const pan = o.querySelector('.pan'); if (!pan) return;
+    pan.innerHTML = `<i class="grab"></i><h3>🏅 Rangliste</h3><div class="kd-gl" style="width:100%">${(r.top || []).map((x, i) => `<div style="${me() && x.n === me().name ? 'color:#ffd23f;font-weight:800' : ''}"><span>${['🥇', '🥈', '🥉'][i] || i + 1 + '.'}</span><span style="display:flex;gap:8px"><span style="flex:1">${esc(x.n)}</span><span>${K.ARENAS[K.arenaOf(x.tr)].e} <b>${x.tr}</b> 🏆</span></span></div>`).join('') + (r.me && r.me.rank > 30 ? `<div style="color:#ffd23f"><span>${r.me.rank}.</span><span>Du – <b>${r.me.tr}</b> 🏆</span></div>` : '') || '<div><span>–</span><span>Noch niemand mit Trophäen.</span></div>'}</div><button class="btn ghost" data-kdx="1" style="width:100%">Schließen</button>`;
+  }
+  function heroRefund() {
+    const s = Z.st, o = document.createElement('div'); o.className = 'kdz-hp';
+    o.innerHTML = `<div class="pn"><div style="font-size:54px">🎁</div><h2>Neustart-Geschenk</h2><p class="note" style="color:#f0e8ff">Kristallduell hat neue Regeln mit Ländern und Farben. Als Dankeschön fürs Mitspielen darfst du dir einen Helden aussuchen.</p>
+      <div class="hgrid">${Object.keys(HE).filter(id => id !== 'abent').map(id => { const H = HE[id]; return `<button class="htile" data-hpk="${id}" style="${cv(id)}"><span class="hp">${H.art}</span><b>${esc(H.n)}</b><small>⚡ ${esc(H.pow)} · alle ${H.cd} Züge</small><small>${esc(H.txt)}</small></button>`; }).join('')}</div></div>`;
+    document.body.appendChild(o);
+    o.addEventListener('click', async e => { const t = e.target.closest('[data-hpk]'); if (!t || Z.busy) return; const id = t.dataset.hpk, H = HE[id];
+      Z.busy = true; const r = await call('kd_heropick', { id }); Z.busy = false; if (r.error) { toast(r.error); return; }
+      o.remove(); Z.st = r.state; render(); if (window.KDfx) KDfx.burst([innerWidth / 2, innerHeight / 2], H.art, fc(id).col); if (window.g3confetti) g3confetti(120); toast(`${H.art} ${H.n} gehört jetzt dir!`); });
   }
   const progOf = (id, n) => { const t = RAR[C[id].r].lv, lv = K.levelOf(id, n); if (lv >= 5) return [1, 'Höchste Stufe']; const a = t[lv - 1] || 0, b = t[lv]; return [(n - a) / (b - a), `${n}/${b} für ★${lv + 1}`]; };
   function filterIds(th, ra, miss, s, onlyOwned) {
-    return Object.entries(C).filter(([id, c]) => !c.tok && (th === 'alle' || c.f === th) && (ra === 'alle' || c.r === ra) && (!miss || !(s.c[id] > 0)) && (!onlyOwned || s.c[id] > 0))
+    return Object.entries(C).filter(([id, c]) => !c.tok && c.t !== 'l' && (th === 'alle' || c.f === th) && (ra === 'alle' || c.r === ra) && (!miss || !(s.c[id] > 0)) && (!onlyOwned || s.c[id] > 0))
       .sort((a, b) => Object.keys(F).indexOf(a[1].f) - Object.keys(F).indexOf(b[1].f) || a[1].c - b[1].c || a[1].n.localeCompare(b[1].n)).map(([id]) => id);
   }
   const themeChips = (cur, attr) => `<div class="chips"><button class="${cur === 'alle' ? 'on' : ''}" ${attr}="alle">Alle</button>${Object.entries(F).map(([k, f]) => `<button class="${cur === k ? 'on' : ''}" ${attr}="${k}">${f.e} ${f.n}</button>`).join('')}</div>`;
@@ -281,10 +331,10 @@
     const ids = filterIds(Z.th, Z.ra, Z.miss, s);
     const all = filterIds(Z.th, 'alle', false, s), have = all.filter(id => s.c[id] > 0).length;
     return `<div class="box" style="display:flex;flex-direction:column;gap:8px">${themeChips(Z.th, 'data-kdzth')}
-      <div class="chips"><button class="${Z.ra === 'alle' ? 'on' : ''}" data-kdzra="alle">Jede Seltenheit</button>${Object.entries(RAR).map(([k, r]) => `<button class="${Z.ra === k ? 'on' : ''}" data-kdzra="${k}" style="color:${Z.ra === k ? '' : r.col}">◆ ${r.n}</button>`).join('')}<button class="${Z.miss ? 'on' : ''}" data-kdzmiss="1">🔒 Nur fehlende</button><button data-kdzbonp="1">🎨 Themen-Boni</button></div>
-      <span class="note">${have} von ${all.length} Karten · ✨ ${s.st} Sternenstaub zum Herstellen</span></div>
-      <h3>🦸 Helden <span class="note">(${Object.keys(s.heroes || {}).filter(h => HE[h]).length}/${Object.keys(HE).length})</span></h3><div class="hgrid">${Object.keys(HE).map(id => heroTile(id, s, false)).join('')}</div>
-      <h3>🃏 Karten</h3>
+      <div class="chips"><button class="${Z.ra === 'alle' ? 'on' : ''}" data-kdzra="alle">Jede Seltenheit</button>${Object.entries(RAR).map(([k, r]) => `<button class="${Z.ra === k ? 'on' : ''}" data-kdzra="${k}" style="color:${Z.ra === k ? '' : r.col}">◆ ${r.n}</button>`).join('')}<button class="${Z.miss ? 'on' : ''}" data-kdzmiss="1">🔒 Fehlende</button><button data-kdzbonp="1">🎨 Boni</button></div>
+      <div class="pbar"><span class="kpl">🃏 ${have}/${all.length}</span><span class="kpl">✨ ${s.st}</span>${ib('levels')}</div></div>
+      ${hd(`🦸 Helden <span class="note">${Object.keys(s.heroes || {}).filter(h => HE[h]).length}/${Object.keys(HE).length}</span>`, 'heroes')}<div class="car">${Object.keys(HE).map(id => heroTile(id, s, false)).join('')}</div>
+      ${hd('🃏 Karten')}
       <div class="grid">${ids.map(id => { const n = s.c[id] || 0, lv = K.levelOf(id, n); const [p, t] = n ? progOf(id, n) : [0, `${RAR[C[id].r].craft} ✨`];
         return `<div class="cw" data-kdzcard="${id}">${n ? `<span class="cnt">×${n}</span>` : '<span class="lock">🔒</span>'}${card(id, { lv: Math.max(1, lv), cls: n ? '' : 'miss' })}${n ? `<span class="prog"><i style="width:${p * 100}%"></i></span>` : ''}<span class="pl">${t}</span></div>`; }).join('') || '<p class="note">Keine Karten für diesen Filter.</p>'}</div>`;
   }
@@ -292,18 +342,19 @@
   function showCard(id) {
     const s = Z.st, n = s.c[id] || 0, lv = K.levelOf(id, n), R = RAR[C[id].r], max = R.lv[4];
     const o = document.createElement('div'); o.className = 'kd-pop'; o.style.zIndex = 9700;
-    o.innerHTML = `${card(id, { cls: 'big', lv: Math.max(1, lv) })}<div class="kd-rew" style="max-width:340px"><div><b style="color:${R.col};font-size:15px">◆ ${R.n}</b> · ${fc(C[id].f).e} ${fc(C[id].f).n} · höchstens ${R.max}× pro Deck</div>
+    o.innerHTML = `${card(id, { cls: 'big', lv: Math.max(1, lv) })}<div class="kd-rew" style="max-width:340px"><div class="pbar" style="justify-content:center"><span class="kpl" style="color:${R.col}">◆ ${R.n}</span><span class="kpl">${fc(C[id].f).e} ${fc(C[id].f).n}</span><span class="kpl">max. ${K.MAX_COPIES}×</span></div>
       <div>${n ? `Du besitzt <b style="font-size:15px">${n}</b> · Stufe ${'★'.repeat(lv)} (${LVTXT[lv]})` : 'Noch nicht in deiner Sammlung.'}</div>
-      ${lv < 5 ? `<div class="note">${R.lv.map((t, i) => `★${i + 1}: ${t}×`).join(' · ')}</div>` : ''}
+      ${lv < 5 ? `<div class="note">${R.lv.map((t, i) => `★${i + 1}: ${t}×`).join(' · ')} <button class="kdz-i" data-kdzi2="levels" style="width:22px;height:22px;font-size:12px">i</button></div>` : ''}
       ${n >= max ? '<div class="note">Weitere Kopien werden zu Sternenstaub (+' + R.dust + ' ✨).</div>' : ''}</div>
       ${(C[id].kw || []).length ? `<div class="kd-rew" style="max-width:340px">${C[id].kw.map(k => K.KW[k] ? `<div>${K.KW[k][0]} <b style="font-size:14px">${K.KW[k][1]}:</b> ${K.KW[k][2]}</div>` : '').join('')}</div>` : ''}
-      <div class="kd-rew" style="max-width:340px;cursor:pointer" data-kdzbonp="1"><div>${fc(C[id].f).e} Thema <b style="font-size:14px">${fc(C[id].f).n}</b> · Bonus ab ${K.BONUS_MIN} Karten: <b style="font-size:14px">${B[C[id].f][0]}</b> – ${B[C[id].f][1]}</div></div>
-      ${Z.tab === 'decks' && Z.ed && n ? (() => { const k = Z.ed.cards[id] || 0, mx = Math.min(R.max, n); return `<div class="row" style="justify-content:center;gap:8px"><span class="note">Im Deck: <b>${k}/${mx}</b></span>${k ? `<button class="btn ghost small" data-kdzpm="-1">➖ Herausnehmen</button>` : ''}${k < mx ? `<button class="btn small" data-kdzpm="1">➕ Ins Deck</button>` : ''}</div>`; })() : ''}
+      <div class="kd-rew" style="max-width:340px;cursor:pointer" data-kdzbonp="1"><div>${fc(C[id].f).e} Thema <b style="font-size:14px">${fc(C[id].f).n}</b> · ab ${K.BONUS_MIN}: <b style="font-size:14px">${B[C[id].f][0]}</b> – ${B[C[id].f][1]}</div></div>
+      ${Z.tab === 'decks' && Z.ed && n ? (() => { const k = Z.ed.cards[id] || 0, mx = Math.min(K.MAX_COPIES, n); return `<div class="row" style="justify-content:center;gap:8px"><span class="note">Im Deck: <b>${k}/${mx}</b></span>${k ? `<button class="btn ghost small" data-kdzpm="-1">➖ Herausnehmen</button>` : ''}${k < mx ? `<button class="btn small" data-kdzpm="1">➕ Ins Deck</button>` : ''}</div>`; })() : ''}
       <div class="row" style="justify-content:center;gap:8px">${n < max ? `<button class="btn" data-kdzcraft="${id}" ${s.st < R.craft ? 'disabled' : ''}>✨ Herstellen (${R.craft})</button>` : ''}<button class="btn ghost" data-kdx="1">Schließen</button></div>`;
     document.body.appendChild(o);
     o.addEventListener('click', async e => {
       if (e.target === o || e.target.closest('[data-kdx]')) { o.remove(); return; }
       if (e.target.closest('[data-kdzbonp]')) { showBonus(); return; }
+      if (e.target.closest('[data-kdzi2]')) { sheet(INFO.levels() + '<button class="btn ghost" data-kdx="1" style="width:100%">Schließen</button>'); return; }
       const pm = e.target.closest('[data-kdzpm]');
       if (pm) { o.remove(); const d = Z.ed, k = d.cards[id] || 0;
         if (pm.dataset.kdzpm === '1') { if (deckN(d.cards) >= K.DECK_SIZE) { toast(`Das Deck ist voll (${K.DECK_SIZE} Karten) – nimm erst eine Karte heraus.`); return; } d.cards[id] = k + 1; Z.just = id; }
@@ -315,17 +366,28 @@
       toast(r.up ? `✨ ${C[id].n} erreicht Stufe ${r.lv}!` : `✨ ${C[id].n} hergestellt`); showCard(id);
     });
   }
-  // Baut aus der Sammlung ein spielbares Deck: stärkstes Thema bevorzugt (für den Themen-Bonus), genug Kreaturen, nicht zu teuer
+  // Baut aus der Sammlung ein spielbares Deck: 23 Zauber in höchstens zwei Farben, dazu 17 passende Länder
   function autoDeck(own) {
-    const th = {}; for (const [id, n] of Object.entries(own)) if (C[id] && n > 0) th[C[id].f] = (th[C[id].f] || 0) + Math.min(n, RAR[C[id].r].max);
-    const rank = Object.keys(th).sort((a, b) => th[b] - th[a]), w = f => [6, 4, 2][rank.indexOf(f)] || 0;
+    const th = {}; for (const [id, n] of Object.entries(own)) if (C[id] && C[id].t !== 'l' && n > 0) th[C[id].f] = (th[C[id].f] || 0) + Math.min(n, K.MAX_COPIES);
+    const rank = Object.keys(th).sort((a, b) => th[b] - th[a]), cols = rank.slice(0, 2);
     const rv = { g: 0, s: 1, e: 2, l: 3 };
-    const score = id => w(C[id].f) + rv[C[id].r] * 1.5 + (C[id].c <= 4 ? 1 : 0);
-    const cards = {}; let n = 0, cre = 0, big = 0;
-    const add = (id, lim) => { const mx = Math.min(RAR[C[id].r].max, own[id] || 0); while ((cards[id] || 0) < mx && n < lim && !(C[id].c >= 6 && big >= 4)) { cards[id] = (cards[id] || 0) + 1; n++; if (C[id].t === 'k') cre++; if (C[id].c >= 6) big++; } };
-    const ids = Object.keys(own).filter(id => C[id] && !C[id].tok && own[id] > 0).sort((a, b) => score(b) - score(a) || C[a].c - C[b].c);
-    for (const id of ids.filter(id => C[id].t === 'k')) if (cre < 17) add(id, Math.min(K.DECK_SIZE, n + 17 - cre));
-    for (const id of ids) add(id, K.DECK_SIZE);
+    const score = id => (C[id].f === cols[0] ? 3 : 2) + rv[C[id].r] * 1.5 + (C[id].c <= 3 ? 1 : 0) + (C[id].t === 'k' ? 0.5 : 0);
+    const cards = {}; let n = 0, cre = 0, big = 0; const SP = K.DECK_SIZE - 17;
+    const add = (id, lim) => { const mx = Math.min(K.MAX_COPIES, own[id] || 0); while ((cards[id] || 0) < mx && n < lim && !(C[id].c >= 6 && big >= 3)) { cards[id] = (cards[id] || 0) + 1; n++; if (C[id].t === 'k') cre++; if (C[id].c >= 6) big++; } };
+    let ids = Object.keys(own).filter(id => C[id] && !C[id].tok && C[id].t !== 'l' && own[id] > 0 && cols.includes(C[id].f)).sort((a, b) => score(b) - score(a) || C[a].c - C[b].c);
+    for (const id of ids.filter(id => C[id].t === 'k')) if (cre < 15) add(id, Math.min(SP, n + 15 - cre));
+    for (const id of ids) add(id, SP);
+    if (n < SP) { ids = Object.keys(own).filter(id => C[id] && !C[id].tok && C[id].t !== 'l' && own[id] > 0).sort((a, b) => score(b) - score(a)); for (const id of ids) add(id, SP); }
+    return withLands(cards);
+  }
+  // füllt das Deck mit Standardländern im Verhältnis der Farbsymbole auf 40 auf
+  function withLands(cards) {
+    for (const id of Object.keys(cards)) if (C[id].t === 'l') delete cards[id];
+    const sp = deckN(cards), need = Math.max(0, K.DECK_SIZE - sp); if (!need) return cards;
+    const pipsBy = {}; for (const [id, k] of Object.entries(cards)) { const o = K.parseCost(C[id].m || ''); for (const [c, v] of Object.entries(o)) if (c !== 'gen') pipsBy[c] = (pipsBy[c] || 0) + v * k; }
+    const tot = Object.values(pipsBy).reduce((a, b) => a + b, 0) || 1, ent = Object.entries(pipsBy).sort((a, b) => b[1] - a[1]);
+    if (!ent.length) ent.push(['A', 1]);
+    let left = need; ent.forEach(([c, v], i) => { const k = i === ent.length - 1 ? left : Math.max(1, Math.round(need * v / tot)); const kk = Math.min(left, k); if (kk > 0) { cards['land_' + c] = kk; left -= kk; } });
     return cards;
   }
   const deckN = cards => Object.values(cards).reduce((a, b) => a + b, 0);
@@ -382,36 +444,38 @@
   }
   function tabDecks(s) {
     ensureEd(s);
-    const d = Z.ed, n = deckN(d.cards), cre = Object.entries(d.cards).reduce((a, [id, k]) => a + (C[id].t === 'k' ? k : 0), 0), th = K.themesOf(d.cards), err = K.checkDeck(d.cards, s.c);
-    const curve = [1, 2, 3, 4, 5, 6, 7].map(c => Object.entries(d.cards).reduce((a, [id, k]) => a + ((c === 7 ? C[id].c >= 7 : C[id].c === c) ? k : 0), 0)), mx = Math.max(4, ...curve);
-    const inDeck = Object.entries(d.cards).sort((a, b) => C[a[0]].c - C[b[0]].c || C[a[0]].n.localeCompare(C[b[0]].n));
+    const d = Z.ed, n = deckN(d.cards), isL = id => C[id] && C[id].t === 'l';
+    const lands = Object.entries(d.cards).reduce((a, [id, k]) => a + (isL(id) ? k : 0), 0), cre = Object.entries(d.cards).reduce((a, [id, k]) => a + (C[id].t === 'k' ? k : 0), 0);
+    const th = K.themesOf(d.cards), err = K.checkDeck(d.cards, s.c);
+    const curve = [1, 2, 3, 4, 5, 6, 7].map(c => Object.entries(d.cards).reduce((a, [id, k]) => a + (!isL(id) && (c === 7 ? C[id].c >= 7 : Math.max(1, C[id].c) === c) ? k : 0), 0)), mx = Math.max(4, ...curve);
+    const inDeck = Object.entries(d.cards).filter(([id]) => !isL(id)).sort((a, b) => C[a[0]].c - C[b[0]].c || C[a[0]].n.localeCompare(C[b[0]].n));
     const all = filterIds(Z.edTh, 'alle', false, s);
-    const avail = id => Math.min(RAR[C[id].r].max, s.c[id] || 0) - (d.cards[id] || 0);
+    const avail = id => Math.min(K.MAX_COPIES, s.c[id] || 0) - (d.cards[id] || 0);
     const owned = all.filter(id => s.c[id] > 0 && avail(id) > 0), locked = all.filter(id => !(s.c[id] > 0));
     const chip = (dk, i) => { const t = K.mainTheme(dk.cards); return `<button class="${i === Z.di ? 'on' : ''}" data-kdzed="${i}">${fc(t).e} ${esc(dk.n)} ${dk.err ? '⚠️' : '✅'}</button>`; };
-    return `<div class="chips">${s.decks.map(chip).join('')}${Z.di < 0 ? '<button class="on">🆕 Neues Deck</button>' : ''}${s.decks.length < 8 ? '<button data-kdzed="new">＋ Neues Deck</button>' : ''}</div>
+    const lrow = f => { const x = F[f], id = 'land_' + x.m, k = d.cards[id] || 0; return `<div class="lrow" style="${cv(f)}"><span class="la">${x.landArt}</span><span class="ln">${esc(x.land)}<small>${window.KDpips ? KDpips(x.m) : ''}</small></span><button data-kdzland="${id}" data-d="-1" ${k ? '' : 'disabled style="opacity:.3"'}>−</button><span class="n">${k}</span><button data-kdzland="${id}" data-d="1">＋</button></div>`; };
+    const usedCols = Object.keys(F).filter(f => (th[f] || 0) > 0 || d.cards['land_' + F[f].m]);
+    const showCols = Z.allLands ? Object.keys(F) : (usedCols.length ? usedCols : ['abent']);
+    return `<div class="chips">${s.decks.map(chip).join('')}${Z.di < 0 ? '<button class="on">🆕 Neues Deck</button>' : ''}${s.decks.length < 8 ? '<button data-kdzed="new">＋ Neu</button>' : ''}</div>
       <div class="box dkhead"><div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><input class="nm" data-kdzname="1" maxlength="24" value="${esc(d.n)}" style="flex:1;min-width:150px"><span class="svst note">${Z.saving === 'wait' ? '… speichert' : Z.saving === 'ok' ? '✓ gespeichert' : ''}</span>
-        <button class="btn ghost small" data-kdzauto="1" title="Füllt das Deck automatisch mit deinen besten Karten">✨ Auto</button>${d.i >= 0 ? '<button class="btn ghost small" data-kdzdel="1" title="Deck löschen">🗑</button>' : ''}</div>
-        <div class="row" style="gap:12px;flex-wrap:wrap;align-items:flex-end;margin-top:8px"><div class="stat" style="flex:1;min-width:220px"><span class="${n === K.DECK_SIZE ? 'ok' : 'bad'}">🃏 ${n}/${K.DECK_SIZE}</span><span class="${cre >= K.MIN_CRE ? 'ok' : 'bad'}">🐾 ${cre}/${K.MIN_CRE} Kreaturen</span>${Object.entries(th).sort((a, b) => b[1] - a[1]).map(([f, k]) => `<span class="${k >= K.BONUS_MIN ? 'ok' : ''}" data-kdzbonp="1" style="cursor:pointer" title="${esc(B[f][0] + ': ' + B[f][1])}">${fc(f).e} ${k}${k >= K.BONUS_MIN ? ' ✓ ' + B[f][0] : `/${K.BONUS_MIN}`}</span>`).join('')}<span data-kdzbonp="1" style="cursor:pointer;background:rgba(255,210,63,.18);color:#ffd23f">🎨 Themen-Boni ansehen</span></div>
+        <button class="btn ghost small" data-kdzauto="1">✨ Auto</button>${d.i >= 0 ? '<button class="btn ghost small" data-kdzdel="1" aria-label="Deck löschen">🗑</button>' : ''}${ib('deck')}</div>
+        <div class="row" style="gap:12px;flex-wrap:wrap;align-items:flex-end;margin-top:8px"><div class="stat" style="flex:1;min-width:220px"><span class="${n === K.DECK_SIZE ? 'ok' : 'bad'}">🃏 ${n}/${K.DECK_SIZE}</span><span>🏞️ ${lands} Länder</span><span>✨ ${n - lands} Zauber</span><span>🐾 ${cre}</span>${Object.entries(th).sort((a, b) => b[1] - a[1]).map(([f, k]) => `<span class="${k >= K.BONUS_MIN ? 'ok' : ''}" data-kdzbonp="1" style="cursor:pointer">${fc(f).e} ${k}${k >= K.BONUS_MIN ? ' ✓' : `/${K.BONUS_MIN}`}</span>`).join('')}<span data-kdzbonp="1" style="cursor:pointer;background:rgba(255,210,63,.18);color:#ffd23f">🎨 Boni</span></div>
         <div class="curve" style="width:170px;height:46px">${curve.map((k, i) => `<div><span>${k || ''}</span><i style="height:${(k / mx) * 28}px"></i>${i === 6 ? '7+' : i + 1}</div>`).join('')}</div></div>
         ${err ? `<div class="note" style="color:#ffb0b0;margin-top:6px">⚠️ ${esc(err)}</div>` : '<div class="note" style="color:#9fffc4;margin-top:6px">✅ Spielbereit</div>'}</div>
-      <h3>🃏 Dein Deck <span class="note">– antippen zum Herausnehmen · ⓘ für Details</span></h3>
+      ${hd(`🃏 Dein Deck <span class="note">${n - lands}</span>`)}
       <div class="dkrow"><div class="mgrid deck">${inDeck.map(([id, k]) => `<div class="mw ${Z.just === id ? 'just' : ''}" data-kdzrm="${id}" data-hold="${id}">${mini(id)}<span class="cnt">×${k}</span><button class="ib" data-kdzinfo="${id}" aria-label="Details">i</button></div>`).join('')}${n < K.DECK_SIZE ? `<div class="mw slot"><span>＋${K.DECK_SIZE - n}</span><small>frei</small></div>` : ''}</div>${heroSlot(d.hero)}</div>
+      ${hd(`🏞️ Länder <span class="note">${lands}</span>`, '', `<button class="btn ghost small" data-kdzlauto="1" aria-label="Länder auffüllen">⚖️ Auffüllen</button><button class="btn ghost small" data-kdzlall="1" aria-label="Alle Farben">${Z.allLands ? '➖' : '🎨 Alle'}</button>`)}
+      <div class="lands">${showCols.map(lrow).join('')}</div>
       ${themeChips(Z.edTh, 'data-kdzeth')}
-      <h3>✋ Deine Karten <span class="note">– antippen zum Hinzufügen · ⓘ für Details</span></h3>
+      ${hd('✋ Deine Karten')}
       <div class="mgrid">${owned.map(id => `<div class="mw" data-kdzadd="${id}" data-hold="${id}">${mini(id)}<span class="cnt free">${avail(id)}×</span><button class="ib" data-kdzinfo="${id}" aria-label="Details">i</button></div>`).join('') || '<p class="note" style="grid-column:1/-1">Alle passenden Karten sind schon im Deck.</p>'}</div>
-      <h3>🔒 Noch nicht gefunden <span class="note">(${locked.length}) – aus Packs oder mit ✨ Sternenstaub herstellen</span></h3>
+      ${hd(`🔒 Gesperrt <span class="note">${locked.length}</span>`)}
       <div class="mgrid">${locked.map(id => `<div class="mw lock" data-kdzcard="${id}">${mini(id, { cls: 'miss' })}<span class="lk">🔒</span></div>`).join('')}</div>`;
-  }
-  function tabLadder(s) {
-    return `<p class="note">Besiege die Gegner der Reihe nach. Jede neue Stufe gibt Funken und ein Gratis-Pack, die letzte sogar drei. Geschaffte Stufen kannst du jederzeit wiederholen.</p><div class="lad">${LADDER.map((L, i) => { const lv = i + 1, done = s.lad >= lv, open = lv <= s.lad + 1; const f = L.th[0];
-      return `<div class="lr ${done ? 'done' : ''} ${open ? '' : 'lock'}" style="${cv(f)};animation-delay:${i * 0.04}s"><span class="a">${L.art}</span><span class="i"><b>${lv}. ${esc(L.n)}</b><small>${L.th.map(t => fc(t).e).join('')} · ❤️ ${L.life} Leben · ${L.r.includes('l') ? 'mit legendären Karten' : L.r.includes('e') ? 'mit epischen Karten' : L.r.includes('s') ? 'mit seltenen Karten' : 'nur gewöhnliche Karten'}</small><small>${done ? '✅ geschafft' : `Belohnung: ${100 + lv * 30} 🪙 + ${lv === LADDER.length ? 3 : 1} Gratis-Pack${lv === LADDER.length ? 's' : ''}`}</small></span>
-        ${open ? `<button class="btn ${done ? 'ghost small' : ''}" data-kdzgo="${lv}">${done ? 'Nochmal' : '⚔️ Kämpfen'}</button>` : '<span style="font-size:22px">🔒</span>'}</div>`; }).join('')}</div>`;
   }
   // Pack öffnen mit Animation
   // Pack öffnen: Karten werden nacheinander aufgedeckt, am Ende alle zusammen gezeigt. Episch und legendär mit eigener Animation.
   const sleep = ms => new Promise(r => setTimeout(r, ms));
-  const RCOL = { g: '#e8e8f0', s: '#4aa8ff', e: '#b45cff', l: '#ffb020' };
+  const RCOL = { g: '#e8e8f0', s: '#9fc4ff', e: '#ffcc33', l: '#ff6a1a' };
   async function openPack(th) {
     if (Z.busy) return; Z.busy = true;
     const f = th === 'mix' ? { col: '#b45cff', col2: '#1f3a8a', e: '💎', n: 'Kristall' } : th === 'start' ? { col: '#ffb020', col2: '#7a2a8a', e: '🎁', n: 'Willkommens' } : fc(th);
@@ -431,7 +495,7 @@
       if (waiter) { const w = waiter; waiter = null; w(); }
     });
     const msg = o.querySelector('.msg'), pk = o.querySelector('.pk');
-    msg.textContent = r.pity ? (r.pity === 'l' ? '🧡 Glücksschutz: legendäre Karte garantiert!' : '💜 Glücksschutz: epische Karte garantiert!') : 'Tippe auf das Pack!';
+    msg.textContent = r.pity ? (r.pity === 'l' ? '🧡 Glücksschutz: mythische Karte garantiert!' : '💜 Glücksschutz: seltene Karte garantiert!') : 'Tippe auf das Pack!';
     await tap();
     // Sternschnuppe in der Farbe der besten Karte
     const best = r.hero ? 'l' : ['l', 'e', 's', 'g'].find(x => r.cards.some(c => c.r === x));
@@ -455,9 +519,9 @@
       const one = wrap.querySelector('.kd-one'), inf = wrap.querySelector('.inf'), hint = wrap.querySelector('.hint');
       await tap(); if (skip) { wrap.remove(); break; }
       hint.textContent = '';
-      if (c.r === 'e') { vortex.style.setProperty('--vc', 'rgba(180,92,255,.9)'); vortex.classList.add('on'); one.classList.remove('in'); one.classList.add('charge'); await sleep(900); }
+      if (c.r === 'e') { vortex.style.setProperty('--vc', 'rgba(255,204,51,.9)'); vortex.classList.add('on'); one.classList.remove('in'); one.classList.add('charge'); await sleep(900); }
       if (c.r === 'l') {
-        dim.classList.add('on'); vortex.style.setProperty('--vc', 'rgba(255,176,32,.95)'); vortex.classList.add('on'); one.classList.remove('in'); one.classList.add('chargeL');
+        dim.classList.add('on'); vortex.style.setProperty('--vc', 'rgba(255,106,26,.95)'); vortex.classList.add('on'); one.classList.remove('in'); one.classList.add('chargeL');
         const [cx, cy] = center(one);
         for (let k = 0; k < 26; k++) { const p = document.createElement('i'); p.className = 'cv'; const a = Math.random() * Math.PI * 2, d = 260 + Math.random() * 200; p.style.left = cx + Math.cos(a) * d + 'px'; p.style.top = cy + Math.sin(a) * d + 'px'; o.appendChild(p);
           setTimeout(() => { p.style.left = cx + 'px'; p.style.top = cy + 'px'; p.style.opacity = '0'; }, 50 + k * 30); setTimeout(() => p.remove(), 1500); }
@@ -470,7 +534,7 @@
       const at = center(one);
       if (c.r !== 'g' && window.KDfx) KDfx.burst(at, c.r === 'l' ? '🧡' : c.r === 'e' ? '💜' : '💠', R.col);
       if (c.r === 'e' || c.r === 'l') {
-        one.classList.add('pop'); const t = document.createElement('div'); t.className = 'rtx'; t.style.setProperty('--rc', R.col); t.textContent = c.r === 'l' ? 'LEGENDÄR!' : 'EPISCH!'; o.appendChild(t); setTimeout(() => t.remove(), 1900);
+        one.classList.add('pop'); const t = document.createElement('div'); t.className = 'rtx'; t.style.setProperty('--rc', R.col); t.textContent = c.r === 'l' ? 'MYTHISCH!' : 'SELTEN!'; o.appendChild(t); setTimeout(() => t.remove(), 1900);
         if (window.KDfx) setTimeout(() => KDfx.burst(at, '✦', R.col), 250);
       }
       if (c.r === 'l') { rays.classList.add('on'); if (navigator.vibrate) navigator.vibrate([80, 40, 160]); }
@@ -511,14 +575,13 @@
       const k = e.target.closest('.kdf'); if (k) { showCard(r.cards[Number(k.dataset.i)].id); return; }
       const b = e.target.closest('[data-pk]'); if (!b) return;
       if (b.dataset.pk === 'again') { o.remove(); openPack(th); }
-      else if (b.dataset.pk === 'auto') { o.remove(); Z.tab = 'decks'; Z.di = -1; Z.ed = { i: -1, n: 'Mein Deck', cards: autoDeck(Z.st.c) }; render(); saveSoon(); toast('✨ Deck gebaut und gespeichert'); }
+      else if (b.dataset.pk === 'auto') { o.remove(); Z.tab = 'decks'; Z.di = -1; Z.ed = { i: -1, n: 'Mein Deck', cards: autoDeck(Z.st.c), hero: 'abent' }; render(); saveSoon(); toast('✨ Deck gebaut und gespeichert'); }
       else o.remove();
     });
   }
   const RAD = r => RAR[r].col;
   function startGame(kind) {
-    const mode = window.KDmode ? KDmode() : 'klassisch';
-    const p = kind === 'friends' ? null : kind === 'arena' ? { arena: K.arenaOf((Z.st && Z.st.tr) || 0), mode } : { lvl: Number(kind) || 0, mode };
+    const p = kind === 'friends' ? null : kind === 'arena' ? { arena: K.arenaOf((Z.st && Z.st.tr) || 0) } : { lvl: Number(kind) || 0 };
     if (kind === 'arena' && !me()) { toast('Für Trophäenkämpfe brauchst du ein Konto.'); return; }
     close();
     if (typeof room !== 'undefined' && room && room.game === 'duell' && isHost() && p) { send({ t: 'start', bot: 1, ...p }); return; }
@@ -531,7 +594,12 @@
     const g = (a) => e.target.closest(`[${a}]`);
     let b;
     if (g('data-kdzx')) { close(); return; }
-    if ((b = g('data-kdzt'))) { Z.tab = b.dataset.kdzt; render(); if (!Z.st && me()) { await load(); render(); } return; }
+    if ((b = g('data-kdzt'))) { goTab(b.dataset.kdzt); if (!Z.st && me()) { await load(); render(); } return; }
+    if ((b = g('data-kdzi'))) { const h = INFO[b.dataset.kdzi] && INFO[b.dataset.kdzi](); if (b.dataset.kdzi === 'bonus') showBonus(); else if (h) sheet(h + '<button class="btn ghost" data-kdx="1" style="width:100%">Schließen</button>'); return; }
+    if (g('data-kdztop')) { showTop(); return; }
+    if ((b = g('data-kdzland'))) { const id = b.dataset.kdzland, d = Z.ed, k = (d.cards[id] || 0) + Number(b.dataset.d); if (k < 0) return; if (k > (d.cards[id] || 0) && deckN(d.cards) >= K.DECK_SIZE) { toast(`Das Deck ist voll (${K.DECK_SIZE}).`); return; } if (k) d.cards[id] = k; else delete d.cards[id]; Z.keepScroll = true; render(); saveSoon(); return; }
+    if (g('data-kdzlauto')) { withLands(Z.ed.cards); Z.keepScroll = true; render(); saveSoon(); toast('⚖️ Länder passend zu deinen Farben aufgefüllt'); return; }
+    if (g('data-kdzlall')) { Z.allLands = !Z.allLands; Z.keepScroll = true; render(); return; }
     if (g('data-kdzlogin')) { close(); const a = q('[data-acct="open"]'); if (a) { a.click(); a.scrollIntoView({ behavior: 'smooth', block: 'center' }); } return; }
     if ((b = g('data-kdzgo'))) { startGame(b.dataset.kdzgo); return; }
     if ((b = g('data-kdzptype'))) { const P = K.PACKS[b.dataset.kdzptype]; if ((Z.st.ar || 0) < P.min) { toast(`${P.n} gibt es ab ${K.ARENAS[P.min].e} ${K.ARENAS[P.min].n}.`); return; } Z.ptype = b.dataset.kdzptype; Z.keepScroll = true; render(); return; }
@@ -552,13 +620,14 @@
     if (g('data-kdzauto')) { const cards = autoDeck(Z.st.c); Z.ed.cards = cards; Z.keepScroll = true; render(); saveSoon(); if (deckN(cards) < K.DECK_SIZE) toast('Für ein volles Deck fehlen dir noch Karten – öffne ein paar Packs.'); else toast('✨ Deck automatisch gefüllt'); return; }
     if ((b = g('data-kdzeth'))) { Z.edTh = b.dataset.kdzeth; Z.keepScroll = true; render(); return; }
     if ((b = g('data-kdzadd'))) {
-      const id = b.dataset.kdzadd, d = Z.ed, k = d.cards[id] || 0, mx = Math.min(RAR[C[id].r].max, Z.st.c[id] || 0);
+      const id = b.dataset.kdzadd, d = Z.ed, k = d.cards[id] || 0, mx = Math.min(K.MAX_COPIES, Z.st.c[id] || 0);
       if (k >= mx) return;
       if (deckN(d.cards) >= K.DECK_SIZE) { toast(`Das Deck ist voll (${K.DECK_SIZE} Karten) – nimm oben erst eine Karte heraus.`); return; }
       d.cards[id] = k + 1; Z.just = id; Z.keepScroll = true; render(); Z.just = null; saveSoon(); return;
     }
     if ((b = g('data-kdzrm'))) { const id = b.dataset.kdzrm, d = Z.ed; if (d.cards[id] > 1) d.cards[id]--; else delete d.cards[id]; Z.keepScroll = true; render(); saveSoon(); return; }
-    if (g('data-kdzdel')) { if (!confirm(`Deck „${Z.ed.n}“ wirklich löschen?`)) return; const r = await call('kd_deck_del', { i: Z.ed.i }); if (r.error) { toast(r.error); return; } Z.ed = null; Z.di = 0; setState(r.state); return; }
+    if (g('data-kdzdel')) { const o = sheet(`<h3>🗑 Deck löschen?</h3><span class="kd-pill warn">„${esc(Z.ed.n)}“ ist danach weg.</span><div class="bigbtns"><button class="btn atk" data-y="1">🗑 Löschen</button><button class="btn ghost" data-kdx="1">Abbrechen</button></div>`);
+      o.addEventListener('click', async ev => { if (!ev.target.closest('[data-y]')) return; o.remove(); const r = await call('kd_deck_del', { i: Z.ed.i }); if (r.error) { toast(r.error); return; } Z.ed = null; Z.di = 0; setState(r.state); }); return; }
   });
   // Gedrückt halten: Kartendetails
   let holdT = null, held = false;
@@ -568,5 +637,12 @@
   document.addEventListener('contextmenu', e => { if (e.target.closest && e.target.closest('#kdz [data-hold]')) e.preventDefault(); });
   document.addEventListener('input', e => { if (e.target.matches && e.target.matches('#kdz [data-kdzname]') && Z.ed) { Z.ed.n = e.target.value; saveSoon(); } });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && q('#kdz') && !q('#kdpk') && !q('.kd-pop')) close(); });
+  function goTab(t) { const a = TABS.findIndex(x => x[0] === Z.tab), b = TABS.findIndex(x => x[0] === t); if (a === b) return; Z.swipe = b > a ? 'swl' : 'swr'; Z.tab = t; render(); const zb = q('#kdz .zb'); if (zb) zb.scrollTop = 0; afterTab(); }
+  function afterTab() { const c = q('#kdz [data-cur-ar]'); if (c) c.scrollIntoView({ inline: 'center', block: 'nearest' }); }
+  let sx = null, sy = null, sOk = false;
+  document.addEventListener('touchstart', e => { const z = e.target.closest && e.target.closest('#kdz .zb'); sOk = !!z && !e.target.closest('.car,input,.mgrid.deck .mw'); if (!sOk) return; sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
+  document.addEventListener('touchend', e => { if (!sOk || sx == null || q('#kdpk') || q('.kd-sheet') || q('.kd-pop')) { sx = null; return; } const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy; sx = null;
+    if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.8) { const i = TABS.findIndex(x => x[0] === Z.tab), j = i + (dx < 0 ? 1 : -1); if (j >= 0 && j < TABS.length) goTab(TABS[j][0]); } }, { passive: true });
+  document.addEventListener('scroll', e => { const c = e.target; if (!c.matches || !c.matches('#kdz .car')) return; const d = c.nextElementSibling; if (!d || !d.classList.contains('dots')) return; const kids = [...c.children], mid = c.scrollLeft + c.clientWidth / 2; let bi = 0, bd = 1e9; kids.forEach((k, i) => { const m = k.offsetLeft + k.offsetWidth / 2, dd = Math.abs(m - mid); if (dd < bd) { bd = dd; bi = i; } }); [...d.children].forEach((x, i) => x.classList.toggle('on', i === bi)); }, true);
   window.KDZ = { pending: null, open, close };
 })();
