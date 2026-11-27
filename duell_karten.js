@@ -396,6 +396,8 @@
      ['Prisma', 'f_levi*1 n_gruft*1 f_orakel*1 n_morgul*1 f_magier*2 n_vampir*2 f_hai*3 n_fresser*3 f_pirat*3 n_fluch*3 f_welle*3 n_hexe*3 f_frost*2 n_faenger*2'],
      ['Drachenthron', 'g_krieger*3 w_hirsch*3 g_berserk*3 w_baer*3 g_drache*2 w_riese*2 g_titan*2 w_brakka*1 g_phoenix2*1 g_ignar*1 g_stoss*3 w_peitsche*3 w_herde*2 g_rausch*1']],
   ].map(list => list.map(([n, str]) => ({ n, cards: to40(D(str)) })));
-  const out = { parseCost, cmc, COLORS, MAX_COPIES, to40, MODES, ARENAS, arenaOf, PACKS, BOTDECKS, HEROES, HERO_P, LADDER, PACK, F, KW, C, DECKS, B, BONUS_MIN, RAR, levelOf, checkDeck, themesOf, bonusesOf, mainTheme, DECK_SIZE, MIN_CRE };
+  // Funken pro Sieg im Trophäenkampf: 25, je Kampfgebiet +5 (außer in Gebieten, die ein neues Pack freischalten), höchstens 50
+  const winCoins = ai => { let v = 25; for (let i = 1; i <= ai; i++) if (!Object.values(PACKS).some(p => p.min === i)) v += 5; return Math.min(50, v); };
+  const out = { winCoins, parseCost, cmc, COLORS, MAX_COPIES, to40, MODES, ARENAS, arenaOf, PACKS, BOTDECKS, HEROES, HERO_P, LADDER, PACK, F, KW, C, DECKS, B, BONUS_MIN, RAR, levelOf, checkDeck, themesOf, bonusesOf, mainTheme, DECK_SIZE, MIN_CRE };
   if (typeof module !== 'undefined' && module.exports) module.exports = out; else window.DuellKarten = out;
 })();

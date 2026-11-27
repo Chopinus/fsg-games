@@ -134,7 +134,7 @@ function reward(acc, info) {
   } else if (info.arena == null) {
     if (info.win) { k.dbw++; const v = k.dbw <= 12 ? 20 + 3 * (info.lvl || 0) : 5; f += v; lines.push(`Sieg gegen den Bot: +${v}`); }
     else { f += 5; lines.push('Duell gespielt: +5'); }
-  }
+  } else if (info.win) { const v = K.winCoins(info.arena); f += v; lines.push(`Sieg im Trophäenkampf: +${v}`); }
   if (info.win && !k.dfw) { k.dfw = true; f += FIRST_WIN; lines.push(`Erster Sieg des Tages: +${FIRST_WIN}`); }
   // Trophäen: Trophäenkämpfe gegen Bots und alle Duelle gegen echte Spieler
   let trd = 0, newArena = null;
