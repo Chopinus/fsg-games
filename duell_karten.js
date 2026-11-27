@@ -221,7 +221,7 @@
     wild: { n: 'Waldkönig Ur', art: '🧔', pow: 'Urwuchs', cd: 3, e: { k: 'buff', a: 1, h: 1, tg: 'own', kw: ['durch'] }, txt: 'Eine eigene Kreatur bekommt dauerhaft +1/+1 und Trampelschaden.' },
     flut: { n: 'Meereskaiserin Nerea', art: '🧜‍♀️', pow: 'Gezeitenbann', cd: 3, e: { k: 'freeze', tg: 'ecre', draw: 1 }, txt: 'Friere eine gegnerische Kreatur ein und ziehe 1 Karte.' },
     nacht: { n: 'Nekromant Morvan', art: '🧛‍♂️', pow: 'Seelenraub', cd: 3, e: { k: 'drain', n: 3 }, txt: '3 Schaden an den Gegner, du heilst dich um 3.' },
-    licht: { n: 'Hohepriesterin Lumen', art: '🧝‍♀️', pow: 'Heiliger Schutz', cd: 3, e: { k: 'shieldAll', heal: 3 }, txt: 'Alle deine Kreaturen bekommen Schild, du heilst dich um 3.' },
+    licht: { n: 'Hohepriesterin Lumen', art: '🧝‍♀️', pow: 'Heiliger Schutz', cd: 3, e: { k: 'shieldAll', heal: 2 }, txt: 'Alle deine Kreaturen bekommen Schild, du heilst dich um 2.' },
   };
   const HERO_P = 0.01; // pro Pack
 
