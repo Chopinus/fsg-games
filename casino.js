@@ -274,7 +274,8 @@ const SLOT = {
   act(r, x, a) {
     if (a.type !== 'spin') return;
     const bet = clampChips(a.amount); if (bet < 10) return 'Mindesteinsatz 10.'; if (bet > x.chips) return 'Nicht genug Jetons.'; if (bet > limOf(x)) return limMsg(x);
-    x.chips -= bet; let res = SLOT.spin(bet); if (res.pay > 0 && malus(x) && Math.random() < .79) res = SLOT.spin(bet); // halbiert die Gewinnquote x.chips = clampChips(x.chips + res.pay); x.win = res.pay - bet;
+    x.chips -= bet; let res = SLOT.spin(bet); if (res.pay > 0 && malus(x) && Math.random() < .79) res = SLOT.spin(bet);
+    x.chips = clampChips(x.chips + res.pay); x.win = res.pay - bet;
     x.slot = { id: (x.slot ? x.slot.id : 0) + 1, ...res, bet };
     if (res.pay >= bet * 15) log(r.state, `${x.name} knackt den Automaten: ${res.pay.toLocaleString('de-DE')}!`);
   },
