@@ -417,19 +417,25 @@ function botBlock(s) {
       if (two.length === 2 && two[0].a + two[1].a >= hpLeft(a) && (s.smart || incoming >= P.life)) { use(two[0], a); use(two[1], a); incoming -= a.a; }
       continue;
     }
-    const best = opts.find(b => kills(b, a) && !kills(a, b)) || opts.find(b => !kills(a, b)) || opts.find(b => kills(b, a) && crVal(a) >= crVal(b) + 1);
+    const byVal = opts.slice().sort((x, y) => crVal(x) - crVal(y));
+    const best = byVal.find(b => kills(b, a) && !kills(a, b)) || byVal.find(b => !kills(a, b)) || byVal.find(b => kills(b, a) && crVal(a) >= crVal(b)); // guter Block, sonst fairer Tausch
     if (best) { use(best, a); incoming -= a.a; continue; }
     if (s.smart) {
       const two = opts.filter(b => !uses[b.u]).sort((x, y) => y.a - x.a).slice(0, 2);
       if (two.length === 2 && two[0].a + two[1].a >= hpLeft(a) && !a.shield && crVal(a) >= Math.min(crVal(two[0]), crVal(two[1])) + 2) { use(two[0], a); use(two[1], a); incoming -= a.a; }
     }
   }
-  if (incoming >= P.life) for (const a of atts) { // Notfall
-    if (pairs.some(([, x]) => x === a.u) || has(a, 'bedroh')) continue;
-    const b = free.filter(x => canUse(x) && canBlock(x, a)).sort((x, y) => crVal(x) - crVal(y))[0];
-    if (b) { use(b, a); incoming -= a.a; if (incoming < P.life) break; }
+  const must = new Set(); // Blocks, die das Überleben sichern – die lässt auch ein schwacher Bot nicht weg
+  const danger = () => incoming >= P.life || P.life - incoming <= 5 || incoming >= Math.ceil(P.life * 0.6);
+  for (const a of atts) { // viel Schaden oder tödlich: auch Kreaturen opfern, die größten Angreifer zuerst
+    if (!danger()) break;
+    if (pairs.some(([, x]) => x === a.u) || has(a, 'bedroh') || a.a <= 0) continue;
+    const lethal = incoming >= P.life;
+    const b = free.filter(x => canUse(x) && canBlock(x, a) && (lethal || kills(x, a) || crVal(x) <= crVal(a) + 1 || x.a === 0)).sort((x, y) => crVal(x) - crVal(y))[0];
+    if (b) { use(b, a); if (lethal || s.smart) must.add(b.u + ':' + a.u); incoming -= a.a; }
   }
-  let bl = s.dumb ? pairs.filter(() => Math.random() >= s.dumb) : pairs;
+  for (const [b, a] of pairs) if (incoming >= P.life) must.add(b + ':' + a);
+  let bl = s.dumb ? pairs.filter(([b, a]) => must.has(b + ':' + a) || Math.random() >= s.dumb) : pairs;
   for (const u of s.atk) { const A = findCre(s, u); if (A && has(A, 'bedroh') && bl.filter(([, a]) => a === u).length === 1) bl = bl.filter(([, a]) => a !== u); }
   s.bl = bl;
   if (s.bl.length) log(s, `${s.nm[BOT]} blockt${s.bl.length > 1 ? ` (${s.bl.length} Blocks)` : ''}.`);
