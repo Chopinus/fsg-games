@@ -254,7 +254,6 @@
       <div class="zb ${Z.swipe || ''}"><div class="wrap">${body()}</div></div><nav class="tabs">${TABS.map(([k, e, n]) => `<button class="${Z.tab === k ? 'on' : ''}" data-kdzt="${k}"><i>${e}</i>${n}${k === 'packs' && s && (s.free || Object.values(s.fp || {}).some(x => x > 0)) ? '<span class="dot"></span>' : ''}</button>`).join('')}</nav>`;
     Z.swipe = '';
     const zb = el.querySelector('.zb'); if (zb && Z.keepScroll) zb.scrollTop = sc; Z.keepScroll = false;
-    if (s && s.heroPick && !q('.kdz-hp')) heroRefund();
   }
   const needLogin = what => `<div class="box center"><div style="font-size:44px">🔐</div><p>Melde dich an, um ${what}.</p><button class="btn" data-kdzlogin="1">Anmelden</button></div>`;
   function body() {
@@ -312,15 +311,7 @@
     const r = await call('kd_top'); const pan = o.querySelector('.pan'); if (!pan) return;
     pan.innerHTML = `<i class="grab"></i><h3>🏅 Rangliste</h3><div class="kd-gl" style="width:100%">${(r.top || []).map((x, i) => `<div style="${me() && x.n === me().name ? 'color:#ffd23f;font-weight:800' : ''}"><span>${['🥇', '🥈', '🥉'][i] || i + 1 + '.'}</span><span style="display:flex;gap:8px"><span style="flex:1">${esc(x.n)}</span><span>${K.ARENAS[K.arenaOf(x.tr)].e} <b>${x.tr}</b> 🏆</span></span></div>`).join('') + (r.me && r.me.rank > 30 ? `<div style="color:#ffd23f"><span>${r.me.rank}.</span><span>Du – <b>${r.me.tr}</b> 🏆</span></div>` : '') || '<div><span>–</span><span>Noch niemand mit Trophäen.</span></div>'}</div><button class="btn ghost" data-kdx="1" style="width:100%">Schließen</button>`;
   }
-  function heroRefund() {
-    const s = Z.st, o = document.createElement('div'); o.className = 'kdz-hp';
-    o.innerHTML = `<div class="pn"><div style="font-size:54px">🎁</div><h2>Neustart-Geschenk</h2><p class="note" style="color:#f0e8ff">Kristallduell hat neue Regeln mit Ländern und Farben. Als Dankeschön fürs Mitspielen darfst du dir einen Helden aussuchen.</p>
-      <div class="hgrid">${Object.keys(HE).filter(id => id !== 'abent').map(id => { const H = HE[id]; return `<button class="htile" data-hpk="${id}" style="${cv(id)}"><span class="hp">${H.art}</span><b>${esc(H.n)}</b><small>⚡ ${esc(H.pow)} · alle ${H.cd} Züge</small><small>${esc(H.txt)}</small></button>`; }).join('')}</div></div>`;
-    document.body.appendChild(o);
-    o.addEventListener('click', async e => { const t = e.target.closest('[data-hpk]'); if (!t || Z.busy) return; const id = t.dataset.hpk, H = HE[id];
-      Z.busy = true; const r = await call('kd_heropick', { id }); Z.busy = false; if (r.error) { toast(r.error); return; }
-      o.remove(); Z.st = r.state; render(); if (window.KDfx) KDfx.burst([innerWidth / 2, innerHeight / 2], H.art, fc(id).col); if (window.g3confetti) g3confetti(120); toast(`${H.art} ${H.n} gehört jetzt dir!`); });
-  }
+
   const progOf = (id, n) => { const t = RAR[C[id].r].lv, lv = K.levelOf(id, n); if (lv >= 5) return [1, 'Höchste Stufe']; const a = t[lv - 1] || 0, b = t[lv]; return [(n - a) / (b - a), `${n}/${b} für ★${lv + 1}`]; };
   function filterIds(th, ra, miss, s, onlyOwned) {
     return Object.entries(C).filter(([id, c]) => !c.tok && c.t !== 'l' && (th === 'alle' || c.f === th) && (ra === 'alle' || c.r === ra) && (!miss || !(s.c[id] > 0)) && (!onlyOwned || s.c[id] > 0))

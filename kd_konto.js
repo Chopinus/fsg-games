@@ -17,13 +17,18 @@ const Q_REWARD = 60, FIRST_WIN = 60;
 
 // Start: jeder besitzt das Abenteuer-Startdeck (40 Karten, Grundländer gehören ohnehin allen) und den Abenteuer-Helden.
 const START_DECK = DECKS.abent, START_NAME = 'Abenteuer-Startdeck';
-const fresh = () => ({ v: 8, tr: 0, trMax: 0, road: 0, fp: {}, heroes: { abent: 1 }, c: Object.fromEntries(Object.entries(START_DECK).filter(([id]) => C[id].t !== 'l')), welcome: 0, f: 300, st: 0, pe: 0, pl: 0, free: 0,
-  decks: [{ n: START_NAME, cards: { ...START_DECK }, hero: 'abent' }], lad: 0, packs: 0, d: '', dq: [], dbw: 0, dpw: 0, dfw: false, heroPick: 0 });
+const fresh = () => ({ v: 9, tr: 0, trMax: 0, road: 0, fp: {}, heroes: { abent: 1 }, c: Object.fromEntries(Object.entries(START_DECK).filter(([id]) => C[id].t !== 'l')), welcome: 0, f: 300, st: 0, pe: 0, pl: 0, free: 0,
+  decks: [{ n: START_NAME, cards: { ...START_DECK }, hero: 'abent' }], lad: 0, packs: 0, d: '', dq: [], dbw: 0, dpw: 0, dfw: false });
 function init(acc) {
   if (!acc.kd) acc.kd = fresh();
-  if ((acc.kd.v || 0) < 8) { // Umbau auf Länder und 40-Karten-Decks: alle starten neu. Wer in der Bot-Leiter Stufe 6 geschafft hat, darf sich einen Helden aussuchen.
-    const old = acc.kd, vet = (old.lad || 0) >= 6 || (old.trMax || 0) >= 900;
-    acc.kd = fresh(); if (vet) acc.kd.heroPick = 1;
+  if ((acc.kd.v || 0) < 8) { // Umbau auf Länder und 40-Karten-Decks: alle starten neu. 
+    acc.kd = fresh();
+  }
+  if ((acc.kd.v || 0) < 9) { // Helden-Auswahl zurückgenommen: frei gewählte Helden wieder entfernen
+    const k = acc.kd; k.v = 9;
+    if (!k.heroPick && (k.packs || 0) <= 15) for (const h of Object.keys(k.heroes || {})) if (h !== 'abent') delete k.heroes[h];
+    delete k.heroPick;
+    for (const d of k.decks || []) if (d.hero && !k.heroes[d.hero]) d.hero = 'abent';
   }
   const k = acc.kd, d = day();
   if (k.d !== d) { // neuer Tag: neue Aufgaben
@@ -38,7 +43,7 @@ const levels = acc => { const k = init(acc), out = {}; for (const [id, n] of Obj
 const deckList = acc => init(acc).decks.map(d => ({ n: d.n, cards: d.cards, hero: d.hero && (acc.kd.heroes || {})[d.hero] ? d.hero : null, err: K.checkDeck(d.cards, acc.kd.c) }));
 function state(acc) {
   const k = init(acc);
-  return { c: k.c, heroPick: k.heroPick || 0, heroes: k.heroes || {}, welcome: k.welcome || 0, f: k.f, st: k.st, pe: k.pe, pl: k.pl, free: k.free, fp: k.fp || {}, tr: k.tr || 0, trMax: k.trMax || 0, ar: K.arenaOf(k.trMax || 0), lad: k.lad, packs: k.packs, decks: deckList(acc), dq: k.dq, dfw: k.dfw };
+  return { c: k.c, heroPick: 0, heroes: k.heroes || {}, welcome: k.welcome || 0, f: k.f, st: k.st, pe: k.pe, pl: k.pl, free: k.free, fp: k.fp || {}, tr: k.tr || 0, trMax: k.trMax || 0, ar: K.arenaOf(k.trMax || 0), lad: k.lad, packs: k.packs, decks: deckList(acc), dq: k.dq, dfw: k.dfw };
 }
 function rollRarity(o) { o = o || PACK.odds; t = o.g + o.s + o.e + o.l; let x = Math.random() * t; for (const r of ['l', 'e', 's', 'g']) { if (x < o[r]) return r; x -= o[r]; } return 'g'; }
 function pickCard(th, r, own, taken, cre) {
@@ -172,12 +177,10 @@ function reward(acc, info) {
 
 function action(action, acc, body) {
   if (action === 'kd_state') return [200, state(acc)];
-  if (action === 'kd_heropick') { const k = init(acc), id = String(body.id || ''); if (!k.heroPick) return [400, { error: 'Du hast deinen Helden schon gewählt.' }]; if (!K.HEROES[id] || id === 'abent') return [400, { error: 'Diesen Helden gibt es nicht.' }];
-    k.heroes[id] = 1; k.heroPick = 0; return [200, { id, state: state(acc) }]; }
   if (action === 'kd_pack') return openPack(acc, String(body.th || 'mix'), String(body.type || 'klein'));
   if (action === 'kd_craft') return craft(acc, String(body.id || ''));
   if (action === 'kd_deck_save') return saveDeck(acc, body);
   if (action === 'kd_deck_del') return delDeck(acc, Number(body.i));
   return [404, { error: 'Unbekannt' }];
 }
-module.exports = { action, reward, levels, deckList, init, ACTIONS: ['kd_heropick', 'kd_state', 'kd_pack', 'kd_craft', 'kd_deck_save', 'kd_deck_del'] };
+module.exports = { action, reward, levels, deckList, init, ACTIONS: ['kd_state', 'kd_pack', 'kd_craft', 'kd_deck_save', 'kd_deck_del'] };

@@ -216,12 +216,12 @@
   // Helden: eigener großer Platz im Deck (nicht Teil der 30 Karten). Heldenkraft einsetzbar, wenn die Abklingzeit (in eigenen Zügen) vorbei ist.
   // Sammeln: 1 % Chance pro Themenpack auf den Helden des Themas. Den Abenteuer-Helden hat jeder von Anfang an.
   const HEROES = {
-    abent: { n: 'Hauptmann Aldric', art: '🦸‍♂️', pow: 'Schwerthieb', cd: 2, e: { k: 'dmg', n: 2, tg: 'any' }, txt: '2 Schaden an ein beliebiges Ziel.' },
+    abent: { n: 'Hauptmann Aldric', art: '🦸‍♂️', pow: 'Schwerthieb', cd: 3, e: { k: 'dmg', n: 2, tg: 'any' }, txt: '2 Schaden an ein beliebiges Ziel.' },
     glut: { n: 'Flammenkönigin Pyra', art: '👸', pow: 'Feuerregen', cd: 3, e: { k: 'dmgAll', n: 1, side: 'foe', face: 2 }, txt: '1 Schaden an alle gegnerischen Kreaturen und 2 an den Gegner.' },
-    wild: { n: 'Waldkönig Ur', art: '🧔', pow: 'Urwuchs', cd: 2, e: { k: 'buff', a: 2, h: 2, tg: 'own' }, txt: 'Eine eigene Kreatur bekommt dauerhaft +2/+2.' },
+    wild: { n: 'Waldkönig Ur', art: '🧔', pow: 'Urwuchs', cd: 3, e: { k: 'buff', a: 1, h: 1, tg: 'own', kw: ['durch'] }, txt: 'Eine eigene Kreatur bekommt dauerhaft +1/+1 und Trampelschaden.' },
     flut: { n: 'Meereskaiserin Nerea', art: '🧜‍♀️', pow: 'Gezeitenbann', cd: 3, e: { k: 'freeze', tg: 'ecre', draw: 1 }, txt: 'Friere eine gegnerische Kreatur ein und ziehe 1 Karte.' },
     nacht: { n: 'Nekromant Morvan', art: '🧛‍♂️', pow: 'Seelenraub', cd: 3, e: { k: 'drain', n: 3 }, txt: '3 Schaden an den Gegner, du heilst dich um 3.' },
-    licht: { n: 'Hohepriesterin Lumen', art: '🧝‍♀️', pow: 'Heiliger Schutz', cd: 4, e: { k: 'shieldAll', heal: 3 }, txt: 'Alle deine Kreaturen bekommen Schild, du heilst dich um 3.' },
+    licht: { n: 'Hohepriesterin Lumen', art: '🧝‍♀️', pow: 'Heiliger Schutz', cd: 3, e: { k: 'shieldAll', heal: 3 }, txt: 'Alle deine Kreaturen bekommen Schild, du heilst dich um 3.' },
   };
   const HERO_P = 0.01; // pro Pack
 
