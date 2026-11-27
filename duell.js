@@ -268,11 +268,14 @@ function resolve(r) {
       if (has(A, 'durch') && left > 0) dealt += hitFace(s, foe, left, A.u);
       if (has(A, 'saug')) heal(s, pid, dealt);
     };
-    const bStrike = B => { if (!alive(B) || done.has(B.u)) return; done.add(B.u); const n = hitCre(s, A, B.a, B); if (has(B, 'saug')) heal(s, foe, n); };
-    if (has(A, 'erst') && alive(A)) aStrike(); // Erstschlag
-    for (const B of Bs) if (has(B, 'erst')) bStrike(B);
-    if (!has(A, 'erst') && alive(A)) aStrike();
-    for (const B of Bs) if (!has(B, 'erst')) bStrike(B);
+    const bStrike = B => { if (done.has(B.u)) return; done.add(B.u); const n = hitCre(s, A, B.a, B); if (has(B, 'saug')) heal(s, foe, n); };
+    // 1. Erstschlag-Schritt
+    if (has(A, 'erst') && alive(A)) aStrike();
+    for (const B of Bs) if (has(B, 'erst') && alive(B)) bStrike(B);
+    // 2. normaler Schaden: alle, die jetzt noch leben, teilen GLEICHZEITIG aus
+    const aGo = !has(A, 'erst') && alive(A), bGo = Bs.filter(B => !has(B, 'erst') && alive(B));
+    if (aGo) aStrike();
+    for (const B of bGo) bStrike(B);
   }
   s.atk = []; s.bl = [];
   if (s.phase !== 'end') s.phase = 'main';
