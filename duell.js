@@ -455,15 +455,17 @@ function botMull(P) { const lands = P.hand.filter(h => C[h.id].t === 'l').length
 
 /* ---------- Decks ---------- */
 function deckOptions(r, pid) {
-  const out = Object.keys(DECKS).map(f => ({ id: 'base:' + f, n: 'Grunddeck ' + F[f].n, th: f, bon: K.bonusesOf(DECKS[f]), hero: f === 'abent' ? 'abent' : null }));
-  const acc = API && API.accOf(pid);
+  // Keine Leihdecks: nur eigene Decks. Ohne Konto (oder ohne Deck) gibt es nur das Abenteuer-Startdeck.
+  const out = [], acc = API && API.accOf(pid);
   if (acc) (API.decks(acc) || []).forEach((d, i) => out.push({ id: 'my:' + i, n: d.n, hero: d.hero || null, th: K.mainTheme(d.cards), bon: K.bonusesOf(d.cards), ok: !d.err, err: d.err || null, mine: 1 }));
+  if (!out.some(o => o.ok)) out.push({ id: 'base:abent', n: 'Abenteuer-Startdeck', th: 'abent', bon: K.bonusesOf(DECKS.abent), hero: 'abent', mine: 1 });
   return out;
 }
 function setDeck(r, pid, id) {
   const s = r.state, P = s.pl[pid];
   let cards = null, name = '', hero = null;
-  if (id === 'zufall') id = 'base:' + (k => k[Math.floor(Math.random() * k.length)])(Object.keys(DECKS));
+  if (id === 'zufall') id = pid === BOT ? 'base:' + (k => k[Math.floor(Math.random() * k.length)])(Object.keys(DECKS)) : ((s.opts[pid] || []).find(o => o.ok !== false) || { id: 'base:abent' }).id;
+  if (pid !== BOT && id.startsWith('base:') && !(s.opts[pid] || []).some(o => o.id === id)) return 'Leihdecks gibt es nicht mehr – spiel mit deinem eigenen Deck.';
   if (id.startsWith('base:') && DECKS[id.slice(5)]) { cards = DECKS[id.slice(5)]; name = 'Grunddeck ' + F[id.slice(5)].n; if (id === 'base:abent') hero = 'abent'; }
   else if (id.startsWith('my:') && API) {
     const acc = API.accOf(pid), d = acc && (API.decks(acc) || [])[Number(id.slice(3))];

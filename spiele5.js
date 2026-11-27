@@ -389,7 +389,7 @@
     stage.innerHTML = `<div class="kd"><div class="kd-phase" style="justify-content:center"><span class="kd-pill me">⚔️ Deck wählen</span><span class="kd-pill">Gegner: ${foeTxt}</span>${v.left != null ? '<span class="kd-pill">⏱ <span data-cd></span></span>' : ''}</div>
       ${!v.mine ? '<p class="status">Die Spieler wählen ihre Decks …</p>' : mineF ? `<p class="status">✅ Deck gewählt${foeF ? '' : ` – warte auf ${esc(v.nm[v.foe])}`}</p>` : `
       ${my.length ? `<div class="kd-decks">${my.map(dk).join('')}</div>` : ''}
-      <div class="kd-phase" style="justify-content:center;margin-top:10px"><span class="kd-pill">🃏 Leihdecks</span></div><div class="kd-decks" style="margin-top:8px">${base.map(dk).join('')}</div>`}</div>`;
+      ${base.length ? `<div class="kd-decks" style="margin-top:8px">${base.map(dk).join('')}</div>` : ''}${my.some(o => o.id === 'base:abent') && window.KDZ ? '<div class="kd-phase" style="justify-content:center;margin-top:10px"><button class="btn ghost small" data-kdz="decks">📦 Eigenes Deck bauen</button></div>' : ''}`}</div>`;
   }
   function banner(t) { const b = document.createElement('div'); b.className = 'kd-banner'; b.style.fontSize = 'clamp(28px,7vw,54px)'; b.textContent = t; document.body.appendChild(b); setTimeout(() => b.remove(), 1700); }
   const PT = { glut: ['🔥', '#ff5a3d'], wild: ['🍃', '#3ec46d'], flut: ['💧', '#3aa8ff'], nacht: ['🟣', '#a45cff'], licht: ['✨', '#f5c542'], abent: ['⭐', '#e0a050'] };
