@@ -934,6 +934,11 @@ async function handle(action, body, ip) {
     if (action === 'wd_guess' && !wasWin && res[1] && res[1].win) HUB.event(acc, 'wortle', 1, markDirty);
     return res;
   }
+  if (action === 'kd_top') { // Kristallduell: Trophäen-Rangliste (öffentlich)
+    const list = Object.values(accounts).filter(a => a && a.kd && (a.kd.tr || 0) > 0).map(a => ({ n: a.name, tr: a.kd.tr || 0 })).sort((x, y) => y.tr - x.tr);
+    const me = acc ? list.findIndex(x => x.n === acc.name) : -1;
+    return [200, { top: list.slice(0, 30), me: me >= 0 ? { rank: me + 1, tr: list[me].tr } : null, n: list.length }];
+  }
   if (KD.ACTIONS.includes(action)) { // Kristallduell
     if (!acc || !(acc.tokens || []).includes(sha256(String(body.token || '')))) return [401, { error: 'Melde dich im Game Hub an, um Karten zu sammeln.' }];
     const res = KD.action(action, acc, body); if (res[0] === 200) markDirty(); return res;

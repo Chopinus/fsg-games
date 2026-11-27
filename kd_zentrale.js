@@ -82,6 +82,18 @@
   .htile .st{margin-top:4px;font-size:11px;font-weight:800;background:rgba(0,0,0,.35);border-radius:8px;padding:2px 8px}
   .htile.on{border-color:#ffd23f;box-shadow:0 0 0 2px #ffd23f,0 0 20px rgba(255,210,63,.6)}
   .htile.lock{filter:grayscale(.85) brightness(.55)}
+  #kdz .arhero{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:18px;border-radius:22px;background:radial-gradient(circle at 15% 30%,color-mix(in srgb,var(--c1) 55%,transparent),transparent 60%),linear-gradient(135deg,var(--c2),#120c22);border:2px solid color-mix(in srgb,var(--c1) 70%,#fff);box-shadow:0 0 30px color-mix(in srgb,var(--c1) 30%,transparent)}
+  #kdz .arhero .ae{font-size:72px;filter:drop-shadow(0 6px 12px rgba(0,0,0,.5));animation:kdbob 3s ease-in-out infinite}
+  #kdz .arhero .ai{flex:1;min-width:200px;display:flex;flex-direction:column;gap:4px} #kdz .arhero .ai b{font:400 30px var(--display)} #kdz .arhero small{color:#e8e0ff;opacity:.85}
+  #kdz .arhero .trn{font:800 26px var(--body);color:#ffd23f}
+  #kdz .trbar{height:12px;border-radius:6px;background:rgba(0,0,0,.4);overflow:hidden} #kdz .trbar i{display:block;height:100%;background:linear-gradient(90deg,#ffd23f,#ff8a3d);box-shadow:0 0 10px #ffb020}
+  #kdz .btn.big{font-size:20px;padding:14px 26px}
+  #kdz .arpath{display:flex;flex-direction:column;gap:8px}
+  #kdz .arr{position:relative;display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:16px;background:linear-gradient(90deg,color-mix(in srgb,var(--c1) 30%,#1d1830),#1d1830);border:1px solid rgba(255,255,255,.1);animation:kdzoom .4s both}
+  #kdz .arr .ae{font-size:34px;width:46px;text-align:center} #kdz .arr .ai{flex:1;min-width:0} #kdz .arr .ai b{display:block} #kdz .arr small{display:block;color:var(--muted);font-size:12px}
+  #kdz .arr.lock{filter:grayscale(.7) brightness(.6)} #kdz .arr.cur{border:2px solid #ffd23f;box-shadow:0 0 18px rgba(255,210,63,.4)}
+  #kdz .arr .here{font-size:11px;font-weight:800;background:#ffd23f;color:#2a1a00;padding:3px 8px;border-radius:8px;white-space:nowrap}
+  .kdz-pack.gross{border-width:3px} .kdz-pack.koenig{border:3px solid #b45cff;box-shadow:0 0 22px rgba(180,92,255,.5)} .kdz-pack.legende{border:3px solid #ffb020;box-shadow:0 0 28px rgba(255,176,32,.6)}
   #kdz .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:12px 8px;justify-items:center}
   #kdz .mgrid.deck{background:rgba(255,210,63,.06);border:1px solid rgba(255,210,63,.3);border-radius:16px;padding:14px 10px;min-height:120px}
   #kdz .mw{position:relative;cursor:pointer;transition:transform .15s;-webkit-touch-callout:none;user-select:none}
@@ -192,7 +204,7 @@
     render(); await load(); render();
   }
   function close() { const el = q('#kdz'); if (el) el.remove(); document.documentElement.style.overflow = ''; Z.ed = null; }
-  const TABS = [['spielen', '⚔️ Spielen'], ['packs', '🎁 Packs'], ['samml', '🃏 Sammlung'], ['decks', '📦 Decks'], ['leiter', '🏆 Bot-Leiter']];
+  const TABS = [['spielen', '⚔️ Spielen'], ['packs', '🎁 Packs'], ['samml', '🃏 Sammlung'], ['decks', '📦 Decks'], ['trophaen', '🏆 Trophäen']];
   function render() {
     const el = q('#kdz'); if (!el) return;
     const s = Z.st, sc = el.querySelector('.zb') ? el.querySelector('.zb').scrollTop : 0;
@@ -204,25 +216,27 @@
   function body() {
     const s = Z.st;
     if (Z.tab === 'spielen') return tabPlay(s);
-    if (!me()) return needLogin(Z.tab === 'packs' ? 'Packs zu öffnen' : Z.tab === 'samml' ? 'Karten zu sammeln' : Z.tab === 'decks' ? 'eigene Decks zu bauen' : 'die Bot-Leiter zu erklimmen');
+    if (!me()) return needLogin(Z.tab === 'packs' ? 'Packs zu öffnen' : Z.tab === 'samml' ? 'Karten zu sammeln' : Z.tab === 'decks' ? 'eigene Decks zu bauen' : 'Trophäen zu sammeln');
     if (!s) return `<p class="note center">${Z.err ? esc(Z.err) : 'Lädt …'}</p>`;
     if (Z.tab === 'packs') return tabPacks(s);
     if (Z.tab === 'samml') return tabColl(s);
     if (Z.tab === 'decks') return tabDecks(s);
-    if (Z.tab === 'leiter') return tabLadder(s);
+    if (Z.tab === 'trophaen' || Z.tab === 'leiter') return tabTrophy(s);
     return '';
   }
   const welcomeBox = s => s && s.welcome > 0 ? `<div class="box kdz-wel"><span class="e">🎁</span><div style="flex:1;min-width:180px"><b>Willkommens-Packs: noch ${s.welcome}</b><div class="note" style="color:#f0e8ff">Zufällige Karten aus allen fünf Themen – genug für dein erstes eigenes Deck. Danach baut dir ✨ „Automatisch bauen“ ein Startdeck.</div></div><button class="btn" data-kdzpack="start">Öffnen</button></div>` : '';
+  const ARn = s => K.ARENAS[K.arenaOf(s.tr || 0)];
   function tabPlay(s) {
     const tot = Object.values(C).filter(c => !c.tok).length, own = s ? Object.keys(s.c).filter(id => C[id] && !C[id].tok && s.c[id] > 0).length : 0;
     const first = s && !s.packs && s.lad === 0 ? `<div class="box kdz-wel" style="animation:none"><span class="e" style="animation:none">🗺️</span><div style="flex:1;min-width:200px"><b>Willkommen, Abenteurer!</b><div class="note" style="color:#f0e8ff">Du besitzt das <b>Abenteuer-Startdeck</b> (30 Karten). So geht's weiter:<br>1. Spiele gegen den Bot oder Freunde → du bekommst 🪙 Funken.<br>2. Öffne mit Funken Packs → neue Karten aus allen Themen.<br>3. Baue unter 📦 Decks dein eigenes Deck.</div></div><button class="btn" data-kdzt="packs">🎁 Erstes Pack öffnen</button></div>` : '';
     return `${welcomeBox(s)}${first}<div class="big2">
-      <button class="bigb" data-kdzgo="friends" style="background:linear-gradient(135deg,#6a3fd6,#2a1a6a)"><span class="e">👥</span><b>Gegen Freunde</b><span>Runde erstellen und Freunde einladen</span></button>
-      <button class="bigb" data-kdzgo="0" style="background:linear-gradient(135deg,#1f6a8a,#0b2a3a)"><span class="e">🤖</span><b>Übungs-Bot</b><span>Locker üben, gibt etwas Funken</span></button>
-      <button class="bigb" data-kdzt="leiter" style="background:linear-gradient(135deg,#a8790a,#3a2a00)"><span class="e">🏆</span><b>Bot-Leiter</b><span>${s ? `Stufe ${s.lad}/${LADDER.length} geschafft` : '10 Gegner, immer stärker'}</span></button></div>
+      <button class="bigb" data-kdzgo="arena" style="background:linear-gradient(135deg,#a8790a,#3a2a00)"><span class="e">🏆</span><b>Trophäenkampf</b><span>${s ? `${ARn(s).e} ${ARn(s).n} · ${s.tr} 🏆` : 'Gegen Bots um Trophäen kämpfen'}</span></button>
+      <button class="bigb" data-kdzgo="friends" style="background:linear-gradient(135deg,#6a3fd6,#2a1a6a)"><span class="e">👥</span><b>Gegen Freunde</b><span>Runde erstellen – Siege geben auch Trophäen</span></button>
+      <button class="bigb" data-kdzgo="0" style="background:linear-gradient(135deg,#1f6a8a,#0b2a3a)"><span class="e">🤖</span><b>Übungs-Bot</b><span>Ohne Trophäen, locker üben</span></button></div>
+      <div class="box"><h3 style="margin-bottom:0">🎮 Spielmodus</h3>${window.KDmodePick ? KDmodePick() : ''}</div>
       ${s ? `<div class="box"><h3>📅 Tagesaufgaben</h3>${s.dq.map(x => `<div class="q ${x.done ? 'done' : ''}"><span class="t">${x.done ? '✅' : '🎯'} ${esc(x.t)}</span><span class="bar"><i style="width:${(x.n / x.g) * 100}%"></i></span><span>${x.n}/${x.g}</span><span>+60 🪙</span></div>`).join('')}
         <div class="q ${s.dfw ? 'done' : ''}"><span class="t">${s.dfw ? '✅' : '🌅'} Erster Sieg des Tages</span><span>+60 🪙</span></div></div>
-        <div class="box"><h3>📊 Deine Sammlung</h3><p style="margin:4px 0">${own} von ${tot} Karten · ${s.packs} Packs geöffnet · ${s.decks.length} eigene Decks</p><p class="note" style="margin:0">Funken gibt es für jedes Duell (Siege zählen mehr), für Tagesaufgaben und für neue Stufen der Bot-Leiter.</p></div>` : `<div class="box">${needLogin('Karten zu sammeln, Packs zu öffnen und eigene Decks zu bauen')}</div>`}
+        <div class="box"><h3>📊 Deine Sammlung</h3><p style="margin:4px 0">${own} von ${tot} Karten · ${s.packs} Packs geöffnet · ${s.decks.length} eigene Decks</p><p class="note" style="margin:0">Funken gibt es für jedes Duell (Siege zählen mehr), für Tagesaufgaben und auf dem Trophäenweg.</p></div>` : `<div class="box">${needLogin('Karten zu sammeln, Packs zu öffnen und eigene Decks zu bauen')}</div>`}
       <details class="box"><summary style="cursor:pointer;font-weight:800">ℹ️ So funktioniert das Sammeln</summary>
         <p class="note" style="margin:8px 0 4px">Ziehst du eine Karte mehrfach, steigt ihre Stufe – nur das Aussehen ändert sich, nicht die Stärke:</p>
         <div class="stat"><span>★★ Silberrahmen</span><span>★★★ Goldrahmen mit Glanz</span><span>★★★★ leuchtet + Angriffs-Effekt</span><span>★★★★★ Prisma-Rahmen, Aura und Einschlag</span></div>
@@ -231,12 +245,31 @@
   }
   function tabPacks(s) {
     if (s.welcome > 0) return welcomeBox(s) + '<p class="note center">Öffne zuerst deine Willkommens-Packs – danach kannst du hier mit Funken neue Packs kaufen.</p>';
-    const can = s.free > 0 || s.f >= PACK.cost;
-    const pk = (th, i) => { const f = fc(th === 'mix' ? null : th); return `<button class="kdz-pack" data-kdzpack="${th}" style="${th === 'mix' ? '--c1:#b45cff;--c2:#1f3a8a' : cv(th)};animation:kdzoom .4s ${i * 0.05}s both" ${can ? '' : 'disabled'}><span class="e">${th === 'mix' ? '💎' : f.e}</span><b>${th === 'mix' ? 'Kristallpack' : f.n + '-Pack'}</b><span class="note" style="position:relative;color:#eee;font-size:12px">${th === 'mix' ? 'alle Themen' : 'nur ' + f.n + '-Karten'}</span><span class="pr ${s.free ? 'free' : ''}">${s.free ? 'Gratis' : PACK.cost + ' 🪙'}</span></button>`; };
-    return `<div class="box"><div class="pity"><span>📦 ${PACK.size} Karten pro Pack, mindestens eine seltene</span><span>💜 Epische Karte garantiert in spätestens <b>${PACK.pityE - s.pe}</b> Packs</span><span>🧡 Legendäre Karte garantiert in spätestens <b>${PACK.pityL - s.pl}</b> Packs</span></div>
-      <div class="pity" style="margin-top:6px">${Object.entries(RAR).map(([k, r]) => `<span style="color:${r.col}">◆ ${r.n} ${PACK.odds[k]} %</span>`).join('')}</div></div>
-      ${can ? '' : `<p class="note center">Du brauchst ${PACK.cost} 🪙 für ein Pack – spiel ein paar Duelle!</p>`}
+    const ai = s.ar || 0, A = K.ARENAS[ai], T = K.PACKS[Z.ptype] && ai >= K.PACKS[Z.ptype].min ? Z.ptype : 'klein', P = K.PACKS[T];
+    const freeN = t => (t === 'klein' ? s.free : (s.fp || {})[t] || 0);
+    const can = freeN(T) > 0 || s.f >= P.cost, hm = T === 'koenig' ? 2 : T === 'legende' ? 3 : 1;
+    const pk = (th, i) => { const f = fc(th === 'mix' ? null : th); return `<button class="kdz-pack ${T}" data-kdzpack="${th}" style="${th === 'mix' ? '--c1:#b45cff;--c2:#1f3a8a' : cv(th)};animation:kdzoom .4s ${i * 0.05}s both" ${can ? '' : 'disabled'}><span class="e">${th === 'mix' ? '💎' : f.e}</span><b>${th === 'mix' ? 'Kristall' : f.n}<br>${P.n}</b><span class="note" style="position:relative;color:#eee;font-size:12px">${th === 'mix' ? 'alle Themen' : 'nur ' + f.n + '-Karten'}</span><span class="pr ${freeN(T) ? 'free' : ''}">${freeN(T) ? `Gratis (${freeN(T)})` : P.cost + ' 🪙'}</span></button>`; };
+    return `<div class="chips ptypes">${Object.entries(K.PACKS).map(([k, p]) => { const lock = ai < p.min; return `<button class="${k === T ? 'on' : ''}" data-kdzptype="${k}" ${lock ? `title="ab ${K.ARENAS[p.min].n}"` : ''}>${lock ? '🔒' : '🎁'} ${p.n} · ${p.size} Karten${freeN(k) ? ` · <b>${freeN(k)}× gratis</b>` : ''}${lock ? ` · ab ${K.ARENAS[p.min].e}` : ''}</button>`; }).join('')}</div>
+      <div class="box"><div class="pity"><span>📦 ${esc(P.txt)}</span><span>💜 Epische Karte garantiert in spätestens <b>${PACK.pityE - s.pe}</b> Packs</span><span>🧡 Legendäre Karte garantiert in spätestens <b>${PACK.pityL - s.pl}</b> Packs</span></div>
+      <div class="pity" style="margin-top:6px"><span>${A.e} Chancen in <b>${A.n}</b> (höchstes erreichtes Gebiet):</span>${Object.entries(RAR).map(([k, r]) => `<span style="color:${r.col}">◆ ${r.n} ${A.odds[k]} %</span>`).join('')}<span style="color:#ffd23f">🦸 Held ${+(A.hero * hm).toFixed(1)} %</span></div>
+      <div class="note" style="margin-top:6px">Je höher dein Kampfgebiet, desto besser die Chancen – bis ${K.ARENAS[K.ARENAS.length - 1].odds.l} % legendär und ${K.ARENAS[K.ARENAS.length - 1].hero} % Held im ${K.ARENAS[K.ARENAS.length - 1].e} ${K.ARENAS[K.ARENAS.length - 1].n}.</div></div>
+      ${can ? '' : `<p class="note center">Du brauchst ${P.cost} 🪙 für dieses Pack – spiel ein paar Trophäenkämpfe!</p>`}
       <div class="packs">${['mix', ...Object.keys(F)].map(pk).join('')}</div>`;
+  }
+  // Trophäen: aktuelles Kampfgebiet, Weg mit allen Gebieten, Rangliste
+  function tabTrophy(s) {
+    const ai = K.arenaOf(s.tr), A = K.ARENAS[ai], N = K.ARENAS[ai + 1];
+    const pct = N ? Math.max(0, Math.min(100, ((s.tr - A.t) / (N.t - A.t)) * 100)) : 100;
+    const nextRoad = (Math.floor((s.trMax || 0) / 100) + 1) * 100;
+    if (!Z.top && !Z.topLoading) { Z.topLoading = 1; call('kd_top').then(r => { Z.top = r; Z.topLoading = 0; if (Z.tab === 'trophaen') { Z.keepScroll = true; render(); } }); }
+    return `<div class="arhero" style="--c1:${A.col};--c2:${A.col2}"><span class="ae">${A.e}</span><div class="ai"><small>Kampfgebiet ${ai + 1} von ${K.ARENAS.length}</small><b>${A.n}</b>
+        <div class="trn">🏆 ${s.tr}</div><div class="trbar"><i style="width:${pct}%"></i></div><small>${N ? `Noch ${N.t - s.tr} 🏆 bis ${N.e} ${N.n}` : 'Höchstes Kampfgebiet erreicht!'} · nächste Weg-Belohnung bei ${nextRoad} 🏆</small></div>
+        <button class="btn big" data-kdzgo="arena">⚔️ Kämpfen</button></div>
+      <div class="box"><b>🎮 Spielmodus für Trophäenkämpfe</b>${window.KDmodePick ? KDmodePick() : ''}<div class="note">Sieg ≈ +30 🏆, Niederlage −20 🏆. Unter den Anfang deines Kampfgebiets fällst du nie. Die Gegner spielen zufällig eines von drei Gebiets-Decks und werden mit jedem Gebiet schlauer.</div></div>
+      <h3>🛤️ Kampfgebiete</h3><div class="arpath">${K.ARENAS.map((x, i) => { const reached = (s.trMax || 0) >= x.t, cur = i === ai;
+        return `<div class="arr ${reached ? '' : 'lock'} ${cur ? 'cur' : ''}" style="--c1:${x.col};--c2:${x.col2};animation-delay:${i * 0.03}s"><span class="ae">${reached ? x.e : '🔒'}</span><div class="ai"><b>${i + 1}. ${x.n}</b><small>ab ${x.t} 🏆 · Bots: ${i < 2 ? 'Anfänger' : i < 5 ? 'geübt' : i < 8 ? 'clever' : i < 11 ? 'Meister' : 'Champion'} · Kartenstufe ${x.lv}</small>
+          <small>Packs: ◆ legendär ${x.odds.l} % · ◆ episch ${x.odds.e} % · 🦸 Held ${x.hero} %${Object.values(K.PACKS).filter(p => p.min === i && i > 0).map(p => ` · 🎁 ${p.n} freigeschaltet`).join('')}</small></div>${cur ? '<span class="here">DU BIST HIER</span>' : ''}</div>`; }).reverse().join('')}</div>
+      <h3>🏅 Rangliste</h3><div class="box">${Z.top ? (Z.top.top || []).map((x, i) => `<div class="q" style="${me() && x.n === me().name ? 'color:#ffd23f;font-weight:800' : ''}"><span style="width:28px">${['🥇', '🥈', '🥉'][i] || i + 1 + '.'}</span><span class="t">${esc(x.n)}</span><span>${K.ARENAS[K.arenaOf(x.tr)].e}</span><span><b>${x.tr}</b> 🏆</span></div>`).join('') + (Z.top.me && Z.top.me.rank > 30 ? `<div class="q" style="color:#ffd23f"><span>${Z.top.me.rank}.</span><span class="t">Du</span><span><b>${Z.top.me.tr}</b> 🏆</span></div>` : '') || '<p class="note">Noch niemand mit Trophäen – sei die oder der Erste!</p>' : '<p class="note">Lädt …</p>'}</div>`;
   }
   const progOf = (id, n) => { const t = RAR[C[id].r].lv, lv = K.levelOf(id, n); if (lv >= 5) return [1, 'Höchste Stufe']; const a = t[lv - 1] || 0, b = t[lv]; return [(n - a) / (b - a), `${n}/${b} für ★${lv + 1}`]; };
   function filterIds(th, ra, miss, s, onlyOwned) {
@@ -384,9 +417,9 @@
     const f = th === 'mix' ? { col: '#b45cff', col2: '#1f3a8a', e: '💎', n: 'Kristall' } : th === 'start' ? { col: '#ffb020', col2: '#7a2a8a', e: '🎁', n: 'Willkommens' } : fc(th);
     const o = document.createElement('div'); o.id = 'kdpk'; o.style.cssText = `--c1:${f.col};--c2:${f.col2}`;
     o.innerHTML = `<div class="dim"></div><div class="rays"></div><div class="vortex"></div><button class="btn ghost small skip" hidden>Überspringen ⏭</button>
-      <div class="kdz-pack pk" style="--c1:${f.col};--c2:${f.col2}"><span class="e">${f.e}</span><b>${th === 'mix' ? 'Kristallpack' : th === 'start' ? 'Willkommens-Pack' : f.n + '-Pack'}</b></div><div class="msg">Wird geöffnet …</div>`;
+      <div class="kdz-pack pk" style="--c1:${f.col};--c2:${f.col2}"><span class="e">${f.e}</span><b>${th === 'mix' ? 'Kristallpack' : th === 'start' ? 'Willkommens-Pack' : f.n + '-Pack'}${th !== 'start' && Z.ptype && Z.ptype !== 'klein' ? '<br>' + K.PACKS[Z.ptype].n : ''}</b></div><div class="msg">Wird geöffnet …</div>`;
     document.body.appendChild(o);
-    const [r] = await Promise.all([call('kd_pack', { th }), sleep(600)]);
+    const [r] = await Promise.all([call('kd_pack', { th, type: th === 'start' ? undefined : Z.ptype || 'klein' }), sleep(600)]);
     Z.busy = false;
     if (r.error) { o.remove(); toast(r.error); return; }
     setState(r.state, true);
@@ -473,7 +506,7 @@
     o.appendChild(sum);
     const acts = sum.querySelector('.acts');
     if (r.welcome) acts.innerHTML = r.state.welcome > 0 ? `<button class="btn" data-pk="again">🎁 Nächstes Willkommens-Pack (${r.state.welcome} übrig)</button><button class="btn ghost" data-pk="close">Später</button>` : '<button class="btn" data-pk="auto">✨ Deck automatisch bauen</button><button class="btn ghost" data-pk="close">Fertig</button>';
-    else { const can = r.state.free > 0 || r.state.f >= PACK.cost; acts.innerHTML = `${can ? `<button class="btn" data-pk="again">🎁 Noch ein Pack (${r.state.free ? 'Gratis' : PACK.cost + ' 🪙'})</button>` : ''}<button class="btn ghost" data-pk="close">Fertig</button>`; }
+    else { const PT = K.PACKS[r.type] || K.PACKS.klein, fr = r.type && r.type !== 'klein' ? (r.state.fp || {})[r.type] || 0 : r.state.free, can = fr > 0 || r.state.f >= PT.cost; acts.innerHTML = `${can ? `<button class="btn" data-pk="again">🎁 Noch ein ${PT.n} (${fr ? 'Gratis' : PT.cost + ' 🪙'})</button>` : ''}<button class="btn ghost" data-pk="close">Fertig</button>`; }
     sum.addEventListener('click', e => {
       const k = e.target.closest('.kdf'); if (k) { showCard(r.cards[Number(k.dataset.i)].id); return; }
       const b = e.target.closest('[data-pk]'); if (!b) return;
@@ -484,11 +517,13 @@
   }
   const RAD = r => RAR[r].col;
   function startGame(kind) {
+    const mode = window.KDmode ? KDmode() : 'klassisch';
+    const p = kind === 'friends' ? null : kind === 'arena' ? { arena: K.arenaOf((Z.st && Z.st.tr) || 0), mode } : { lvl: Number(kind) || 0, mode };
+    if (kind === 'arena' && !me()) { toast('Für Trophäenkämpfe brauchst du ein Konto.'); return; }
     close();
-    const lvl = kind === 'friends' ? null : Number(kind) || 0;
-    if (typeof room !== 'undefined' && room && room.game === 'duell' && isHost() && lvl != null) { send({ t: 'start', bot: 1, lvl }); return; }
+    if (typeof room !== 'undefined' && room && room.game === 'duell' && isHost() && p) { send({ t: 'start', bot: 1, ...p }); return; }
     if (typeof needNick === 'function' && !needNick()) return;
-    window.KDZ.pending = lvl; send({ t: 'create', game: 'duell' });
+    window.KDZ.pending = p; send({ t: 'create', game: 'duell' });
   }
   document.addEventListener('click', async e => {
     const op = e.target.closest('[data-kdz]'); if (op) { e.preventDefault(); const t = op.dataset.kdz; open(TABS.some(x => x[0] === t) ? t : 'spielen'); return; }
@@ -499,6 +534,7 @@
     if ((b = g('data-kdzt'))) { Z.tab = b.dataset.kdzt; render(); if (!Z.st && me()) { await load(); render(); } return; }
     if (g('data-kdzlogin')) { close(); const a = q('[data-acct="open"]'); if (a) { a.click(); a.scrollIntoView({ behavior: 'smooth', block: 'center' }); } return; }
     if ((b = g('data-kdzgo'))) { startGame(b.dataset.kdzgo); return; }
+    if ((b = g('data-kdzptype'))) { const P = K.PACKS[b.dataset.kdzptype]; if ((Z.st.ar || 0) < P.min) { toast(`${P.n} gibt es ab ${K.ARENAS[P.min].e} ${K.ARENAS[P.min].n}.`); return; } Z.ptype = b.dataset.kdzptype; Z.keepScroll = true; render(); return; }
     if ((b = g('data-kdzpack'))) { if (!b.disabled) openPack(b.dataset.kdzpack); return; }
     if ((b = g('data-kdzth'))) { Z.th = b.dataset.kdzth; render(); return; }
     if ((b = g('data-kdzra'))) { Z.ra = b.dataset.kdzra; render(); return; }

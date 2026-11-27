@@ -24,13 +24,13 @@ function payout(r) { // Belohnungen (Funken, Aufgaben, Bot-Leiter) für Spieler 
   if (!API) return;
   for (const pid of s.p) {
     if (pid === BOT) continue; const acc = API.accOf(pid); if (!acc) continue;
-    try { s.rew[pid] = API.reward(acc, { win: s.winner === pid, draw: !!s.draw, pvp: !s.bot, lvl: s.lvl || 0, turns: s.n, st: s.st[pid], bon: s.pl[pid].bon, left: !!s.left }); } catch (e) { console.error(e); }
+    try { s.rew[pid] = API.reward(acc, { win: s.winner === pid, draw: !!s.draw, pvp: !s.bot, lvl: s.lvl || 0, arena: s.arena, mode: s.mode, turns: s.n, st: s.st[pid], bon: s.pl[pid].bon, left: !!s.left }); } catch (e) { console.error(e); }
   }
 }
 function log(s, t) { s.log.push(t); if (s.log.length > 8) s.log.shift(); }
 function fx(s, e) { e.q = ++s.seq; s.fx.push(e); if (s.fx.length > 40) s.fx.shift(); }
 function mkCre(s, id, owner) {
-  const c = C[id], cr = { u: ++s.uc, id, o: owner, a: c.a, h: c.h, d: 0, kw: (c.kw || []).slice(), sick: !(c.kw || []).includes('eile'), tap: false, frz: false, shield: (c.kw || []).includes('schild') };
+  const c = C[id], cr = { u: ++s.uc, id, o: owner, a: c.a, h: c.h, d: 0, kw: (c.kw || []).slice(), sick: !(c.kw || []).includes('eile'), tap: false, frz: false, al: 1, shield: (c.kw || []).includes('schild') };
   if (bon(s, owner, 'wild')) cr.h += 1; // Urkraft
   if (bon(s, owner, 'abent')) cr.a += 1; // Kameradschaft
   return cr;
@@ -135,6 +135,7 @@ function applyEffect(s, pid, e, T, srcU) {
 function play(s, pid, hi, tgt) {
   const P = s.pl[pid], card = P.hand[hi]; if (!card) return 'Diese Karte gibt es nicht.';
   const c = C[card.id];
+  if (s.phase !== 'main' && !c.inst) return 'Jetzt gehen nur Sofortzauber.';
   if (c.c > P.cr) return `Dafür brauchst du ${c.c} Kristalle.`;
   if (c.t === 'k' && P.board.length >= BOARD_MAX) return `Mehr als ${BOARD_MAX} Kreaturen passen nicht aufs Feld.`;
   let T = null;
@@ -159,45 +160,107 @@ function useHero(s, pid, tgt) { // Heldenkraft einsetzen
   log(s, `${H.art} ${H.n} setzt ${H.pow} ein!`);
   applyEffect(s, pid, e, T, null); cleanup(s);
 }
-const canAttack = (c) => !c.tap && !c.sick && !has(c, 'mauer') && c.a > 0;
+const isArena = s => s.mode === 'arena';
+const canAttack = (c, s) => !c.tap && !c.sick && !has(c, 'mauer') && c.a > 0 && (!s || !isArena(s) || (c.al || 0) > 0);
 const canBlock = (b, a) => !b.tap && (!has(a, 'flug') || has(b, 'flug') || has(b, 'reich'));
+const isGuard = c => has(c, 'wache') || has(c, 'mauer');
+const alive = c => c && c.d < c.h && !c.dead;
+// Sofortzauber (nur Klassisch): im Block- oder Trick-Fenster spielbar
+const instOk = (s, pid) => s.pl[pid].hand.some(h => C[h.id].inst && C[h.id].c <= s.pl[pid].cr);
 
+/* ---------- Klassisch: Angreifer wählen, Gegner blockt (auch mehrfach), Sofortzauber, Erstschlag ---------- */
 function attack(r, pid, list) {
   const s = r.state, P = s.pl[pid];
   if (s.attacked) return 'Du hast in diesem Zug schon angegriffen.';
   const att = [...new Set(list.map(Number))].map(u => P.board.find(c => c.u === u)).filter(Boolean);
   if (!att.length) return 'Wähle zuerst Angreifer.';
   if (att.some(c => !canAttack(c))) return 'Eine dieser Kreaturen kann gerade nicht angreifen.';
-  s.attacked = true; s.atk = att.map(c => c.u); s.blocks = {};
+  s.attacked = true; s.atk = att.map(c => c.u); s.bl = [];
   for (const c of att) if (!has(c, 'wach')) c.tap = true;
   fx(s, { k: 'attack', us: s.atk.slice() });
   log(s, `${s.nm[pid]} greift mit ${att.length} Kreatur${att.length > 1 ? 'en' : ''} an!`);
   const foe = foeOf(s, pid);
-  if (!s.pl[foe].board.some(b => att.some(a => canBlock(b, a)))) { resolve(r); return; }
+  if (!s.pl[foe].board.some(b => att.some(a => canBlock(b, a))) && !instOk(s, foe)) { toTrick(r); return; }
   s.phase = 'block';
-  if (foe === BOT) schedule(r, 1100, () => { botBlock(s); resolve(r); afterResolve(r); });
-  else if (!s.bot) setTimer(r, BLOCK_MS, () => { resolve(r); afterResolve(r); });
+  if (foe === BOT) schedule(r, 1100, () => { botBlock(s); if (s.smart) botInstant(s, BOT, 'block'); toTrick(r); });
+  else if (!s.bot) setTimer(r, BLOCK_MS, () => toTrick(r));
+}
+function toTrick(r) { // nach den Blocks: Angreifer darf noch Kampftricks (Sofortzauber) spielen
+  const s = r.state; if (s.phase === 'end') return;
+  const pid = s.turn;
+  if (!s.atk.some(u => findCre(s, u)) || !instOk(s, pid)) { resolve(r); afterResolve(r); return; }
+  s.phase = 'trick';
+  if (pid === BOT) schedule(r, 900, () => { if (s.smart) botInstant(s, BOT, 'trick'); resolve(r); afterResolve(r); });
+  else if (!s.bot) setTimer(r, 20e3, () => { resolve(r); afterResolve(r); });
+}
+function setBlocks(s, pid, pairs) { // pairs: [[blocker, attacker], …]
+  const P = s.pl[pid], cnt = {}, out = [];
+  for (const [bu, au] of (pairs || []).slice(0, 12)) {
+    const B = P.board.find(c => c.u === Number(bu)), A = s.atk.includes(Number(au)) ? findCre(s, Number(au)) : null;
+    if (!B || !A || !canBlock(B, A)) return 'Dieser Block geht nicht.';
+    cnt[B.u] = (cnt[B.u] || 0) + 1; if (cnt[B.u] > (has(B, 'wache') ? 2 : 1)) return 'Nur Wächter dürfen zwei Angreifer blocken.';
+    if (out.some(([b, a]) => b === B.u && a === A.u)) continue;
+    out.push([B.u, A.u]);
+  }
+  s.bl = out; return null;
 }
 function resolve(r) {
   const s = r.state, pid = s.turn, foe = foeOf(s, pid), F2 = s.pl[foe];
-  const byAtt = {}; for (const [b, a] of Object.entries(s.blocks || {})) byAtt[a] = Number(b);
+  const done = new Set(); // Blocker, die ihren Schaden schon ausgeteilt haben (Wächter mit zwei Blocks: nur beim ersten)
   for (const u of s.atk) {
-    const A = findCre(s, u); if (!A || A.o !== pid) continue;
-    const B = byAtt[u] != null ? F2.board.find(c => c.u === byAtt[u]) : null;
-    if (B) {
-      const room = hpLeft(B), hadShield = B.shield, aDmg = A.a, bDmg = B.a;
-      fx(s, { k: 'hit', from: A.u, to: 'u:' + B.u });
-      const dealt = hitCre(s, B, aDmg, A), back = hitCre(s, A, bDmg, B);
-      if (has(A, 'durch') && !hadShield && aDmg > room) hitFace(s, foe, aDmg - room, A.u);
-      if (has(A, 'saug')) heal(s, pid, dealt + (has(A, 'durch') && !hadShield ? Math.max(0, aDmg - room) : 0));
-      if (has(B, 'saug')) heal(s, foe, back);
-    } else {
+    const A = findCre(s, u); if (!A || A.o !== pid || A.frz) continue; // eingefrorene Angreifer fallen aus
+    const Bs = s.bl.filter(([, a]) => a === u).map(([b]) => F2.board.find(c => c.u === b)).filter(Boolean);
+    if (!Bs.length) {
+      if (!alive(A)) continue;
       fx(s, { k: 'hit', from: A.u, to: 'f:' + foe });
       const n = hitFace(s, foe, A.a, A.u); if (has(A, 'saug')) heal(s, pid, n);
+      continue;
     }
+    fx(s, { k: 'hit', from: A.u, to: 'u:' + Bs[0].u });
+    const aStrike = () => { // Angreifer verteilt Schaden der Reihe nach, Rest bei Durchbruch an den Spieler
+      let left = A.a, dealt = 0;
+      for (const B of Bs) { if (!alive(B) || left <= 0) continue; const need = B.shield ? 1 : Math.max(1, hpLeft(B)), give = B === Bs.filter(alive).slice(-1)[0] && !has(A, 'durch') ? left : Math.min(left, need); left -= give; dealt += hitCre(s, B, give, A); }
+      if (has(A, 'durch') && left > 0) dealt += hitFace(s, foe, left, A.u);
+      if (has(A, 'saug')) heal(s, pid, dealt);
+    };
+    const bStrike = B => { if (!alive(B) || done.has(B.u)) return; done.add(B.u); const n = hitCre(s, A, B.a, B); if (has(B, 'saug')) heal(s, foe, n); };
+    // Schritt 1: Erstschlag
+    if (has(A, 'erst') && alive(A)) aStrike();
+    for (const B of Bs) if (has(B, 'erst')) bStrike(B);
+    // Schritt 2: alle anderen, die noch leben
+    if (!has(A, 'erst') && alive(A)) aStrike();
+    for (const B of Bs) if (!has(B, 'erst')) bStrike(B);
   }
-  s.atk = []; s.blocks = {};
+  s.atk = []; s.bl = [];
   if (s.phase !== 'end') s.phase = 'main';
+  cleanup(s);
+}
+
+/* ---------- Arena: jede Kreatur greift einzeln ein Ziel an ---------- */
+function guardsOf(s, pid) { return s.pl[pid].board.filter(isGuard); }
+function strike(r, pid, u, t) {
+  const s = r.state, P = s.pl[pid], foe = foeOf(s, pid);
+  const A = P.board.find(c => c.u === Number(u));
+  if (!A || !canAttack(A, s)) return 'Diese Kreatur kann gerade nicht angreifen.';
+  const guards = guardsOf(s, foe);
+  let D = null;
+  if (t === 'f:' + foe) { if (guards.length && !has(A, 'flug')) return `Erst die Wächter (${guards.map(c => C[c.id].n).join(', ')}) besiegen!`; }
+  else { D = s.pl[foe].board.find(c => 'u:' + c.u === t); if (!D) return 'Wähle ein Ziel.'; if (guards.length && !isGuard(D) && !has(A, 'flug')) return 'Erst die Wächter besiegen – nur Flieger dürfen darüber hinweg.'; }
+  A.al = (A.al || 1) - 1;
+  if (A.al <= 0 && !has(A, 'wach')) { /* bleibt stehen, ist aber für diesen Zug fertig */ }
+  fx(s, { k: 'hit', from: A.u, to: D ? 'u:' + D.u : 'f:' + foe, one: 1 });
+  if (!D) { const n = hitFace(s, foe, A.a, A.u); if (has(A, 'saug')) heal(s, pid, n); log(s, `${C[A.id].n} trifft ${s.nm[foe]}!`); }
+  else {
+    const room = hpLeft(D), hadShield = D.shield;
+    const hitD = () => { const n = hitCre(s, D, A.a, A); if (has(A, 'durch') && !hadShield && A.a > room) hitFace(s, foe, A.a - room, A.u); if (has(A, 'saug')) heal(s, pid, n); };
+    const hitA = () => { if (D.a <= 0) return; const n = hitCre(s, A, D.a, D); if (has(D, 'saug')) heal(s, foe, n); };
+    if (has(A, 'erst')) { hitD(); if (alive(D)) hitA(); }
+    else if (has(D, 'erst')) { hitA(); if (alive(A)) hitD(); }
+    else { hitD(); hitA(); }
+    log(s, `${C[A.id].n} greift ${C[D.id].n} an.`);
+    if (!alive(D) && alive(A)) { A.a += 1; A.h += 1; fx(s, { k: 'buff', t: 'u:' + A.u, a: 1, h: 1 }); } // Siegeszug
+  }
+  s.attacked = true;
   cleanup(s);
 }
 function afterResolve(r) { const s = r.state; if (s.phase !== 'main') return; if (s.turn === BOT) schedule(r, 1000, () => botStep(r)); else if (!s.bot) setTimer(r, Math.max(15e3, s.turnEnd - Date.now()), () => endTurn(r)); }
@@ -205,10 +268,11 @@ function setTimer(r, ms, fn) { const s = r.state; s.dl = Date.now() + ms; schedu
 
 function startTurn(r, pid) {
   const s = r.state, P = s.pl[pid];
-  s.turn = pid; s.phase = 'main'; s.attacked = false; s.atk = []; s.blocks = {}; s.n++;
+  s.turn = pid; s.phase = 'main'; s.attacked = false; s.atk = []; s.bl = []; s.n++;
   P.mx = Math.min(10, P.mx + 1); P.cr = P.mx;
   for (const c of P.board) {
     c.sick = false; if (c.frz) c.frz = false; else c.tap = false;
+    c.al = has(c, 'wach') && isArena(s) ? 2 : 1;
     const w = C[c.id].wachs; if (w) { c.a += w[0]; c.h += w[1]; fx(s, { k: 'buff', t: 'u:' + c.u, a: w[0], h: w[1] }); }
   }
   if (P.hero && P.hero.cd > 0) P.hero.cd--; // Heldenkraft lädt auf
@@ -222,9 +286,9 @@ function startTurn(r, pid) {
 }
 function endTurn(r) {
   const s = r.state; if (s.phase === 'end') return;
-  if (s.phase === 'block') resolve(r);
+  if (s.phase === 'block' || s.phase === 'trick') resolve(r);
   if (s.phase === 'end') return;
-  for (const pid of s.p) for (const c of s.pl[pid].board) c.d = 0; // Schaden heilt am Zugende
+  if (!isArena(s)) for (const pid of s.p) for (const c of s.pl[pid].board) c.d = 0; // Klassisch: Schaden heilt am Zugende (Arena: Wunden bleiben)
   startTurn(r, foeOf(s, s.turn));
 }
 
@@ -263,19 +327,18 @@ function botWants(s, me, c) { // ungezielte Karten: lohnt sich das gerade?
   if (e.k === 'revive') return P.dead.length > 0;
   return true;
 }
-function botStep(r) {
-  const s = r.state; if (s.phase !== 'main' || s.turn !== BOT) return;
-  const me = BOT, foe = foeOf(s, me), P = s.pl[me];
-  // 0. Heldenkraft, wenn bereit und sinnvoll
+function botPlay(r, me) { // Heldenkraft und Karten (eine Aktion pro Schritt). true = es wurde etwas gemacht
+  const s = r.state, foe = foeOf(s, me), P = s.pl[me];
   if (P.hero && P.hero.cd === 0) {
     const e = K.HEROES[P.hero.id].e; let t, ok = true;
     if (e.tg) { t = botTargetFor(s, me, e); if (!t && e.tg === 'any') t = 'f:' + foe; ok = !!t; }
     else if (e.k === 'shieldAll') ok = P.board.length >= 1 || P.life < s.maxLife[me];
-    if (ok && useHero(s, me, t) === undefined) { if (s.phase === 'main') schedule(r, 1200, () => botStep(r)); return; }
+    if (ok && useHero(s, me, t) === undefined) return true;
   }
-  // 1. Karten ausspielen (teuerste zuerst)
   const order = P.hand.map((h, i) => ({ i, c: C[h.id] })).filter(x => x.c.c <= P.cr).sort((a, b) => b.c.c - a.c.c);
+  // schlaue Bots halten in Klassisch einen Sofortzauber für den gegnerischen Zug zurück, wenn sonst nichts Großes kommt
   for (const { i, c } of order) {
+    if (s.smart && !isArena(s) && c.inst && c.e && (c.e.k === 'buff' || c.e.k === 'dmg') && P.board.length && Math.random() < 0.6) continue;
     let tgt;
     if (c.e && c.e.tg && anyTarget(s, me, c.e)) {
       tgt = botTargetFor(s, me, c.e);
@@ -283,15 +346,43 @@ function botStep(r) {
     }
     else if (c.e && c.e.tg && c.t === 'z') continue;
     else if (!botWants(s, me, c)) continue;
-    if (play(s, me, i, tgt) === undefined) { if (s.phase === 'main') schedule(r, 1100, () => botStep(r)); return; }
+    if (play(s, me, i, tgt) === undefined) return true;
   }
-  // 2. Angreifen
+  return false;
+}
+function botStrikePick(s, me) { // Arena: bester einzelner Angriff
+  const foe = foeOf(s, me), mine = s.pl[me].board.filter(c => canAttack(c, s)); if (!mine.length) return null;
+  const FB = s.pl[foe].board, guards = FB.filter(isGuard), life = s.pl[foe].life;
+  const legal = A => (guards.length && !has(A, 'flug') ? guards : FB).map(c => 'u:' + c.u).concat(guards.length && !has(A, 'flug') ? [] : ['f:' + foe]);
+  const kills = (x, y) => (x.a >= hpLeft(y) || (has(x, 'gift') && x.a > 0)) && !y.shield;
+  // Tödlich? Alles ins Gesicht
+  const faceDmg = mine.filter(A => legal(A).includes('f:' + foe)).reduce((n, A) => n + A.a * (A.al || 1), 0);
+  let best = null, bestV = -99;
+  for (const A of mine) for (const t of legal(A)) {
+    let v;
+    if (t[0] === 'f') v = faceDmg >= life ? 100 : A.a * (life <= 10 ? 1.4 : 0.9);
+    else { const D = FB.find(c => 'u:' + c.u === t), win = kills(A, D), die = kills(D, A) && !(has(A, 'erst') && win);
+      v = (win ? crVal(D) + 1 : -1) - (die ? crVal(A) : 0) + (isGuard(D) ? 0.5 : 0); }
+    if (s.dumb && Math.random() < s.dumb) v += (Math.random() - 0.5) * 8; // leichte Gegner zielen schlechter
+    if (v > bestV) { bestV = v; best = { u: A.u, t }; }
+  }
+  return bestV > 0 || faceDmg >= life ? best : (s.dumb && Math.random() < 0.5 ? best : null);
+}
+function botStep(r) {
+  const s = r.state; if (s.phase !== 'main' || s.turn !== BOT) return;
+  const me = BOT, foe = foeOf(s, me), P = s.pl[me];
+  if (botPlay(r, me)) { if (s.phase === 'main') schedule(r, 1100, () => botStep(r)); return; }
+  if (isArena(s)) {
+    const pk = botStrikePick(s, me);
+    if (pk && strike(r, me, pk.u, pk.t) === undefined) { if (s.phase === 'main') schedule(r, 900, () => botStep(r)); return; }
+    endTurn(r); return;
+  }
   if (!s.attacked) {
-    const mine = P.board.filter(canAttack), blockers = s.pl[foe].board.filter(b => !b.tap);
+    const mine = P.board.filter(c => canAttack(c)), blockers = s.pl[foe].board.filter(b => !b.tap);
     const rest = mine.map(c => c.a).sort((x, y) => y - x).slice(blockers.length).reduce((n, x) => n + x, 0);
     const allIn = rest >= s.pl[foe].life; // selbst wenn jeder Blocker einen der Stärksten aufhält, reicht es
     const go = mine.filter(a => { const bl = blockers.filter(b => canBlock(b, a)); if (!bl.length) return true; if (allIn) return true;
-      return !bl.some(b => (b.a >= hpLeft(a) || has(b, 'gift')) && !a.shield) || bl.every(b => crVal(b) >= crVal(a) && b.a >= hpLeft(a) && (a.a >= hpLeft(b) || has(a, 'gift'))); });
+      return !bl.some(b => (b.a >= hpLeft(a) || has(b, 'gift')) && !a.shield && !(has(a, 'erst') && a.a >= hpLeft(b))) || bl.every(b => crVal(b) >= crVal(a) && b.a >= hpLeft(a) && (a.a >= hpLeft(b) || has(a, 'gift'))); });
     if (s.dumb && Math.random() < s.dumb) go.splice(0, Math.ceil(go.length / 2)); // leichtere Gegner greifen zögerlicher an
     if (go.length) { attack(r, me, go.map(c => c.u)); if (s.phase === 'main') schedule(r, 1300, () => botStep(r)); return; }
     s.attacked = true;
@@ -301,22 +392,44 @@ function botStep(r) {
 function botBlock(s) {
   const me = BOT, P = s.pl[me];
   const atts = s.atk.map(u => findCre(s, u)).filter(Boolean).sort((a, b) => b.a - a.a);
-  const free = P.board.filter(b => !b.tap), used = new Set(), blocks = {};
+  const free = P.board.filter(b => !b.tap), uses = {}, pairs = [];
+  const cap = b => (has(b, 'wache') ? 2 : 1), canUse = b => (uses[b.u] || 0) < cap(b);
+  const use = (b, a) => { uses[b.u] = (uses[b.u] || 0) + 1; pairs.push([b.u, a.u]); };
   let incoming = atts.reduce((n, a) => n + a.a, 0);
   const kills = (x, y) => (x.a >= hpLeft(y) || (has(x, 'gift') && x.a > 0)) && !y.shield;
   for (const a of atts) { // gute Blocks: überleben und/oder lohnender Tausch
-    const opts = free.filter(b => !used.has(b.u) && canBlock(b, a));
+    const opts = free.filter(b => canUse(b) && canBlock(b, a));
     const best = opts.find(b => kills(b, a) && !kills(a, b)) || opts.find(b => !kills(a, b)) || opts.find(b => kills(b, a) && crVal(a) >= crVal(b) + 1);
-    if (best) { blocks[best.u] = a.u; used.add(best.u); incoming -= a.a; }
+    if (best) { use(best, a); incoming -= a.a; continue; }
+    if (s.smart) { // Doppelblock gegen große Angreifer: zusammen töten, einer überlebt meist
+      const two = opts.filter(b => !uses[b.u]).sort((x, y) => y.a - x.a).slice(0, 2);
+      if (two.length === 2 && two[0].a + two[1].a >= hpLeft(a) && !a.shield && crVal(a) >= Math.min(crVal(two[0]), crVal(two[1])) + 2) { use(two[0], a); use(two[1], a); incoming -= a.a; }
+    }
   }
   if (incoming >= P.life) for (const a of atts) { // Notfall: alles blocken, was geht
-    if (Object.values(blocks).includes(a.u)) continue;
-    const b = free.filter(x => !used.has(x.u) && canBlock(x, a)).sort((x, y) => crVal(x) - crVal(y))[0];
-    if (b) { blocks[b.u] = a.u; used.add(b.u); incoming -= a.a; if (incoming < P.life) break; }
+    if (pairs.some(([, x]) => x === a.u)) continue;
+    const b = free.filter(x => canUse(x) && canBlock(x, a)).sort((x, y) => crVal(x) - crVal(y))[0];
+    if (b) { use(b, a); incoming -= a.a; if (incoming < P.life) break; }
   }
-  if (s.dumb) for (const b of Object.keys(blocks)) if (Math.random() < s.dumb) delete blocks[b];
-  s.blocks = blocks;
-  if (Object.keys(blocks).length) log(s, `${s.nm[BOT]} blockt mit ${Object.keys(blocks).length} Kreatur${Object.keys(blocks).length > 1 ? 'en' : ''}.`);
+  s.bl = s.dumb ? pairs.filter(() => Math.random() >= s.dumb) : pairs;
+  if (s.bl.length) log(s, `${s.nm[BOT]} blockt${s.bl.length > 1 ? ` (${s.bl.length} Blocks)` : ''}.`);
+}
+function botInstant(s, me, when) { // schlaue Bots: Sofortzauber im Kampf
+  const P = s.pl[me], foe = foeOf(s, me);
+  for (let i = 0; i < P.hand.length; i++) {
+    const c = C[P.hand[i].id]; if (!c.inst || c.c > P.cr || !c.e) continue;
+    const e = c.e; let t = null;
+    if (e.k === 'buff' && e.tg === 'own') { // eigenen Kämpfer retten oder gewinnen lassen
+      for (const [b, a] of s.bl) { const mineU = when === 'block' ? b : a, otherU = when === 'block' ? a : b; const M = findCre(s, mineU), O = findCre(s, otherU); if (!M || !O) continue;
+        if (O.a >= hpLeft(M) && O.a < hpLeft(M) + e.h) { t = 'u:' + M.u; break; } }
+    } else if (e.k === 'dmg') { // Angreifer bzw. Blocker vor dem Kampf erledigen
+      const n = dmgN(s, me, e.n), pool = when === 'block' ? s.atk.map(u => findCre(s, u)) : s.bl.map(([b]) => findCre(s, b));
+      const x = pool.filter(Boolean).filter(c => !c.shield && hpLeft(c) <= n && fits(s, me, e, c)).sort((a, b) => crVal(b) - crVal(a))[0];
+      if (x && crVal(x) >= 4) t = 'u:' + x.u;
+    } else if (e.k === 'freeze' && when === 'block') { const x = s.atk.map(u => findCre(s, u)).filter(Boolean).sort((a, b) => b.a - a.a)[0]; if (x && x.a >= 4) t = 'u:' + x.u; }
+    if (t && play(s, me, i, t) === undefined) { log(s, `⚡ Sofortzauber: ${c.n}!`); return true; }
+  }
+  return false;
 }
 
 /* ---------- Decks ---------- */
@@ -377,17 +490,24 @@ module.exports = {
   start(r, m = {}) {
     if (r.timer) clearTimeout(r.timer);
     const old = r.state, ids = r.players.map(p => p.id);
-    const lvl = m.bot ? Math.max(0, Math.min(LADDER.length, Number(m.lvl) | 0)) : 0;
+    const arena = m.bot && m.arena != null && K.ARENAS[Number(m.arena)] ? Number(m.arena) : null; // Trophäenkampf
+    const lvl = m.bot && arena == null ? Math.max(0, Math.min(LADDER.length, Number(m.lvl) | 0)) : 0;
+    const mode = m.mode === 'arena' ? 'arena' : m.mode === 'klassisch' ? 'klassisch' : (old && old.mode) || 'klassisch';
     const p = m.bot ? [ids[0], BOT] : (old && old.p && old.p.every(x => ids.includes(x)) && !old.bot ? [old.p[1], old.p[0]] : ids.slice(0, 2));
     const pl = {}; for (const id of p) pl[id] = { life: LIFE, mx: 0, cr: 0, deck: [], hand: [], board: [], grave: [], dead: [], fat: 0, fac: null, bon: [], lv: {}, cards: null, deckName: '' };
     const nm = { [p[0]]: nameOf(r, p[0]), [p[1]]: nameOf(r, p[1]) };
     const maxLife = { [p[0]]: LIFE, [p[1]]: LIFE };
-    r.state = { p, pl, nm, maxLife, phase: 'pick', turn: null, n: 0, attacked: false, atk: [], blocks: {}, winner: null, draw: false, log: ['Wählt euer Deck.'], fx: [], seq: 0, uc: 0, dl: 0, turnEnd: 0,
-      score: old && old.score && !old.bot === !m.bot && (old.lvl || 0) === lvl ? old.score : {}, bot: !!m.bot, lvl, lastDeck: (old && old.lastDeck) || {}, st: {}, rew: null, paid: false, opts: {}, dumb: !m.bot ? 0 : lvl === 0 ? 0.2 : lvl <= 3 ? 0.35 : lvl <= 5 ? 0.15 : 0 };
+    r.state = { p, pl, nm, maxLife, phase: 'pick', turn: null, n: 0, attacked: false, atk: [], winner: null, draw: false, log: ['Wählt euer Deck.'], fx: [], seq: 0, uc: 0, dl: 0, turnEnd: 0,
+      score: old && old.score && !old.bot === !m.bot && (old.lvl || 0) === lvl && old.arena === arena ? old.score : {}, bot: !!m.bot, lvl, arena, mode, bl: [], smart: arena != null ? K.ARENAS[arena].smart : lvl >= 6, lastDeck: (old && old.lastDeck) || {}, st: {}, rew: null, paid: false, opts: {}, dumb: !m.bot ? 0 : arena != null ? K.ARENAS[arena].bot : lvl === 0 ? 0.2 : lvl <= 3 ? 0.35 : lvl <= 5 ? 0.15 : 0 };
     const s = r.state;
     for (const id of p) s.st[id] = { spell: 0, summon: 0, kill: 0 };
     for (const id of p) if (id !== BOT) s.opts[id] = deckOptions(r, id);
-    if (m.bot) {
+    if (m.bot && arena != null) { // Trophäenkampf: zufälliges Bot-Deck aus dem Kampfgebiet
+      const A = K.ARENAS[arena], list = K.BOTDECKS[arena], d = list[Math.floor(Math.random() * list.length)], P = pl[BOT];
+      const NAMES = ['Bruno', 'Greta', 'Kalle', 'Mira', 'Ole', 'Frieda', 'Hugo', 'Lotta', 'Bernd', 'Ida', 'Theo', 'Wanda', 'Rudi', 'Elsa'];
+      P.cards = d.cards; P.deckName = d.n; P.fac = K.mainTheme(d.cards); P.bon = K.bonusesOf(d.cards); P.lv = {}; for (const k of Object.keys(C)) P.lv[k] = A.lv;
+      P.hero = arena >= 1 && K.HEROES[P.fac] ? { id: P.fac, cd: K.HEROES[P.fac].cd } : null; nm[BOT] = `${NAMES[Math.floor(Math.random() * NAMES.length)]} (${A.e} ${A.n})`; P.art = A.e;
+    } else if (m.bot) {
       if (lvl) { const L = LADDER[lvl - 1]; const cards = ladderDeck(lvl); const P = pl[BOT]; P.cards = cards; P.deckName = L.n; P.fac = K.mainTheme(cards); P.bon = K.bonusesOf(cards); P.lv = {}; for (const k of Object.keys(C)) P.lv[k] = Math.min(5, Math.ceil(lvl / 2)); P.life = maxLife[BOT] = L.life; nm[BOT] = L.n; P.art = L.art; if (lvl >= 3) P.hero = { id: L.th[0], cd: K.HEROES[L.th[0]].cd }; }
       else setDeck(r, BOT, 'zufall');
     }
@@ -414,19 +534,22 @@ module.exports = {
     if (s.phase === 'end') return 'quiet';
     if (a.type === 'block') {
       if (s.phase !== 'block' || s.turn === pid) return 'quiet';
-      const blocks = {}, used = new Set(), P = s.pl[pid];
-      for (const [bu, au] of Object.entries(a.b || {}).slice(0, BOARD_MAX)) {
-        const B = P.board.find(c => c.u === Number(bu)), A = s.atk.includes(Number(au)) ? findCre(s, Number(au)) : null;
-        if (!B || !A || used.has(A.u) || !canBlock(B, A)) return 'Dieser Block geht nicht.';
-        used.add(A.u); blocks[B.u] = A.u;
-      }
-      s.blocks = blocks; resolve(r); afterResolve(r); return;
+      const pairs = Array.isArray(a.b) ? a.b : Object.entries(a.b || {}).map(([b, x]) => [b, x]);
+      const e = setBlocks(s, pid, pairs); if (e) return e;
+      if (s.bl.length) log(s, `${s.nm[pid]} blockt${s.bl.length > 1 ? ` (${s.bl.length} Blocks)` : ''}.`);
+      toTrick(r); return;
     }
+    if (a.type === 'play' && (s.phase === 'block' || s.phase === 'trick')) { // Sofortzauber im Kampf
+      const mayPlay = s.phase === 'block' ? s.turn !== pid : s.turn === pid; if (!mayPlay) return 'Gerade ist der Gegner dran.';
+      const e = play(s, pid, Number(a.i), a.t); if (!e) log(s, `⚡ Sofortzauber!`); return e;
+    }
+    if (a.type === 'go') { if (s.phase !== 'trick' || s.turn !== pid) return 'quiet'; resolve(r); afterResolve(r); return; }
     if (s.turn !== pid) return 'Du bist gerade nicht dran.';
     if (s.phase !== 'main') return 'quiet';
     if (a.type === 'play') return play(s, pid, Number(a.i), a.t);
     if (a.type === 'hero') return useHero(s, pid, a.t);
-    if (a.type === 'attack') return attack(r, pid, Array.isArray(a.us) ? a.us.slice(0, BOARD_MAX) : []);
+    if (a.type === 'attack') { if (isArena(s)) return 'Im Arena-Modus greift jede Kreatur einzeln an.'; return attack(r, pid, Array.isArray(a.us) ? a.us.slice(0, BOARD_MAX) : []); }
+    if (a.type === 'strike') { if (!isArena(s)) return 'quiet'; return strike(r, pid, a.u, String(a.t || '')); }
     if (a.type === 'end') { endTurn(r); return; }
     return 'quiet';
   },
@@ -434,9 +557,9 @@ module.exports = {
   view(r, pid) {
     const s = r.state; if (!s) return null;
     const mine = s.p.includes(pid), me = mine ? pid : s.p[0], foe = foeOf(s, me), pick = s.phase === 'pick';
-    const pub = id => { const P = s.pl[id]; return { hero: P.hero && !(pick && id !== pid) ? { id: P.hero.id, cd: P.hero.cd } : null, life: P.life, max: s.maxLife[id], mx: P.mx, cr: P.cr, deck: P.deck.length, hand: P.hand.length, board: P.board.map(c => ({ u: c.u, id: c.id, a: c.a, h: c.h, d: c.d, kw: c.kw, sick: c.sick, tap: c.tap, frz: c.frz, shield: c.shield })), grave: P.grave.length,
+    const pub = id => { const P = s.pl[id]; return { hero: P.hero && !(pick && id !== pid) ? { id: P.hero.id, cd: P.hero.cd } : null, life: P.life, max: s.maxLife[id], mx: P.mx, cr: P.cr, deck: P.deck.length, hand: P.hand.length, board: P.board.map(c => ({ u: c.u, id: c.id, a: c.a, h: c.h, d: c.d, kw: c.kw, sick: c.sick, tap: c.tap, frz: c.frz, shield: c.shield, al: c.al })), grave: P.grave.length,
       fac: pick && id !== pid ? (P.cards ? '?' : null) : P.fac, bon: pick && id !== pid ? [] : P.bon, dn: pick && id !== pid ? '' : P.deckName, art: P.art || null, lv: pick ? {} : P.lv, fat: P.fat }; };
-    return { phase: s.phase, p: s.p, me, foe, mine, nm: s.nm, turn: s.turn, n: s.n, attacked: s.attacked, atk: s.atk, blocks: s.blocks, winner: s.winner, draw: s.draw, log: s.log, fx: s.fx, seq: s.seq, score: s.score, bot: s.bot, lvl: s.lvl,
+    return { phase: s.phase, p: s.p, me, foe, mine, nm: s.nm, turn: s.turn, n: s.n, attacked: s.attacked, atk: s.atk, bl: s.bl, mode: s.mode, arena: s.arena, winner: s.winner, draw: s.draw, log: s.log, fx: s.fx, seq: s.seq, score: s.score, bot: s.bot, lvl: s.lvl,
       left: s.dl ? Math.max(0, s.dl - Date.now()) : null, lastDeck: s.lastDeck[pid] || null, opts: pick && mine ? s.opts[pid] || [] : null, rew: s.rew && s.rew[pid] || null,
       P: { [me]: pub(me), [foe]: pub(foe) }, hand: mine ? s.pl[me].hand : [] };
   },

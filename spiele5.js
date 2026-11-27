@@ -17,6 +17,13 @@
   .kd-life{position:relative;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font:400 22px var(--display);color:#fff;background:radial-gradient(circle at 35% 30%,#ff6b7d,#8a0f24);box-shadow:0 0 0 3px #3a0f18,0 0 18px rgba(255,60,90,.45);flex:none;transition:transform .2s}
   .kd-life.low{animation:kdpulse 1s ease-in-out infinite}
   @keyframes kdpulse{50%{box-shadow:0 0 0 3px #3a0f18,0 0 30px rgba(255,60,90,.9)}}
+  .kd-cre.used{filter:saturate(.5) brightness(.75)}
+  .kd-mode{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:3;font-size:12px;font-weight:800;padding:3px 10px;border-radius:99px;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.18);cursor:pointer;white-space:nowrap}
+  .kd-modes{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:8px 0}
+  .kd-modes button{border:2px solid #4a3f66;background:#1d1830;color:#fff;border-radius:14px;padding:10px 14px;font:800 15px var(--body);cursor:pointer;text-align:left;max-width:260px}
+  .kd-modes button small{display:block;font-weight:600;color:var(--muted);font-size:12px}
+  .kd-modes button.on{border-color:#ffd23f;background:linear-gradient(135deg,#3a2a6a,#2a1a4a);box-shadow:0 0 16px rgba(255,210,63,.35)}
+  .kd-card .sof{position:absolute;top:2px;left:22px;font-size:9px;font-weight:800;color:#2a1a00;background:#ffd23f;border-radius:6px;padding:0 4px}
   .kd-hero{position:relative;flex:none;width:58px;height:58px;border-radius:50%;padding:0;border:0;cursor:pointer;background:conic-gradient(#ffd23f var(--p),rgba(255,255,255,.12) 0);display:grid;place-items:center;transition:transform .2s}
   .kd-hero .hp{width:50px;height:50px;border-radius:50%;display:grid;place-items:center;font-size:30px;background:radial-gradient(circle at 35% 30%,var(--c1),var(--c2));box-shadow:inset 0 0 10px rgba(0,0,0,.5)}
   .kd-hero .cdn{position:absolute;bottom:-4px;right:-4px;min-width:22px;height:22px;border-radius:11px;background:#1a1030;border:2px solid #6a5a9a;color:#fff;font:800 12px/18px var(--body)}
@@ -172,7 +179,7 @@
   `;
   const stl = document.createElement('style'); stl.textContent = css; document.head.appendChild(stl);
   const q = s => document.querySelector(s);
-  const S = { rid: null, seen: -1, atk: new Set(), blk: {}, bsel: null, tgt: null, hand: new Set(), phaseKey: '' };
+  const S = { rid: null, seen: -1, atk: new Set(), blk: [], asel: null, bsel: null, tgt: null, hand: new Set(), phaseKey: '' };
   const fc = f => F[f] || { col: '#666', col2: '#222', e: '❔', n: '?' };
   const cv = (f) => `--c1:${fc(f).col};--c2:${fc(f).col2}`;
   const kwIcons = kw => kw.map(k => (KW[k] ? KW[k][0] : '')).join('');
@@ -183,10 +190,17 @@
     const c = C[id]; if (!c) return '';
     const kw = (c.kw || []).map(k => KW[k] ? KW[k][1] : k).join(' · '), lv = o.lv || 0;
     return `<div class="kd-card ${o.cls || ''} ${lv >= 2 ? 'lv' + lv : ''}" style="${cv(c.f)};${c.r ? `--rc:${RAR[c.r].col};` : ''}${o.style || ''}" ${o.attr || ''}>${lvFx(lv)}<span class="cost">${c.c}</span>${stars(lv)}<div class="in"><div class="art">${c.art}</div><b class="nm ${c.n.length > 13 ? 'ln' : ''}">${esc(c.n)}</b>${kw ? `<div class="kw">${kw}</div>` : ''}${c.txt ? `<p class="tx">${esc(c.txt)}</p>` : ''}</div>
-      ${c.r ? '<i class="rg"></i>' : ''}${c.t === 'k' ? `<span class="st a">${o.a ?? c.a}</span><span class="st h">${o.h ?? c.h}</span><span class="ty">Kreatur</span>` : '<span class="ty">Zauber</span>'}</div>`;
+      ${c.r ? '<i class="rg"></i>' : ''}${c.inst ? '<span class="sof" title="Sofortzauber (Klassisch): auch im gegnerischen Zug">⚡ Sofort</span>' : ''}${c.t === 'k' ? `<span class="st a">${o.a ?? c.a}</span><span class="st h">${o.h ?? c.h}</span><span class="ty">Kreatur</span>` : '<span class="ty">Zauber</span>'}</div>`;
   }
   window.KDcard = cardHTML;
   const canAttack = c => !c.tap && !c.sick && !c.kw.includes('mauer') && c.a > 0;
+  const canAtk = (c, v) => !c.tap && !c.sick && !c.kw.includes('mauer') && c.a > 0 && (v.mode !== 'arena' || (c.al || 0) > 0);
+  const isGuard = c => c.kw.includes('wache') || c.kw.includes('mauer');
+  function strikeOpts(v) { // Arena: erlaubte Ziele der gewählten Kreatur
+    const A = v.P[v.me].board.find(c => c.u === S.asel); if (!A) return [];
+    const FB = v.P[v.foe].board, guards = FB.filter(isGuard), fly = A.kw.includes('flug');
+    return guards.length && !fly ? guards.map(c => 'u:' + c.u) : ['f:' + v.foe, ...FB.map(c => 'u:' + c.u)];
+  }
   const canBlock = (b, a) => !b.tap && (!a.kw.includes('flug') || b.kw.includes('flug') || b.kw.includes('reich'));
   const targetsFor = (v, e) => {
     const me = v.me, foe = v.foe, out = [], tg = e.tg;
@@ -195,19 +209,27 @@
     return out;
   };
 
-  const playable = (v, c) => { const P = v.P[v.me]; return v.mine && v.turn === v.me && v.phase === 'main' && c.c <= P.cr && !(c.t === 'k' && P.board.length >= 6) && !(c.t === 'z' && c.e && c.e.tg && !targetsFor(v, c.e).length); };
+  const instWin = v => v.mine && ((v.phase === 'block' && v.turn !== v.me) || (v.phase === 'trick' && v.turn === v.me));
+  const playable = (v, c) => { const P = v.P[v.me]; return v.mine && ((v.turn === v.me && v.phase === 'main') || (c.inst && instWin(v))) && c.c <= P.cr && !(c.t === 'k' && P.board.length >= 6) && !(c.t === 'z' && c.e && c.e.tg && !targetsFor(v, c.e).length); };
   function creHTML(c, v, side) {
     const k = C[c.id], my = side === 'me', main = v.phase === 'main' && v.turn === v.me && v.mine;
     const cls = ['kd-cre'];
     if (c.tap) cls.push('tap'); if (c.sick && !c.tap) cls.push('sick'); if (c.frz) cls.push('frz'); if (c.shield) cls.push('shield');
-    if (my && main && !S.tgt && !v.attacked && canAttack(c)) cls.push(S.atk.has(c.u) ? 'sel' : 'can');
+    const arena = v.mode === 'arena';
+    if (arena) {
+      if (my && main && !S.tgt && canAtk(c, v)) cls.push(S.asel === c.u ? 'sel' : 'can');
+      if (my && v.turn === v.me && !c.tap && !c.sick && (c.al || 0) <= 0) cls.push('used');
+      if (!my && S.asel != null && strikeOpts(v).includes('u:' + c.u)) cls.push('tgt');
+    } else if (my && main && !S.tgt && !v.attacked && canAttack(c)) cls.push(S.atk.has(c.u) ? 'sel' : 'can');
     if (v.atk.includes(c.u)) cls.push('attacking');
     if (S.bsel === c.u) cls.push('bsel');
     if (S.tgt && S.tgt.opts.includes('u:' + c.u)) cls.push('tgt');
     let badge = '';
-    if (v.phase === 'block') {
+    if (v.phase === 'block' || v.phase === 'trick') {
       const ai = v.atk.indexOf(c.u); if (ai >= 0) badge = `<span class="bl ak">${ai + 1}</span>`;
-      const bl = v.turn === v.me ? v.blocks : S.blk; const to = bl[c.u]; if (to != null) badge = `<span class="bl">🛡${v.atk.indexOf(Number(to)) + 1}</span>`;
+      const pairs = v.phase === 'block' && v.turn !== v.me ? S.blk : (v.bl || []);
+      const mineB = pairs.filter(([b]) => b === c.u).map(([, a]) => v.atk.indexOf(Number(a)) + 1);
+      if (mineB.length) badge = `<span class="bl">🛡${mineB.join('+')}</span>`;
     }
     const hurt = c.d > 0, up = c.a > k.a || c.h > k.h, lv = (v.P[side === 'me' ? v.me : v.foe].lv || {})[c.id] || 1;
     if (lv >= 2) cls.push('lv' + lv);
@@ -223,17 +245,18 @@
   }
   function barHTML(v, pid, side) {
     const P = v.P[pid], f = fc(P.fac), gems = Array.from({ length: P.mx }, (_, i) => `<i class="${i < P.cr ? 'on' : ''}"></i>`).join('');
-    const tg = S.tgt && S.tgt.opts.includes('f:' + pid) ? 'tgt' : '';
+    const tg = (S.tgt && S.tgt.opts.includes('f:' + pid)) || (S.asel != null && v.mode === 'arena' && strikeOpts(v).includes('f:' + pid)) ? 'tgt' : '';
     return `<div class="kd-bar ${v.turn === pid && v.phase !== 'end' ? 'turn' : ''}"><div class="who"><span class="av" style="--c1:${f.col};--c2:${f.col2}">${P.art || (pid === 'bot' ? '🤖' : f.e)}</span><span class="nm">${esc(v.nm[pid])}${side === 'me' && v.mine ? ' (du)' : ''}${(P.bon || []).length ? `<span class="kd-bon" data-kdbon="${pid}" title="Themen-Bonus">${P.bon.map(b => `<i>${fc(b).e}</i>`).join('')}</span>` : ''}<small>${esc(P.dn || f.n)} · <span title="Handkarten">🂠 ${P.hand}</span> · <span title="Karten im Deck">📚 ${P.deck}</span></small></span></div>
       <div class="kd-gems">${gems}<b>${P.cr}/${P.mx}</b></div>${heroHTML(v, pid, side)}
       <div class="kd-life ${P.life <= 5 ? 'low' : ''} ${tg}" data-face="f:${pid}" title="Leben">${Math.max(0, P.life)}</div></div>`;
   }
 
   function render(stage, v) {
-    if (S.rid !== room.id) { S.rid = room.id; S.seen = -1; S.atk.clear(); S.blk = {}; S.bsel = null; S.tgt = null; S.hand = new Set(); }
+    if (S.rid !== room.id) { S.rid = room.id; S.seen = -1; S.atk.clear(); S.blk = []; S.asel = null; S.bsel = null; S.tgt = null; S.hand = new Set(); }
     // Auswahl aufräumen
     const pk = v.phase + ':' + v.turn + ':' + v.n + ':' + v.attacked;
-    if (pk !== S.phaseKey) { S.phaseKey = pk; S.atk.clear(); S.blk = {}; S.bsel = null; S.tgt = null; }
+    if (pk !== S.phaseKey) { S.phaseKey = pk; if (v.phase !== 'end') S.arenaShown = 0; S.atk.clear(); S.blk = []; S.bsel = null; S.tgt = null; S.asel = null; }
+    if (S.asel != null && !v.P[v.me].board.some(c => c.u === S.asel && canAtk(c, v))) S.asel = null;
     if (v.phase === 'pick') return renderPick(stage, v);
     // Alte Positionen merken (für Animationen gestorbener Kreaturen)
     const prev = {}; stage.querySelectorAll('[data-u]').forEach(e => { prev[e.dataset.u] = { r: e.getBoundingClientRect(), html: e.outerHTML }; });
@@ -247,16 +270,25 @@
     let mid = '';
     if (v.phase === 'end') {
       const win = v.winner === me && v.mine, rw = v.rew;
-      const next = v.bot && v.lvl && win && v.lvl < K.LADDER.length ? `<button class="btn" data-kdbot="${v.lvl + 1}">🏆 Weiter zu Stufe ${v.lvl + 1}</button>` : '';
+      const nextAr = v.arena != null ? (rw && rw.tr != null ? K.arenaOf(rw.tr) : v.arena) : null;
+      const next = nextAr != null ? `<button class="btn" data-kdbot="1" data-kdarena="${nextAr}">🏆 Nächster Trophäenkampf</button>` : v.bot && v.lvl && win && v.lvl < K.LADDER.length ? `<button class="btn" data-kdbot="${v.lvl + 1}">🏆 Weiter zu Stufe ${v.lvl + 1}</button>` : '';
+      if (rw && rw.newArena != null && !S.arenaShown) { S.arenaShown = 1; const A = K.ARENAS[rw.newArena]; setTimeout(() => { const b = document.createElement('div'); b.className = 'kd-banner'; b.style.fontSize = 'clamp(28px,7vw,54px)'; b.textContent = `${A.e} ${A.n}!`; document.body.appendChild(b); setTimeout(() => b.remove(), 1700); if (window.g3confetti) g3confetti(160); }, 400); }
       mid = `<div class="kd-end"><div class="big ${win || !v.mine ? '' : 'l'}">${v.draw ? 'Unentschieden!' : win ? '🏆 Sieg!' : v.mine ? 'Niederlage' : `${esc(v.nm[v.winner])} gewinnt!`}</div>
         ${rw && rw.lines && rw.lines.length ? `<div class="kd-rew">${rw.f ? `<b>+${rw.f} 🪙 Funken</b>` : ''}${rw.lines.map(l => `<div>${esc(l)}</div>`).join('')}${rw.total != null ? `<div class="note">Jetzt: ${rw.total} 🪙 · <a href="#" data-kdz="packs">Packs öffnen</a></div>` : ''}</div>` : ''}
         <p class="note">Stand: ${esc(v.nm[v.p[0]])} ${v.score[v.p[0]] || 0} – ${v.score[v.p[1]] || 0} ${esc(v.nm[v.p[1]])}</p>
-        <div class="row" style="justify-content:center;gap:8px;flex-wrap:wrap">${v.bot && isHost() ? `${next}<button class="btn ${next ? 'ghost' : ''}" data-kdbot="${v.lvl || 0}">⚔️ Nochmal</button>` : againHTML('⚔️ Revanche!')}<button class="btn ghost" data-kdz="spielen">💎 Zentrale</button></div></div>`;
+        <div class="row" style="justify-content:center;gap:8px;flex-wrap:wrap">${v.bot && isHost() ? (nextAr != null ? next : `${next}<button class="btn ${next ? 'ghost' : ''}" data-kdbot="${v.lvl || 0}">⚔️ Nochmal</button>`) : againHTML('⚔️ Revanche!')}<button class="btn ghost" data-kdz="spielen">💎 Zentrale</button></div></div>`;
     } else if (S.tgt) {
       mid = `<div class="kd-tgtbar">🎯 Ziel für ${S.tgt.hero ? esc(HE[v.P[v.me].hero.id].pow) : esc(C[v.hand[S.tgt.i] ? v.hand[S.tgt.i].id : ''] ? C[v.hand[S.tgt.i].id].n : '')} wählen <button class="btn ghost small" data-kd="cancel">Abbrechen</button></div>`;
     } else if (v.phase === 'block') {
-      if (v.mine && v.turn !== me) { const n = Object.keys(S.blk).length; mid = `<span class="msg mine">🛡️ Angriff! ${S.bsel ? 'Jetzt einen roten Angreifer antippen' : 'Tippe deine Kreatur, dann den Angreifer, den sie blocken soll'}</span><button class="btn" data-kd="block">${n ? `🛡️ Mit ${n} blocken` : 'Nicht blocken'}</button>`; }
+      if (v.mine && v.turn !== me) { const n = S.blk.length, inst = v.hand.some(h => C[h.id].inst && C[h.id].c <= P.cr);
+        mid = `<span class="msg mine">🛡️ Angriff! ${S.bsel ? 'Jetzt einen roten Angreifer antippen' : 'Tippe deine Kreatur, dann den Angreifer – mehrere Blocker pro Angreifer gehen.'}${inst ? ' ⚡ Sofortzauber kannst du jetzt auch spielen.' : ''}</span><button class="btn" data-kd="block">${n ? `🛡️ Blocks bestätigen (${n})` : 'Nicht blocken'}</button>`; }
       else mid = `<span class="msg">⏳ ${esc(v.nm[foe === v.turn ? me : foe])} wählt Blocker …</span>`;
+    } else if (v.phase === 'trick') {
+      if (v.mine && v.turn === me) mid = `<span class="msg mine">⚡ Kampftricks: Spiele jetzt Sofortzauber – oder lass den Kampf beginnen.</span><button class="btn atk" data-kd="go">💥 Schaden!</button>`;
+      else mid = `<span class="msg">⏳ ${esc(v.nm[v.turn])} überlegt einen Kampftrick …</span>`;
+    } else if (myTurn && v.mode === 'arena') {
+      const can = P.board.some(c => canAtk(c, v));
+      mid = `<span class="msg mine">${S.asel != null ? '🎯 Wähle das Ziel (leuchtend) – oder tippe die Kreatur nochmal zum Abbrechen' : can ? 'Tippe eine grün leuchtende Kreatur zum Angreifen' : 'Spiele Karten oder beende den Zug'}</span><button class="btn end" data-kd="end">Zug beenden ⏭</button>`;
     } else if (myTurn) {
       const n = S.atk.size, can = !v.attacked && P.board.some(canAttack);
       mid = `<span class="msg mine">${v.attacked ? 'Angriff vorbei – spiele noch Karten oder beende den Zug' : can ? (n ? '' : 'Karten spielen oder Angreifer antippen') : 'Dein Zug – spiele Karten aus'}</span>
@@ -265,7 +297,8 @@
     if (v.left != null && v.phase !== 'end') mid += ` <span class="note">⏱ <span data-cd></span> s</span>`;
     const row = (pid, side) => { const b = v.P[pid].board; return `<div class="kd-row ${side}">${b.length ? b.map(c => creHTML(c, v, side)).join('') : '<span class="empty">– keine Kreaturen –</span>'}</div>`; };
     stage.dataset.mode = 'kd';
-    stage.innerHTML = `<div class="kd"><div class="kd-table" style="--fo:${fc(v.P[foe].fac).col};--fm:${fc(P.fac).col}">${barHTML(v, foe, 'foe')}${row(foe, 'foe')}<div class="kd-mid">${mid}</div>${row(me, 'me')}${barHTML(v, me, 'me')}</div>
+    const AR = v.arena != null && K.ARENAS ? K.ARENAS[v.arena] : null, MO = K.MODES ? K.MODES[v.mode || 'klassisch'] : null;
+    stage.innerHTML = `<div class="kd"><div class="kd-table" style="--fo:${fc(v.P[foe].fac).col};--fm:${fc(P.fac).col};${AR ? `background:radial-gradient(ellipse at 50% 50%,color-mix(in srgb,${AR.col} 22%,transparent),transparent 70%),linear-gradient(180deg,${AR.col2},#0d0a18 50%,${AR.col2})` : ''}">${MO ? `<span class="kd-mode" data-kdrules="1">${MO.e} ${MO.n}${AR ? ` · ${AR.e} ${AR.n}` : ''} ⓘ</span>` : ''}${barHTML(v, foe, 'foe')}${row(foe, 'foe')}<div class="kd-mid">${mid}</div>${row(me, 'me')}${barHTML(v, me, 'me')}</div>
       ${v.mine ? `<div class="kd-hand">${hand || '<span class="note">Keine Handkarten</span>'}</div>` : ''}<p class="kd-log">${esc(v.log[v.log.length - 1] || '')}</p></div>`;
     if (deadline != null) { const s = Math.max(0, Math.ceil((deadline - Date.now()) / 1000)); stage.querySelectorAll('[data-cd]').forEach(e => (e.textContent = s)); }
     animate(stage, v, prev);
@@ -394,7 +427,7 @@
   }
   document.addEventListener('click', e => {
     if (!room || room.game !== 'duell') return;
-    const kb = e.target.closest('[data-kdbot]'); if (kb && isHost()) { send({ t: 'start', bot: 1, lvl: Number(kb.dataset.kdbot) || 0 }); return; }
+    const kb = e.target.closest('[data-kdbot]'); if (kb && isHost()) { const ar = kb.dataset.kdarena; send({ t: 'start', bot: 1, mode: getMode(), ...(ar != null ? { arena: Number(ar) } : { lvl: Number(kb.dataset.kdbot) || 0 }) }); return; }
     if (!room.view) return;
     const v = room.view;
     const f = e.target.closest('[data-kdd]'); if (f) { if (f.classList.contains('bad')) { toast(f.title || 'Dieses Deck ist nicht fertig.'); return; } act({ type: 'deck', d: f.dataset.kdd }); return; }
@@ -416,35 +449,62 @@
       else if (a === 'attack') act({ type: 'attack', us: [...S.atk] });
       else if (a === 'all') { v.P[v.me].board.filter(canAttack).forEach(c => S.atk.add(c.u)); renderRoom(); }
       else if (a === 'block') act({ type: 'block', b: S.blk });
+      else if (a === 'go') act({ type: 'go' });
       return;
     }
+    const fEl = e.target.closest('[data-face]');
+    if (fEl && v.mode === 'arena' && S.asel != null) { const t = fEl.dataset.face; if (strikeOpts(v).includes(t)) { const a = S.asel; S.asel = null; act({ type: 'strike', u: a, t }); } else toast('Erst die Wächter besiegen – nur Flieger dürfen darüber hinweg.'); return; }
+    const rl = e.target.closest('[data-kdrules]'); if (rl) { showRules(v.mode); return; }
     const h = e.target.closest('[data-hi]'); if (h) { showHand(Number(h.dataset.hi)); return; }
     const cEl = e.target.closest('[data-u]'); if (!cEl) return;
     const u = Number(cEl.dataset.u), side = cEl.dataset.side;
     const mine = v.P[v.me].board.find(c => c.u === u);
-    // Blocken
+    // Blocken (Klassisch): mehrere Blocker pro Angreifer, Wächter dürfen zwei Angreifer blocken
     if (v.phase === 'block' && v.mine && v.turn !== v.me) {
       if (side === 'me' && mine) {
-        if (S.blk[u] != null) { delete S.blk[u]; S.bsel = null; renderRoom(); return; }
+        if (S.bsel === u) { S.bsel = null; renderRoom(); return; }
+        if (S.blk.some(([b]) => b === u) && !(mine.kw.includes('wache') && S.blk.filter(([b]) => b === u).length < 2)) { S.blk = S.blk.filter(([b]) => b !== u); S.bsel = null; renderRoom(); return; }
         if (mine.tap) { toast('Erschöpfte Kreaturen können nicht blocken.'); return; }
-        S.bsel = S.bsel === u ? null : u; renderRoom(); return;
+        S.bsel = u; renderRoom(); return;
       }
       if (side === 'foe' && v.atk.includes(u) && S.bsel != null) {
         const B = v.P[v.me].board.find(c => c.u === S.bsel), A = v.P[v.foe].board.find(c => c.u === u);
         if (!canBlock(B, A)) { toast('Fliegende Angreifer können nur von Flug oder Reichweite geblockt werden.'); return; }
-        for (const k of Object.keys(S.blk)) if (S.blk[k] === u) delete S.blk[k]; // pro Angreifer ein Blocker
-        S.blk[S.bsel] = u; S.bsel = null; renderRoom(); return;
+        if (S.blk.some(([b, a]) => b === B.u && a === u)) { S.bsel = null; renderRoom(); return; }
+        if (!B.kw.includes('wache')) S.blk = S.blk.filter(([b]) => b !== B.u); // normale Blocker: nur ein Angreifer
+        S.blk.push([B.u, u]); S.bsel = null; renderRoom(); return;
       }
       showCre(u); return;
     }
-    // Angreifer wählen
-    if (side === 'me' && mine && v.phase === 'main' && v.turn === v.me && !v.attacked && canAttack(mine)) { if (S.atk.has(u)) S.atk.delete(u); else S.atk.add(u); renderRoom(); return; }
+    // Arena: Angreifer antippen, dann Ziel
+    if (v.mode === 'arena' && v.phase === 'main' && v.turn === v.me && v.mine) {
+      if (side === 'me' && mine && canAtk(mine, v)) { S.asel = S.asel === u ? null : u; renderRoom(); return; }
+      if (side === 'foe' && S.asel != null) { const t = 'u:' + u; if (strikeOpts(v).includes(t)) { const a = S.asel; S.asel = null; act({ type: 'strike', u: a, t }); } else toast('Erst die Wächter besiegen – nur Flieger dürfen darüber hinweg.'); return; }
+    }
+    // Angreifer wählen (Klassisch)
+    if (v.mode !== 'arena' && side === 'me' && mine && v.phase === 'main' && v.turn === v.me && !v.attacked && canAttack(mine)) { if (S.atk.has(u)) S.atk.delete(u); else S.atk.add(u); renderRoom(); return; }
     showCre(u);
   });
+  function showRules(mode) {
+    const M = K.MODES[mode || 'klassisch'];
+    popup(`<div class="kd-rew" style="max-width:420px"><b>${M.e} ${M.n}-Modus</b>${M.rules.map(r => `<div style="margin-top:6px">• ${esc(r)}</div>`).join('')}</div><button class="btn ghost" data-kdx="1">Schließen</button>`);
+  }
+  window.KDrules = showRules;
+  const getMode = () => { try { return localStorage.getItem('fsg.kdmode') === 'arena' ? 'arena' : 'klassisch'; } catch { return 'klassisch'; } };
+  window.KDmode = getMode;
+  const modePick = () => `<div class="kd-modes">${Object.entries(K.MODES).map(([k, M]) => `<button class="${getMode() === k ? 'on' : ''}" data-kdmode="${k}">${M.e} ${M.n}<small>${M.short} · <span data-kdrulesx="${k}" style="text-decoration:underline">Regeln</span></small></button>`).join('')}</div>`;
+  window.KDmodePick = modePick;
+  document.addEventListener('click', e => {
+    const rx = e.target.closest('[data-kdrulesx]'); if (rx) { e.stopPropagation(); showRules(rx.dataset.kdrulesx); return; }
+    const m = e.target.closest('[data-kdmode]'); if (!m) return;
+    try { localStorage.setItem('fsg.kdmode', m.dataset.kdmode); } catch {}
+    document.querySelectorAll('[data-kdmode]').forEach(b => b.classList.toggle('on', b.dataset.kdmode === m.dataset.kdmode));
+  }, true);
+  window.LobbyOpt = Object.assign(window.LobbyOpt || {}, { duell: () => ({ mode: getMode() }) });
   // Lobby: Bot-Knopf und Kurzregeln
   const kdLobby = () => {
-    if (window.KDZ && KDZ.pending != null && isHost()) { const l = KDZ.pending; KDZ.pending = null; setTimeout(() => send({ t: 'start', bot: 1, lvl: l }), 50); }
-    return `${isHost() ? '<div class="qz-lobby" style="text-align:center"><b>Kein Gegner da?</b><div class="row" style="justify-content:center;gap:8px;flex-wrap:wrap"><button class="btn" data-kdbot="0">🤖 Übungs-Bot</button><button class="btn ghost" data-kdz="leiter">🏆 Bot-Leiter</button></div></div>' : ''}
+    if (window.KDZ && KDZ.pending != null && isHost()) { const p = KDZ.pending; KDZ.pending = null; setTimeout(() => send({ t: 'start', bot: 1, mode: getMode(), ...(typeof p === 'object' ? p : { lvl: p }) }), 50); }
+    return `${isHost() ? `<div class="qz-lobby" style="text-align:center"><b>Spielmodus</b>${modePick()}<b>Kein Gegner da?</b><div class="row" style="justify-content:center;gap:8px;flex-wrap:wrap"><button class="btn" data-kdbot="0">🤖 Übungs-Bot</button><button class="btn ghost" data-kdz="trophaen">🏆 Trophäenkampf</button></div></div>` : ''}
     <p class="center"><button class="btn ghost small" data-kdz="packs">💎 Sammlung, Packs & Decks</button></p>
     <details class="kd-rules"><summary>📖 So geht Kristallduell</summary><ul>
     <li>Jeder startet mit <b>20 Leben</b>. Bringe den Gegner auf 0.</li>

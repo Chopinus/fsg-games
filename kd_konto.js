@@ -21,7 +21,7 @@ const START_DECK = DECKS.abent, START_NAME = 'Abenteuer-Startdeck'; // jeder bes
 const WELCOME = 8; // Willkommens-Packs: zusammen 40 Karten aus allen Themen, genug für ein erstes Deck
 const OLD_STARTER = {}; for (const [f, d] of Object.entries(DECKS)) if (f !== 'abent') for (const [id, n] of Object.entries(d)) OLD_STARTER[id] = (OLD_STARTER[id] || 0) + n;
 function init(acc) {
-  if (!acc.kd) acc.kd = { v: 6, heroes: { abent: 1 }, c: { ...START_DECK }, welcome: 0, f: 300, st: 0, pe: 0, pl: 0, free: 0, decks: [{ n: START_NAME, cards: { ...START_DECK }, hero: 'abent' }], lad: 0, packs: 0, d: '', dq: [], dbw: 0, dpw: 0, dfw: false };
+  if (!acc.kd) acc.kd = { v: 7, tr: 0, trMax: 0, road: 0, fp: {}, heroes: { abent: 1 }, c: { ...START_DECK }, welcome: 0, f: 300, st: 0, pe: 0, pl: 0, free: 0, decks: [{ n: START_NAME, cards: { ...START_DECK }, hero: 'abent' }], lad: 0, packs: 0, d: '', dq: [], dbw: 0, dpw: 0, dfw: false };
   if (!acc.kd.v || acc.kd.v === 1) { // alte, zu große Startsammlung verkleinern – gezogene Karten bleiben
     const c = {}; for (const [id, n] of Object.entries(acc.kd.c)) { const k = Math.max(0, n - (OLD_STARTER[id] || 0)); if (k) c[id] = k; }
     for (const id of Object.keys(STARTER)) c[id] = (c[id] || 0) + 1;
@@ -47,6 +47,9 @@ function init(acc) {
     for (const d of k.decks) if (d.n === START_NAME && !d.hero) d.hero = 'abent';
     k.v = 6;
   }
+  if (acc.kd.v === 6) { // Trophäen: Fortschritt der Bot-Leiter wird in Trophäen umgerechnet (ohne doppelte Belohnungen)
+    const k = acc.kd; k.tr = (k.lad || 0) * 150; k.trMax = k.tr; k.road = Math.floor(k.tr / 100); k.fp = k.fp || {}; k.v = 7;
+  }
   const k = acc.kd, d = day();
   if (k.d !== d) { // neuer Tag: neue Aufgaben
     let h = 0; for (const ch of d + (acc.name || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
@@ -60,9 +63,9 @@ const levels = acc => { const k = init(acc), out = {}; for (const [id, n] of Obj
 const deckList = acc => init(acc).decks.map(d => ({ n: d.n, cards: d.cards, hero: d.hero && (acc.kd.heroes || {})[d.hero] ? d.hero : null, err: K.checkDeck(d.cards, acc.kd.c) }));
 function state(acc) {
   const k = init(acc);
-  return { c: k.c, heroes: k.heroes || {}, welcome: k.welcome || 0, f: k.f, st: k.st, pe: k.pe, pl: k.pl, free: k.free, lad: k.lad, packs: k.packs, decks: deckList(acc), dq: k.dq, dfw: k.dfw };
+  return { c: k.c, heroes: k.heroes || {}, welcome: k.welcome || 0, f: k.f, st: k.st, pe: k.pe, pl: k.pl, free: k.free, fp: k.fp || {}, tr: k.tr || 0, trMax: k.trMax || 0, ar: K.arenaOf(k.trMax || 0), lad: k.lad, packs: k.packs, decks: deckList(acc), dq: k.dq, dfw: k.dfw };
 }
-function rollRarity() { const o = PACK.odds, t = o.g + o.s + o.e + o.l; let x = Math.random() * t; for (const r of ['l', 'e', 's', 'g']) { if (x < o[r]) return r; x -= o[r]; } return 'g'; }
+function rollRarity(o) { o = o || PACK.odds; t = o.g + o.s + o.e + o.l; let x = Math.random() * t; for (const r of ['l', 'e', 's', 'g']) { if (x < o[r]) return r; x -= o[r]; } return 'g'; }
 function pickCard(th, r, own, taken, cre) {
   const themes = th === 'mix' || th === 'start' ? Object.keys(F) : [th];
   let list = themes.flatMap(f => (POOL[f] && POOL[f][r]) || []);
@@ -89,30 +92,35 @@ function welcomePack(acc, k) { // 4 gewöhnliche + 1 seltene/epische, davon mind
   const order = { g: 0, s: 1, e: 2, l: 3 }; cards.sort((a, b) => order[a.r] - order[b.r]);
   return [200, { cards, pity: null, free: true, welcome: true, state: state(acc) }];
 }
-function openPack(acc, th) {
+function openPack(acc, th, type) {
   const k = init(acc);
   if (th === 'start') return welcomePack(acc, k);
   if (th !== 'mix' && !F[th]) return [400, { error: 'Unbekanntes Pack.' }];
-  const free = k.free > 0;
-  if (!free && k.f < PACK.cost) return [400, { error: `Dafür brauchst du ${PACK.cost} Funken.` }];
-  if (free) k.free--; else k.f -= PACK.cost;
-  const rs = Array.from({ length: PACK.size }, rollRarity);
-  if (!rs.some(r => r !== 'g')) rs[PACK.size - 1] = 's'; // mindestens eine seltene
+  const T = K.PACKS[type] ? type : 'klein', P = K.PACKS[T], ai = K.arenaOf(k.trMax || 0), A = K.ARENAS[ai];
+  if (ai < P.min) return [400, { error: `${P.n} gibt es ab dem Kampfgebiet ${K.ARENAS[P.min].e} ${K.ARENAS[P.min].n}.` }];
+  k.fp = k.fp || {};
+  const free = T === 'klein' ? k.free > 0 : (k.fp[T] || 0) > 0;
+  if (!free && k.f < P.cost) return [400, { error: `Dafür brauchst du ${P.cost} Funken.` }];
+  if (free) { if (T === 'klein') k.free--; else k.fp[T]--; } else k.f -= P.cost;
+  const rs = Array.from({ length: P.size }, () => rollRarity(A.odds)); // Chancen steigen mit dem Kampfgebiet
+  const rank = { g: 0, s: 1, e: 2, l: 3 }, need = rank[P.sure];
+  if (!rs.some(r => rank[r] >= need)) rs[P.size - 1] = P.sure;
+  if (P.sure2 && rs.filter(r => rank[r] >= need).length < 2) rs[P.size - 2] = P.sure;
   const forceL = k.pl + 1 >= PACK.pityL && !rs.includes('l'), forceE = k.pe + 1 >= PACK.pityE && !rs.some(r => r === 'e' || r === 'l');
-  if (forceL) rs[PACK.size - 1] = 'l'; else if (forceE) rs[PACK.size - 1] = Math.random() < 0.2 ? 'l' : 'e';
+  if (forceL) rs[0] = 'l'; else if (forceE) rs[0] = Math.random() < 0.2 ? 'l' : 'e';
   k.pe = rs.some(r => r === 'e' || r === 'l') ? 0 : k.pe + 1;
   k.pl = rs.includes('l') ? 0 : k.pl + 1;
-  const order = { g: 0, s: 1, e: 2, l: 3 };
-  rs.sort((a, b) => order[a] - order[b]); // die besten zum Schluss aufdecken
+  rs.sort((a, b) => rank[a] - rank[b]); // die besten zum Schluss aufdecken
   const cards = addCards(k, th, rs, 0);
   k.packs++;
-  // Held: 1 % pro Pack (Themenpack: Held des Themas, Kristallpack: zufälliger Held). Hat man ihn schon, gibt es Sternenstaub.
+  // Held: Chance steigt mit dem Kampfgebiet (Königspack ×2, Legendenpack ×3). Themenpack: Held des Themas, Kristallpack: zufällig.
   let hero = null;
-  if (Math.random() < K.HERO_P) {
+  const hp = (A.hero / 100) * (T === 'koenig' ? 2 : T === 'legende' ? 3 : 1);
+  if (Math.random() < hp) {
     const hid = th === 'mix' ? Object.keys(K.HEROES)[Math.floor(Math.random() * Object.keys(K.HEROES).length)] : th;
     if (K.HEROES[hid]) { k.heroes = k.heroes || {}; const dup = !!k.heroes[hid]; if (dup) k.st += 500; else k.heroes[hid] = 1; hero = { id: hid, dup, dust: dup ? 500 : 0 }; }
   }
-  return [200, { cards, hero, pity: forceL ? 'l' : forceE ? 'e' : null, free, state: state(acc) }];
+  return [200, { cards, hero, type: T, pity: forceL ? 'l' : forceE ? 'e' : null, free, state: state(acc) }];
 }
 function craft(acc, id) {
   const k = init(acc), c = C[id]; if (!c || c.tok) return [400, { error: 'Unbekannte Karte.' }];
@@ -143,11 +151,34 @@ function reward(acc, info) {
     if (info.win) { k.dpw++; const v = k.dpw <= 15 ? 50 : 10; f += v; lines.push(`Sieg gegen einen echten Gegner: +${v}`); }
     else if (info.draw) { f += 25; lines.push('Unentschieden: +25'); }
     else if (!info.left) { f += 15; lines.push('Duell gespielt: +15'); }
-  } else {
+  } else if (info.arena == null) {
     if (info.win) { k.dbw++; const v = k.dbw <= 12 ? 20 + 3 * (info.lvl || 0) : 5; f += v; lines.push(`Sieg gegen den Bot: +${v}`); }
     else { f += 5; lines.push('Duell gespielt: +5'); }
   }
   if (info.win && !k.dfw) { k.dfw = true; f += FIRST_WIN; lines.push(`Erster Sieg des Tages: +${FIRST_WIN}`); }
+  // Trophäen: Trophäenkämpfe gegen Bots und alle Duelle gegen echte Spieler
+  let trd = 0, newArena = null;
+  if (info.arena != null || info.pvp) {
+    const before = k.tr || 0, ai = K.arenaOf(before), floor = K.ARENAS[ai].t;
+    if (info.win) trd = 28 + Math.floor(Math.random() * 5);
+    else if (!info.draw) trd = -Math.min(20, before - floor); // nie unter den Anfang des Kampfgebiets
+    k.tr = before + trd;
+    if (k.tr > (k.trMax || 0)) {
+      const oldMax = k.trMax || 0; k.trMax = k.tr;
+      if (K.arenaOf(k.trMax) > K.arenaOf(oldMax)) newArena = K.arenaOf(k.trMax);
+      // Trophäenweg: Belohnung alle 100 Trophäen (nur beim ersten Erreichen)
+      while ((k.road || 0) < Math.floor(k.trMax / 100)) {
+        k.road = (k.road || 0) + 1; const m = k.road * 100, gate = K.ARENAS.findIndex(a => a.t > m - 100 && a.t <= m);
+        if (gate > 0) { const t = gate <= 4 ? 'gross' : gate <= 8 ? 'koenig' : 'legende'; k.fp = k.fp || {}; k.fp[t] = (k.fp[t] || 0) + 1; lines.push(`🏟️ Neues Kampfgebiet ${K.ARENAS[gate].e} ${K.ARENAS[gate].n}: Gratis-${K.PACKS[t].n}!`); }
+        else if (k.road % 5 === 0) { k.free++; k.st += 100; lines.push(`🛤️ Trophäenweg ${m}: Gratis-Pack und +100 ✨`); }
+        else { const v = 40 + 10 * K.arenaOf(m); f += v; lines.push(`🛤️ Trophäenweg ${m}: +${v} 🪙`); }
+      }
+    }
+    if (trd) lines.unshift(`${trd > 0 ? '+' : ''}${trd} 🏆 Trophäen (jetzt ${k.tr})`);
+    else if (!info.win && !info.draw) lines.unshift(`🛡️ Keine Trophäen verloren – Gebietsgrenze (${k.tr} 🏆)`);
+  }
+  if (info.arena != null && info.win) { k.dbw++; const v = k.dbw <= 12 ? 25 + 3 * info.arena : 5; f += v; lines.push(`Trophäenkampf gewonnen: +${v} 🪙`); }
+  else if (info.arena != null) { f += 5; lines.push('Duell gespielt: +5 🪙'); }
   let lad = null;
   if (!info.pvp && info.win && info.lvl && info.lvl === k.lad + 1) {
     k.lad = info.lvl; const v = 100 + info.lvl * 30, packs = info.lvl === LADDER.length ? 3 : 1; f += v; k.free += packs;
@@ -161,12 +192,12 @@ function reward(acc, info) {
     if (q.n >= q.g) { q.done = true; f += Q_REWARD; done.push(q.t); lines.push(`Aufgabe „${q.t}“ erledigt: +${Q_REWARD}`); }
   }
   k.f += f;
-  return { f, lines, lad, total: k.f };
+  return { f, lines, lad, total: k.f, tr: k.tr || 0, trd, newArena };
 }
 
 function action(action, acc, body) {
   if (action === 'kd_state') return [200, state(acc)];
-  if (action === 'kd_pack') return openPack(acc, String(body.th || 'mix'));
+  if (action === 'kd_pack') return openPack(acc, String(body.th || 'mix'), String(body.type || 'klein'));
   if (action === 'kd_craft') return craft(acc, String(body.id || ''));
   if (action === 'kd_deck_save') return saveDeck(acc, body);
   if (action === 'kd_deck_del') return delDeck(acc, Number(body.i));

@@ -307,6 +307,13 @@
   // Neuigkeiten ab Version 1.0. Neue Einträge oben anfügen, mit fortlaufender id.
   // Neuigkeiten, neueste zuerst. Jede Neuerung als kurzer Stichpunkt. id immer hochzählen.
   const UPDATES = [
+    { id: 104, title: 'Kristallduell: zwei Kampfmodi, Trophäen und 12 Kampfgebiete', date: '27.11.2026', items: [
+      '⚔️ Arena-Modus: Jede Kreatur greift einzeln an und wählt ihr Ziel. Wächter müssen zuerst fallen, Wunden bleiben, Siegeszug gibt +1/+1, Wachsame greifen zweimal an.',
+      '🃏 Klassisch-Modus (wie Magic): Mehrfachblocks, Wächter blocken zwei Angreifer, Sofortzauber im gegnerischen Zug und Kampftricks nach den Blocks. Neu: Erstschlag.',
+      '🏆 Trophäenkämpfe gegen Bots in 12 Kampfgebieten – vom Dorfplatz bis zum Kristallthron. Die Bots werden mit jedem Gebiet schlauer.',
+      '🎁 Mit jedem Gebiet steigen die Pack-Chancen (legendär 0,5 % → 4,5 %, Held 1 % → 4 %). Neue Pack-Arten: Großes Pack, Königspack und Legendenpack.',
+      '🛤️ Trophäenweg mit Belohnungen alle 100 Trophäen und eine Rangliste.',
+    ] },
     { id: 103, title: 'Kristallduell: Helden mit eigenem Platz im Deck', date: '26.11.2026', items: [
       'Jedes Deck hat jetzt rechts einen großen Heldenplatz (zusätzlich zu den 30 Karten). Den Abenteuer-Helden Hauptmann Aldric hat jeder von Anfang an.',
       'Im Duell steht dein Held neben deinen Leben. Ist seine Abklingzeit vorbei, leuchtet er – antippen und die Heldenkraft einsetzen (z. B. Schwerthieb, Feuerregen, Seelenraub).',
