@@ -110,6 +110,14 @@ function legal(s, col = s.turn) {
     return !attacked(n.board, k, other(col));
   });
 }
+// Vorauszüge: alles, was die Figur nach dem gegnerischen Zug ziehen könnte (Bauern dürfen schräg vormerken, auch ohne Figur dort)
+function preMoves(s, col) {
+  const seen = new Set(), out = [], b = s.board, lastR = col === 'w' ? 0 : 7, d = col === 'w' ? -1 : 1;
+  const push = (f, t, pr) => { const k = f * 64 + t; if (seen.has(k) || (b[t] && b[t][0] === col && b[t][1] !== 'R')) return; seen.add(k); out.push([f, t, pr ? 1 : 0]); };
+  for (const m of pseudo({ ...s, ep: null }, col)) push(m.f, m.t, m.promo);
+  for (let sq = 0; sq < 64; sq++) if (b[sq] === col + 'P') { const r = sq >> 3, c = sq & 7; for (const dc of [-1, 1]) if (c + dc >= 0 && c + dc < 8 && r + d >= 0 && r + d < 8) push(sq, (r + d) * 8 + c + dc, r + d === lastR); }
+  return out.filter(([f, t]) => !(b[t] && b[t][0] === col));
+}
 function inCheck(s, col) { return attacked(s.board, s.board.indexOf(col + 'K'), other(col)); }
 function insufficient(b) {
   const pcs = b.filter(Boolean).filter(p => p[1] !== 'K');
@@ -424,9 +432,10 @@ module.exports = {
     if (!s) return null;
     const mine = pid === s.w ? 'w' : pid === s.b ? 'b' : null;
     const moves = r.status === 'playing' && mine === s.turn ? legal(s).map(m => [m.f, m.t, m.promo ? 1 : 0]) : [];
+    const pre = r.status === 'playing' && mine && mine !== s.turn ? preMoves(s, mine) : [];
     const nm = id => (id === 'bot' ? (s.puz ? 'Rätsel-Bot' : `Schachbot · ${BOT_LV[s.bot.lv].name}`) : nameOf(r, id));
     return {
-      board: s.board, turn: s.turn, mine, w: s.w, b: s.b, moves, last: s.last, log: s.log, names: { w: nm(s.w), b: nm(s.b) },
+      board: s.board, turn: s.turn, mine, w: s.w, b: s.b, moves, pre, last: s.last, log: s.log, names: { w: nm(s.w), b: nm(s.b) },
       check: r.status === 'playing' && inCheck(s, s.turn), result: s.result, taken: s.taken,
       bot: s.bot ? { col: s.bot.col, lv: s.bot.lv } : null, puz: s.puz ? { ...s.puz } : null, think: !!(s.bot && r.status === 'playing' && s.turn === s.bot.col),
       tc: s.tc || 'none', tcName: TC[s.tc || 'none'].n,

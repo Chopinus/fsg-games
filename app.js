@@ -497,19 +497,30 @@ const glyph = p => `<span class="pc ${p[0] === 'w' ? 'pw' : 'pb'}">${GLYPH[p[1]]
 function renderChess(st, v) {
   setMode(st, 'schach');
   const lastKey = JSON.stringify(v.last) + v.turn;
-  if (ui.selKey !== lastKey) { ui.sel = null; ui.selKey = lastKey; ui.resign = false; }
-  const flip = v.mine === 'b';
   const myTurn = room.status === 'playing' && v.mine === v.turn;
-  const targets = ui.sel != null ? v.moves.filter(m => m[0] === ui.sel).map(m => m[1]) : [];
+  if (ui.selKey !== lastKey) { // Zugwechsel: Auswahl behalten, wenn die eigene Figur noch dasteht; Vorauszug ausführen
+    ui.selKey = lastKey; ui.resign = false;
+    if (ui.sel != null && !(v.board[ui.sel] && v.board[ui.sel][0] === v.mine)) ui.sel = null;
+    if (ui.pre && myTurn) {
+      const p = ui.pre, mv = v.moves.find(m => m[0] === p[0] && m[1] === p[1]); ui.pre = null;
+      if (mv) { ui.sel = null; act({ type: 'move', f: mv[0], t: mv[1], ...(mv[2] ? { promo: 'Q' } : {}) }); }
+      else toast('Vorauszug war nicht möglich – er wurde gelöscht.');
+    } else if (room.status !== 'playing') { ui.pre = null; ui.sel = null; }
+  }
+  const flip = v.mine === 'b';
+  const preNow = room.status === 'playing' && v.mine && !myTurn;
+  const list = preNow ? (v.pre || []) : v.moves;
+  const targets = ui.sel != null && !ui.pre ? list.filter(m => m[0] === ui.sel).map(m => m[1]) : [];
   const kingSq = v.check ? v.board.indexOf(v.turn + 'K') : -1;
   let cells = '';
   for (let i = 0; i < 64; i++) {
     const sq = flip ? 63 - i : i, r = sq >> 3, c = sq & 7, p = v.board[sq];
     const cls = ['sq', (r + c) % 2 ? 'd' : 'l'];
     if (v.last && v.last.includes(sq)) cls.push('last');
-    if (sq === ui.sel) cls.push('sel');
+    if (sq === ui.sel && !ui.pre) cls.push(preNow ? 'presel' : 'sel');
+    if (ui.pre && preNow && ui.pre.includes(sq)) cls.push('premv');
     if (sq === kingSq) cls.push('check');
-    const hint = targets.includes(sq) ? `<span class="hint ${p ? 'cap' : ''}"></span>` : '';
+    const hint = targets.includes(sq) ? `<span class="hint ${p ? 'cap' : ''} ${preNow ? 'pre' : ''}"></span>` : '';
     cells += `<button class="${cls.join(' ')}" data-sq="${sq}" aria-label="${'abcdefgh'[c]}${8 - r}">${p ? glyph(p) : ''}${hint}</button>`;
   }
   const topCol = flip ? 'w' : 'b', botCol = flip ? 'b' : 'w';
@@ -525,7 +536,7 @@ function renderChess(st, v) {
   let status;
   if (v.result) status = v.puz ? esc(v.result.reason) : v.result.winner ? `${v.result.winner === v.mine ? 'Du gewinnst' : `${esc(cName(v.result.winner))} gewinnt`} – ${esc(v.result.reason)}` : esc(v.result.reason);
   else if (!v.mine) status = `${esc(cName(v.turn))} ist am Zug`;
-  else status = myTurn ? (v.check ? 'Schach! Du bist dran' : 'Du bist dran') + (v.puz ? ` – Matt in ${v.puz.left}` : '') : v.think ? 'Der Bot überlegt …' : 'Gegner ist am Zug';
+  else status = myTurn ? (v.check ? 'Schach! Du bist dran' : 'Du bist dran') + (v.puz ? ` – Matt in ${v.puz.left}` : '') : (v.think ? 'Der Bot überlegt …' : 'Gegner ist am Zug') + (ui.pre ? ' · ⏩ Vorauszug gemerkt (antippen zum Löschen)' : ui.sel != null ? ' · Doppelt tippen = Vorauszug' : '');
   let again = '';
   if (room.status === 'ended') {
     if (v.puz) again = isHost() ? (v.puz.solved ? '<p class="note">Morgen gibt es ein neues Rätsel.</p>' : '<button class="btn" data-chpuz="1">Rätsel nochmal versuchen</button>') + chessSoloHTML() : '';
@@ -666,7 +677,17 @@ $('#room').addEventListener('click', e => {
   const sqb = t.closest('[data-sq]');
   if (sqb) {
     const v = room.view, sq = Number(sqb.dataset.sq);
-    if (room.status !== 'playing' || v.mine !== v.turn) return;
+    if (room.status !== 'playing' || !v.mine) return;
+    if (v.mine !== v.turn) { // Gegner ist dran: Figur vorwählen, Doppeltippen auf ein Zielfeld merkt einen Vorauszug
+      if (ui.pre) { ui.pre = null; ui.sel = null; ui.tap = null; renderRoom(); return; }
+      const pm = ui.sel != null && (v.pre || []).find(m => m[0] === ui.sel && m[1] === sq);
+      if (pm) {
+        const now = Date.now();
+        if (ui.tap && ui.tap.sq === sq && now - ui.tap.t < 450) { ui.pre = [pm[0], pm[1]]; ui.tap = null; }
+        else ui.tap = { sq, t: now };
+      } else { ui.tap = null; ui.sel = v.board[sq] && v.board[sq][0] === v.mine && ui.sel !== sq ? sq : null; }
+      renderRoom(); return;
+    }
     const mv = ui.sel != null && v.moves.find(m => m[0] === ui.sel && m[1] === sq);
     if (mv) {
       if (mv[2]) {

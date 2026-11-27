@@ -114,6 +114,11 @@ input{font:inherit;font-size:18px;color:var(--fg);background:var(--bg);border:1p
 .sq.last::after{content:"";position:absolute;inset:0;background:rgba(255,181,71,.38)}
 .sq.sel::after{content:"";position:absolute;inset:0;background:rgba(39,160,106,.55)}
 .sq.check{background:radial-gradient(circle,#ff5a5f 0%,#b0262b 75%)}
+.chess{touch-action:manipulation;-webkit-user-select:none;user-select:none}
+.sq.presel::after{content:"";position:absolute;inset:0;background:rgba(90,140,255,.5)}
+.sq .hint.pre{background:rgba(70,110,230,.45)} .sq .hint.pre.cap{background:transparent;border-color:rgba(70,110,230,.55)}
+.sq.premv::after{content:"";position:absolute;inset:0;background:rgba(70,110,230,.55);animation:chpre 1s ease-in-out infinite}
+@keyframes chpre{50%{background:rgba(70,110,230,.3)}}
 .sq .hint{position:absolute;width:30%;height:30%;border-radius:50%;background:rgba(21,18,28,.35);z-index:2}
 .sq .hint.cap{width:86%;height:86%;background:transparent;border:5px solid rgba(21,18,28,.35)}
 .pc{position:relative;z-index:1}
